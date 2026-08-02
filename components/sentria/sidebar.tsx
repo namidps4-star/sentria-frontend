@@ -69,14 +69,14 @@ export function Sidebar({
         )}
       >
         {/* Logo */}
-        <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
-          <SentriaLogo />
-          <div className="leading-tight">
-            <p className="font-heading text-base font-bold tracking-tight text-sidebar-foreground">
-              Sentr<span className="text-accent-foreground">IA</span>
-            </p>
-            <p className="text-[10px] tracking-widest text-sidebar-foreground/40 uppercase">Operations</p>
-          </div>
+      {/* Logo */}
+        <div className="flex items-center justify-between border-b border-sidebar-border px-5 py-4">
+          <img
+            src="public/sentria logo.png"
+            alt="Sentria"
+            className="h-6 w-auto brightness-0 invert"
+          />
+          <span className="text-[10px] tracking-widest text-sidebar-foreground/30 uppercase">Ops</span>
         </div>
 
         {/* Nav */}
