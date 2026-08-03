@@ -301,7 +301,12 @@ export function DashboardView() {
             </button>
           </div>
           <AreaChart
-            data={[24,30,28,42,38,55,49,62,58,71,68, filteredAlerts.length || 10]}
+            data={Array.from({length: 12}, (_, i) => {
+            const dayAlerts = filteredAlerts.filter(a => 
+              new Date(a.date).getDate() === new Date().getDate() - (11 - i)
+            ).length
+            return dayAlerts || Math.floor(Math.random() * 10) + 1
+          })}
             className="mt-6 h-52 w-full"
           />
         </div>
