@@ -72,7 +72,7 @@ export function Sidebar({
       {/* Logo */}
         <div className="flex items-center justify-between border-b border-sidebar-border px-5 py-4">
           <img
-            src="/sentria_logo.png"
+            src="/sentria_logo(1).png"
             alt="Sentria"
             className="h-12 w-auto border"
           />
