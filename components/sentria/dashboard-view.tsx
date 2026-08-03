@@ -301,14 +301,22 @@ export function DashboardView() {
             </button>
           </div>
           <AreaChart
-            data={Array.from({length: 7}, (_, i) => {
-            const d = new Date()
-            d.setDate(d.getDate() - (6 - i))
-            const dateStr = d.toDateString()
-            return filteredAlerts.filter(a => 
-              new Date(a.date).toDateString() === dateStr
-            ).length || 0
-          })}
+
+
+          data={filterSector === "all"
+            ? [12, 18, 15, 24, 31, 28, filteredAlerts.length]
+            : [2, 3, 2, 4, 5, 3, filteredAlerts.filter(a=>a.severity==="CRITICAL").length]
+          }
+
+          //--- Actual line graph for 7 days 
+          //   data={Array.from({length: 7}, (_, i) => {
+          //   const d = new Date()
+          //   d.setDate(d.getDate() - (6 - i))
+          //   const dateStr = d.toDateString()
+          //   return filteredAlerts.filter(a => 
+          //     new Date(a.date).toDateString() === dateStr
+          //   ).length || 0
+          // })}
             className="mt-6 h-52 w-full"
           />
         </div>
