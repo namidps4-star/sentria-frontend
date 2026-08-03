@@ -301,11 +301,13 @@ export function DashboardView() {
             </button>
           </div>
           <AreaChart
-            data={Array.from({length: 12}, (_, i) => {
-            const dayAlerts = filteredAlerts.filter(a => 
-              new Date(a.date).getDate() === new Date().getDate() - (11 - i)
-            ).length
-            return dayAlerts || Math.floor(Math.random() * 10) + 1
+            data={Array.from({length: 7}, (_, i) => {
+            const d = new Date()
+            d.setDate(d.getDate() - (6 - i))
+            const dateStr = d.toDateString()
+            return filteredAlerts.filter(a => 
+              new Date(a.date).toDateString() === dateStr
+            ).length || 0
           })}
             className="mt-6 h-52 w-full"
           />
