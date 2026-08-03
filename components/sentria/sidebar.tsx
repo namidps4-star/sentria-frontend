@@ -74,7 +74,7 @@ export function Sidebar({
           <img
             src="/sentria logo.png"
             alt="Sentria"
-            className="h-10 w-20"
+            className="h-11 w-auto object-contain"
           />
           <span className="text-[10px] tracking-widest text-sidebar-foreground/30 uppercase">Ops</span>
         </div>
