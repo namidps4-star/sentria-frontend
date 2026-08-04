@@ -41,12 +41,12 @@ const TIERS: Tier[] = [
       "Alertes SMS illimitées",
       "Ask SentrIA illimité",
       "Historique 12 mois & exports CSV/PDF",
-      "Alertes e-mail + rapport hebdomadaire",
-      "Dashboard multi-sites",
+      "IA prédictive & détection d'anomalies",
+      "SentrIA Network Insights",
     ],
     highlight: {
       icon: TrendingUp,
-      label: "SentrIA Insights inclus",
+      label: "SentrIA Intelligence",
       features: [
         "Comparaison avec les tendances du secteur",
         "Benchmarks anonymisés",
