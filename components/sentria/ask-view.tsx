@@ -35,7 +35,11 @@ export function AskView() {
       const res = await fetch(`${API}/ask`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: t, lang: "fr" }),
+        body: JSON.stringify({ 
+        text: t, 
+        lang: "fr",
+        session_id: "user-123"  // later use real user ID
+      }),
       })
       if (!res.ok) throw new Error("API request failed")
       const data = await res.json()
