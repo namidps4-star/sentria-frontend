@@ -44,7 +44,7 @@ const SECTOR_META: Record<string, {
       { label: "Machines surveillées",        value: String(new Set(a.map(x=>x.equipment)).size), delta: "Live", up: true, spark: [5,6,5,7,6,8,9] },
       { label: "Total alertes",               value: String(a.length), delta: "Session", up: true, spark: [2,3,3,4,5,5,6] },
     ],
-    chartTitle: "Alertes machines — 7 jours",
+    chartTitle: "Alertes machines ,7 jours",
     barLabels: ["Panne", "Usure", "Torque"],
     barData: (a) => [
       a.filter(x=>x.message.includes("failure") || x.message.includes("panne")).length,
@@ -59,7 +59,7 @@ const SECTOR_META: Record<string, {
       { label: "Médicaments concernés", value: String(new Set(a.map(x=>x.equipment)).size), delta: "Produits", up: true, spark: [1,2,2,3,3,4,4] },
       { label: "Alertes chaîne froid",  value: String(a.filter(x=>x.message.includes("froid") || x.message.includes("cold")).length), delta: "Urgence", up: false, spark: [0,0,1,0,1,1,2] },
     ],
-    chartTitle: "Alertes stocks — 7 jours",
+    chartTitle: "Alertes stocks ,7 jours",
     barLabels: ["Rupture", "Stock bas", "Froid", "Expiry"],
     barData: (a) => [
       a.filter(x=>x.message.includes("Rupture") || x.message.includes("reorder")).length,
@@ -75,7 +75,7 @@ const SECTOR_META: Record<string, {
       { label: "Produits en risque", value: String(new Set(a.map(x=>x.equipment)).size), delta: "Actifs", up: true, spark: [2,2,3,3,4,4,5] },
       { label: "Alertes temp.",      value: String(a.filter(x=>x.message.includes("temp") || x.message.includes("Temp")).length), delta: "Stockage", up: false, spark: [0,0,1,1,1,2,2] },
     ],
-    chartTitle: "Alertes récoltes — 7 jours",
+    chartTitle: "Alertes récoltes ,7 jours",
     barLabels: ["Perte", "Retard", "Temp.", "Stock"],
     barData: (a) => [
       a.filter(x=>x.message.includes("perte") || x.message.includes("loss")).length,
@@ -91,7 +91,7 @@ const SECTOR_META: Record<string, {
       { label: "Camions surveillés",value: String(new Set(a.map(x=>x.equipment)).size), delta: "Flotte", up: true, spark: [3,4,4,5,5,6,7] },
       { label: "Alertes moteur",    value: String(a.filter(x=>x.message.includes("moteur") || x.message.includes("engine")).length), delta: "Urgence", up: false, spark: [0,0,1,1,1,2,2] },
     ],
-    chartTitle: "Alertes flotte — 7 jours",
+    chartTitle: "Alertes flotte ,7 jours",
     barLabels: ["Moteur", "Huile", "Carburant", "Pneus"],
     barData: (a) => [
       a.filter(x=>x.message.includes("moteur") || x.message.includes("engine")).length,
@@ -107,7 +107,7 @@ const SECTOR_META: Record<string, {
       { label: "Équipements actifs",  value: String(new Set(a.map(x=>x.equipment)).size), delta: "Port", up: true, spark: [4,5,5,6,6,7,8] },
       { label: "Alertes pression",    value: String(a.filter(x=>x.message.includes("pression") || x.message.includes("pressure")).length), delta: "Hydraulique", up: false, spark: [0,1,1,1,2,2,3] },
     ],
-    chartTitle: "Alertes port — 7 jours",
+    chartTitle: "Alertes port ,7 jours",
     barLabels: ["Cycles", "Attente", "Pression", "Carburant"],
     barData: (a) => [
       a.filter(x=>x.message.includes("cycle")).length,
@@ -123,7 +123,7 @@ const SECTOR_META: Record<string, {
       { label: "Générateurs surveillés",value: String(new Set(a.map(x=>x.equipment)).size), delta: "Actifs", up: true, spark: [3,4,4,5,5,6,7] },
       { label: "Alertes surchauffe",    value: String(a.filter(x=>x.message.includes("surchauffe") || x.message.includes("overheat")).length), delta: "Température", up: false, spark: [0,0,1,1,2,2,3] },
     ],
-    chartTitle: "Alertes énergie — 7 jours",
+    chartTitle: "Alertes énergie ,7 jours",
     barLabels: ["Carburant", "Surchauffe", "Huile", "Surcharge"],
     barData: (a) => [
       a.filter(x=>x.message.includes("carburant") || x.message.includes("fuel")).length,
@@ -204,7 +204,7 @@ export function DashboardView({ search = "" }: { search?: string }) {
             Vue globale de vos opérations critiques.
           </h2>
           <p className="mt-2 text-pretty text-sm text-background/70">
-            SentrIA surveille vos alertes en temps réel — machines, stocks, flottes, équipements — partout dans le monde.
+            SentrIA surveille vos alertes en temps réel ,machines, stocks, flottes, équipements ,partout dans le monde.
           </p>
         </div>
         <button className="inline-flex items-center gap-2 self-start rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02]">
@@ -268,7 +268,7 @@ export function DashboardView({ search = "" }: { search?: string }) {
         ))}
       </div>
 
-      {/* KPIs — change per sector */}
+      {/* KPIs ,change per sector */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((k) => (
           <div key={k.label} className="rounded-3xl border border-border bg-card p-5">
@@ -288,7 +288,7 @@ export function DashboardView({ search = "" }: { search?: string }) {
         ))}
       </div>
 
-      {/* Charts — change per sector */}
+      {/* Charts ,change per sector */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
           <div className="flex items-center justify-between">
@@ -341,7 +341,7 @@ export function DashboardView({ search = "" }: { search?: string }) {
           <div className="flex items-center gap-2">
             <Cpu className="h-5 w-5" />
             <h3 className="font-heading text-lg font-bold">
-              Alertes — {SECTORS.find(s => s.key === filterSector)?.label}
+              Alertes ,{SECTORS.find(s => s.key === filterSector)?.label}
             </h3>
           </div>
           <button className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90">
