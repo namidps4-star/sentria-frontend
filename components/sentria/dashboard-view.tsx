@@ -196,6 +196,10 @@ export function DashboardView({ search = "" }: { search?: string }) {
     )
   })
 
+  const meta = SECTOR_META[filterSector] ?? SECTOR_META.all
+  const kpis = meta.kpis(filteredAlerts)
+  const barData = meta.barData(filteredAlerts)
+
   return (
     <div className="space-y-6">
 
