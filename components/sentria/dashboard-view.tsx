@@ -183,13 +183,18 @@ export function DashboardView({ search = "" }: { search?: string }) {
     }
   }
 
-  const filteredAlerts = filterSector === "all"
-    ? alerts
-    : alerts.filter(a => a.sector === filterSector)
-
-  const meta = SECTOR_META[filterSector] ?? SECTOR_META.all
-  const kpis = meta.kpis(filteredAlerts)
-  const barData = meta.barData(filteredAlerts)
+  const filteredAlerts = alerts
+  .filter(a => filterSector === "all" || a.sector === filterSector)
+  .filter(a => {
+    if (!search.trim()) return true
+    const q = search.toLowerCase()
+    return (
+      a.equipment.toLowerCase().includes(q) ||
+      a.message.toLowerCase().includes(q) ||
+      (a.sector ?? "").toLowerCase().includes(q) ||
+      a.severity.toLowerCase().includes(q)
+    )
+  })
 
   return (
     <div className="space-y-6">
