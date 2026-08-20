@@ -142,7 +142,7 @@ type Alert = {
   sector?: string | null
 }
 
-export function DashboardView() {
+export function DashboardView({ search = "" }: { search?: string }) {
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [uploadSector, setUploadSector] = useState("industry")
   const [filterSector, setFilterSector] = useState("all")
