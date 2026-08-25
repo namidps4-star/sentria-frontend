@@ -2,8 +2,14 @@
 
 import { useEffect, useState } from "react"
 import {
-  Activity, Cpu, TrendingUp, TrendingDown,
-  ArrowUpRight, MoreHorizontal, Zap, Upload,
+  Activity,
+  Cpu,
+  TrendingUp,
+  TrendingDown,
+  ArrowUpRight,
+  MoreHorizontal,
+  Zap,
+  Upload,
 } from "lucide-react"
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
@@ -28,36 +34,508 @@ type Alert = {
   sector?: string | null
 }
 
-export function DashboardView({ search = "" }: { search?: string }) {
+const SECTOR_META: Record<
+  string,
+  {
+    kpis: (
+      alerts: Alert[]
+    ) => {
+      label: string
+      value: string
+      delta: string
+      up: boolean
+      spark: number[]
+    }[]
+    chartTitle: string
+    barLabels: string[]
+    barData: (alerts: Alert[]) => number[]
+  }
+> = {
+  all: {
+    kpis: (a) => [
+      {
+        label: "Actifs en alerte",
+        value: String(new Set(a.map((x) => x.equipment)).size),
+        delta: "Live",
+        up: true,
+        spark: [4, 6, 5, 8, 7, 9, 11],
+      },
+      {
+        label: "Alertes critiques",
+        value: String(
+          a.filter((x) => x.severity === "CRITICAL").length
+        ),
+        delta:
+          a.filter((x) => x.severity === "CRITICAL").length > 0
+            ? "À traiter"
+            : "OK",
+        up:
+          a.filter((x) => x.severity === "CRITICAL").length === 0,
+        spark: [9, 8, 7, 8, 6, 5, 4],
+      },
+      {
+        label: "Warnings",
+        value: String(
+          a.filter((x) => x.severity === "WARNING").length
+        ),
+        delta: "Surveillance",
+        up: true,
+        spark: [8, 7, 9, 6, 8, 10, 12],
+      },
+      {
+        label: "Total alertes",
+        value: String(a.length),
+        delta: "Toutes sources",
+        up: true,
+        spark: [2, 3, 3, 4, 5, 5, 6],
+      },
+    ],
+    chartTitle: "Évolution des alertes",
+    barLabels: ["CRIT", "WARN", "INFO"],
+    barData: (a) => [
+      a.filter((x) => x.severity === "CRITICAL").length,
+      a.filter((x) => x.severity === "WARNING").length,
+      0,
+    ],
+  },
+
+  industry: {
+    kpis: (a) => [
+      {
+        label: "Machines en panne imminente",
+        value: String(
+          a.filter((x) => x.severity === "CRITICAL").length
+        ),
+        delta: "Arrêt immédiat",
+        up: false,
+        spark: [2, 4, 3, 6, 5, 8, 7],
+      },
+      {
+        label: "Usure élevée",
+        value: String(
+          a.filter((x) => x.severity === "WARNING").length
+        ),
+        delta: "Surveiller",
+        up: true,
+        spark: [4, 5, 6, 5, 7, 8, 9],
+      },
+      {
+        label: "Machines surveillées",
+        value: String(new Set(a.map((x) => x.equipment)).size),
+        delta: "Live",
+        up: true,
+        spark: [5, 6, 5, 7, 6, 8, 9],
+      },
+      {
+        label: "Total alertes",
+        value: String(a.length),
+        delta: "Session",
+        up: true,
+        spark: [2, 3, 3, 4, 5, 5, 6],
+      },
+    ],
+    chartTitle: "Alertes machines · 7 jours",
+    barLabels: ["Panne", "Usure", "Torque"],
+    barData: (a) => [
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("failure") ||
+          x.message.toLowerCase().includes("panne")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("wear") ||
+          x.message.toLowerCase().includes("usure")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("torque")
+      ).length,
+    ],
+  },
+
+  health: {
+    kpis: (a) => [
+      {
+        label: "Ruptures critiques",
+        value: String(
+          a.filter((x) => x.severity === "CRITICAL").length
+        ),
+        delta: "Commander maintenant",
+        up: false,
+        spark: [3, 2, 4, 5, 3, 4, 6],
+      },
+      {
+        label: "Stocks bas",
+        value: String(
+          a.filter((x) => x.severity === "WARNING").length
+        ),
+        delta: "À surveiller",
+        up: true,
+        spark: [2, 3, 3, 4, 5, 4, 5],
+      },
+      {
+        label: "Médicaments concernés",
+        value: String(new Set(a.map((x) => x.equipment)).size),
+        delta: "Produits",
+        up: true,
+        spark: [1, 2, 2, 3, 3, 4, 4],
+      },
+      {
+        label: "Alertes chaîne froid",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("froid") ||
+              x.message.toLowerCase().includes("cold")
+          ).length
+        ),
+        delta: "Urgence",
+        up: false,
+        spark: [0, 0, 1, 0, 1, 1, 2],
+      },
+    ],
+    chartTitle: "Alertes stocks · 7 jours",
+    barLabels: ["Rupture", "Stock bas", "Froid", "Expiry"],
+    barData: (a) => [
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("rupture") ||
+          x.message.toLowerCase().includes("reorder")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("bas") ||
+          x.message.toLowerCase().includes("low")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("froid") ||
+          x.message.toLowerCase().includes("cold")
+      ).length,
+      a.filter((x) =>
+        x.message.toLowerCase().includes("expir")
+      ).length,
+    ],
+  },
+
+  agriculture: {
+    kpis: (a) => [
+      {
+        label: "Pertes probables",
+        value: String(
+          a.filter((x) => x.severity === "CRITICAL").length
+        ),
+        delta: "Livraison urgente",
+        up: false,
+        spark: [1, 2, 2, 3, 4, 3, 5],
+      },
+      {
+        label: "Retards détectés",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("retard") ||
+              x.message.toLowerCase().includes("delay")
+          ).length
+        ),
+        delta: "Camions",
+        up: false,
+        spark: [0, 1, 1, 2, 2, 3, 3],
+      },
+      {
+        label: "Produits en risque",
+        value: String(new Set(a.map((x) => x.equipment)).size),
+        delta: "Actifs",
+        up: true,
+        spark: [2, 2, 3, 3, 4, 4, 5],
+      },
+      {
+        label: "Alertes temp.",
+        value: String(
+          a.filter((x) =>
+            x.message.toLowerCase().includes("temp")
+          ).length
+        ),
+        delta: "Stockage",
+        up: false,
+        spark: [0, 0, 1, 1, 1, 2, 2],
+      },
+    ],
+    chartTitle: "Alertes récoltes · 7 jours",
+    barLabels: ["Perte", "Retard", "Temp.", "Stock"],
+    barData: (a) => [
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("perte") ||
+          x.message.toLowerCase().includes("loss")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("retard") ||
+          x.message.toLowerCase().includes("delay")
+      ).length,
+      a.filter((x) =>
+        x.message.toLowerCase().includes("temp")
+      ).length,
+      a.filter((x) =>
+        x.message.toLowerCase().includes("stock")
+      ).length,
+    ],
+  },
+
+  transportation: {
+    kpis: (a) => [
+      {
+        label: "Camions critiques",
+        value: String(
+          a.filter((x) => x.severity === "CRITICAL").length
+        ),
+        delta: "Immobiliser",
+        up: false,
+        spark: [1, 2, 1, 3, 2, 4, 3],
+      },
+      {
+        label: "Révisions dues",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("service") ||
+              x.message.toLowerCase().includes("révision")
+          ).length
+        ),
+        delta: "Planifier",
+        up: false,
+        spark: [2, 2, 3, 3, 4, 4, 5],
+      },
+      {
+        label: "Camions surveillés",
+        value: String(new Set(a.map((x) => x.equipment)).size),
+        delta: "Flotte",
+        up: true,
+        spark: [3, 4, 4, 5, 5, 6, 7],
+      },
+      {
+        label: "Alertes moteur",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("moteur") ||
+              x.message.toLowerCase().includes("engine")
+          ).length
+        ),
+        delta: "Urgence",
+        up: false,
+        spark: [0, 0, 1, 1, 1, 2, 2],
+      },
+    ],
+    chartTitle: "Alertes flotte · 7 jours",
+    barLabels: ["Moteur", "Huile", "Carburant", "Pneus"],
+    barData: (a) => [
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("moteur") ||
+          x.message.toLowerCase().includes("engine")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("huile") ||
+          x.message.toLowerCase().includes("oil")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("carburant") ||
+          x.message.toLowerCase().includes("fuel")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("pneu") ||
+          x.message.toLowerCase().includes("tire")
+      ).length,
+    ],
+  },
+
+  logistics: {
+    kpis: (a) => [
+      {
+        label: "Équipements bloqués",
+        value: String(
+          a.filter((x) => x.severity === "CRITICAL").length
+        ),
+        delta: "Arrêt immédiat",
+        up: false,
+        spark: [1, 2, 2, 3, 3, 4, 5],
+      },
+      {
+        label: "Files d'attente",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("attente") ||
+              x.message.toLowerCase().includes("wait")
+          ).length
+        ),
+        delta: "Conteneurs",
+        up: false,
+        spark: [2, 3, 3, 4, 4, 5, 6],
+      },
+      {
+        label: "Équipements actifs",
+        value: String(new Set(a.map((x) => x.equipment)).size),
+        delta: "Port",
+        up: true,
+        spark: [4, 5, 5, 6, 6, 7, 8],
+      },
+      {
+        label: "Alertes pression",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("pression") ||
+              x.message.toLowerCase().includes("pressure")
+          ).length
+        ),
+        delta: "Hydraulique",
+        up: false,
+        spark: [0, 1, 1, 1, 2, 2, 3],
+      },
+    ],
+    chartTitle: "Alertes port · 7 jours",
+    barLabels: ["Cycles", "Attente", "Pression", "Carburant"],
+    barData: (a) => [
+      a.filter((x) =>
+        x.message.toLowerCase().includes("cycle")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("attente") ||
+          x.message.toLowerCase().includes("wait")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("pression") ||
+          x.message.toLowerCase().includes("pressure")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("carburant") ||
+          x.message.toLowerCase().includes("fuel")
+      ).length,
+    ],
+  },
+
+  energy: {
+    kpis: (a) => [
+      {
+        label: "Générateurs critiques",
+        value: String(
+          a.filter((x) => x.severity === "CRITICAL").length
+        ),
+        delta: "Intervenir",
+        up: false,
+        spark: [1, 2, 2, 3, 3, 4, 5],
+      },
+      {
+        label: "Carburant bas",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("carburant") ||
+              x.message.toLowerCase().includes("fuel")
+          ).length
+        ),
+        delta: "Réapprovisionner",
+        up: false,
+        spark: [2, 2, 3, 3, 4, 4, 5],
+      },
+      {
+        label: "Générateurs surveillés",
+        value: String(new Set(a.map((x) => x.equipment)).size),
+        delta: "Actifs",
+        up: true,
+        spark: [3, 4, 4, 5, 5, 6, 7],
+      },
+      {
+        label: "Alertes surchauffe",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("surchauffe") ||
+              x.message.toLowerCase().includes("overheat")
+          ).length
+        ),
+        delta: "Température",
+        up: false,
+        spark: [0, 0, 1, 1, 2, 2, 3],
+      },
+    ],
+    chartTitle: "Alertes énergie · 7 jours",
+    barLabels: ["Carburant", "Surchauffe", "Huile", "Surcharge"],
+    barData: (a) => [
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("carburant") ||
+          x.message.toLowerCase().includes("fuel")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("surchauffe") ||
+          x.message.toLowerCase().includes("overheat")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("huile") ||
+          x.message.toLowerCase().includes("oil")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("surcharge") ||
+          x.message.toLowerCase().includes("overload")
+      ).length,
+    ],
+  },
+}
+
+export function DashboardView({
+  search = "",
+}: {
+  search?: string
+}) {
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [uploadSector, setUploadSector] = useState("industry")
   const [filterSector, setFilterSector] = useState("all")
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState("")
 
-  // Active sectors from localStorage
-  const [activeSectors, setActiveSectors] = useState<string[]>(() => {
-    if (typeof window === "undefined") return ["industry"]
+  // Read active sectors from localStorage
+  const [activeSectors, setActiveSectors] = useState<string[]>(
+    () => {
+      if (typeof window === "undefined") {
+        return ["industry"]
+      }
 
-    try {
-      const stored = JSON.parse(
-        localStorage.getItem("sentria_sectors") || '["industry"]'
-      )
-
-      return Array.isArray(stored) && stored.length > 0
-        ? stored
-        : ["industry"]
-    } catch {
-      return ["industry"]
-    }
-  })
-
-  // Refresh when sectors are changed in settings
-  useEffect(() => {
-    const handler = () => {
       try {
         const stored = JSON.parse(
-          localStorage.getItem("sentria_sectors") || '["industry"]'
+          localStorage.getItem("sentria_sectors") ||
+            '["industry"]'
+        )
+
+        return Array.isArray(stored) && stored.length > 0
+          ? stored
+          : ["industry"]
+      } catch {
+        return ["industry"]
+      }
+    }
+  )
+
+  // Listen for changes from SettingsView
+  useEffect(() => {
+    const refreshSectors = () => {
+      try {
+        const stored = JSON.parse(
+          localStorage.getItem("sentria_sectors") ||
+            '["industry"]'
         )
 
         setActiveSectors(
@@ -70,17 +548,26 @@ export function DashboardView({ search = "" }: { search?: string }) {
       }
     }
 
-    window.addEventListener("sentria_sectors_updated", handler)
+    window.addEventListener(
+      "sentria_sectors_updated",
+      refreshSectors
+    )
 
     return () => {
-      window.removeEventListener("sentria_sectors_updated", handler)
+      window.removeEventListener(
+        "sentria_sectors_updated",
+        refreshSectors
+      )
     }
   }, [])
 
-  // Make sure selected upload/filter sector is still active
+  // Keep selected upload sector valid
   useEffect(() => {
-    if (!activeSectors.includes(uploadSector)) {
-      setUploadSector(activeSectors[0] ?? "industry")
+    if (
+      activeSectors.length > 0 &&
+      !activeSectors.includes(uploadSector)
+    ) {
+      setUploadSector(activeSectors[0])
     }
 
     if (
@@ -91,15 +578,23 @@ export function DashboardView({ search = "" }: { search?: string }) {
     }
   }, [activeSectors, uploadSector, filterSector])
 
+  // Load alerts
   useEffect(() => {
     fetch(`${API}/alerts`)
       .then((r) => r.json())
-      .then((d) => setAlerts(Array.isArray(d) ? d : []))
-      .catch(console.error)
+      .then((d) => {
+        setAlerts(Array.isArray(d) ? d : [])
+      })
+      .catch((err) => {
+        console.error("Failed to load alerts:", err)
+      })
   }, [])
 
-  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleUpload(
+    e: React.ChangeEvent<HTMLInputElement>
+  ) {
     const file = e.target.files?.[0]
+
     if (!file) return
 
     setUploading(true)
@@ -117,8 +612,15 @@ export function DashboardView({ search = "" }: { search?: string }) {
         }
       )
 
+      if (!res.ok) {
+        throw new Error("Upload failed")
+      }
+
       const data = await res.json()
-      setUploadMsg(data.message ?? "Fichier traité.")
+
+      setUploadMsg(
+        data.message ?? "Fichier traité."
+      )
 
       await new Promise((r) => setTimeout(r, 2000))
 
@@ -126,8 +628,10 @@ export function DashboardView({ search = "" }: { search?: string }) {
       const d2 = await r2.json()
 
       setAlerts(Array.isArray(d2) ? d2 : [])
+
       setFilterSector(uploadSector)
-    } catch {
+    } catch (error) {
+      console.error(error)
       setUploadMsg("Erreur lors de l'upload.")
     } finally {
       setUploading(false)
@@ -154,10 +658,69 @@ export function DashboardView({ search = "" }: { search?: string }) {
       )
     })
 
+  const meta =
+    SECTOR_META[filterSector] ?? SECTOR_META.all
+
+  const kpis = meta.kpis(filteredAlerts)
+  const barData = meta.barData(filteredAlerts)
+
+  // Real 7-day alert data
+  const chartData = Array.from(
+    { length: 7 },
+    (_, i) => {
+      const d = new Date()
+
+      d.setHours(0, 0, 0, 0)
+      d.setDate(d.getDate() - (6 - i))
+
+      return filteredAlerts.filter((a) => {
+        const alertDate = new Date(a.date)
+
+        return (
+          alertDate.getFullYear() === d.getFullYear() &&
+          alertDate.getMonth() === d.getMonth() &&
+          alertDate.getDate() === d.getDate()
+        )
+      }).length
+    }
+  )
+
   return (
     <div className="space-y-6">
 
-      {/* Upload CSV */}
+      {/* HERO */}
+      <div className="flex flex-col gap-4 rounded-3xl bg-foreground p-6 text-background md:flex-row md:items-center md:justify-between md:p-8">
+        <div className="max-w-xl">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+            <Zap className="h-3.5 w-3.5" />
+            Temps réel
+          </span>
+
+          <h2 className="mt-3 text-balance font-heading text-2xl font-bold leading-tight md:text-3xl">
+            Vue globale de vos opérations critiques.
+          </h2>
+
+          <p className="mt-2 text-pretty text-sm text-background/70">
+            SentrIA surveille vos alertes en temps réel ·
+            machines, stocks, flottes, équipements · partout
+            dans le monde.
+          </p>
+        </div>
+
+        <button
+          onClick={() =>
+            document
+              .getElementById("alerts-table")
+              ?.scrollIntoView({ behavior: "smooth" })
+          }
+          className="inline-flex items-center gap-2 self-start rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02]"
+        >
+          Voir les alertes
+          <ArrowUpRight className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* UPLOAD CSV */}
       <div className="rounded-3xl border border-border bg-card p-6">
         <h3 className="font-heading text-lg font-bold">
           Importer des données
@@ -168,8 +731,6 @@ export function DashboardView({ search = "" }: { search?: string }) {
         </p>
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
-
-          {/* ONLY ACTIVE SECTORS */}
           <div className="flex flex-wrap gap-2">
             {SECTORS
               .filter(
@@ -180,7 +741,9 @@ export function DashboardView({ search = "" }: { search?: string }) {
               .map((s) => (
                 <button
                   key={s.key}
-                  onClick={() => setUploadSector(s.key)}
+                  onClick={() =>
+                    setUploadSector(s.key)
+                  }
                   className={cn(
                     "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors",
                     uploadSector === s.key
@@ -228,7 +791,7 @@ export function DashboardView({ search = "" }: { search?: string }) {
         </p>
       </div>
 
-      {/* Sector filter — ONLY ACTIVE SECTORS */}
+      {/* SECTOR FILTER */}
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setFilterSector("all")}
@@ -254,7 +817,9 @@ export function DashboardView({ search = "" }: { search?: string }) {
           .map((s) => (
             <button
               key={s.key}
-              onClick={() => setFilterSector(s.key)}
+              onClick={() =>
+                setFilterSector(s.key)
+              }
               className={cn(
                 "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
                 filterSector === s.key
@@ -275,7 +840,205 @@ export function DashboardView({ search = "" }: { search?: string }) {
           ))}
       </div>
 
-      {/* Keep the rest of your existing DashboardView below this point */}
+      {/* KPIs */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {kpis.map((k) => (
+          <div
+            key={k.label}
+            className="rounded-3xl border border-border bg-card p-5"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm text-muted-foreground">
+                {k.label}
+              </span>
+
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
+                  k.up
+                    ? "bg-accent/25 text-accent-foreground"
+                    : "bg-destructive/10 text-destructive"
+                )}
+              >
+                {k.up ? (
+                  <TrendingUp className="h-3 w-3" />
+                ) : (
+                  <TrendingDown className="h-3 w-3" />
+                )}
+                {k.delta}
+              </span>
+            </div>
+
+            <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
+              {k.value}
+            </p>
+
+            <Sparkline
+              data={k.spark}
+              className={cn(
+                "mt-2 h-9 w-full",
+                k.up
+                  ? "text-accent"
+                  : "text-destructive"
+              )}
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* CHARTS */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-heading text-lg font-bold">
+                {meta.chartTitle}
+              </h3>
+
+              <p className="text-sm text-muted-foreground">
+                7 derniers jours
+              </p>
+            </div>
+
+            <button
+              className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
+              aria-label="Options"
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
+          </div>
+
+          <AreaChart
+            data={chartData}
+            className="mt-6 h-52 w-full"
+          />
+        </div>
+
+        <div className="rounded-3xl border border-border bg-card p-6">
+          <div className="flex items-center gap-2">
+            <Activity className="h-5 w-5 text-accent-foreground" />
+
+            <h3 className="font-heading text-lg font-bold">
+              Répartition
+            </h3>
+          </div>
+
+          <p className="text-sm text-muted-foreground">
+            {meta.barLabels.join(" · ")}
+          </p>
+
+          <BarChart
+            data={barData}
+            labels={meta.barLabels}
+            className="mt-6"
+            height={180}
+          />
+        </div>
+      </div>
+
+      {/* ALERTS TABLE */}
+      <div
+        id="alerts-table"
+        className="rounded-3xl border border-border bg-card"
+      >
+        <div className="flex items-center justify-between p-6 pb-4">
+          <div className="flex items-center gap-2">
+            <Cpu className="h-5 w-5" />
+
+            <h3 className="font-heading text-lg font-bold">
+              Alertes ·{" "}
+              {
+                SECTORS.find(
+                  (s) => s.key === filterSector
+                )?.label
+              }
+            </h3>
+          </div>
+
+          <button className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90">
+            Tout voir
+            <ArrowUpRight className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-y border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
+                <th className="px-6 py-3 font-medium">
+                  Actif
+                </th>
+                <th className="px-6 py-3 font-medium">
+                  Message
+                </th>
+                <th className="px-6 py-3 font-medium">
+                  Secteur
+                </th>
+                <th className="px-6 py-3 font-medium">
+                  Sévérité
+                </th>
+                <th className="px-6 py-3 font-medium">
+                  Date
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {filteredAlerts
+                .slice(0, 20)
+                .map((alert, i) => (
+                  <tr
+                    key={`${alert.equipment}-${alert.date}-${i}`}
+                    className="border-b border-border last:border-0 transition-colors hover:bg-muted/50"
+                  >
+                    <td className="px-6 py-4 font-semibold">
+                      {alert.equipment}
+                    </td>
+
+                    <td className="px-6 py-4 text-muted-foreground">
+                      {alert.message}
+                    </td>
+
+                    <td className="px-6 py-4 capitalize text-muted-foreground">
+                      {alert.sector ?? "—"}
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <span
+                        className={cn(
+                          "rounded-full px-2.5 py-1 text-xs font-semibold",
+                          alert.severity === "CRITICAL"
+                            ? "bg-destructive/10 text-destructive"
+                            : "bg-amber-500/15 text-amber-600"
+                        )}
+                      >
+                        {alert.severity}
+                      </span>
+                    </td>
+
+                    <td className="px-6 py-4 text-muted-foreground">
+                      {new Date(
+                        alert.date
+                      ).toLocaleString("fr-FR")}
+                    </td>
+                  </tr>
+                ))}
+
+              {filteredAlerts.length === 0 && (
+                <tr>
+                  <td
+                    className="px-6 py-8 text-muted-foreground"
+                    colSpan={5}
+                  >
+                    Aucune alerte pour ce secteur.
+                    Importez un CSV.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   )
 }
