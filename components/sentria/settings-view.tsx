@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Globe, Bell, Moon, Check, Building2, Mail, Layers } from "lucide-react"
+import { Globe, Bell, Moon, Check, Building2, Mail } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const LANGUAGES = [
@@ -11,15 +11,6 @@ const LANGUAGES = [
   { code: "pt", label: "Português", region: "Brésil" },
   { code: "ar", label: "العربية", region: "Maghreb" },
   { code: "sw", label: "Kiswahili", region: "Afrique de l'Est" },
-]
-
-const SECTORS = [
-  { key: "industry", emoji: "🏭", label: "Industrie", desc: "Machines, générateurs, usines" },
-  { key: "health", emoji: "💊", label: "Santé", desc: "Pharmacies, cliniques, médicaments" },
-  { key: "agriculture", emoji: "🌾", label: "Agriculture", desc: "Récoltes, irrigation, stockage" },
-  { key: "transportation", emoji: "🚛", label: "Transport", desc: "Flottes, camions, véhicules" },
-  { key: "logistics", emoji: "🚢", label: "Logistique", desc: "Ports, entrepôts, conteneurs" },
-  { key: "energy", emoji: "⚡", label: "Énergie", desc: "Générateurs, solaire, réseaux" },
 ]
 
 const UI: Record<string, Record<string, string>> = {
@@ -39,9 +30,6 @@ const UI: Record<string, Record<string, string>> = {
     timezone: "Fuseau horaire",
     cancel: "Annuler",
     save: "Enregistrer",
-    sectors: "Secteurs actifs",
-    sectorsDesc: "Choisissez les secteurs que vous surveillez. Le dashboard et les templates CSV s'adaptent automatiquement.",
-    sectorsNote: "Les secteurs disponibles dépendent de votre plan.",
   },
   en: {
     title: "Language & region",
@@ -59,15 +47,12 @@ const UI: Record<string, Record<string, string>> = {
     timezone: "Timezone",
     cancel: "Cancel",
     save: "Save",
-    sectors: "Active sectors",
-    sectorsDesc: "Choose the sectors you monitor. The dashboard and CSV templates adapt automatically.",
-    sectorsNote: "Available sectors depend on your plan.",
   },
   es: {
     title: "Idioma & región",
     subtitle: "La interfaz se adapta a su territorio.",
     prefs: "Preferencias",
-    alerts: "Alertas en tiempo real",
+    alerts: "Alertas",
     alertsDesc: "Recibir señales críticas al instante.",
     weekly: "Informe semanal",
     weeklyDesc: "Resumen por correo cada lunes.",
@@ -79,9 +64,6 @@ const UI: Record<string, Record<string, string>> = {
     timezone: "Zona horaria",
     cancel: "Cancelar",
     save: "Guardar",
-    sectors: "Sectores activos",
-    sectorsDesc: "Elija los sectores que supervisa.",
-    sectorsNote: "Los sectores disponibles dependen de su plan.",
   },
   pt: {
     title: "Idioma & região",
@@ -99,9 +81,6 @@ const UI: Record<string, Record<string, string>> = {
     timezone: "Fuso horário",
     cancel: "Cancelar",
     save: "Guardar",
-    sectors: "Sectores ativos",
-    sectorsDesc: "Escolha os sectores que monitoriza.",
-    sectorsNote: "Os sectores disponíveis dependem do seu plano.",
   },
   ar: {
     title: "اللغة والمنطقة",
@@ -119,9 +98,6 @@ const UI: Record<string, Record<string, string>> = {
     timezone: "المنطقة الزمنية",
     cancel: "إلغاء",
     save: "حفظ",
-    sectors: "القطاعات النشطة",
-    sectorsDesc: "اختر القطاعات التي تراقبها.",
-    sectorsNote: "القطاعات المتاحة تعتمد على خطتك.",
   },
   sw: {
     title: "Lugha & eneo",
@@ -139,9 +115,6 @@ const UI: Record<string, Record<string, string>> = {
     timezone: "Eneo la saa",
     cancel: "Ghairi",
     save: "Hifadhi",
-    sectors: "Sekta zinazofanya kazi",
-    sectorsDesc: "Chagua sekta unazofuatilia.",
-    sectorsNote: "Sekta zinazopatikana zinategemea mpango wako.",
   },
 }
 
@@ -154,6 +127,7 @@ function Toggle({
 }) {
   return (
     <button
+      type="button"
       onClick={onChange}
       className={cn(
         "relative h-6 w-11 rounded-full transition-colors",
@@ -174,35 +148,23 @@ function Toggle({
 
 export function SettingsView() {
   const [lang, setLang] = useState("fr")
+
   const [toggles, setToggles] = useState({
     alerts: true,
     weekly: false,
     dark: false,
   })
-  const [activeSectors, setActiveSectors] = useState<string[]>(["industry"])
 
-  const toggle = (k: keyof typeof toggles) =>
-    setToggles((s) => ({ ...s, [k]: !s[k] }))
-
-  function toggleSector(key: string) {
-    setActiveSectors((prev) =>
-      prev.includes(key)
-        ? prev.length > 1
-          ? prev.filter((s) => s !== key)
-          : prev
-        : [...prev, key]
-    )
+  const toggle = (key: keyof typeof toggles) => {
+    setToggles((state) => ({
+      ...state,
+      [key]: !state[key],
+    }))
   }
 
-  function saveSettings() {
-    localStorage.setItem(
-      "sentria_sectors",
-      JSON.stringify(activeSectors)
-    )
-
-    window.dispatchEvent(
-      new Event("sentria_sectors_updated")
-    )
+  const saveSettings = () => {
+    // Keep settings unrelated to sector configuration here.
+    // Sector selection is handled by onboarding.
   }
 
   const t = UI[lang] ?? UI.fr
@@ -222,10 +184,12 @@ export function SettingsView() {
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
             <Globe className="h-5 w-5" />
           </span>
+
           <div>
             <h3 className="font-heading text-lg font-bold">
               {t.title}
             </h3>
+
             <p className="text-sm text-muted-foreground">
               {t.subtitle}
             </p>
@@ -233,13 +197,14 @@ export function SettingsView() {
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-          {LANGUAGES.map((l) => {
-            const active = lang === l.code
+          {LANGUAGES.map((language) => {
+            const active = lang === language.code
 
             return (
               <button
-                key={l.code}
-                onClick={() => setLang(l.code)}
+                key={language.code}
+                type="button"
+                onClick={() => setLang(language.code)}
                 className={cn(
                   "flex items-center justify-between rounded-2xl border p-3.5 text-left transition-colors",
                   active
@@ -248,7 +213,10 @@ export function SettingsView() {
                 )}
               >
                 <div>
-                  <p className="font-semibold">{l.label}</p>
+                  <p className="font-semibold">
+                    {language.label}
+                  </p>
+
                   <p
                     className={cn(
                       "text-xs",
@@ -257,7 +225,7 @@ export function SettingsView() {
                         : "text-muted-foreground"
                     )}
                   >
-                    {l.region}
+                    {language.region}
                   </p>
                 </div>
 
@@ -270,71 +238,6 @@ export function SettingsView() {
             )
           })}
         </div>
-      </section>
-
-      {/* Active Sectors */}
-      <section className="rounded-3xl border border-border bg-card p-6">
-        <div className="mb-2 flex items-center gap-2.5">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-            <Layers className="h-5 w-5" />
-          </span>
-
-          <div>
-            <h3 className="font-heading text-lg font-bold">
-              {t.sectors}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {t.sectorsDesc}
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-          {SECTORS.map((s) => {
-            const active = activeSectors.includes(s.key)
-
-            return (
-              <button
-                key={s.key}
-                onClick={() => toggleSector(s.key)}
-                className={cn(
-                  "flex items-center gap-3 rounded-2xl border p-3.5 text-left transition-colors",
-                  active
-                    ? "border-foreground bg-foreground text-background"
-                    : "border-border bg-background hover:border-ring"
-                )}
-              >
-                <span className="text-xl">{s.emoji}</span>
-
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold">
-                    {s.label}
-                  </p>
-                  <p
-                    className={cn(
-                      "truncate text-xs",
-                      active
-                        ? "text-background/70"
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    {s.desc}
-                  </p>
-                </div>
-
-                {active && (
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground">
-                    <Check className="h-3.5 w-3.5" />
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </div>
-
-        <p className="mt-3 text-xs text-muted-foreground">
-          {t.sectorsNote}
-        </p>
       </section>
 
       {/* Preferences */}
@@ -379,6 +282,7 @@ export function SettingsView() {
                   <p className="text-sm font-semibold">
                     {row.title}
                   </p>
+
                   <p className="text-xs text-muted-foreground">
                     {row.desc}
                   </p>
@@ -405,6 +309,7 @@ export function SettingsView() {
             <h3 className="font-heading text-lg font-bold">
               {t.org}
             </h3>
+
             <p className="text-sm text-muted-foreground">
               {t.orgDesc}
             </p>
@@ -439,11 +344,15 @@ export function SettingsView() {
         </div>
 
         <div className="mt-5 flex justify-end gap-2">
-          <button className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold hover:bg-muted">
+          <button
+            type="button"
+            className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold hover:bg-muted"
+          >
             {t.cancel}
           </button>
 
           <button
+            type="button"
             onClick={saveSettings}
             className="rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-background hover:opacity-90"
           >
