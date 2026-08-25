@@ -98,19 +98,12 @@ export function SettingsView() {
             const active = activeSectors.includes(s.key)
             return (
               <button
-                key={s.key}
-                onClick={() => toggleSector(s.key)}
-                className={cn(
-                  "flex items-center gap-3 rounded-2xl border p-3.5 text-left transition-colors",
-                  active ? "border-foreground bg-foreground text-background" : "border-border bg-background hover:border-ring"
-                )}
-              >
-                <span className="text-xl">{s.emoji}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm">{s.label}</p>
-                  <p className={cn("text-xs truncate", active ? "text-background/70" : "text-muted-foreground")}>{s.desc}</p>
-                </div>
-                {active && <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground"><Check className="h-3.5 w-3.5" /></span>}
+                onClick={() => {
+                  localStorage.setItem("sentria_sectors", JSON.stringify(activeSectors))
+                  window.dispatchEvent(new Event("sentria_sectors_updated"))
+                }}
+                className="rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-background hover:opacity-90">
+                {t.save}
               </button>
             )
           })}
