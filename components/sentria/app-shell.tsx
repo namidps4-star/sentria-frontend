@@ -9,7 +9,7 @@ import { AskView } from "./ask-view"
 import { PricingView } from "./pricing-view"
 import { ProfileView } from "./profile-view"
 import { SettingsView } from "./settings-view"
-import { OnboardingModal } from "./onboarding-modal"
+import { OnboardingView } from "./onboarding-modal"
 import { ReportView } from "./report-view"
 
 
