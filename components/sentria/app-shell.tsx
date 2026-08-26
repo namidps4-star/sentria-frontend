@@ -10,6 +10,8 @@ import { PricingView } from "./pricing-view"
 import { ProfileView } from "./profile-view"
 import { SettingsView } from "./settings-view"
 import { OnboardingModal } from "./onboarding-modal"
+import { ReportView } from "./report-view"
+
 
 const META: Record<ViewKey, { title: string; subtitle: string }> = {
   dashboard: { title: "Dashboard",   subtitle: "Vue globale des opérations" },
@@ -18,6 +20,8 @@ const META: Record<ViewKey, { title: string; subtitle: string }> = {
   pricing:   { title: "Abonnement",  subtitle: "Choisissez le plan adapté à vos opérations" },
   profile:   { title: "Profil",      subtitle: "Votre compte et votre activité" },
   settings:  { title: "Paramètres", subtitle: "Langue, notifications et organisation" },
+  report:    { title: "Rapport",    subtitle: "Analyse détaillée de vos opérations" },
+
 }
 
 export function AppShell() {
