@@ -10,6 +10,11 @@ import {
   MoreHorizontal,
   Zap,
   Upload,
+  Check,
+  ChevronRight,
+  Database,
+  ShieldCheck,
+  Building2,
 } from "lucide-react"
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
@@ -147,9 +152,8 @@ const SECTOR_META: Record<
           x.message.toLowerCase().includes("wear") ||
           x.message.toLowerCase().includes("usure")
       ).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("torque")
+      a.filter((x) =>
+        x.message.toLowerCase().includes("torque")
       ).length,
     ],
   },
@@ -496,6 +500,39 @@ const SECTOR_META: Record<
   },
 }
 
+const ONBOARDING_STEPS = [
+  {
+    title: "Votre secteur",
+    description:
+      "Choisissez les activités que SentrIA doit surveiller.",
+    icon: Building2,
+  },
+  {
+    title: "Votre espace",
+    description:
+      "Configurez les secteurs pertinents pour votre organisation.",
+    icon: Database,
+  },
+  {
+    title: "Vos données",
+    description:
+      "Importez un premier fichier CSV pour lancer l'analyse.",
+    icon: Upload,
+  },
+  {
+    title: "Analyse",
+    description:
+      "SentrIA vérifie vos données et prépare votre surveillance.",
+    icon: ShieldCheck,
+  },
+  {
+    title: "C'est prêt",
+    description:
+      "Votre dashboard opérationnel est maintenant disponible.",
+    icon: Zap,
+  },
+]
+
 export function DashboardView({
   search = "",
 }: {
@@ -507,7 +544,28 @@ export function DashboardView({
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState("")
 
-  // Read active sectors from localStorage
+  const [onboardingComplete, setOnboardingComplete] = useState(() => {
+    if (typeof window === "undefined") return false
+
+    return (
+      localStorage.getItem(
+        "sentria_onboarding_complete"
+      ) === "true"
+    )
+  })
+
+  const [onboardingStep, setOnboardingStep] = useState(() => {
+    if (typeof window === "undefined") return 0
+
+    const value = Number(
+      localStorage.getItem(
+        "sentria_onboarding_step"
+      ) || "0"
+    )
+
+    return Number.isFinite(value) ? value : 0
+  })
+
   const [activeSectors, setActiveSectors] = useState<string[]>(
     () => {
       if (typeof window === "undefined") {
@@ -529,7 +587,6 @@ export function DashboardView({
     }
   )
 
-  // Listen for changes from SettingsView
   useEffect(() => {
     const refreshSectors = () => {
       try {
@@ -561,7 +618,6 @@ export function DashboardView({
     }
   }, [])
 
-  // Keep selected upload sector valid
   useEffect(() => {
     if (
       activeSectors.length > 0 &&
@@ -578,7 +634,6 @@ export function DashboardView({
     }
   }, [activeSectors, uploadSector, filterSector])
 
-  // Load alerts
   useEffect(() => {
     fetch(`${API}/alerts`)
       .then((r) => r.json())
@@ -589,6 +644,29 @@ export function DashboardView({
         console.error("Failed to load alerts:", err)
       })
   }, [])
+
+  function updateOnboardingStep(step: number) {
+    setOnboardingStep(step)
+
+    localStorage.setItem(
+      "sentria_onboarding_step",
+      String(step)
+    )
+  }
+
+  function completeOnboarding() {
+    localStorage.setItem(
+      "sentria_onboarding_complete",
+      "true"
+    )
+
+    localStorage.setItem(
+      "sentria_onboarding_step",
+      "5"
+    )
+
+    setOnboardingComplete(true)
+  }
 
   async function handleUpload(
     e: React.ChangeEvent<HTMLInputElement>
@@ -622,7 +700,9 @@ export function DashboardView({
         data.message ?? "Fichier traité."
       )
 
-      await new Promise((r) => setTimeout(r, 2000))
+      await new Promise((r) =>
+        setTimeout(r, 1500)
+      )
 
       const r2 = await fetch(`${API}/alerts`)
       const d2 = await r2.json()
@@ -630,9 +710,15 @@ export function DashboardView({
       setAlerts(Array.isArray(d2) ? d2 : [])
 
       setFilterSector(uploadSector)
+
+      if (!onboardingComplete) {
+        updateOnboardingStep(3)
+      }
     } catch (error) {
       console.error(error)
-      setUploadMsg("Erreur lors de l'upload.")
+      setUploadMsg(
+        "Erreur lors de l'upload."
+      )
     } finally {
       setUploading(false)
       e.target.value = ""
@@ -659,12 +745,12 @@ export function DashboardView({
     })
 
   const meta =
-    SECTOR_META[filterSector] ?? SECTOR_META.all
+    SECTOR_META[filterSector] ??
+    SECTOR_META.all
 
   const kpis = meta.kpis(filteredAlerts)
   const barData = meta.barData(filteredAlerts)
 
-  // Real 7-day alert data
   const chartData = Array.from(
     { length: 7 },
     (_, i) => {
@@ -677,17 +763,477 @@ export function DashboardView({
         const alertDate = new Date(a.date)
 
         return (
-          alertDate.getFullYear() === d.getFullYear() &&
-          alertDate.getMonth() === d.getMonth() &&
-          alertDate.getDate() === d.getDate()
+          alertDate.getFullYear() ===
+            d.getFullYear() &&
+          alertDate.getMonth() ===
+            d.getMonth() &&
+          alertDate.getDate() ===
+            d.getDate()
         )
       }).length
     }
   )
 
+  /*
+   * ============================================================
+   * ONBOARDING
+   * ============================================================
+   */
+
+  if (!onboardingComplete) {
+    const currentStep =
+      ONBOARDING_STEPS[onboardingStep] ??
+      ONBOARDING_STEPS[0]
+
+    const StepIcon = currentStep.icon
+
+    return (
+      <div className="space-y-6">
+        {/* HERO */}
+        <div className="rounded-3xl bg-foreground p-6 text-background md:p-10">
+          <div className="max-w-3xl">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+              <Zap className="h-3.5 w-3.5" />
+              Bienvenue sur SentrIA
+            </span>
+
+            <h1 className="mt-4 font-heading text-3xl font-bold tracking-tight md:text-5xl">
+              Configurez votre surveillance
+              opérationnelle.
+            </h1>
+
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-background/70 md:text-base">
+              Quelques étapes suffisent pour connecter
+              vos données, configurer vos secteurs et
+              commencer à détecter les situations critiques.
+            </p>
+          </div>
+        </div>
+
+        {/* PROGRESS */}
+        <div className="rounded-3xl border border-border bg-card p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-semibold">
+                Configuration
+              </p>
+
+              <p className="mt-1 text-xs text-muted-foreground">
+                Étape {onboardingStep + 1} sur{" "}
+                {ONBOARDING_STEPS.length}
+              </p>
+            </div>
+
+            <span className="font-semibold">
+              {Math.round(
+                ((onboardingStep + 1) /
+                  ONBOARDING_STEPS.length) *
+                  100
+              )}
+              %
+            </span>
+          </div>
+
+          <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-accent transition-all duration-500"
+              style={{
+                width: `${
+                  ((onboardingStep + 1) /
+                    ONBOARDING_STEPS.length) *
+                  100
+                }%`,
+              }}
+            />
+          </div>
+        </div>
+
+        {/* STEP CARDS */}
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
+          {ONBOARDING_STEPS.map(
+            (step, index) => {
+              const Icon = step.icon
+              const completed =
+                index < onboardingStep
+              const active =
+                index === onboardingStep
+
+              return (
+                <button
+                  key={step.title}
+                  onClick={() =>
+                    index <= onboardingStep &&
+                    updateOnboardingStep(index)
+                  }
+                  className={cn(
+                    "rounded-3xl border p-5 text-left transition-all",
+                    active
+                      ? "border-foreground bg-card shadow-sm"
+                      : completed
+                      ? "border-accent/40 bg-card"
+                      : "border-border bg-card/50"
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "flex h-10 w-10 items-center justify-center rounded-2xl",
+                      completed
+                        ? "bg-accent text-accent-foreground"
+                        : active
+                        ? "bg-foreground text-background"
+                        : "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    {completed ? (
+                      <Check className="h-5 w-5" />
+                    ) : (
+                      <Icon className="h-5 w-5" />
+                    )}
+                  </div>
+
+                  <p className="mt-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Étape {index + 1}
+                  </p>
+
+                  <p className="mt-1 font-heading text-sm font-bold">
+                    {step.title}
+                  </p>
+                </button>
+              )
+            }
+          )}
+        </div>
+
+        {/* CURRENT STEP */}
+        <div className="rounded-3xl border border-border bg-card p-6 md:p-8">
+          <div className="flex flex-col gap-8">
+            <div className="flex gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent/20 text-accent-foreground">
+                <StepIcon className="h-7 w-7" />
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Étape {onboardingStep + 1}
+                </p>
+
+                <h2 className="mt-1 font-heading text-2xl font-bold">
+                  {currentStep.title}
+                </h2>
+
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                  {currentStep.description}
+                </p>
+              </div>
+            </div>
+
+            {/* STEP 0 — SECTOR */}
+            {onboardingStep === 0 && (
+              <div>
+                <p className="mb-3 text-sm font-semibold">
+                  Quels secteurs souhaitez-vous
+                  surveiller ?
+                </p>
+
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                  {SECTORS.filter(
+                    (s) => s.key !== "all"
+                  ).map((sector) => {
+                    const selected =
+                      activeSectors.includes(
+                        sector.key
+                      )
+
+                    return (
+                      <button
+                        key={sector.key}
+                        onClick={() => {
+                          const next = selected
+                            ? activeSectors.filter(
+                                (x) =>
+                                  x !== sector.key
+                              )
+                            : [
+                                ...activeSectors,
+                                sector.key,
+                              ]
+
+                          if (next.length === 0) return
+
+                          setActiveSectors(next)
+
+                          localStorage.setItem(
+                            "sentria_sectors",
+                            JSON.stringify(next)
+                          )
+
+                          window.dispatchEvent(
+                            new Event(
+                              "sentria_sectors_updated"
+                            )
+                          )
+                        }}
+                        className={cn(
+                          "flex items-center justify-between rounded-2xl border p-4 text-left transition-all",
+                          selected
+                            ? "border-foreground bg-foreground text-background"
+                            : "border-border hover:bg-muted"
+                        )}
+                      >
+                        <span className="text-sm font-semibold">
+                          {sector.label}
+                        </span>
+
+                        {selected && (
+                          <Check className="h-4 w-4" />
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* STEP 1 — SPACE */}
+            {onboardingStep === 1 && (
+              <div className="rounded-2xl bg-muted/50 p-6">
+                <div className="flex items-start gap-4">
+                  <Database className="mt-0.5 h-6 w-6 shrink-0" />
+
+                  <div>
+                    <h3 className="font-heading font-bold">
+                      Votre espace est prêt
+                    </h3>
+
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      SentrIA va utiliser les secteurs
+                      sélectionnés pour adapter les
+                      indicateurs, alertes et analyses
+                      de votre dashboard.
+                    </p>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {activeSectors.map((sector) => (
+                        <span
+                          key={sector}
+                          className="rounded-full bg-background px-3 py-1.5 text-xs font-semibold"
+                        >
+                          {
+                            SECTORS.find(
+                              (s) =>
+                                s.key === sector
+                            )?.label
+                          }
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 2 — UPLOAD */}
+            {onboardingStep === 2 && (
+              <div className="rounded-2xl border border-dashed border-border p-6">
+                <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <h3 className="font-heading text-lg font-bold">
+                      Importez votre premier CSV
+                    </h3>
+
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Les données seront analysées
+                      automatiquement.
+                    </p>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {SECTORS.filter(
+                        (s) =>
+                          s.key !== "all" &&
+                          activeSectors.includes(
+                            s.key
+                          )
+                      ).map((sector) => (
+                        <button
+                          key={sector.key}
+                          onClick={() =>
+                            setUploadSector(
+                              sector.key
+                            )
+                          }
+                          className={cn(
+                            "rounded-full border px-3 py-1.5 text-xs font-semibold",
+                            uploadSector ===
+                              sector.key
+                              ? "border-foreground bg-foreground text-background"
+                              : "border-border hover:bg-muted"
+                          )}
+                        >
+                          {sector.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <label className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90">
+                    <Upload className="h-4 w-4" />
+
+                    {uploading
+                      ? "Analyse…"
+                      : "Importer CSV"}
+
+                    <input
+                      type="file"
+                      accept=".csv"
+                      className="hidden"
+                      onChange={handleUpload}
+                      disabled={uploading}
+                    />
+                  </label>
+                </div>
+
+                {uploadMsg && (
+                  <div className="mt-4 rounded-2xl bg-green-500/10 p-4 text-sm font-medium text-green-600">
+                    {uploadMsg}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* STEP 3 — ANALYSIS */}
+            {onboardingStep === 3 && (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div className="rounded-2xl bg-muted/50 p-5">
+                  <Database className="h-5 w-5" />
+
+                  <p className="mt-4 text-2xl font-bold">
+                    {alerts.length}
+                  </p>
+
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Alertes détectées
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-muted/50 p-5">
+                  <Cpu className="h-5 w-5" />
+
+                  <p className="mt-4 text-2xl font-bold">
+                    {
+                      new Set(
+                        alerts.map(
+                          (x) => x.equipment
+                        )
+                      ).size
+                    }
+                  </p>
+
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Actifs identifiés
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-muted/50 p-5">
+                  <ShieldCheck className="h-5 w-5" />
+
+                  <p className="mt-4 text-2xl font-bold">
+                    {
+                      alerts.filter(
+                        (x) =>
+                          x.severity ===
+                          "CRITICAL"
+                      ).length
+                    }
+                  </p>
+
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Alertes critiques
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 4 */}
+            {onboardingStep === 4 && (
+              <div className="rounded-2xl bg-accent/10 p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-accent">
+                    <Check className="h-5 w-5" />
+                  </div>
+
+                  <div>
+                    <h3 className="font-heading text-xl font-bold">
+                      Votre surveillance est prête.
+                    </h3>
+
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      Vous pouvez maintenant accéder
+                      au dashboard et suivre vos alertes,
+                      actifs et indicateurs opérationnels
+                      en temps réel.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ACTIONS */}
+            <div className="flex flex-wrap justify-between gap-3">
+              <div>
+                {onboardingStep > 0 && (
+                  <button
+                    onClick={() =>
+                      updateOnboardingStep(
+                        onboardingStep - 1
+                      )
+                    }
+                    className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold hover:bg-muted"
+                  >
+                    Retour
+                  </button>
+                )}
+              </div>
+
+              {onboardingStep < 4 ? (
+                <button
+                  onClick={() =>
+                    updateOnboardingStep(
+                      onboardingStep + 1
+                    )
+                  }
+                  disabled={
+                    onboardingStep === 0 &&
+                    activeSectors.length === 0
+                  }
+                  className="inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3 text-sm font-semibold text-background disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Continuer
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              ) : (
+                <button
+                  onClick={completeOnboarding}
+                  className="inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-semibold text-accent-foreground"
+                >
+                  Ouvrir mon dashboard
+                  <ArrowUpRight className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  /*
+   * ============================================================
+   * DASHBOARD
+   * ============================================================
+   */
+
   return (
     <div className="space-y-6">
-
       {/* HERO */}
       <div className="flex flex-col gap-4 rounded-3xl bg-foreground p-6 text-background md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-xl">
@@ -711,7 +1257,9 @@ export function DashboardView({
           onClick={() =>
             document
               .getElementById("alerts-table")
-              ?.scrollIntoView({ behavior: "smooth" })
+              ?.scrollIntoView({
+                behavior: "smooth",
+              })
           }
           className="inline-flex items-center gap-2 self-start rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02]"
         >
@@ -720,7 +1268,7 @@ export function DashboardView({
         </button>
       </div>
 
-      {/* UPLOAD CSV */}
+      {/* UPLOAD */}
       <div className="rounded-3xl border border-border bg-card p-6">
         <h3 className="font-heading text-lg font-bold">
           Importer des données
@@ -732,28 +1280,26 @@ export function DashboardView({
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <div className="flex flex-wrap gap-2">
-            {SECTORS
-              .filter(
-                (s) =>
-                  s.key !== "all" &&
-                  activeSectors.includes(s.key)
-              )
-              .map((s) => (
-                <button
-                  key={s.key}
-                  onClick={() =>
-                    setUploadSector(s.key)
-                  }
-                  className={cn(
-                    "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors",
-                    uploadSector === s.key
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-border bg-background hover:bg-muted"
-                  )}
-                >
-                  {s.label}
-                </button>
-              ))}
+            {SECTORS.filter(
+              (s) =>
+                s.key !== "all" &&
+                activeSectors.includes(s.key)
+            ).map((s) => (
+              <button
+                key={s.key}
+                onClick={() =>
+                  setUploadSector(s.key)
+                }
+                className={cn(
+                  "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors",
+                  uploadSector === s.key
+                    ? "border-foreground bg-foreground text-background"
+                    : "border-border bg-background hover:bg-muted"
+                )}
+              >
+                {s.label}
+              </button>
+            ))}
           </div>
 
           <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90">
@@ -808,36 +1354,34 @@ export function DashboardView({
           </span>
         </button>
 
-        {SECTORS
-          .filter(
-            (s) =>
-              s.key !== "all" &&
-              activeSectors.includes(s.key)
-          )
-          .map((s) => (
-            <button
-              key={s.key}
-              onClick={() =>
-                setFilterSector(s.key)
-              }
-              className={cn(
-                "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
-                filterSector === s.key
-                  ? "border-foreground bg-foreground text-background"
-                  : "border-border bg-background hover:bg-muted"
-              )}
-            >
-              {s.label}
+        {SECTORS.filter(
+          (s) =>
+            s.key !== "all" &&
+            activeSectors.includes(s.key)
+        ).map((s) => (
+          <button
+            key={s.key}
+            onClick={() =>
+              setFilterSector(s.key)
+            }
+            className={cn(
+              "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
+              filterSector === s.key
+                ? "border-foreground bg-foreground text-background"
+                : "border-border bg-background hover:bg-muted"
+            )}
+          >
+            {s.label}
 
-              <span className="ml-1.5 text-[10px] opacity-60">
-                {
-                  alerts.filter(
-                    (a) => a.sector === s.key
-                  ).length
-                }
-              </span>
-            </button>
-          ))}
+            <span className="ml-1.5 text-[10px] opacity-60">
+              {
+                alerts.filter(
+                  (a) => a.sector === s.key
+                ).length
+              }
+            </span>
+          </button>
+        ))}
       </div>
 
       {/* KPIs */}
@@ -865,6 +1409,7 @@ export function DashboardView({
                 ) : (
                   <TrendingDown className="h-3 w-3" />
                 )}
+
                 {k.delta}
               </span>
             </div>
@@ -936,7 +1481,7 @@ export function DashboardView({
         </div>
       </div>
 
-      {/* ALERTS TABLE */}
+      {/* ALERTS */}
       <div
         id="alerts-table"
         className="rounded-3xl border border-border bg-card"
@@ -968,15 +1513,19 @@ export function DashboardView({
                 <th className="px-6 py-3 font-medium">
                   Actif
                 </th>
+
                 <th className="px-6 py-3 font-medium">
                   Message
                 </th>
+
                 <th className="px-6 py-3 font-medium">
                   Secteur
                 </th>
+
                 <th className="px-6 py-3 font-medium">
                   Sévérité
                 </th>
+
                 <th className="px-6 py-3 font-medium">
                   Date
                 </th>
@@ -1007,7 +1556,8 @@ export function DashboardView({
                       <span
                         className={cn(
                           "rounded-full px-2.5 py-1 text-xs font-semibold",
-                          alert.severity === "CRITICAL"
+                          alert.severity ===
+                            "CRITICAL"
                             ? "bg-destructive/10 text-destructive"
                             : "bg-amber-500/15 text-amber-600"
                         )}
