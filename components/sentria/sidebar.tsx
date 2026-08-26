@@ -22,6 +22,8 @@ export type ViewKey =
   | "pricing"
   | "profile"
   | "settings"
+  | "report"
+
 
 const NAV_SECTIONS: {
   title: string
@@ -32,63 +34,63 @@ const NAV_SECTIONS: {
     badge?: string
   }[]
 }[] = [
-  {
-    title: "Overview",
-    items: [
-      {
-        key: "dashboard",
-        label: "Dashboard",
-        icon: LayoutDashboard,
-      },
-    ],
-  },
-  {
-    title: "Operations",
-    items: [
-      {
-        key: "sites",
-        label: "Sites",
-        icon: Building2,
-      },
-    ],
-  },
-  {
-    title: "Intelligence",
-    items: [
-      {
-        key: "ask",
-        label: "Ask SentrIA",
-        icon: Sparkles,
-        badge: "IA",
-      },
-      {
-        key: "reports",
-        label: "Rapports",
-        icon: FileText,
-      },
-    ],
-  },
-  {
-    title: "Account",
-    items: [
-      {
-        key: "pricing",
-        label: "Abonnement",
-        icon: CreditCard,
-      },
-      {
-        key: "profile",
-        label: "Profil",
-        icon: User,
-      },
-      {
-        key: "settings",
-        label: "Paramètres",
-        icon: Settings,
-      },
-    ],
-  },
-]
+    {
+      title: "Overview",
+      items: [
+        {
+          key: "dashboard",
+          label: "Dashboard",
+          icon: LayoutDashboard,
+        },
+      ],
+    },
+    {
+      title: "Operations",
+      items: [
+        {
+          key: "sites",
+          label: "Sites",
+          icon: Building2,
+        },
+      ],
+    },
+    {
+      title: "Intelligence",
+      items: [
+        {
+          key: "ask",
+          label: "Ask SentrIA",
+          icon: Sparkles,
+          badge: "IA",
+        },
+        {
+          key: "reports",
+          label: "Rapports",
+          icon: FileText,
+        },
+      ],
+    },
+    {
+      title: "Account",
+      items: [
+        {
+          key: "pricing",
+          label: "Abonnement",
+          icon: CreditCard,
+        },
+        {
+          key: "profile",
+          label: "Profil",
+          icon: User,
+        },
+        {
+          key: "settings",
+          label: "Paramètres",
+          icon: Settings,
+        },
+      ],
+    },
+  ]
 
 export function Sidebar({
   active,

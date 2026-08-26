@@ -70,6 +70,8 @@ export function AppShell() {
           {view === "pricing"   && <PricingView />}
           {view === "profile"   && <ProfileView />}
           {view === "settings"  && <SettingsView />}
+          {view === "report"    && <ReportView />}
+
         </main>
       </div>
     </div>
