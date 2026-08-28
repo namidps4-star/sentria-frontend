@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import { Sparkles, ArrowUp, Globe2, Lightbulb, MapPin } from "lucide-react"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import { cn } from "@/lib/utils"
 
 const API = "https://sentria-production.up.railway.app"
@@ -109,7 +111,13 @@ export function AskView() {
                   : "rounded-tr-md bg-foreground text-background",
               )}
             >
-              {m.text}
+              {m.role === "ai" ? (
+                <div className="prose prose-sm dark:prose-invert max-w-none overflow-x-auto [&_table]:min-w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_td]:border [&_td]:border-border [&_td]:px-3 [&_td]:py-2">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.text}</ReactMarkdown>
+                </div>
+              ) : (
+                m.text
+              )}
             </div>
           </div>
         ))}

@@ -10,7 +10,7 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'SentrIA — Intelligence opérationnelle',
+  title: 'SentrIA | Intelligence opérationnelle',
   description: 'SentrIA : surveillance et intelligence prédictive des systèmes, équipements et opérations critiques.',
   generator: 'v0.app',
   icons: {

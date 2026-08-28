@@ -18,12 +18,10 @@ export type ViewKey =
   | "dashboard"
   | "sites"
   | "ask"
-  | "reports"
+  | "report"
   | "pricing"
   | "profile"
   | "settings"
-  | "report"
-
 
 const NAV_SECTIONS: {
   title: string
@@ -64,7 +62,7 @@ const NAV_SECTIONS: {
           badge: "IA",
         },
         {
-          key: "reports",
+          key: "report",
           label: "Rapports",
           icon: FileText,
         },
