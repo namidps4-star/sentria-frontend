@@ -19,7 +19,6 @@ import {
 } from "lucide-react"
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
-import { OnboardingView } from "./onboarding-modal" 
 
 const API = "https://sentria-8btn.onrender.com"
 
@@ -539,16 +538,6 @@ export function DashboardView({
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState("")
 
-  const [onboardingComplete, setOnboardingComplete] = useState(() => {
-    if (typeof window === "undefined") return false
-
-    return (
-      localStorage.getItem(
-        "sentria_onboarding_complete"
-      ) === "true"
-    )
-  })
-
   const [activeSectors, setActiveSectors] = useState<string[]>(
     () => {
       if (typeof window === "undefined") {
@@ -745,21 +734,6 @@ export function DashboardView({
       }).length
     }
   )
-
-  /*
-   * ============================================================
-   * ONBOARDING
-   * ============================================================
-   */
-
-  if (!onboardingComplete) {
-    return (
-      <OnboardingView
-        onComplete={() => setOnboardingComplete(true)}
-      />
-    )
-  }
-
 
   /*
    * ============================================================

@@ -5,6 +5,7 @@ import {
   ArrowUpRight,
   Check,
   ChevronRight,
+  Building2,
   Factory,
   HeartPulse,
   Wheat,
@@ -288,6 +289,17 @@ function ContainerYardPreview() {
 }
 
 export function OnboardingView({ onComplete }: { onComplete?: () => void }) {
+  useEffect(() => {
+    // Prevent the page underneath from also scrolling while this
+    // fixed full-screen overlay is open — without this you get two
+    // independent scrollbars (this overlay's + the page behind it).
+    const previous = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.body.style.overflow = previous
+    }
+  }, [])
+
   const [step, setStep] = useState(1)
   const [sector, setSector] = useState<Sector | null>(null)
   const [selectedEquipment, setSelectedEquipment] = useState<string[]>([])
@@ -305,7 +317,7 @@ export function OnboardingView({ onComplete }: { onComplete?: () => void }) {
   const sourcesStepNumber = hasOpsStep ? 4 : 3
 
   const STEP_META = [
-    { title: "Votre secteur", description: "Choisissez le secteur que SentrIA doit surveiller.", icon: Ship },
+    { title: "Votre secteur", description: "Choisissez le secteur que SentrIA doit surveiller.", icon: Building2 },
     {
       title: hasOpsStep ? "Vos priorités" : "Que voulez-vous surveiller ?",
       description: "Sélectionnez ce qui compte pour votre activité.",
@@ -353,8 +365,8 @@ export function OnboardingView({ onComplete }: { onComplete?: () => void }) {
 
   function finish() {
     if (typeof window !== "undefined") {
-      // Single source of truth, checked by DashboardView.
-      localStorage.setItem("sentria_onboarding_complete", "true")
+      // This is the key AppShell actually checks to hide this overlay.
+      localStorage.setItem("sentria_onboarded", "true")
 
       if (sector) localStorage.setItem("sentria_sector", sector)
       localStorage.setItem("sentria_equipment", JSON.stringify(selectedEquipment))
@@ -386,7 +398,8 @@ export function OnboardingView({ onComplete }: { onComplete?: () => void }) {
           : true
 
   return (
-    <div className="space-y-6">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-background">
+      <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 md:px-8 md:py-12">
       {/* HERO */}
       <div className="rounded-3xl bg-foreground p-6 text-background md:p-10">
         <div className="max-w-3xl">
@@ -694,6 +707,7 @@ export function OnboardingView({ onComplete }: { onComplete?: () => void }) {
             )}
           </div>
         </div>
+      </div>
       </div>
     </div>
   )
