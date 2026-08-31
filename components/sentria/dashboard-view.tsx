@@ -65,6 +65,18 @@ const CATEGORY_ICON: Record<string, typeof Wrench> = {
   other: Sparkles,
 }
 
+const CATEGORY_LABEL: Record<string, string> = {
+  maintenance: "Maintenance",
+  fuel: "Carburant",
+  delay: "Retard",
+  stock: "Stock",
+  cold_chain: "Chaine du froid",
+  expiry: "Expiration",
+  capacity: "Capacite",
+  predictive: "Predictif",
+  other: "Autre",
+}
+
 const SECTOR_META: Record<
   string,
   {
@@ -779,41 +791,68 @@ export function DashboardView({
 
       {/* RECOMMENDATIONS */}
       {recommendations.length > 0 && (
-        <div className="rounded-3xl border border-border bg-card p-6">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-accent-foreground" />
+        <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6">
+          {/* soft ambient glow, purely decorative */}
+          <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-accent/20 blur-3xl" />
 
-            <h3 className="font-heading text-lg font-bold">
-              Priorités du moment
-            </h3>
+          <div className="relative flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+              <Sparkles className="h-4 w-4" />
+            </div>
+
+            <div>
+              <h3 className="font-heading text-lg font-bold">
+                Priorités du moment
+              </h3>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                Les {recommendations.length} situations les plus urgentes, avec une action concrète pour chacune.
+              </p>
+            </div>
           </div>
 
-          <p className="mt-1 text-sm text-muted-foreground">
-            Les {recommendations.length} situations les plus urgentes, avec une action concrète pour chacune.
-          </p>
-
-          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-1">
+          <div className="relative mt-6 space-y-3">
             {recommendations.map((rec, i) => {
               const Icon = CATEGORY_ICON[rec.action_category] ?? Sparkles
+              const isCritical = rec.severity === "CRITICAL"
+              const isTop = i === 0
+              const riskPct =
+                typeof rec.risk_score === "number"
+                  ? Math.round(rec.risk_score > 1 ? Math.min(rec.risk_score, 100) : rec.risk_score * 100)
+                  : null
 
               return (
                 <div
                   key={`${rec.equipment}-${rec.alert_key}-${i}`}
-                  className="flex items-start gap-4 rounded-2xl border border-border bg-background p-4"
+                  className={cn(
+                    "group relative flex items-start gap-4 rounded-2xl border p-4 transition-all duration-300 ease-out animate-in fade-in slide-in-from-bottom-2 hover:-translate-y-0.5 hover:shadow-lg",
+                    isTop
+                      ? "border-transparent bg-gradient-to-br from-accent/15 via-card to-card ring-1 ring-accent/40"
+                      : "border-border bg-background hover:border-accent/40"
+                  )}
+                  style={{ animationDelay: `${i * 70}ms`, animationFillMode: "backwards" }}
                 >
                   <div
                     className={cn(
-                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-                      rec.severity === "CRITICAL"
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold tabular-nums",
+                      isTop
+                        ? "bg-accent text-accent-foreground shadow-sm"
+                        : isCritical
                         ? "bg-destructive/10 text-destructive"
                         : "bg-amber-500/15 text-amber-600"
                     )}
                   >
-                    <Icon className="h-5 w-5" />
+                    {isTop ? <Icon className="h-5 w-5" /> : String(i + 1).padStart(2, "0")}
                   </div>
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
+                      {isTop && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent-foreground">
+                          <Sparkles className="h-2.5 w-2.5" />
+                          Priorité n°1
+                        </span>
+                      )}
+
                       <span className="font-semibold">
                         {rec.equipment}
                       </span>
@@ -821,12 +860,17 @@ export function DashboardView({
                       <span
                         className={cn(
                           "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
-                          rec.severity === "CRITICAL"
+                          isCritical
                             ? "bg-destructive/10 text-destructive"
                             : "bg-amber-500/15 text-amber-600"
                         )}
                       >
                         {rec.severity}
+                      </span>
+
+                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                        <Icon className="h-2.5 w-2.5" />
+                        {CATEGORY_LABEL[rec.action_category] ?? "Autre"}
                       </span>
 
                       {rec.sector && (
@@ -839,7 +883,28 @@ export function DashboardView({
                     <p className="mt-1.5 text-sm leading-5 text-foreground">
                       {rec.recommended_action}
                     </p>
+
+                    {riskPct !== null && (
+                      <div className="mt-3 flex items-center gap-2">
+                        <div className="h-1.5 w-full max-w-[160px] overflow-hidden rounded-full bg-muted">
+                          <div
+                            className={cn(
+                              "h-full rounded-full transition-all duration-500",
+                              isCritical ? "bg-destructive" : "bg-amber-500"
+                            )}
+                            style={{ width: `${riskPct}%` }}
+                          />
+                        </div>
+                        <span className="shrink-0 text-[10px] font-medium text-muted-foreground">
+                          {riskPct}% risque
+                        </span>
+                      </div>
+                    )}
                   </div>
+
+                  {!isTop && (
+                    <ArrowUpRight className="h-4 w-4 shrink-0 self-center text-muted-foreground opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+                  )}
                 </div>
               )
             })}
