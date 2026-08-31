@@ -239,7 +239,7 @@ function ContainerYardPreview() {
     <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-background">
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div>
-          <p className="text-xs font-semibold text-foreground">Aperçu — Terminal conteneurs</p>
+          <p className="text-xs font-semibold text-foreground">Aperçu du terminal conteneurs</p>
           <p className="text-[11px] text-muted-foreground">Exemple avec vos futures données</p>
         </div>
         <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
@@ -291,7 +291,7 @@ function ContainerYardPreview() {
 export function OnboardingView({ onComplete }: { onComplete?: () => void }) {
   useEffect(() => {
     // Prevent the page underneath from also scrolling while this
-    // fixed full-screen overlay is open — without this you get two
+    // fixed full-screen overlay is open, without this you get two
     // independent scrollbars (this overlay's + the page behind it).
     const previous = document.body.style.overflow
     document.body.style.overflow = "hidden"
@@ -491,7 +491,7 @@ export function OnboardingView({ onComplete }: { onComplete?: () => void }) {
             </div>
           </div>
 
-          {/* STEP 1 — SECTOR */}
+          {/* STEP 1: SECTOR */}
           {step === 1 && (
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
               {SECTORS.map((item) => {
@@ -522,7 +522,7 @@ export function OnboardingView({ onComplete }: { onComplete?: () => void }) {
             </div>
           )}
 
-          {/* STEP 2 — OUTCOMES */}
+          {/* STEP 2: OUTCOMES */}
           {step === 2 && sector && (
             <div>
               <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
@@ -579,7 +579,7 @@ export function OnboardingView({ onComplete }: { onComplete?: () => void }) {
             </div>
           )}
 
-          {/* STEP 3 (logistics only) — OPERATIONS TYPE */}
+          {/* STEP 3 (logistics only): OPERATIONS TYPE */}
           {step === opsStepNumber && hasOpsStep && (
             <div>
               <div className="flex flex-wrap gap-2">
@@ -609,7 +609,7 @@ export function OnboardingView({ onComplete }: { onComplete?: () => void }) {
             </div>
           )}
 
-          {/* STEP — DATA SOURCES */}
+          {/* STEP: DATA SOURCES */}
           {step === sourcesStepNumber && (
             <div>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
