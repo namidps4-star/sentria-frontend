@@ -398,7 +398,7 @@ export function OnboardingView({ onComplete }: { onComplete?: () => void }) {
           : true
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-background">
+    <div className="fixed inset-0 z-50 animate-in fade-in zoom-in-[0.98] overflow-y-auto bg-background duration-200 ease-out motion-reduce:animate-none">
       <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 md:px-8 md:py-12">
       {/* HERO */}
       <div className="rounded-3xl bg-foreground p-6 text-background md:p-10">
