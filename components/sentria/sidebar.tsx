@@ -106,7 +106,7 @@ export function Sidebar({
       {/* Mobile overlay */}
       {open && (
         <div
-          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-[2px] lg:hidden"
+          className="fixed inset-0 z-30 animate-in fade-in bg-black/40 backdrop-blur-[2px] duration-200 ease-out lg:hidden motion-reduce:animate-none"
           onClick={onClose}
           aria-hidden="true"
         />
@@ -117,7 +117,7 @@ export function Sidebar({
           "fixed inset-y-0 left-0 z-40 flex w-64 flex-col",
           "border-r border-sidebar-border",
           "bg-sidebar text-sidebar-foreground",
-          "transition-transform duration-300",
+          "transition-transform duration-200 ease-out motion-reduce:transition-none",
           "lg:static lg:z-auto lg:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full",
         )}
