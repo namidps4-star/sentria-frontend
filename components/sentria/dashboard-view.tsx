@@ -790,196 +790,168 @@ export function DashboardView({
       </div>
 
       {/* RECOMMENDATIONS */}
-      {recommendations.length > 0 && (
-        <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6">
-          {/* soft ambient glow, purely decorative */}
-          <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-accent/20 blur-3xl" />
+      {recommendations.length > 0 && (() => {
+        const [top, ...rest] = recommendations
+        const TopIcon = CATEGORY_ICON[top.action_category] ?? Sparkles
+        const topCritical = top.severity === "CRITICAL"
+        const topRiskPct =
+          typeof top.risk_score === "number"
+            ? Math.round(top.risk_score > 1 ? Math.min(top.risk_score, 100) : top.risk_score * 100)
+            : null
 
-          <div className="relative flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-              <Sparkles className="h-4 w-4" />
+        return (
+          <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6">
+            {/* soft ambient glow, purely decorative */}
+            <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-accent/20 blur-3xl" />
+
+            <div className="relative flex flex-wrap items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+                  <Sparkles className="h-4 w-4" />
+                </div>
+
+                <div>
+                  <h3 className="font-heading text-lg font-bold">
+                    Priorités du moment
+                  </h3>
+                  <p className="mt-0.5 text-sm text-muted-foreground">
+                    {recommendations.length} situations classées par urgence, avec une action concrète pour chacune.
+                  </p>
+                </div>
+              </div>
+
+              {rest.length > 0 && (
+                <span className="hidden shrink-0 rounded-full border border-border px-3 py-1 text-[11px] font-medium text-muted-foreground sm:inline-flex">
+                  Faites défiler pour voir la suite
+                </span>
+              )}
             </div>
 
-            <div>
-              <h3 className="font-heading text-lg font-bold">
-                Priorités du moment
-              </h3>
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                Les {recommendations.length} situations les plus urgentes, avec une action concrète pour chacune.
-              </p>
-            </div>
-          </div>
+            <div className="relative mt-6 flex flex-col gap-4 lg:flex-row">
+              {/* spotlight: the single most urgent item */}
+              <div className="flex w-full shrink-0 flex-col justify-between rounded-2xl border border-transparent bg-gradient-to-br from-accent/20 via-card to-card p-5 ring-1 ring-accent/40 lg:w-72">
+                <div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-accent-foreground">
+                      <Sparkles className="h-3 w-3" />
+                      Priorité n°1
+                    </span>
 
-          <div className="relative mt-6 space-y-3">
-            {recommendations.map((rec, i) => {
-              const Icon = CATEGORY_ICON[rec.action_category] ?? Sparkles
-              const isCritical = rec.severity === "CRITICAL"
-              const isTop = i === 0
-              const riskPct =
-                typeof rec.risk_score === "number"
-                  ? Math.round(rec.risk_score > 1 ? Math.min(rec.risk_score, 100) : rec.risk_score * 100)
-                  : null
-
-              return (
-                <div
-                  key={`${rec.equipment}-${rec.alert_key}-${i}`}
-                  className={cn(
-                    "group relative flex items-start gap-4 rounded-2xl border p-4 transition-all duration-300 ease-out animate-in fade-in slide-in-from-bottom-2 hover:-translate-y-0.5 hover:shadow-lg",
-                    isTop
-                      ? "border-transparent bg-gradient-to-br from-accent/15 via-card to-card ring-1 ring-accent/40"
-                      : "border-border bg-background hover:border-accent/40"
-                  )}
-                  style={{ animationDelay: `${i * 70}ms`, animationFillMode: "backwards" }}
-                >
-                  <div
-                    className={cn(
-                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-bold tabular-nums",
-                      isTop
-                        ? "bg-accent text-accent-foreground shadow-sm"
-                        : isCritical
-                        ? "bg-destructive/10 text-destructive"
-                        : "bg-amber-500/15 text-amber-600"
-                    )}
-                  >
-                    {isTop ? <Icon className="h-5 w-5" /> : String(i + 1).padStart(2, "0")}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {isTop && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-accent-foreground">
-                          <Sparkles className="h-2.5 w-2.5" />
-                          Priorité n°1
-                        </span>
-                      )}
-
-                      <span className="font-semibold">
-                        {rec.equipment}
-                      </span>
-
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
-                          isCritical
-                            ? "bg-destructive/10 text-destructive"
-                            : "bg-amber-500/15 text-amber-600"
-                        )}
-                      >
-                        {rec.severity}
-                      </span>
-
-                      <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                        <Icon className="h-2.5 w-2.5" />
-                        {CATEGORY_LABEL[rec.action_category] ?? "Autre"}
-                      </span>
-
-                      {rec.sector && (
-                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                          {SECTORS.find((s) => s.key === rec.sector)?.label ?? rec.sector}
-                        </span>
-                      )}
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground shadow-sm">
+                      <TopIcon className="h-4 w-4" />
                     </div>
-
-                    <p className="mt-1.5 text-sm leading-5 text-foreground">
-                      {rec.recommended_action}
-                    </p>
-
-                    {riskPct !== null && (
-                      <div className="mt-3 flex items-center gap-2">
-                        <div className="h-1.5 w-full max-w-[160px] overflow-hidden rounded-full bg-muted">
-                          <div
-                            className={cn(
-                              "h-full rounded-full transition-all duration-500",
-                              isCritical ? "bg-destructive" : "bg-amber-500"
-                            )}
-                            style={{ width: `${riskPct}%` }}
-                          />
-                        </div>
-                        <span className="shrink-0 text-[10px] font-medium text-muted-foreground">
-                          {riskPct}% risque
-                        </span>
-                      </div>
-                    )}
                   </div>
 
-                  {!isTop && (
-                    <ArrowUpRight className="h-4 w-4 shrink-0 self-center text-muted-foreground opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
+                  <p className="mt-4 font-heading text-base font-bold leading-snug">
+                    {top.equipment}
+                  </p>
+
+                  <p className="mt-2 text-sm leading-5 text-foreground/90">
+                    {top.recommended_action}
+                  </p>
+                </div>
+
+                <div className="mt-4">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+                        topCritical
+                          ? "bg-destructive/10 text-destructive"
+                          : "bg-amber-500/15 text-amber-600"
+                      )}
+                    >
+                      {top.severity}
+                    </span>
+
+                    <span className="text-[10px] text-muted-foreground">
+                      {CATEGORY_LABEL[top.action_category] ?? "Autre"}
+                    </span>
+                  </div>
+
+                  {topRiskPct !== null && (
+                    <div className="mt-3 flex items-center gap-2">
+                      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-background/70">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all duration-500",
+                            topCritical ? "bg-destructive" : "bg-amber-500"
+                          )}
+                          style={{ width: `${topRiskPct}%` }}
+                        />
+                      </div>
+                      <span className="shrink-0 text-[10px] font-medium text-muted-foreground">
+                        {topRiskPct}%
+                      </span>
+                    </div>
                   )}
                 </div>
-              )
-            })}
+              </div>
+
+              {/* queue: the remaining priorities, scrollable so the panel stays compact */}
+              {rest.length > 0 && (
+                <div className="scrollbar-hide -mx-1 flex flex-1 snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-1">
+                  {rest.map((rec, idx) => {
+                    const rank = idx + 2
+                    const Icon = CATEGORY_ICON[rec.action_category] ?? Sparkles
+                    const isCritical = rec.severity === "CRITICAL"
+
+                    return (
+                      <div
+                        key={`${rec.equipment}-${rec.alert_key}-${idx}`}
+                        className="group flex w-64 shrink-0 snap-start flex-col rounded-2xl border border-border bg-background p-4 transition-all duration-300 ease-out animate-in fade-in slide-in-from-right-2 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-lg"
+                        style={{ animationDelay: `${idx * 70}ms`, animationFillMode: "backwards" }}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span
+                            className={cn(
+                              "flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold tabular-nums",
+                              isCritical
+                                ? "bg-destructive/10 text-destructive"
+                                : "bg-amber-500/15 text-amber-600"
+                            )}
+                          >
+                            {String(rank).padStart(2, "0")}
+                          </span>
+
+                          <Icon className="h-4 w-4 text-muted-foreground" />
+                        </div>
+
+                        <p className="mt-3 truncate text-sm font-semibold">
+                          {rec.equipment}
+                        </p>
+
+                        <p className="mt-1 line-clamp-2 text-xs leading-4 text-muted-foreground">
+                          {rec.recommended_action}
+                        </p>
+
+                        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                          <span
+                            className={cn(
+                              "rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider",
+                              isCritical
+                                ? "bg-destructive/10 text-destructive"
+                                : "bg-amber-500/15 text-amber-600"
+                            )}
+                          >
+                            {rec.severity}
+                          </span>
+
+                          {rec.sector && (
+                            <span className="truncate text-[9px] uppercase tracking-wider text-muted-foreground">
+                              {SECTORS.find((s) => s.key === rec.sector)?.label ?? rec.sector}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* UPLOAD */}
-      <div className="rounded-3xl border border-border bg-card p-6">
-        <h3 className="font-heading text-lg font-bold">
-          Importer des données
-        </h3>
-
-        <p className="mt-1 text-sm text-muted-foreground">
-          Choisissez un secteur puis importez votre CSV.
-        </p>
-
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <div className="flex flex-wrap gap-2">
-            {SECTORS.filter(
-              (s) =>
-                s.key !== "all" &&
-                activeSectors.includes(s.key)
-            ).map((s) => (
-              <button
-                key={s.key}
-                onClick={() =>
-                  setUploadSector(s.key)
-                }
-                className={cn(
-                  "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors",
-                  uploadSector === s.key
-                    ? "border-foreground bg-foreground text-background"
-                    : "border-border bg-background hover:bg-muted"
-                )}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90">
-            <Upload className="h-4 w-4" />
-
-            {uploading
-              ? "Traitement…"
-              : "Importer CSV"}
-
-            <input
-              type="file"
-              accept=".csv"
-              className="hidden"
-              onChange={handleUpload}
-              disabled={uploading}
-            />
-          </label>
-        </div>
-
-        {uploadMsg && (
-          <p className="mt-3 text-sm font-medium text-green-600">
-            {uploadMsg}
-          </p>
-        )}
-
-        <p className="mt-2 text-xs text-muted-foreground">
-          Secteur :{" "}
-          <span className="font-semibold text-foreground">
-            {
-              SECTORS.find(
-                (s) => s.key === uploadSector
-              )?.label
-            }
-          </span>
-        </p>
-      </div>
+        )
+      })()}
 
       {/* SECTOR FILTER */}
       <div className="flex flex-wrap gap-2">
@@ -1125,6 +1097,75 @@ export function DashboardView({
         </div>
       </div>
 
+      {/* UPLOAD */}
+      <div className="rounded-3xl border border-border bg-card p-6">
+        <h3 className="font-heading text-lg font-bold">
+          Importer des données
+        </h3>
+
+        <p className="mt-1 text-sm text-muted-foreground">
+          Choisissez un secteur puis importez votre CSV.
+        </p>
+
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap gap-2">
+            {SECTORS.filter(
+              (s) =>
+                s.key !== "all" &&
+                activeSectors.includes(s.key)
+            ).map((s) => (
+              <button
+                key={s.key}
+                onClick={() =>
+                  setUploadSector(s.key)
+                }
+                className={cn(
+                  "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors",
+                  uploadSector === s.key
+                    ? "border-foreground bg-foreground text-background"
+                    : "border-border bg-background hover:bg-muted"
+                )}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90">
+            <Upload className="h-4 w-4" />
+
+            {uploading
+              ? "Traitement…"
+              : "Importer CSV"}
+
+            <input
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={handleUpload}
+              disabled={uploading}
+            />
+          </label>
+        </div>
+
+        {uploadMsg && (
+          <p className="mt-3 text-sm font-medium text-green-600">
+            {uploadMsg}
+          </p>
+        )}
+
+        <p className="mt-2 text-xs text-muted-foreground">
+          Secteur :{" "}
+          <span className="font-semibold text-foreground">
+            {
+              SECTORS.find(
+                (s) => s.key === uploadSector
+              )?.label
+            }
+          </span>
+        </p>
+      </div>
+
       {/* ALERTS */}
       <div
         id="alerts-table"
@@ -1193,7 +1234,7 @@ export function DashboardView({
                     </td>
 
                     <td className="px-6 py-4 capitalize text-muted-foreground">
-                      {alert.sector ?? "—"}
+                      {alert.sector ?? "N/A"}
                     </td>
 
                     <td className="px-6 py-4">
