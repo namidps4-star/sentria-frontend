@@ -630,7 +630,7 @@ export function DashboardView({
   }, [])
 
   function refreshRecommendations() {
-    fetch(`${API}/recommendations?limit=5&lang=fr`)
+    fetch(`${API}/recommendations?limit=20&lang=fr`)
       .then((r) => r.json())
       .then((d) => {
         setRecommendations(Array.isArray(d?.recommendations) ? d.recommendations : [])
@@ -717,6 +717,14 @@ export function DashboardView({
       )
     })
 
+  const filteredRecommendations = recommendations
+    .filter(
+      (r) =>
+        filterSector === "all" ||
+        r.sector === filterSector
+    )
+    .slice(0, 5)
+
   const meta =
     SECTOR_META[filterSector] ??
     SECTOR_META.all
@@ -790,8 +798,8 @@ export function DashboardView({
       </div>
 
       {/* RECOMMENDATIONS */}
-      {recommendations.length > 0 && (() => {
-        const [top, ...rest] = recommendations
+      {filteredRecommendations.length > 0 ? (() => {
+        const [top, ...rest] = filteredRecommendations
         const TopIcon = CATEGORY_ICON[top.action_category] ?? Sparkles
         const topCritical = top.severity === "CRITICAL"
         const topRiskPct =
@@ -815,7 +823,7 @@ export function DashboardView({
                     Priorités du moment
                   </h3>
                   <p className="mt-0.5 text-sm text-muted-foreground">
-                    {recommendations.length} situations classées par urgence, avec une action concrète pour chacune.
+                    {filteredRecommendations.length} situations classées par urgence, avec une action concrète pour chacune.
                   </p>
                 </div>
               </div>
@@ -951,7 +959,12 @@ export function DashboardView({
             </div>
           </div>
         )
-      })()}
+      })() : recommendations.length > 0 ? (
+        <div className="flex items-center gap-3 rounded-3xl border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
+          <Sparkles className="h-4 w-4 shrink-0" />
+          Aucune priorité urgente pour ce secteur pour le moment. Tout est sous contrôle ici.
+        </div>
+      ) : null}
 
       {/* SECTOR FILTER */}
       <div className="flex flex-wrap gap-2">
