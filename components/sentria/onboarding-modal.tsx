@@ -35,7 +35,6 @@ import {
   Radar,
   Sparkles,
   Anchor,
-  PackageSearch,
   Recycle,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -178,7 +177,6 @@ const OPS_TYPES: OpsType[] = [
   { id: "port", label: "Port & conteneurs", icon: Anchor },
   { id: "entrepot", label: "Entrepôt & manutention", icon: Warehouse },
   { id: "transport", label: "Transport & distribution", icon: Truck },
-  { id: "expedition", label: "Préparation & expédition", icon: PackageSearch },
   { id: "froid", label: "Chaîne du froid", icon: Snowflake },
   { id: "multi", label: "Plusieurs activités", icon: Recycle },
 ]
