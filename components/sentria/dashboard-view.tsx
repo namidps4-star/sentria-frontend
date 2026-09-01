@@ -16,6 +16,7 @@ import {
   Clock3,
   Package,
   Radar,
+  Shield,
 } from "lucide-react"
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
@@ -75,6 +76,20 @@ const CATEGORY_LABEL: Record<string, string> = {
   capacity: "Capacite",
   predictive: "Predictif",
   other: "Autre",
+}
+
+// Plain-language consequence of ignoring each category, shown on
+// recommendation cards so the value of acting is obvious at a glance.
+const IMPACT_HINT: Record<string, string> = {
+  maintenance: "Évite un arrêt non planifié de plusieurs heures",
+  fuel: "Évite une immobilisation faute de carburant",
+  delay: "Limite un retard qui peut s'aggraver rapidement",
+  stock: "Évite une rupture de stock imminente",
+  cold_chain: "Évite une perte de produits par rupture du froid",
+  expiry: "Évite une perte liée à des produits périmés",
+  capacity: "Évite une saturation qui bloque le flux",
+  predictive: "Anticipe une panne avant qu'elle ne survienne",
+  other: "Évite une perturbation opérationnelle",
 }
 
 const SECTOR_META: Record<
@@ -538,6 +553,341 @@ const SECTOR_META: Record<
   },
 }
 
+// Step 3 of onboarding ("operations type") only applies within the
+// logistics sector. Each entry reshapes the KPI/chart vocabulary to
+// match what that specific operation actually cares about. "multi"
+// intentionally falls back to the generic SECTOR_META.logistics above.
+const OPS_TYPE_LABEL: Record<string, string> = {
+  port: "Port & conteneurs",
+  entrepot: "Entrepôt & manutention",
+  transport: "Transport & distribution",
+  expedition: "Préparation & expédition",
+  froid: "Chaîne du froid",
+}
+
+const LOGISTICS_OPS_META: Record<string, (typeof SECTOR_META)["logistics"]> = {
+  port: {
+    kpis: (a) => [
+      {
+        label: "Conteneurs bloqués",
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
+        delta: "Arrêt immédiat",
+        up: false,
+        spark: [1, 2, 2, 3, 3, 4, 5],
+      },
+      {
+        label: "Attente au quai",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("attente") ||
+              x.message.toLowerCase().includes("quai") ||
+              x.message.toLowerCase().includes("wait")
+          ).length
+        ),
+        delta: "File conteneurs",
+        up: false,
+        spark: [2, 3, 3, 4, 4, 5, 6],
+      },
+      {
+        label: "Grues & engins actifs",
+        value: String(new Set(a.map((x) => x.equipment)).size),
+        delta: "Terminal",
+        up: true,
+        spark: [4, 5, 5, 6, 6, 7, 8],
+      },
+      {
+        label: "Alertes hydrauliques",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("pression") ||
+              x.message.toLowerCase().includes("hydraulique") ||
+              x.message.toLowerCase().includes("pressure")
+          ).length
+        ),
+        delta: "Grues",
+        up: false,
+        spark: [0, 1, 1, 1, 2, 2, 3],
+      },
+    ],
+    chartTitle: "Activité quai et conteneurs \u00b7 7 jours",
+    barLabels: ["Cycles grue", "Attente quai", "Pression", "Carburant"],
+    barData: (a) => [
+      a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("attente") ||
+          x.message.toLowerCase().includes("quai") ||
+          x.message.toLowerCase().includes("wait")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("pression") ||
+          x.message.toLowerCase().includes("pressure")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("carburant") ||
+          x.message.toLowerCase().includes("fuel")
+      ).length,
+    ],
+  },
+
+  entrepot: {
+    kpis: (a) => [
+      {
+        label: "Zones bloquées",
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
+        delta: "Arrêt immédiat",
+        up: false,
+        spark: [1, 2, 2, 3, 3, 4, 5],
+      },
+      {
+        label: "Commandes en retard",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("retard") ||
+              x.message.toLowerCase().includes("delay")
+          ).length
+        ),
+        delta: "Préparation",
+        up: false,
+        spark: [2, 3, 3, 4, 4, 5, 6],
+      },
+      {
+        label: "Chariots actifs",
+        value: String(new Set(a.map((x) => x.equipment)).size),
+        delta: "Entrepôt",
+        up: true,
+        spark: [4, 5, 5, 6, 6, 7, 8],
+      },
+      {
+        label: "Alertes capacité",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("capacite") ||
+              x.message.toLowerCase().includes("capacity") ||
+              x.message.toLowerCase().includes("surcharge")
+          ).length
+        ),
+        delta: "Stockage",
+        up: false,
+        spark: [0, 1, 1, 1, 2, 2, 3],
+      },
+    ],
+    chartTitle: "Activité entrepôt \u00b7 7 jours",
+    barLabels: ["Cycles", "Retards", "Capacité", "Carburant"],
+    barData: (a) => [
+      a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("retard") ||
+          x.message.toLowerCase().includes("delay")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("capacite") ||
+          x.message.toLowerCase().includes("capacity")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("carburant") ||
+          x.message.toLowerCase().includes("fuel")
+      ).length,
+    ],
+  },
+
+  transport: {
+    kpis: (a) => [
+      {
+        label: "Véhicules bloqués",
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
+        delta: "Arrêt immédiat",
+        up: false,
+        spark: [1, 2, 2, 3, 3, 4, 5],
+      },
+      {
+        label: "Retards de livraison",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("retard") ||
+              x.message.toLowerCase().includes("delay")
+          ).length
+        ),
+        delta: "Tournées",
+        up: false,
+        spark: [2, 3, 3, 4, 4, 5, 6],
+      },
+      {
+        label: "Véhicules actifs",
+        value: String(new Set(a.map((x) => x.equipment)).size),
+        delta: "Flotte",
+        up: true,
+        spark: [4, 5, 5, 6, 6, 7, 8],
+      },
+      {
+        label: "Alertes carburant",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("carburant") ||
+              x.message.toLowerCase().includes("fuel")
+          ).length
+        ),
+        delta: "Flotte",
+        up: false,
+        spark: [0, 1, 1, 1, 2, 2, 3],
+      },
+    ],
+    chartTitle: "Activité flotte \u00b7 7 jours",
+    barLabels: ["Cycles", "Retards", "Pression", "Carburant"],
+    barData: (a) => [
+      a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("retard") ||
+          x.message.toLowerCase().includes("delay")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("pression") ||
+          x.message.toLowerCase().includes("pressure")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("carburant") ||
+          x.message.toLowerCase().includes("fuel")
+      ).length,
+    ],
+  },
+
+  expedition: {
+    kpis: (a) => [
+      {
+        label: "Commandes bloquées",
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
+        delta: "Arrêt immédiat",
+        up: false,
+        spark: [1, 2, 2, 3, 3, 4, 5],
+      },
+      {
+        label: "Attente expédition",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("attente") ||
+              x.message.toLowerCase().includes("wait")
+          ).length
+        ),
+        delta: "Quai départ",
+        up: false,
+        spark: [2, 3, 3, 4, 4, 5, 6],
+      },
+      {
+        label: "Postes actifs",
+        value: String(new Set(a.map((x) => x.equipment)).size),
+        delta: "Expedition",
+        up: true,
+        spark: [4, 5, 5, 6, 6, 7, 8],
+      },
+      {
+        label: "Alertes capacité",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("capacite") ||
+              x.message.toLowerCase().includes("capacity")
+          ).length
+        ),
+        delta: "Colis",
+        up: false,
+        spark: [0, 1, 1, 1, 2, 2, 3],
+      },
+    ],
+    chartTitle: "Activité expédition \u00b7 7 jours",
+    barLabels: ["Cycles", "Attente", "Capacité", "Carburant"],
+    barData: (a) => [
+      a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("attente") ||
+          x.message.toLowerCase().includes("wait")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("capacite") ||
+          x.message.toLowerCase().includes("capacity")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("carburant") ||
+          x.message.toLowerCase().includes("fuel")
+      ).length,
+    ],
+  },
+
+  froid: {
+    kpis: (a) => [
+      {
+        label: "Ruptures chaîne du froid",
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
+        delta: "Arrêt immédiat",
+        up: false,
+        spark: [1, 2, 2, 3, 3, 4, 5],
+      },
+      {
+        label: "Alertes température",
+        value: String(
+          a.filter((x) => x.message.toLowerCase().includes("temp")).length
+        ),
+        delta: "Seuil dépassé",
+        up: false,
+        spark: [2, 3, 3, 4, 4, 5, 6],
+      },
+      {
+        label: "Équipements actifs",
+        value: String(new Set(a.map((x) => x.equipment)).size),
+        delta: "Froid",
+        up: true,
+        spark: [4, 5, 5, 6, 6, 7, 8],
+      },
+      {
+        label: "Alertes pression",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("pression") ||
+              x.message.toLowerCase().includes("pressure")
+          ).length
+        ),
+        delta: "Groupe froid",
+        up: false,
+        spark: [0, 1, 1, 1, 2, 2, 3],
+      },
+    ],
+    chartTitle: "Activité chaîne du froid \u00b7 7 jours",
+    barLabels: ["Cycles", "Temp. hors seuil", "Pression", "Carburant"],
+    barData: (a) => [
+      a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
+      a.filter((x) => x.message.toLowerCase().includes("temp")).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("pression") ||
+          x.message.toLowerCase().includes("pressure")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("carburant") ||
+          x.message.toLowerCase().includes("fuel")
+      ).length,
+    ],
+  },
+}
+
 export function DashboardView({
   search = "",
 }: {
@@ -571,6 +921,14 @@ export function DashboardView({
     }
   )
 
+  // Step 3 of onboarding ("operations type"), only meaningful when the
+  // logistics sector is active. Drives which KPI/chart vocabulary from
+  // LOGISTICS_OPS_META is shown, see the `meta` computation below.
+  const [opsType, setOpsType] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null
+    return localStorage.getItem("sentria_ops_type")
+  })
+
   useEffect(() => {
     const refreshSectors = () => {
       try {
@@ -587,6 +945,8 @@ export function DashboardView({
       } catch {
         setActiveSectors(["industry"])
       }
+
+      setOpsType(localStorage.getItem("sentria_ops_type"))
     }
 
     window.addEventListener(
@@ -601,6 +961,7 @@ export function DashboardView({
       )
     }
   }, [])
+
 
   useEffect(() => {
     if (
@@ -726,6 +1087,9 @@ export function DashboardView({
     .slice(0, 5)
 
   const meta =
+    (filterSector === "logistics" && opsType
+      ? LOGISTICS_OPS_META[opsType]
+      : undefined) ??
     SECTOR_META[filterSector] ??
     SECTOR_META.all
 
@@ -807,6 +1171,17 @@ export function DashboardView({
             ? Math.round(top.risk_score > 1 ? Math.min(top.risk_score, 100) : top.risk_score * 100)
             : null
 
+        // How many times this exact equipment has shown up in the last 7
+        // days of real alert history. A recurring problem is more urgent
+        // than a one-off, even at the same severity.
+        const cutoff = new Date()
+        cutoff.setDate(cutoff.getDate() - 7)
+        const recurrenceOf = (equipment: string) =>
+          alerts.filter(
+            (a) => a.equipment === equipment && new Date(a.date) >= cutoff
+          ).length
+        const topRecurrence = recurrenceOf(top.equipment)
+
         return (
           <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6">
             {/* soft ambient glow, purely decorative */}
@@ -857,6 +1232,20 @@ export function DashboardView({
                   <p className="mt-2 text-sm leading-5 text-foreground/90">
                     {top.recommended_action}
                   </p>
+
+                  <div className="mt-3 flex items-start gap-1.5 rounded-lg bg-background/60 px-2.5 py-2">
+                    <Shield className="mt-0.5 h-3 w-3 shrink-0 text-accent-foreground" />
+                    <p className="text-[11px] leading-4 text-muted-foreground">
+                      {IMPACT_HINT[top.action_category] ?? IMPACT_HINT.other}
+                    </p>
+                  </div>
+
+                  {topRecurrence > 1 && (
+                    <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive">
+                      <TrendingUp className="h-3 w-3" />
+                      Réapparu {topRecurrence} fois cette semaine
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-4">
@@ -903,6 +1292,7 @@ export function DashboardView({
                     const rank = idx + 2
                     const Icon = CATEGORY_ICON[rec.action_category] ?? Sparkles
                     const isCritical = rec.severity === "CRITICAL"
+                    const recurrence = recurrenceOf(rec.equipment)
 
                     return (
                       <div
@@ -932,6 +1322,13 @@ export function DashboardView({
                         <p className="mt-1 line-clamp-2 text-xs leading-4 text-muted-foreground">
                           {rec.recommended_action}
                         </p>
+
+                        {recurrence > 1 && (
+                          <div className="mt-2 inline-flex w-fit items-center gap-1 rounded-full bg-destructive/10 px-1.5 py-0.5 text-[9px] font-semibold text-destructive">
+                            <TrendingUp className="h-2.5 w-2.5" />
+                            {recurrence}x cette semaine
+                          </div>
+                        )}
 
                         <div className="mt-3 flex flex-wrap items-center gap-1.5">
                           <span
@@ -1012,6 +1409,13 @@ export function DashboardView({
           </button>
         ))}
       </div>
+
+      {filterSector === "logistics" && opsType && LOGISTICS_OPS_META[opsType] && (
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[11px] font-medium text-accent-foreground">
+          <Shield className="h-3 w-3" />
+          Vue adaptée : {OPS_TYPE_LABEL[opsType]}
+        </div>
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
