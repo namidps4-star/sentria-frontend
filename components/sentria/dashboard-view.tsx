@@ -561,7 +561,6 @@ const OPS_TYPE_LABEL: Record<string, string> = {
   port: "Port & conteneurs",
   entrepot: "Entrepôt & manutention",
   transport: "Transport & distribution",
-  expedition: "Préparation & expédition",
   froid: "Chaîne du froid",
 }
 
@@ -710,15 +709,15 @@ const LOGISTICS_OPS_META: Record<string, (typeof SECTOR_META)["logistics"]> = {
         spark: [1, 2, 2, 3, 3, 4, 5],
       },
       {
-        label: "Retards de livraison",
+        label: "Entretien en retard",
         value: String(
           a.filter(
             (x) =>
-              x.message.toLowerCase().includes("retard") ||
-              x.message.toLowerCase().includes("delay")
+              x.message.toLowerCase().includes("révision") ||
+              x.message.toLowerCase().includes("service")
           ).length
         ),
-        delta: "Tournées",
+        delta: "Maintenance",
         up: false,
         spark: [2, 3, 3, 4, 4, 5, 6],
       },
@@ -744,84 +743,11 @@ const LOGISTICS_OPS_META: Record<string, (typeof SECTOR_META)["logistics"]> = {
       },
     ],
     chartTitle: "Activité flotte \u00b7 7 jours",
-    barLabels: ["Cycles", "Retards", "Pression", "Carburant"],
+    barLabels: ["Surchauffe", "Huile", "Pneus", "Carburant"],
     barData: (a) => [
-      a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("retard") ||
-          x.message.toLowerCase().includes("delay")
-      ).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("pression") ||
-          x.message.toLowerCase().includes("pressure")
-      ).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("carburant") ||
-          x.message.toLowerCase().includes("fuel")
-      ).length,
-    ],
-  },
-
-  expedition: {
-    kpis: (a) => [
-      {
-        label: "Commandes bloquées",
-        value: String(a.filter((x) => x.severity === "CRITICAL").length),
-        delta: "Arrêt immédiat",
-        up: false,
-        spark: [1, 2, 2, 3, 3, 4, 5],
-      },
-      {
-        label: "Attente expédition",
-        value: String(
-          a.filter(
-            (x) =>
-              x.message.toLowerCase().includes("attente") ||
-              x.message.toLowerCase().includes("wait")
-          ).length
-        ),
-        delta: "Quai départ",
-        up: false,
-        spark: [2, 3, 3, 4, 4, 5, 6],
-      },
-      {
-        label: "Postes actifs",
-        value: String(new Set(a.map((x) => x.equipment)).size),
-        delta: "Expedition",
-        up: true,
-        spark: [4, 5, 5, 6, 6, 7, 8],
-      },
-      {
-        label: "Alertes capacité",
-        value: String(
-          a.filter(
-            (x) =>
-              x.message.toLowerCase().includes("capacite") ||
-              x.message.toLowerCase().includes("capacity")
-          ).length
-        ),
-        delta: "Colis",
-        up: false,
-        spark: [0, 1, 1, 1, 2, 2, 3],
-      },
-    ],
-    chartTitle: "Activité expédition \u00b7 7 jours",
-    barLabels: ["Cycles", "Attente", "Capacité", "Carburant"],
-    barData: (a) => [
-      a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("attente") ||
-          x.message.toLowerCase().includes("wait")
-      ).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("capacite") ||
-          x.message.toLowerCase().includes("capacity")
-      ).length,
+      a.filter((x) => x.message.toLowerCase().includes("surchauffe")).length,
+      a.filter((x) => x.message.toLowerCase().includes("huile")).length,
+      a.filter((x) => x.message.toLowerCase().includes("pneus")).length,
       a.filter(
         (x) =>
           x.message.toLowerCase().includes("carburant") ||
@@ -1020,7 +946,10 @@ export function DashboardView({
 
     try {
       const res = await fetch(
-        `${API}/upload?sector=${uploadSector}&lang=fr`,
+        `${API}/upload?sector=${uploadSector}&lang=fr` +
+          (uploadSector === "logistics" && opsType
+            ? `&ops_type=${opsType}`
+            : ""),
         {
           method: "POST",
           body: form,
