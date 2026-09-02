@@ -1,10 +1,10 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
-import { Space_Grotesk, Inter, Geist_Mono } from 'next/font/google'
+import { Chakra_Petch, Inter, Geist_Mono } from 'next/font/google'
 import './globals.css'
 
-const spaceGrotesk = Space_Grotesk({
-  variable: '--font-space-grotesk',
+const chakraPetch = Chakra_Petch({
+  variable: '--font-chakra-petch',
   subsets: ['latin'],
   weight: ['500', '600', '700'],
 })
@@ -57,7 +57,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`light ${spaceGrotesk.variable} ${inter.variable} ${geistMono.variable} bg-background`}
+      className={`light ${chakraPetch.variable} ${inter.variable} ${geistMono.variable} bg-background`}
     >
       <body className="font-sans antialiased">
         {children}
