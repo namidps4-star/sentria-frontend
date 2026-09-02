@@ -1,39 +1,16 @@
 "use client"
 
-<<<<<<< HEAD
-import { useState } from "react"
-import {
-  Building2,
-  Factory,
-  Plus,
-  Upload,
-  Wifi,
-  CheckCircle2,
-  HeartPulse,
-  Wheat,
-  Truck,
-  Ship,
-  Zap,
-  Cog,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
-
-type Sector = "industry" | "health" | "agriculture" | "transportation" | "logistics" | "energy"
-=======
 import { useMemo, useState } from "react"
 import {
   Activity,
   AlertTriangle,
   ArrowLeft,
-  ArrowUpRight,
   Building2,
   CheckCircle2,
   ChevronRight,
   CircleDot,
-  Cog,
   Cpu,
   Database,
-  Factory,
   HeartPulse,
   MapPin,
   Plus,
@@ -45,6 +22,7 @@ import {
   Wheat,
   XCircle,
   Zap,
+  Cog,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -64,21 +42,10 @@ type DataSource = {
   connected: boolean
   lastSync?: string
 }
->>>>>>> feature/layout
 
 type Site = {
   id: string
   name: string
-<<<<<<< HEAD
-  sector: Sector
-  machines: number
-  warnings: number
-  critical: number
-  lastScan: string
-}
-
-const SECTORS: { key: Sector; label: string; icon: any }[] = [
-=======
   location: string
   sector: Sector
   status: SiteStatus
@@ -90,75 +57,15 @@ const SECTORS: { key: Sector; label: string; icon: any }[] = [
   sources: DataSource[]
 }
 
-const SECTORS: {
-  key: Sector
-  label: string
-  icon: any
-}[] = [
->>>>>>> feature/layout
-  { key: "industry", label: "Industrie", icon: Cog },
-  { key: "health", label: "Santé", icon: HeartPulse },
-  { key: "agriculture", label: "Agriculture", icon: Wheat },
-  { key: "transportation", label: "Transport", icon: Truck },
-  { key: "logistics", label: "Logistique", icon: Ship },
-  { key: "energy", label: "Énergie", icon: Zap },
+const SECTORS = [
+  { key: "industry" as Sector, label: "Industrie", icon: Cog },
+  { key: "health" as Sector, label: "Santé", icon: HeartPulse },
+  { key: "agriculture" as Sector, label: "Agriculture", icon: Wheat },
+  { key: "transportation" as Sector, label: "Transport", icon: Truck },
+  { key: "logistics" as Sector, label: "Logistique", icon: Ship },
+  { key: "energy" as Sector, label: "Énergie", icon: Zap },
 ]
 
-<<<<<<< HEAD
-const DEFAULT_SITES: Site[] = [
-  { id: "main", name: "Site principal", sector: "industry", machines: 42, warnings: 8, critical: 2, lastScan: "Aujourd'hui" },
-  { id: "health", name: "Clinique Nord", sector: "health", machines: 18, warnings: 3, critical: 0, lastScan: "Hier" },
-  { id: "energy", name: "Générateurs Est", sector: "energy", machines: 12, warnings: 1, critical: 0, lastScan: "Il y a 2 jours" },
-]
-
-export function SitesView() {
-  const [sites, setSites] = useState<Site[]>(DEFAULT_SITES)
-  const [activeSite, setActiveSite] = useState("main")
-  const [selectedSector, setSelectedSector] = useState<Sector>("industry")
-
-  function addSite() {
-    const next = sites.length + 1
-    const site: Site = {
-      id: `site-${next}`,
-      name: `Nouveau site ${next}`,
-      sector: selectedSector,
-      machines: 0,
-      warnings: 0,
-      critical: 0,
-      lastScan: "Aucun scan",
-    }
-
-    setSites([...sites, site])
-    setActiveSite(site.id)
-  }
-
-  function getSector(site: Site) {
-    return SECTORS.find((s) => s.key === site.sector) ?? SECTORS[0]
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-6 md:flex-row md:items-center md:justify-between">
-        <div>
-          <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-            <Building2 className="h-4 w-4" />
-            Gestion multi-sites et multi-secteurs
-          </div>
-
-          <h2 className="mt-2 font-heading text-2xl font-bold tracking-tight">
-            Pilotez plusieurs sites depuis le même espace.
-          </h2>
-
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Ajoutez un site, choisissez son secteur, connectez ses capteurs IoT ou importez un historique CSV pour démarrer rapidement.
-=======
-/*
- * No fake operational data.
- * If no sites exist, the UI starts with a real empty state.
- *
- * You can later replace this with:
- * GET /sites
- */
 const INITIAL_SITES: Site[] = []
 
 const STATUS_META = {
@@ -183,34 +90,23 @@ const STATUS_META = {
 }
 
 function getSector(sector: Sector) {
-  return (
-    SECTORS.find((item) => item.key === sector) ??
-    SECTORS[0]
-  )
+  return SECTORS.find((item) => item.key === sector) ?? SECTORS[0]
 }
 
 function HealthScore({ value }: { value: number }) {
   return (
     <div className="flex items-center gap-3">
       <div className="relative h-12 w-12">
-        <svg
-          viewBox="0 0 36 36"
-          className="h-12 w-12 -rotate-90"
-        >
+        <svg viewBox="0 0 36 36" className="h-12 w-12 -rotate-90">
           <path
-            d="M18 2.0845
-              a 15.9155 15.9155 0 0 1 0 31.831
-              a 15.9155 15.9155 0 0 1 0 -31.831"
+            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
             fill="none"
             stroke="currentColor"
             strokeWidth="3"
             className="text-muted"
           />
-
           <path
-            d="M18 2.0845
-              a 15.9155 15.9155 0 0 1 0 31.831
-              a 15.9155 15.9155 0 0 1 0 -31.831"
+            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
             fill="none"
             stroke="currentColor"
             strokeWidth="3"
@@ -232,9 +128,7 @@ function HealthScore({ value }: { value: number }) {
       </div>
 
       <div>
-        <p className="text-xs text-muted-foreground">
-          Santé du site
-        </p>
+        <p className="text-xs text-muted-foreground">Santé du site</p>
         <p className="text-sm font-semibold">
           {value >= 80
             ? "Opérationnel"
@@ -248,34 +142,16 @@ function HealthScore({ value }: { value: number }) {
 }
 
 export function SitesView() {
-  const [sites, setSites] = useState<Site[]>(
-    INITIAL_SITES
-  )
-
-  const [activeSiteId, setActiveSiteId] =
-    useState<string | null>(null)
-
-  const [selectedSector, setSelectedSector] =
-    useState<Sector>("industry")
-
-  const [showAddSite, setShowAddSite] =
-    useState(false)
-
-  const [newSiteName, setNewSiteName] =
-    useState("")
-
-  const [newSiteLocation, setNewSiteLocation] =
-    useState("")
-
-  const [newSiteSector, setNewSiteSector] =
-    useState<Sector>("industry")
+  const [sites, setSites] = useState<Site[]>(INITIAL_SITES)
+  const [activeSiteId, setActiveSiteId] = useState<string | null>(null)
+  const [showAddSite, setShowAddSite] = useState(false)
+  const [newSiteName, setNewSiteName] = useState("")
+  const [newSiteLocation, setNewSiteLocation] = useState("")
+  const [newSiteSector, setNewSiteSector] = useState<Sector>("industry")
 
   const activeSite = useMemo(
-    () =>
-      sites.find(
-        (site) => site.id === activeSiteId
-      ) ?? null,
-    [sites, activeSiteId]
+    () => sites.find((site) => site.id === activeSiteId) ?? null,
+    [sites, activeSiteId],
   )
 
   function createSite() {
@@ -284,8 +160,7 @@ export function SitesView() {
     const site: Site = {
       id: `site-${Date.now()}`,
       name: newSiteName.trim(),
-      location:
-        newSiteLocation.trim() || "Localisation à définir",
+      location: newSiteLocation.trim() || "Localisation à définir",
       sector: newSiteSector,
       status: "offline",
       assets: 0,
@@ -315,7 +190,6 @@ export function SitesView() {
     setSites((current) => [...current, site])
     setActiveSiteId(site.id)
     setShowAddSite(false)
-
     setNewSiteName("")
     setNewSiteLocation("")
     setNewSiteSector("industry")
@@ -323,48 +197,42 @@ export function SitesView() {
 
   function addSource(
     siteId: string,
-    sourceType: "csv" | "api" | "iot"
+    sourceType: "csv" | "api" | "iot",
   ) {
     setSites((current) =>
       current.map((site) =>
         site.id === siteId
           ? {
               ...site,
-              sources: site.sources.map(
-                (source) =>
-                  source.type === sourceType
-                    ? {
-                        ...source,
-                        connected: true,
-                        lastSync: "À l'instant",
-                      }
-                    : source
+              sources: site.sources.map((source) =>
+                source.type === sourceType
+                  ? {
+                      ...source,
+                      connected: true,
+                      lastSync: "À l'instant",
+                    }
+                  : source,
               ),
               status: "connected",
               lastData: "À l'instant",
             }
-          : site
-      )
+          : site,
+      ),
     )
   }
 
-  /*
-   * SITE DETAIL
-   */
   if (activeSite) {
     const sector = getSector(activeSite.sector)
     const SectorIcon = sector.icon
     const status = STATUS_META[activeSite.status]
-    const StatusIcon = status.icon
 
     return (
       <div className="space-y-6">
-        {/* HEADER */}
         <div className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-6 md:flex-row md:items-center md:justify-between">
           <div>
             <button
               onClick={() => setActiveSiteId(null)}
-              className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
+              className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft className="h-4 w-4" />
               Tous les sites
@@ -377,20 +245,20 @@ export function SitesView() {
 
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="font-heading text-2xl font-bold tracking-tight">
+                  <h2 className="font-heading text-2xl font-bold">
                     {activeSite.name}
                   </h2>
 
                   <span
                     className={cn(
                       "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
-                      status.className
+                      status.className,
                     )}
                   >
                     <span
                       className={cn(
                         "h-1.5 w-1.5 rounded-full",
-                        status.dot
+                        status.dot,
                       )}
                     />
                     {status.label}
@@ -407,15 +275,12 @@ export function SitesView() {
             </div>
           </div>
 
-          <button
-            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-muted"
-          >
+          <button className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-semibold hover:bg-muted">
             <Settings2 className="h-4 w-4" />
             Configurer le site
           </button>
         </div>
 
-        {/* TABS */}
         <div className="flex gap-2 overflow-x-auto border-b border-border pb-2">
           {[
             "Vue d'ensemble",
@@ -430,7 +295,7 @@ export function SitesView() {
                 "whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold",
                 index === 0
                   ? "bg-foreground text-background"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
               )}
             >
               {tab}
@@ -438,14 +303,12 @@ export function SitesView() {
           ))}
         </div>
 
-        {/* KPIS */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-3xl border border-border bg-card p-5">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Activity className="h-4 w-4" />
               Santé du site
             </div>
-
             <div className="mt-4">
               <HealthScore value={activeSite.health} />
             </div>
@@ -456,11 +319,9 @@ export function SitesView() {
               <Cpu className="h-4 w-4" />
               Actifs surveillés
             </div>
-
             <p className="mt-3 font-heading text-3xl font-bold">
               {activeSite.assets}
             </p>
-
             <p className="mt-1 text-xs text-muted-foreground">
               Machines, équipements ou actifs
             </p>
@@ -471,17 +332,14 @@ export function SitesView() {
               <AlertTriangle className="h-4 w-4" />
               Alertes critiques
             </div>
-
             <p
               className={cn(
                 "mt-3 font-heading text-3xl font-bold",
-                activeSite.critical > 0 &&
-                  "text-destructive"
+                activeSite.critical > 0 && "text-destructive",
               )}
             >
               {activeSite.critical}
             </p>
-
             <p className="mt-1 text-xs text-muted-foreground">
               Nécessitent une action immédiate
             </p>
@@ -492,18 +350,15 @@ export function SitesView() {
               <CircleDot className="h-4 w-4" />
               Warnings
             </div>
-
             <p className="mt-3 font-heading text-3xl font-bold">
               {activeSite.warnings}
             </p>
-
             <p className="mt-1 text-xs text-muted-foreground">
               À surveiller
             </p>
           </div>
         </div>
 
-        {/* ATTENTION / DATA SOURCES */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="rounded-3xl border border-border bg-card p-6">
             <div className="flex items-center justify-between">
@@ -511,7 +366,6 @@ export function SitesView() {
                 <h3 className="font-heading text-lg font-bold">
                   Attention requise
                 </h3>
-
                 <p className="text-sm text-muted-foreground">
                   Ce qui nécessite votre attention.
                 </p>
@@ -524,12 +378,10 @@ export function SitesView() {
             activeSite.warnings === 0 ? (
               <div className="mt-6 flex items-center gap-3 rounded-2xl bg-muted p-4">
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
-
                 <div>
                   <p className="text-sm font-semibold">
                     Aucun problème détecté
                   </p>
-
                   <p className="text-xs text-muted-foreground">
                     Le site fonctionne normalement.
                   </p>
@@ -540,54 +392,34 @@ export function SitesView() {
                 {activeSite.critical > 0 && (
                   <div className="flex items-center justify-between rounded-2xl bg-destructive/5 p-4">
                     <div className="flex items-center gap-3">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-destructive/10">
-                        <AlertTriangle className="h-4 w-4 text-destructive" />
-                      </span>
-
+                      <AlertTriangle className="h-4 w-4 text-destructive" />
                       <div>
                         <p className="text-sm font-semibold">
-                          {activeSite.critical} alerte
-                          {activeSite.critical > 1
-                            ? "s"
-                            : ""}{" "}
-                          critique
-                          {activeSite.critical > 1
-                            ? "s"
-                            : ""}
+                          {activeSite.critical} alerte critique
                         </p>
-
                         <p className="text-xs text-muted-foreground">
                           Action immédiate recommandée
                         </p>
                       </div>
                     </div>
-
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    <ChevronRight className="h-4 w-4" />
                   </div>
                 )}
 
                 {activeSite.warnings > 0 && (
                   <div className="flex items-center justify-between rounded-2xl bg-amber-500/5 p-4">
                     <div className="flex items-center gap-3">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10">
-                        <AlertTriangle className="h-4 w-4 text-amber-600" />
-                      </span>
-
+                      <AlertTriangle className="h-4 w-4 text-amber-600" />
                       <div>
                         <p className="text-sm font-semibold">
                           {activeSite.warnings} warning
-                          {activeSite.warnings > 1
-                            ? "s"
-                            : ""}
                         </p>
-
                         <p className="text-xs text-muted-foreground">
                           Surveillance recommandée
                         </p>
                       </div>
                     </div>
-
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    <ChevronRight className="h-4 w-4" />
                   </div>
                 )}
               </div>
@@ -600,7 +432,6 @@ export function SitesView() {
                 <h3 className="font-heading text-lg font-bold">
                   Sources de données
                 </h3>
-
                 <p className="text-sm text-muted-foreground">
                   Comment SentrIA reçoit les données.
                 </p>
@@ -630,13 +461,9 @@ export function SitesView() {
                       <p className="text-sm font-semibold">
                         {source.name}
                       </p>
-
                       <p className="text-xs text-muted-foreground">
                         {source.connected
-                          ? `Dernière synchronisation : ${
-                              source.lastSync ??
-                              "récemment"
-                            }`
+                          ? `Dernière synchronisation : ${source.lastSync ?? "récemment"}`
                           : "Non connecté"}
                       </p>
                     </div>
@@ -650,10 +477,7 @@ export function SitesView() {
                   ) : (
                     <button
                       onClick={() =>
-                        addSource(
-                          activeSite.id,
-                          source.type
-                        )
+                        addSource(activeSite.id, source.type)
                       }
                       className="rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background"
                     >
@@ -666,24 +490,14 @@ export function SitesView() {
           </div>
         </div>
 
-        {/* SITE DATA */}
         <div className="rounded-3xl border border-border bg-card p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h3 className="font-heading text-lg font-bold">
-                Données du site
-              </h3>
+          <h3 className="font-heading text-lg font-bold">
+            Données du site
+          </h3>
 
-              <p className="mt-1 text-sm text-muted-foreground">
-                Dernières données reçues par SentrIA.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="h-2 w-2 rounded-full bg-green-500" />
-              Dernière donnée : {activeSite.lastData}
-            </div>
-          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Dernières données reçues par SentrIA.
+          </p>
 
           {activeSite.assets === 0 ? (
             <div className="mt-6 rounded-2xl border border-dashed border-border p-8 text-center">
@@ -694,16 +508,13 @@ export function SitesView() {
               </h4>
 
               <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-                Connectez une source de données ou importez
-                votre historique CSV pour commencer la
-                surveillance.
+                Connectez une source de données ou importez votre
+                historique CSV pour commencer la surveillance.
               </p>
 
               <div className="mt-5 flex flex-wrap justify-center gap-2">
                 <button
-                  onClick={() =>
-                    addSource(activeSite.id, "csv")
-                  }
+                  onClick={() => addSource(activeSite.id, "csv")}
                   className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground"
                 >
                   <Upload className="h-4 w-4" />
@@ -711,9 +522,7 @@ export function SitesView() {
                 </button>
 
                 <button
-                  onClick={() =>
-                    addSource(activeSite.id, "iot")
-                  }
+                  onClick={() => addSource(activeSite.id, "iot")}
                   className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-semibold"
                 >
                   <Wifi className="h-4 w-4" />
@@ -724,9 +533,7 @@ export function SitesView() {
           ) : (
             <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="rounded-2xl bg-muted p-4">
-                <p className="text-xs text-muted-foreground">
-                  Actifs
-                </p>
+                <p className="text-xs text-muted-foreground">Actifs</p>
                 <p className="mt-1 text-2xl font-bold">
                   {activeSite.assets}
                 </p>
@@ -739,7 +546,7 @@ export function SitesView() {
                 <p className="mt-1 text-2xl font-bold">
                   {
                     activeSite.sources.filter(
-                      (source) => source.connected
+                      (source) => source.connected,
                     ).length
                   }
                 </p>
@@ -760,13 +567,8 @@ export function SitesView() {
     )
   }
 
-  /*
-   * SITES LIST
-   */
-
   return (
     <div className="space-y-6">
-      {/* HERO */}
       <div className="flex flex-col gap-5 rounded-3xl bg-foreground p-6 text-background md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-2xl">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
@@ -774,112 +576,40 @@ export function SitesView() {
             Infrastructure
           </span>
 
-          <h2 className="mt-3 font-heading text-2xl font-bold tracking-tight md:text-3xl">
+          <h2 className="mt-3 font-heading text-2xl font-bold md:text-3xl">
             Vos opérations, site par site.
           </h2>
 
           <p className="mt-2 text-sm leading-relaxed text-background/70">
-            Centralisez vos sites, actifs, sources de données
-            et alertes dans un seul espace.
->>>>>>> feature/layout
+            Centralisez vos sites, actifs, sources de données et
+            alertes dans un seul espace.
           </p>
         </div>
 
         <button
-<<<<<<< HEAD
-          onClick={addSite}
-          className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-semibold text-background"
-=======
           onClick={() => setShowAddSite(true)}
-          className="inline-flex items-center gap-2 self-start rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02]"
->>>>>>> feature/layout
+          className="inline-flex items-center gap-2 self-start rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground"
         >
           <Plus className="h-4 w-4" />
           Ajouter un site
         </button>
       </div>
 
-<<<<<<< HEAD
-      <div className="rounded-3xl border border-border bg-card p-6">
-        <h3 className="font-heading text-lg font-bold">Secteur du prochain site</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          SentrIA adapte les alertes selon le secteur choisi.
-        </p>
-
-        <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6">
-          {SECTORS.map((sector) => {
-            const Icon = sector.icon
-            const active = selectedSector === sector.key
-
-            return (
-              <button
-                key={sector.key}
-                onClick={() => setSelectedSector(sector.key)}
-                className={cn(
-                  "flex items-center gap-2 rounded-2xl border px-3 py-3 text-sm font-semibold transition-colors",
-                  active
-                    ? "border-foreground bg-foreground text-background"
-                    : "border-border bg-background hover:bg-muted",
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {sector.label}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {sites.map((site) => {
-          const selected = activeSite === site.id
-          const sector = getSector(site)
-          const Icon = sector.icon
-
-          return (
-            <button
-              key={site.id}
-              onClick={() => setActiveSite(site.id)}
-              className={cn(
-                "rounded-3xl border border-border bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:shadow-md",
-                selected && "ring-2 ring-ring",
-              )}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-muted">
-                    <Factory className="h-5 w-5" />
-                  </span>
-
-                  <div>
-                    <h3 className="font-heading text-lg font-bold">{site.name}</h3>
-                    <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                      <Icon className="h-3.5 w-3.5" />
-                      {sector.label}
-=======
-      {/* SUMMARY */}
       {sites.length > 0 && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="rounded-3xl border border-border bg-card p-5">
-            <p className="text-sm text-muted-foreground">
-              Sites
-            </p>
-
+            <p className="text-sm text-muted-foreground">Sites</p>
             <p className="mt-2 font-heading text-3xl font-bold">
               {sites.length}
             </p>
           </div>
 
           <div className="rounded-3xl border border-border bg-card p-5">
-            <p className="text-sm text-muted-foreground">
-              Connectés
-            </p>
-
+            <p className="text-sm text-muted-foreground">Connectés</p>
             <p className="mt-2 font-heading text-3xl font-bold">
               {
                 sites.filter(
-                  (site) =>
-                    site.status === "connected"
+                  (site) => site.status === "connected",
                 ).length
               }
             </p>
@@ -889,19 +619,16 @@ export function SitesView() {
             <p className="text-sm text-muted-foreground">
               Alertes critiques
             </p>
-
             <p className="mt-2 font-heading text-3xl font-bold text-destructive">
               {sites.reduce(
-                (total, site) =>
-                  total + site.critical,
-                0
+                (total, site) => total + site.critical,
+                0,
               )}
             </p>
           </div>
         </div>
       )}
 
-      {/* EMPTY STATE */}
       {sites.length === 0 && (
         <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center md:p-16">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-muted">
@@ -913,9 +640,9 @@ export function SitesView() {
           </h3>
 
           <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-muted-foreground">
-            Commencez par ajouter votre premier site.
-            Vous pourrez ensuite connecter vos données,
-            importer un historique et surveiller vos actifs.
+            Commencez par ajouter votre premier site. Vous pourrez
+            ensuite connecter vos données, importer un historique et
+            surveiller vos actifs.
           </p>
 
           <button
@@ -928,21 +655,17 @@ export function SitesView() {
         </div>
       )}
 
-      {/* SITE GRID */}
       {sites.length > 0 && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {sites.map((site) => {
             const sector = getSector(site.sector)
             const SectorIcon = sector.icon
-            const status =
-              STATUS_META[site.status]
+            const status = STATUS_META[site.status]
 
             return (
               <button
                 key={site.id}
-                onClick={() =>
-                  setActiveSiteId(site.id)
-                }
+                onClick={() => setActiveSiteId(site.id)}
                 className="group rounded-3xl border border-border bg-card p-6 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg"
               >
                 <div className="flex items-start justify-between gap-4">
@@ -963,20 +686,20 @@ export function SitesView() {
                     </div>
                   </div>
 
-                  <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 </div>
 
                 <div className="mt-5 flex flex-wrap items-center gap-2">
                   <span
                     className={cn(
                       "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
-                      status.className
+                      status.className,
                     )}
                   >
                     <span
                       className={cn(
                         "h-1.5 w-1.5 rounded-full",
-                        status.dot
+                        status.dot,
                       )}
                     />
                     {status.label}
@@ -992,7 +715,6 @@ export function SitesView() {
                     <p className="text-[11px] text-muted-foreground">
                       Actifs
                     </p>
-
                     <p className="mt-1 font-heading text-xl font-bold">
                       {site.assets}
                     </p>
@@ -1002,7 +724,6 @@ export function SitesView() {
                     <p className="text-[11px] text-muted-foreground">
                       Warnings
                     </p>
-
                     <p className="mt-1 font-heading text-xl font-bold">
                       {site.warnings}
                     </p>
@@ -1012,73 +733,17 @@ export function SitesView() {
                     <p className="text-[11px] text-muted-foreground">
                       Critiques
                     </p>
-
                     <p
                       className={cn(
                         "mt-1 font-heading text-xl font-bold",
-                        site.critical > 0 &&
-                          "text-destructive"
+                        site.critical > 0 && "text-destructive",
                       )}
                     >
                       {site.critical}
->>>>>>> feature/layout
                     </p>
                   </div>
                 </div>
 
-<<<<<<< HEAD
-                {selected && (
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-accent-foreground">
-                    <CheckCircle2 className="h-4 w-4" />
-                  </span>
-                )}
-              </div>
-
-              <div className="mt-5 grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-2xl bg-muted p-3">
-                  <p className="font-heading text-xl font-bold">{site.machines}</p>
-                  <p className="text-[11px] text-muted-foreground">Actifs</p>
-                </div>
-
-                <div className="rounded-2xl bg-muted p-3">
-                  <p className="font-heading text-xl font-bold">{site.warnings}</p>
-                  <p className="text-[11px] text-muted-foreground">Warnings</p>
-                </div>
-
-                <div className="rounded-2xl bg-muted p-3">
-                  <p className="font-heading text-xl font-bold">{site.critical}</p>
-                  <p className="text-[11px] text-muted-foreground">Critiques</p>
-                </div>
-              </div>
-
-              <p className="mt-4 text-sm text-muted-foreground">
-                Dernier scan: {site.lastScan}
-              </p>
-            </button>
-          )
-        })}
-      </div>
-
-      <div className="rounded-3xl border border-border bg-card p-6">
-        <h3 className="font-heading text-lg font-bold">Sources de données du site</h3>
-
-        <p className="mt-1 text-sm text-muted-foreground">
-          Reliez chaque capteur, machine, import CSV et alerte à un site_id et à un secteur.
-        </p>
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground">
-            <Wifi className="h-4 w-4" />
-            Connecter capteurs IoT
-          </button>
-
-          <button className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-semibold">
-            <Upload className="h-4 w-4" />
-            Importer historique CSV
-          </button>
-        </div>
-      </div>
-=======
                 <div className="mt-5 flex items-center justify-between">
                   <HealthScore value={site.health} />
 
@@ -1086,7 +751,6 @@ export function SitesView() {
                     <p className="text-xs text-muted-foreground">
                       Dernière donnée
                     </p>
-
                     <p className="mt-1 text-sm font-semibold">
                       {site.lastData}
                     </p>
@@ -1098,7 +762,6 @@ export function SitesView() {
         </div>
       )}
 
-      {/* ADD SITE MODAL */}
       {showAddSite && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-xl rounded-3xl border border-border bg-card p-6 shadow-2xl">
@@ -1109,15 +772,12 @@ export function SitesView() {
                 </h3>
 
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Créez le contexte opérationnel de votre
-                  nouveau site.
+                  Créez le contexte opérationnel de votre nouveau site.
                 </p>
               </div>
 
               <button
-                onClick={() =>
-                  setShowAddSite(false)
-                }
+                onClick={() => setShowAddSite(false)}
                 className="rounded-full p-2 text-muted-foreground hover:bg-muted"
                 aria-label="Fermer"
               >
@@ -1133,11 +793,9 @@ export function SitesView() {
 
                 <input
                   value={newSiteName}
-                  onChange={(e) =>
-                    setNewSiteName(e.target.value)
-                  }
+                  onChange={(e) => setNewSiteName(e.target.value)}
                   placeholder="Ex. Usine Lyon"
-                  className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-foreground"
+                  className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-foreground"
                 />
               </div>
 
@@ -1152,7 +810,7 @@ export function SitesView() {
                     setNewSiteLocation(e.target.value)
                   }
                   placeholder="Ex. Lyon, France"
-                  className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-foreground"
+                  className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none focus:border-foreground"
                 />
               </div>
 
@@ -1164,22 +822,19 @@ export function SitesView() {
                 <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-3">
                   {SECTORS.map((sector) => {
                     const Icon = sector.icon
-                    const active =
-                      newSiteSector === sector.key
+                    const active = newSiteSector === sector.key
 
                     return (
                       <button
                         key={sector.key}
                         onClick={() =>
-                          setNewSiteSector(
-                            sector.key
-                          )
+                          setNewSiteSector(sector.key)
                         }
                         className={cn(
-                          "flex items-center gap-2 rounded-2xl border px-3 py-3 text-sm font-semibold transition-colors",
+                          "flex items-center gap-2 rounded-2xl border px-3 py-3 text-sm font-semibold",
                           active
                             ? "border-foreground bg-foreground text-background"
-                            : "border-border hover:bg-muted"
+                            : "border-border hover:bg-muted",
                         )}
                       >
                         <Icon className="h-4 w-4" />
@@ -1196,14 +851,13 @@ export function SitesView() {
 
                   <div>
                     <p className="text-sm font-semibold">
-                      Vous pourrez connecter les données
-                      ensuite
+                      Vous pourrez connecter les données ensuite
                     </p>
 
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                      CSV, API ou capteurs IoT. Le site sera
-                      créé même sans données afin de pouvoir
-                      terminer votre configuration.
+                      CSV, API ou capteurs IoT. Le site sera créé même
+                      sans données afin de pouvoir terminer votre
+                      configuration.
                     </p>
                   </div>
                 </div>
@@ -1212,9 +866,7 @@ export function SitesView() {
 
             <div className="mt-6 flex justify-end gap-2">
               <button
-                onClick={() =>
-                  setShowAddSite(false)
-                }
+                onClick={() => setShowAddSite(false)}
                 className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold"
               >
                 Annuler
@@ -1231,7 +883,6 @@ export function SitesView() {
           </div>
         </div>
       )}
->>>>>>> feature/layout
     </div>
   )
 }
