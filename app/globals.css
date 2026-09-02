@@ -17,7 +17,7 @@
 }
 
 @theme inline {
-  --font-heading: var(--font-space-grotesk), 'Space Grotesk Fallback';
+  --font-heading: var(--font-chakra-petch), 'Chakra Petch Fallback';
   --font-sans: var(--font-inter), 'Inter Fallback';
   --font-mono: var(--font-geist-mono), 'Geist Mono Fallback';
   --color-sidebar-ring: var(--sidebar-ring);
