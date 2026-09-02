@@ -2,6 +2,11 @@
 
 import { useState } from "react"
 import { Sparkles, ArrowUp, Globe2, Lightbulb, MapPin } from "lucide-react"
+<<<<<<< HEAD
+=======
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
+>>>>>>> feature/layout
 import { cn } from "@/lib/utils"
 
 const API = "https://sentria-production.up.railway.app"
@@ -35,7 +40,15 @@ export function AskView() {
       const res = await fetch(`${API}/ask`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+<<<<<<< HEAD
         body: JSON.stringify({ text: t, lang: "fr" }),
+=======
+        body: JSON.stringify({ 
+        text: t, 
+        lang: "fr",
+        session_id: "user-123"  // later use real user ID
+      }),
+>>>>>>> feature/layout
       })
       if (!res.ok) throw new Error("API request failed")
       const data = await res.json()
@@ -105,7 +118,17 @@ export function AskView() {
                   : "rounded-tr-md bg-foreground text-background",
               )}
             >
+<<<<<<< HEAD
               {m.text}
+=======
+              {m.role === "ai" ? (
+                <div className="prose prose-sm dark:prose-invert max-w-none overflow-x-auto [&_table]:min-w-full [&_table]:border-collapse [&_th]:border [&_th]:border-border [&_th]:px-3 [&_th]:py-2 [&_td]:border [&_td]:border-border [&_td]:px-3 [&_td]:py-2">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{m.text}</ReactMarkdown>
+                </div>
+              ) : (
+                m.text
+              )}
+>>>>>>> feature/layout
             </div>
           </div>
         ))}

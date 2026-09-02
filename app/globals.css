@@ -1,6 +1,10 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
+<<<<<<< HEAD
+=======
+@plugin '@tailwindcss/typography';
+>>>>>>> feature/layout
 
 @custom-variant dark (&:is(.dark *));
 
@@ -160,6 +164,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+<<<<<<< HEAD
   body {
     @apply bg-background text-foreground;
   }
@@ -167,3 +172,14 @@
     @apply font-sans;
   }
 }
+=======
+
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  html {
+    @apply font-sans;
+  }
+}
+>>>>>>> feature/layout
