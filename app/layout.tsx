@@ -1,18 +1,9 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
-import { Chakra_Petch, Inter, Geist_Mono } from 'next/font/google'
+import { Geist, Geist_Mono } from 'next/font/google'
 import './globals.css'
 
-const chakraPetch = Chakra_Petch({
-  variable: '--font-chakra-petch',
-  subsets: ['latin'],
-  weight: ['500', '600', '700'],
-})
-const inter = Inter({
-  variable: '--font-inter',
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
-})
+const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
@@ -57,7 +48,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`light ${chakraPetch.variable} ${inter.variable} ${geistMono.variable} bg-background`}
+      className={`light ${geistSans.variable} ${geistMono.variable} bg-background`}
     >
       <body className="font-sans antialiased">
         {children}
