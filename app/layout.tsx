@@ -1,12 +1,17 @@
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
-import { IBM_Plex_Sans, Geist_Mono } from 'next/font/google'
+import { Space_Grotesk, Inter, Geist_Mono } from 'next/font/google'
 import './globals.css'
 
-const plexSans = IBM_Plex_Sans({
-  variable: '--font-plex-sans',
+const spaceGrotesk = Space_Grotesk({
+  variable: '--font-space-grotesk',
   subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+  weight: ['500', '600', '700'],
+})
+const inter = Inter({
+  variable: '--font-inter',
+  subsets: ['latin'],
+  weight: ['400', '500', '600'],
 })
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
@@ -52,7 +57,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`light ${plexSans.variable} ${geistMono.variable} bg-background`}
+      className={`light ${spaceGrotesk.variable} ${inter.variable} ${geistMono.variable} bg-background`}
     >
       <body className="font-sans antialiased">
         {children}
