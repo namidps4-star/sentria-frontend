@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
+import { LogisticsBlockagesView } from "./logistics-blockages-view"
 
 const API = "https://sentria-8btn.onrender.com"
 
@@ -1053,6 +1054,10 @@ export function DashboardView({
    * DASHBOARD
    * ============================================================
    */
+
+  if (filterSector === "logistics") {
+    return <LogisticsBlockagesView onBack={() => setFilterSector("all")} />
+  }
 
   return (
     <div className="space-y-6">
