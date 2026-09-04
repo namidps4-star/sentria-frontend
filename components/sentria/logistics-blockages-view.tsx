@@ -4,88 +4,21 @@ import { useEffect, useMemo, useState } from "react"
 import {
   Anchor,
   ArrowLeft,
-  Check,
+  BarChart3,
+  Boxes,
   Clock3,
-  Package,
-  PackageSearch,
-  Radar,
-  Recycle,
-  Shield,
+  Container,
+  Gauge,
   Snowflake,
   Truck,
   Warehouse,
+  Wrench,
   AlertTriangle,
-  CircleAlert,
 } from "lucide-react"
-import { cn } from "@/lib/utils"
 
-type OpsType =
-  | "port"
-  | "entrepot"
-  | "transport"
-  | "expedition"
-  | "froid"
-  | "multi"
+const API = "https://sentria-8btn.onrender.com"
 
-type Alert = {
-  equipment: string
-  message: string
-  severity: "WARNING" | "CRITICAL" | string
-  date: string
-  sector?: string | null
-}
-
-const OPS_TYPES: {
-  id: OpsType
-  label: string
-  description: string
-  icon: typeof Anchor
-}[] = [
-  {
-    id: "port",
-    label: "Port & conteneurs",
-    description:
-      "Quais, conteneurs, grues, engins de manutention et files d'attente.",
-    icon: Anchor,
-  },
-  {
-    id: "entrepot",
-    label: "Entrepôt & manutention",
-    description:
-      "Zones de stockage, chariots, préparation et flux internes.",
-    icon: Warehouse,
-  },
-  {
-    id: "transport",
-    label: "Transport & distribution",
-    description:
-      "Flotte, véhicules, tournées, livraisons et retards.",
-    icon: Truck,
-  },
-  {
-    id: "expedition",
-    label: "Préparation & expédition",
-    description:
-      "Commandes, préparation, emballage et départ des marchandises.",
-    icon: PackageSearch,
-  },
-  {
-    id: "froid",
-    label: "Chaîne du froid",
-    description:
-      "Température, équipements frigorifiques et continuité du froid.",
-    icon: Snowflake,
-  },
-  {
-    id: "multi",
-    label: "Plusieurs activités",
-    description:
-      "Une surveillance transversale de plusieurs activités logistiques.",
-    icon: Recycle,
-  },
-]
-
-const OPS_TYPE_LABEL: Record<OpsType, string> = {
+const OPS_TYPE_LABEL: Record<string, string> = {
   port: "Port & conteneurs",
   entrepot: "Entrepôt & manutention",
   transport: "Transport & distribution",
@@ -94,199 +27,262 @@ const OPS_TYPE_LABEL: Record<OpsType, string> = {
   multi: "Plusieurs activités",
 }
 
+type Alert = {
+  id?: string | number
+  asset_id?: string
+  message?: string
+  sector?: string
+  severity?: string
+  created_at?: string
+  timestamp?: string
+}
+
+type Props = {
+  onBack?: () => void
+}
+
 const OPS_META: Record<
-  OpsType,
+  string,
   {
-    title: string
-    subtitle: string
-    signals: string[]
+    icon: typeof Anchor
+    cards: {
+      title: string
+      value: string
+      subtitle: string
+      icon: typeof Anchor
+    }[]
   }
 > = {
   port: {
-    title: "Blocages port & conteneurs",
-    subtitle:
-      "Identifiez les files d'attente, les conteneurs immobilisés et les équipements susceptibles de ralentir le terminal.",
-    signals: [
-      "Attente anormalement longue",
-      "Cycle de manutention ralenti",
-      "Pression hydraulique anormale",
-      "Équipement immobilisé",
-      "Risque de congestion du terminal",
+    icon: Anchor,
+    cards: [
+      {
+        title: "Conteneurs bloqués",
+        value: "6",
+        subtitle: "Arrêt immédiat",
+        icon: Container,
+      },
+      {
+        title: "Attente au quai",
+        value: "5",
+        subtitle: "File conteneurs",
+        icon: Clock3,
+      },
+      {
+        title: "Grues & engins actifs",
+        value: "491",
+        subtitle: "Terminal",
+        icon: Gauge,
+      },
+      {
+        title: "Alertes hydrauliques",
+        value: "5",
+        subtitle: "Grues",
+        icon: Wrench,
+      },
     ],
   },
 
   entrepot: {
-    title: "Blocages entrepôt & manutention",
-    subtitle:
-      "Surveillez les zones saturées, les retards de préparation et les équipements qui peuvent interrompre le flux.",
-    signals: [
-      "Zone de stockage saturée",
-      "Commande en retard",
-      "Cycle de préparation ralenti",
-      "Capacité dépassée",
-      "Équipement de manutention indisponible",
+    icon: Warehouse,
+    cards: [
+      {
+        title: "Blocages entrepôt",
+        value: "6",
+        subtitle: "À traiter",
+        icon: Boxes,
+      },
+      {
+        title: "Attente manutention",
+        value: "5",
+        subtitle: "File active",
+        icon: Clock3,
+      },
+      {
+        title: "Équipements actifs",
+        value: "491",
+        subtitle: "Opérations",
+        icon: Gauge,
+      },
+      {
+        title: "Alertes maintenance",
+        value: "5",
+        subtitle: "À surveiller",
+        icon: Wrench,
+      },
     ],
   },
 
   transport: {
-    title: "Blocages transport & distribution",
-    subtitle:
-      "Anticipez les immobilisations, les retards de tournée et les problèmes pouvant bloquer les livraisons.",
-    signals: [
-      "Véhicule immobilisé",
-      "Retard de livraison",
-      "Entretien en retard",
-      "Niveau de carburant critique",
-      "Risque de rupture de tournée",
+    icon: Truck,
+    cards: [
+      {
+        title: "Livraisons bloquées",
+        value: "6",
+        subtitle: "Action immédiate",
+        icon: Truck,
+      },
+      {
+        title: "Temps d'attente",
+        value: "5",
+        subtitle: "Flotte",
+        icon: Clock3,
+      },
+      {
+        title: "Véhicules actifs",
+        value: "491",
+        subtitle: "En circulation",
+        icon: Gauge,
+      },
+      {
+        title: "Alertes flotte",
+        value: "5",
+        subtitle: "À surveiller",
+        icon: AlertTriangle,
+      },
     ],
   },
 
   expedition: {
-    title: "Blocages préparation & expédition",
-    subtitle:
-      "Détectez les commandes, postes de préparation et expéditions susceptibles de rester bloqués.",
-    signals: [
-      "Commande bloquée",
-      "Préparation en retard",
-      "Manque de stock",
-      "Poste de préparation saturé",
-      "Départ d'expédition menacé",
+    icon: Boxes,
+    cards: [
+      {
+        title: "Commandes bloquées",
+        value: "6",
+        subtitle: "À traiter",
+        icon: Boxes,
+      },
+      {
+        title: "Attente expédition",
+        value: "5",
+        subtitle: "File active",
+        icon: Clock3,
+      },
+      {
+        title: "Postes actifs",
+        value: "491",
+        subtitle: "Préparation",
+        icon: Gauge,
+      },
+      {
+        title: "Alertes opérationnelles",
+        value: "5",
+        subtitle: "À surveiller",
+        icon: AlertTriangle,
+      },
     ],
   },
 
   froid: {
-    title: "Blocages chaîne du froid",
-    subtitle:
-      "Surveillez les ruptures de température et les équipements frigorifiques pouvant interrompre le flux.",
-    signals: [
-      "Température hors seuil",
-      "Rupture de chaîne du froid",
-      "Pression anormale",
-      "Équipement frigorifique en anomalie",
-      "Risque de perte produit",
+    icon: Snowflake,
+    cards: [
+      {
+        title: "Alertes température",
+        value: "6",
+        subtitle: "Action immédiate",
+        icon: Snowflake,
+      },
+      {
+        title: "Attente quai",
+        value: "5",
+        subtitle: "Chaîne du froid",
+        icon: Clock3,
+      },
+      {
+        title: "Équipements actifs",
+        value: "491",
+        subtitle: "Installations",
+        icon: Gauge,
+      },
+      {
+        title: "Alertes maintenance",
+        value: "5",
+        subtitle: "À surveiller",
+        icon: Wrench,
+      },
     ],
   },
 
   multi: {
-    title: "Blocages logistiques",
-    subtitle:
-      "Vue transversale des risques pouvant perturber vos différentes activités logistiques.",
-    signals: [
-      "Blocage opérationnel",
-      "File d'attente anormale",
-      "Équipement indisponible",
-      "Retard critique",
-      "Capacité dépassée",
+    icon: Boxes,
+    cards: [
+      {
+        title: "Blocages critiques",
+        value: "6",
+        subtitle: "Action immédiate",
+        icon: Boxes,
+      },
+      {
+        title: "Temps d'attente",
+        value: "5",
+        subtitle: "Opérations",
+        icon: Clock3,
+      },
+      {
+        title: "Équipements actifs",
+        value: "491",
+        subtitle: "Toutes activités",
+        icon: Gauge,
+      },
+      {
+        title: "Alertes actives",
+        value: "5",
+        subtitle: "À surveiller",
+        icon: AlertTriangle,
+      },
     ],
   },
 }
 
-export function LogisticsBlockagesView({
-  onBack,
-}: {
-  onBack?: () => void
-}) {
-  const [opsType, setOpsType] = useState<OpsType | null>(null)
+export function LogisticsBlockagesView({ onBack }: Props) {
+  const [opsType, setOpsType] = useState("port")
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const savedOpsType =
-      localStorage.getItem("sentria_ops_type") as OpsType | null
+    const storedOpsType = localStorage.getItem("sentria_ops_type")
 
-    if (
-      savedOpsType &&
-      OPS_TYPES.some((item) => item.id === savedOpsType)
-    ) {
-      setOpsType(savedOpsType)
+    if (storedOpsType && OPS_TYPE_LABEL[storedOpsType]) {
+      setOpsType(storedOpsType)
     }
 
-    fetch("https://sentria-8btn.onrender.com/alerts")
-      .then((response) => {
+    async function loadAlerts() {
+      try {
+        const response = await fetch(`${API}/alerts`)
+
         if (!response.ok) {
-          throw new Error("Failed to load alerts")
+          throw new Error("Impossible de récupérer les alertes")
         }
 
-        return response.json()
-      })
-      .then((data) => {
-        setAlerts(Array.isArray(data) ? data : [])
-      })
-      .catch((error) => {
-        console.error(
-          "Failed to load logistics alerts:",
-          error
-        )
+        const data = await response.json()
+
+        if (Array.isArray(data)) {
+          setAlerts(data)
+        } else if (Array.isArray(data?.alerts)) {
+          setAlerts(data.alerts)
+        }
+      } catch {
         setAlerts([])
-      })
-      .finally(() => {
+      } finally {
         setLoading(false)
-      })
+      }
+    }
+
+    loadAlerts()
   }, [])
 
-  function selectOpsType(id: OpsType) {
-    setOpsType(id)
+  const meta = useMemo(() => {
+    return OPS_META[opsType] || OPS_META.port
+  }, [opsType])
 
-    localStorage.setItem("sentria_ops_type", id)
+  const Icon = meta.icon
 
-    window.dispatchEvent(
-      new Event("sentria_ops_type_updated")
-    )
-  }
-
-  const meta = opsType ? OPS_META[opsType] : null
-
-  const logisticsAlerts = useMemo(() => {
-    return alerts.filter(
-      (alert) => alert.sector === "logistics"
-    )
-  }, [alerts])
-
-  const criticalAlerts = logisticsAlerts.filter(
-    (alert) => alert.severity === "CRITICAL"
-  )
-
-  const warningAlerts = logisticsAlerts.filter(
-    (alert) => alert.severity === "WARNING"
-  )
-
-  const equipmentCount = new Set(
-    logisticsAlerts.map((alert) => alert.equipment)
-  ).size
-
-  function matchesAny(
-    message: string,
-    words: string[]
-  ) {
-    const value = message.toLowerCase()
-
-    return words.some((word) =>
-      value.includes(word.toLowerCase())
-    )
-  }
-
-  const waitingAlerts = logisticsAlerts.filter((alert) =>
-    matchesAny(alert.message, [
-      "attente",
-      "wait",
-      "retard",
-      "delay",
-      "queue",
-      "file",
-    ])
-  )
-
-  const blockageAlerts = logisticsAlerts.filter((alert) =>
-    matchesAny(alert.message, [
-      "bloqué",
-      "bloque",
-      "block",
-      "immobil",
-      "failure",
-      "panne",
-      "critical",
-    ])
-  )
+  const displayedAlerts = alerts
+    .filter((alert) => {
+      if (!alert.sector) return true
+      return alert.sector === "logistics" || alert.sector === "logistique"
+    })
+    .slice(0, 10)
 
   function goBack() {
     if (onBack) {
@@ -298,513 +294,203 @@ export function LogisticsBlockagesView({
   }
 
   return (
-    <div className="min-h-full space-y-6">
-      {/* HEADER */}
-      <div className="rounded-3xl bg-foreground p-6 text-background md:p-8">
+    <div className="min-h-full bg-background">
+      <div className="mx-auto w-full max-w-7xl px-6 py-8">
         <button
-          type="button"
           onClick={goBack}
-          className="mb-6 inline-flex items-center gap-2 rounded-full border border-background/20 px-4 py-2 text-sm font-medium text-background/80 transition-colors hover:bg-background/10 hover:text-background"
+          className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Retour au dashboard
+          Retour
         </button>
 
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
-              <Shield className="h-3.5 w-3.5" />
-              Éviter les blocages
-            </div>
-
-            <h1 className="mt-4 font-heading text-2xl font-bold md:text-4xl">
-              {meta?.title ??
-                "Prévention des blocages logistiques"}
-            </h1>
-
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-background/70 md:text-base">
-              {meta?.subtitle ??
-                "Choisissez votre activité opérationnelle pour adapter la surveillance aux risques qui peuvent bloquer vos flux."}
-            </p>
-          </div>
-
-          {opsType && (
-            <div className="shrink-0 rounded-2xl border border-background/15 bg-background/10 px-4 py-3">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-background/50">
-                Activité sélectionnée
-              </p>
-
-              <p className="mt-1 text-sm font-semibold">
-                {OPS_TYPE_LABEL[opsType]}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* OPS TYPE */}
-      <section className="rounded-3xl border border-border bg-card p-6 md:p-7">
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <Radar className="h-5 w-5" />
-
-            <h2 className="font-heading text-lg font-bold">
-              Type d'opérations
-            </h2>
-          </div>
-
-          <p className="text-sm text-muted-foreground">
-            Votre choix d'onboarding est conservé. Vous pouvez
-            le modifier ici si votre activité change.
-          </p>
-        </div>
-
-        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {OPS_TYPES.map((item) => {
-            const Icon = item.icon
-            const selected = opsType === item.id
-
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => selectOpsType(item.id)}
-                className={cn(
-                  "group relative rounded-2xl border p-4 text-left transition-all",
-                  selected
-                    ? "border-foreground bg-foreground text-background shadow-sm"
-                    : "border-border bg-background hover:-translate-y-0.5 hover:border-foreground/30 hover:bg-muted/50"
-                )}
-              >
-                {selected && (
-                  <div className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-accent-foreground">
-                    <Check className="h-3.5 w-3.5" />
-                  </div>
-                )}
-
-                <div
-                  className={cn(
-                    "flex h-10 w-10 items-center justify-center rounded-xl",
-                    selected
-                      ? "bg-background/10"
-                      : "bg-muted"
-                  )}
-                >
-                  <Icon className="h-5 w-5" />
-                </div>
-
-                <p className="mt-4 pr-7 font-semibold">
-                  {item.label}
-                </p>
-
-                <p
-                  className={cn(
-                    "mt-1 text-xs leading-5",
-                    selected
-                      ? "text-background/65"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  {item.description}
-                </p>
-              </button>
-            )
-          })}
-        </div>
-      </section>
-
-      {/* NO OPS TYPE */}
-      {!opsType && (
-        <section className="rounded-3xl border border-amber-500/30 bg-amber-500/5 p-6">
-          <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600">
-              <AlertTriangle className="h-4 w-4" />
-            </div>
-
-            <div>
-              <h3 className="font-heading font-bold">
-                Type d'opérations non sélectionné
-              </h3>
-
-              <p className="mt-1 text-sm leading-5 text-muted-foreground">
-                Sélectionnez votre activité ci-dessus pour
-                personnaliser la vue des blocages.
-              </p>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* KPI */}
-      {opsType && (
-        <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-3xl border border-border bg-card p-5">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
-                  Blocages critiques
-                </span>
-
-                <CircleAlert className="h-4 w-4 text-destructive" />
+        <div className="mb-8 flex items-start justify-between gap-6">
+          <div>
+            <div className="mb-2 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                <Icon className="h-5 w-5 text-primary" />
               </div>
 
-              <p className="mt-3 font-heading text-3xl font-bold">
-                {criticalAlerts.length}
-              </p>
-
-              <p className="mt-1 text-xs text-muted-foreground">
-                À traiter immédiatement
-              </p>
-            </div>
-
-            <div className="rounded-3xl border border-border bg-card p-5">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
-                  Situations à surveiller
-                </span>
-
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-              </div>
-
-              <p className="mt-3 font-heading text-3xl font-bold">
-                {warningAlerts.length}
-              </p>
-
-              <p className="mt-1 text-xs text-muted-foreground">
-                Risques détectés
-              </p>
-            </div>
-
-            <div className="rounded-3xl border border-border bg-card p-5">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
-                  Files / retards
-                </span>
-
-                <Clock3 className="h-4 w-4 text-accent-foreground" />
-              </div>
-
-              <p className="mt-3 font-heading text-3xl font-bold">
-                {waitingAlerts.length}
-              </p>
-
-              <p className="mt-1 text-xs text-muted-foreground">
-                Signaux de ralentissement
-              </p>
-            </div>
-
-            <div className="rounded-3xl border border-border bg-card p-5">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">
-                  Équipements concernés
-                </span>
-
-                <Radar className="h-4 w-4 text-accent-foreground" />
-              </div>
-
-              <p className="mt-3 font-heading text-3xl font-bold">
-                {equipmentCount}
-              </p>
-
-              <p className="mt-1 text-xs text-muted-foreground">
-                Actifs avec alertes
-              </p>
-            </div>
-          </div>
-
-          {/* RISK SIGNALS */}
-          <section className="rounded-3xl border border-border bg-card p-6">
-            <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" />
-
-                  <h2 className="font-heading text-lg font-bold">
-                    Signaux à surveiller
-                  </h2>
-                </div>
-
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Les principaux événements susceptibles de
-                  provoquer un blocage pour{" "}
-                  <span className="font-semibold text-foreground">
-                    {OPS_TYPE_LABEL[opsType]}
-                  </span>
-                  .
-                </p>
-              </div>
-
-              <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1.5 text-[11px] font-semibold text-accent-foreground">
-                <Check className="h-3 w-3" />
-                Surveillance active
+              <span className="text-sm font-medium text-primary">
+                Logistique
               </span>
             </div>
 
-            <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {meta?.signals.map((signal) => (
-                <div
-                  key={signal}
-                  className="flex items-center gap-3 rounded-2xl border border-border bg-background p-4"
-                >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted">
-                    <Shield className="h-4 w-4 text-muted-foreground" />
+            <h1 className="text-3xl font-semibold tracking-tight">
+              Vue globale de vos opérations critiques
+            </h1>
+
+            <p className="mt-2 text-muted-foreground">
+              Surveillance des blocages et des opérations logistiques en temps
+              réel.
+            </p>
+          </div>
+
+          <div className="rounded-xl border bg-card px-4 py-3 text-right shadow-sm">
+            <p className="text-xs text-muted-foreground">Vue adaptée</p>
+            <p className="mt-1 font-semibold">
+              {OPS_TYPE_LABEL[opsType] || "Port & conteneurs"}
+            </p>
+          </div>
+        </div>
+
+        <div className="mb-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {meta.cards.map((card) => {
+            const CardIcon = card.icon
+
+            return (
+              <div
+                key={card.title}
+                className="rounded-2xl border bg-card p-5 shadow-sm"
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      {card.title}
+                    </p>
+
+                    <p className="mt-3 text-3xl font-semibold tracking-tight">
+                      {card.value}
+                    </p>
+
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {card.subtitle}
+                    </p>
                   </div>
 
-                  <span className="text-sm font-medium">
-                    {signal}
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
+                    <CardIcon className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+          <div className="rounded-2xl border bg-card p-6 shadow-sm">
+            <div className="mb-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">
+                  Activité quai et conteneurs · 7 jours
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Évolution des opérations critiques.
+                </p>
+              </div>
+
+              <BarChart3 className="h-5 w-5 text-muted-foreground" />
+            </div>
+
+            <div className="flex h-64 items-end gap-3">
+              {[42, 58, 46, 72, 61, 84, 67, 92, 74, 88, 69, 78].map(
+                (height, index) => (
+                  <div
+                    key={index}
+                    className="flex flex-1 items-end"
+                  >
+                    <div
+                      className="w-full rounded-t-md bg-primary/20"
+                      style={{ height: `${height}%` }}
+                    />
+                  </div>
+                )
+              )}
+            </div>
+
+            <div className="mt-4 flex justify-between text-xs text-muted-foreground">
+              <span>J-6</span>
+              <span>J-5</span>
+              <span>J-4</span>
+              <span>J-3</span>
+              <span>J-2</span>
+              <span>J-1</span>
+              <span>Aujourd'hui</span>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border bg-card p-6 shadow-sm">
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold">Répartition</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Principaux indicateurs opérationnels.
+              </p>
+            </div>
+
+            <div className="space-y-5">
+              {[
+                ["Cycles grue", "38%"],
+                ["Attente quai", "27%"],
+                ["Pression", "21%"],
+                ["Carburant", "14%"],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <div className="mb-2 flex justify-between text-sm">
+                    <span>{label}</span>
+                    <span className="font-medium">{value}</span>
+                  </div>
+
+                  <div className="h-2 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{ width: value }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 rounded-2xl border bg-card p-6 shadow-sm">
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">
+                Alertes · Logistique
+              </h2>
+
+              <p className="mt-1 text-sm text-muted-foreground">
+                Alertes liées à vos opérations logistiques.
+              </p>
+            </div>
+
+            <AlertTriangle className="h-5 w-5 text-muted-foreground" />
+          </div>
+
+          {loading ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">
+              Chargement des alertes...
+            </div>
+          ) : displayedAlerts.length === 0 ? (
+            <div className="py-10 text-center text-sm text-muted-foreground">
+              Aucune alerte disponible.
+            </div>
+          ) : (
+            <div className="divide-y">
+              {displayedAlerts.map((alert, index) => (
+                <div
+                  key={alert.id ?? `${alert.asset_id}-${index}`}
+                  className="flex items-center justify-between gap-4 py-4"
+                >
+                  <div className="min-w-0">
+                    <p className="font-medium">
+                      {alert.asset_id || "Actif logistique"}
+                    </p>
+
+                    <p className="mt-1 truncate text-sm text-muted-foreground">
+                      {alert.message || "Alerte opérationnelle"}
+                    </p>
+                  </div>
+
+                  <span className="shrink-0 rounded-full bg-muted px-3 py-1 text-xs font-medium">
+                    {alert.severity || "WARNING"}
                   </span>
                 </div>
               ))}
             </div>
-          </section>
-
-          {/* LIVE ALERTS */}
-          <section className="rounded-3xl border border-border bg-card">
-            <div className="flex flex-col gap-3 p-6 pb-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <CircleAlert className="h-5 w-5" />
-
-                  <h2 className="font-heading text-lg font-bold">
-                    Blocages détectés
-                  </h2>
-                </div>
-
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Alertes logistiques actuellement disponibles.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="rounded-full bg-destructive/10 px-3 py-1 text-[11px] font-semibold text-destructive">
-                  {criticalAlerts.length} critique
-                  {criticalAlerts.length > 1 ? "s" : ""}
-                </span>
-
-                <span className="rounded-full bg-amber-500/15 px-3 py-1 text-[11px] font-semibold text-amber-600">
-                  {warningAlerts.length} warning
-                  {warningAlerts.length > 1 ? "s" : ""}
-                </span>
-              </div>
-            </div>
-
-            {loading ? (
-              <div className="border-t border-border p-8 text-center text-sm text-muted-foreground">
-                Chargement des alertes…
-              </div>
-            ) : logisticsAlerts.length === 0 ? (
-              <div className="border-t border-border p-8">
-                <div className="mx-auto flex max-w-lg flex-col items-center text-center">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/15 text-accent-foreground">
-                    <Check className="h-5 w-5" />
-                  </div>
-
-                  <h3 className="mt-4 font-heading text-base font-bold">
-                    Aucun blocage détecté
-                  </h3>
-
-                  <p className="mt-1 text-sm leading-5 text-muted-foreground">
-                    Aucun signal logistique n'est actuellement
-                    remonté par SentrIA. Les nouvelles alertes
-                    apparaîtront automatiquement ici.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="overflow-x-auto border-t border-border">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
-                      <th className="px-6 py-3 font-medium">
-                        Actif
-                      </th>
-
-                      <th className="px-6 py-3 font-medium">
-                        Situation
-                      </th>
-
-                      <th className="px-6 py-3 font-medium">
-                        Sévérité
-                      </th>
-
-                      <th className="px-6 py-3 font-medium">
-                        Date
-                      </th>
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {logisticsAlerts
-                      .slice()
-                      .sort((a, b) => {
-                        if (
-                          a.severity === "CRITICAL" &&
-                          b.severity !== "CRITICAL"
-                        ) {
-                          return -1
-                        }
-
-                        if (
-                          a.severity !== "CRITICAL" &&
-                          b.severity === "CRITICAL"
-                        ) {
-                          return 1
-                        }
-
-                        return (
-                          new Date(b.date).getTime() -
-                          new Date(a.date).getTime()
-                        )
-                      })
-                      .slice(0, 20)
-                      .map((alert, index) => {
-                        const critical =
-                          alert.severity === "CRITICAL"
-
-                        const isBlockage =
-                          blockageAlerts.includes(alert)
-
-                        return (
-                          <tr
-                            key={`${alert.equipment}-${alert.date}-${index}`}
-                            className="border-b border-border last:border-0 hover:bg-muted/40"
-                          >
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-2">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
-                                  <Package className="h-4 w-4" />
-                                </div>
-
-                                <span className="font-semibold">
-                                  {alert.equipment}
-                                </span>
-                              </div>
-                            </td>
-
-                            <td className="max-w-md px-6 py-4">
-                              <div className="flex items-start gap-2">
-                                {isBlockage && (
-                                  <CircleAlert
-                                    className={cn(
-                                      "mt-0.5 h-4 w-4 shrink-0",
-                                      critical
-                                        ? "text-destructive"
-                                        : "text-amber-600"
-                                    )}
-                                  />
-                                )}
-
-                                <span className="text-muted-foreground">
-                                  {alert.message}
-                                </span>
-                              </div>
-                            </td>
-
-                            <td className="px-6 py-4">
-                              <span
-                                className={cn(
-                                  "rounded-full px-2.5 py-1 text-xs font-semibold",
-                                  critical
-                                    ? "bg-destructive/10 text-destructive"
-                                    : "bg-amber-500/15 text-amber-600"
-                                )}
-                              >
-                                {alert.severity}
-                              </span>
-                            </td>
-
-                            <td className="whitespace-nowrap px-6 py-4 text-muted-foreground">
-                              {new Date(
-                                alert.date
-                              ).toLocaleString("fr-FR")}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-
-          {/* HOW IT WORKS */}
-          <section className="rounded-3xl border border-border bg-card p-6">
-            <div className="flex items-center gap-2">
-              <Radar className="h-5 w-5" />
-
-              <h2 className="font-heading text-lg font-bold">
-                Prévention des blocages
-              </h2>
-            </div>
-
-            <p className="mt-1 text-sm text-muted-foreground">
-              SentrIA utilise votre secteur, votre objectif
-              « Éviter les blocages » et votre type d'opérations
-              pour contextualiser les alertes.
-            </p>
-
-            <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-3">
-              <div className="rounded-2xl border border-border bg-background p-5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted">
-                  <Radar className="h-4 w-4" />
-                </div>
-
-                <p className="mt-4 font-semibold">
-                  01 · Détecter
-                </p>
-
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Les alertes et anomalies sont analysées en
-                  continu.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-background p-5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted">
-                  <AlertTriangle className="h-4 w-4" />
-                </div>
-
-                <p className="mt-4 font-semibold">
-                  02 · Prioriser
-                </p>
-
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Les risques de blocage sont classés selon leur
-                  urgence.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-background p-5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted">
-                  <Shield className="h-4 w-4" />
-                </div>
-
-                <p className="mt-4 font-semibold">
-                  03 · Agir
-                </p>
-
-                <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                  Les situations critiques sont mises en avant
-                  pour permettre une intervention rapide.
-                </p>
-              </div>
-            </div>
-          </section>
-
-          {/* BACK */}
-          <div className="flex justify-center pb-4">
-            <button
-              type="button"
-              onClick={goBack}
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-5 py-2.5 text-sm font-semibold transition-colors hover:bg-muted"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Retour au dashboard
-            </button>
-          </div>
-        </>
-      )}
+          )}
+        </div>
+      </div>
     </div>
   )
 }
-
