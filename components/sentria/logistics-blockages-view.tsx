@@ -7,6 +7,7 @@ import {
   ArrowRight,
   Boxes,
   Check,
+  ChevronDown,
   ChevronRight,
   CircleAlert,
   ClipboardCheck,
@@ -376,6 +377,7 @@ export function LogisticsBlockagesView({
 
   const [selected, setSelected] = useState<PrimitiveId>(defaultSelected)
   const [applied, setApplied] = useState(false)
+  const [expandedBreakpoint, setExpandedBreakpoint] = useState<PrimitiveId | null>(null)
 
   // Re-derive the default focus stage whenever the composition itself changes
   // (e.g. the customer changes their onboarding selection while this view stays mounted).
@@ -518,21 +520,61 @@ export function LogisticsBlockagesView({
             <div><p className="text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground">Points de rupture</p><h3 className="mt-1 text-lg font-semibold">À protéger maintenant</h3></div>
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-muted"><Radar className="h-4 w-4" /></span>
           </div>
-          <div className="mt-5 space-y-3">
+          <div className="mt-5 space-y-2">
             {config.breakpoints.map((point) => {
               const active = point.primitiveId === selected
+              const isOpen = expandedBreakpoint === point.primitiveId
               const primitive = PRIMITIVES[point.primitiveId]
+              const PrimitiveIcon = primitive.icon
+              const toneClasses = point.tone === "risk"
+                ? { pill: "bg-rose-500 text-white", ring: "bg-rose-500/10 text-rose-600" }
+                : { pill: "bg-amber-500 text-white", ring: "bg-amber-500/10 text-amber-600" }
+
               return (
-                <button key={point.primitiveId} onClick={() => setSelected(point.primitiveId)} className={cn("w-full rounded-2xl border p-4 text-left transition-all", active ? "border-primary bg-muted/70 shadow-sm" : "border-border hover:border-muted-foreground/30 hover:bg-muted/40")}>
-                  <div className="flex items-start gap-3">
-                    <span className={cn("mt-1 h-2.5 w-2.5 rounded-full", point.tone === "risk" ? "bg-rose-500" : "bg-amber-500")} />
+                <div key={point.primitiveId} className={cn("overflow-hidden rounded-2xl border transition-all", active ? "border-primary" : "border-border")}>
+                  <button
+                    onClick={() => {
+                      setSelected(point.primitiveId)
+                      setExpandedBreakpoint(isOpen ? null : point.primitiveId)
+                    }}
+                    className={cn("flex w-full items-center gap-3 p-3.5 text-left transition-colors", active ? "bg-muted/70" : "hover:bg-muted/40")}
+                  >
+                    <span className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-xl", toneClasses.ring)}>
+                      <PrimitiveIcon className="h-4 w-4" />
+                    </span>
                     <div className="min-w-0 flex-1">
-                      <div className="flex justify-between gap-2"><p className="font-semibold">{primitive.name}</p><p className={cn("text-sm font-bold", point.tone === "risk" ? "text-rose-600" : "text-amber-600")}>{point.risk}%</p></div>
-                      <p className="mt-0.5 text-sm text-muted-foreground">{point.title}</p>
-                      <p className="mt-2 text-xs font-medium text-foreground">{point.impact}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="truncate font-semibold">{primitive.name}</p>
+                        <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide", toneClasses.pill)}>
+                          {point.tone === "risk" ? "Risque" : "À surveiller"}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">{point.title}</p>
                     </div>
-                  </div>
-                </button>
+                    <span className={cn("shrink-0 text-sm font-bold", point.tone === "risk" ? "text-rose-600" : "text-amber-600")}>{point.risk}%</span>
+                    <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", isOpen && "rotate-180")} />
+                  </button>
+
+                  {isOpen && (
+                    <div className="space-y-3 border-t border-border bg-background/60 p-3.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Impact estimé</span>
+                        <span className="font-semibold text-foreground">{point.impact}</span>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">SentrIA surveille ici</p>
+                        <ul className="mt-1.5 space-y-1">
+                          {primitive.signalDna.map((signal) => (
+                            <li key={signal} className="flex items-center gap-1.5 text-xs text-foreground">
+                              <span className={cn("h-1 w-1 rounded-full", point.tone === "risk" ? "bg-rose-500" : "bg-amber-500")} />
+                              {signal}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )
             })}
           </div>
