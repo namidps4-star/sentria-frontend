@@ -17,9 +17,24 @@ import { cn } from "@/lib/utils"
 
 type StatusLevel = "ok" | "watch" | "blocked"
 
-type OperationCell = {
-  id: string
-  status: StatusLevel
+type Alert = {
+  equipment: string
+  message: string
+  severity: "WARNING" | "CRITICAL" | string
+  date: string
+  sector?: string | null
+}
+
+type Recommendation = {
+  equipment: string
+  sector?: string | null
+  severity: "WARNING" | "CRITICAL" | string
+  date: string
+  message: string
+  risk_score?: number | null
+  alert_key?: string | null
+  recommended_action: string
+  action_category: string
 }
 
 type SecondaryRupture = {
@@ -91,11 +106,7 @@ const STATUS_STYLES: Record<StatusLevel, { dot: string; cell: string; label: str
   },
 }
 
-function OperationsGrid({
-  onSettled,
-}: {
-  onSettled?: () => void
-}) {
+function OperationsGrid({ onSettled }: { onSettled?: () => void }) {
   const [statuses, setStatuses] = useState<StatusLevel[]>(() =>
     Array(GRID_SIZE).fill("ok")
   )
@@ -186,10 +197,23 @@ function OperationsGrid({
   )
 }
 
-export function LogisticsBlockagesView({ onBack }: { onBack?: () => void }) {
+export function LogisticsBlockagesView({
+  onBack,
+  alerts = [],
+  recommendations = [],
+}: {
+  onBack?: () => void
+  alerts?: Alert[]
+  recommendations?: Recommendation[]
+}) {
   const [showRecommendation, setShowRecommendation] = useState(false)
   const [applied, setApplied] = useState(false)
   const [expanded, setExpanded] = useState<string | null>(null)
+
+  // Reserved for when real logistics alerts/recommendations feed this view
+  // instead of the illustrative data below.
+  void alerts
+  void recommendations
 
   function toggleExpanded(id: string) {
     setExpanded((current) => (current === id ? null : id))
@@ -200,20 +224,19 @@ export function LogisticsBlockagesView({ onBack }: { onBack?: () => void }) {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 md:px-8 md:py-12">
+    <div className="space-y-6">
       {/* HEADER */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          {onBack && (
-            <button
-              type="button"
-              onClick={onBack}
-              className="mb-3 inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground"
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
-              Logistique
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => onBack?.()}
+            disabled={!onBack}
+            className="mb-3 inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground disabled:cursor-default disabled:opacity-0"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+            Retour
+          </button>
 
           <h1 className="font-heading text-2xl font-bold tracking-tight md:text-3xl">
             Éviter les blocages
