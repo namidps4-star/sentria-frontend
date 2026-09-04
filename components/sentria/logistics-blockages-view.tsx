@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react"
 import {
   Anchor,
   ArrowLeft,
-  ArrowRight,
   Check,
   Clock3,
   Package,
@@ -100,11 +99,6 @@ const OPS_META: Record<
   {
     title: string
     subtitle: string
-    kpis: {
-      label: string
-      description: string
-      icon: typeof Package
-    }[]
     signals: string[]
   }
 > = {
@@ -112,23 +106,6 @@ const OPS_META: Record<
     title: "Blocages port & conteneurs",
     subtitle:
       "Identifiez les files d'attente, les conteneurs immobilisés et les équipements susceptibles de ralentir le terminal.",
-    kpis: [
-      {
-        label: "Conteneurs bloqués",
-        description: "Conteneurs immobilisés ou en anomalie.",
-        icon: Package,
-      },
-      {
-        label: "Attente au quai",
-        description: "Files d'attente et temps d'attente détectés.",
-        icon: Clock3,
-      },
-      {
-        label: "Équipements à risque",
-        description: "Grues et engins pouvant provoquer un arrêt.",
-        icon: Radar,
-      },
-    ],
     signals: [
       "Attente anormalement longue",
       "Cycle de manutention ralenti",
@@ -142,23 +119,6 @@ const OPS_META: Record<
     title: "Blocages entrepôt & manutention",
     subtitle:
       "Surveillez les zones saturées, les retards de préparation et les équipements qui peuvent interrompre le flux.",
-    kpis: [
-      {
-        label: "Zones bloquées",
-        description: "Zones ou flux actuellement perturbés.",
-        icon: Warehouse,
-      },
-      {
-        label: "Commandes en retard",
-        description: "Commandes susceptibles de manquer leur départ.",
-        icon: Clock3,
-      },
-      {
-        label: "Équipements à risque",
-        description: "Chariots et équipements de manutention.",
-        icon: Radar,
-      },
-    ],
     signals: [
       "Zone de stockage saturée",
       "Commande en retard",
@@ -172,23 +132,6 @@ const OPS_META: Record<
     title: "Blocages transport & distribution",
     subtitle:
       "Anticipez les immobilisations, les retards de tournée et les problèmes pouvant bloquer les livraisons.",
-    kpis: [
-      {
-        label: "Véhicules bloqués",
-        description: "Véhicules présentant une anomalie critique.",
-        icon: Truck,
-      },
-      {
-        label: "Retards",
-        description: "Retards pouvant perturber les tournées.",
-        icon: Clock3,
-      },
-      {
-        label: "Flotte à risque",
-        description: "Véhicules nécessitant une attention.",
-        icon: Radar,
-      },
-    ],
     signals: [
       "Véhicule immobilisé",
       "Retard de livraison",
@@ -202,23 +145,6 @@ const OPS_META: Record<
     title: "Blocages préparation & expédition",
     subtitle:
       "Détectez les commandes, postes de préparation et expéditions susceptibles de rester bloqués.",
-    kpis: [
-      {
-        label: "Commandes bloquées",
-        description: "Commandes qui ne peuvent pas avancer.",
-        icon: PackageSearch,
-      },
-      {
-        label: "Préparations en retard",
-        description: "Commandes dépassant leur délai prévu.",
-        icon: Clock3,
-      },
-      {
-        label: "Postes à risque",
-        description: "Postes pouvant ralentir les expéditions.",
-        icon: Radar,
-      },
-    ],
     signals: [
       "Commande bloquée",
       "Préparation en retard",
@@ -232,23 +158,6 @@ const OPS_META: Record<
     title: "Blocages chaîne du froid",
     subtitle:
       "Surveillez les ruptures de température et les équipements frigorifiques pouvant interrompre le flux.",
-    kpis: [
-      {
-        label: "Ruptures du froid",
-        description: "Équipements ou marchandises hors seuil.",
-        icon: Snowflake,
-      },
-      {
-        label: "Alertes température",
-        description: "Températures proches ou hors limites.",
-        icon: AlertTriangle,
-      },
-      {
-        label: "Équipements à risque",
-        description: "Groupes froid et équipements surveillés.",
-        icon: Radar,
-      },
-    ],
     signals: [
       "Température hors seuil",
       "Rupture de chaîne du froid",
@@ -262,23 +171,6 @@ const OPS_META: Record<
     title: "Blocages logistiques",
     subtitle:
       "Vue transversale des risques pouvant perturber vos différentes activités logistiques.",
-    kpis: [
-      {
-        label: "Blocages critiques",
-        description: "Situations nécessitant une intervention immédiate.",
-        icon: CircleAlert,
-      },
-      {
-        label: "Files d'attente",
-        description: "Flux présentant un ralentissement.",
-        icon: Clock3,
-      },
-      {
-        label: "Équipements à risque",
-        description: "Équipements pouvant provoquer un arrêt.",
-        icon: Radar,
-      },
-    ],
     signals: [
       "Blocage opérationnel",
       "File d'attente anormale",
@@ -289,7 +181,11 @@ const OPS_META: Record<
   },
 }
 
-export function LogisticsBlockagesView() {
+export function LogisticsBlockagesView({
+  onBack,
+}: {
+  onBack?: () => void
+}) {
   const [opsType, setOpsType] = useState<OpsType | null>(null)
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [loading, setLoading] = useState(true)
@@ -393,6 +289,11 @@ export function LogisticsBlockagesView() {
   )
 
   function goBack() {
+    if (onBack) {
+      onBack()
+      return
+    }
+
     window.history.back()
   }
 
@@ -417,7 +318,8 @@ export function LogisticsBlockagesView() {
             </div>
 
             <h1 className="mt-4 font-heading text-2xl font-bold md:text-4xl">
-              {meta?.title ?? "Prévention des blocages logistiques"}
+              {meta?.title ??
+                "Prévention des blocages logistiques"}
             </h1>
 
             <p className="mt-3 max-w-2xl text-sm leading-6 text-background/70 md:text-base">
@@ -905,3 +807,4 @@ export function LogisticsBlockagesView() {
     </div>
   )
 }
+
