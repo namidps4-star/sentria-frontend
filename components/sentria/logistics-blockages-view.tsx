@@ -110,6 +110,7 @@ export function LogisticsBlockagesView() {
             <p className="mt-5 border-l-2 border-rose-400 pl-3 text-sm leading-6 text-muted-foreground">Ces signaux convergent vers une surcharge probable demain matin. <span className="font-medium text-foreground">11 commandes prioritaires sont concernées.</span></p>
           </div>
 
+
           <div className="grid gap-5 p-5 sm:p-7 lg:grid-cols-[.7fr_1.3fr]">
             <div className="rounded-2xl bg-muted/55 p-5"><p className="text-xs font-bold uppercase tracking-[0.13em] text-muted-foreground">Si rien ne change</p><div className="mt-5 space-y-3 border-l border-dashed border-border pl-4 text-sm"><p><span className="font-semibold">Maintenant</span><span className="ml-2 text-muted-foreground">flux sous tension</span></p><p className="relative"><span className="absolute -left-[21px] top-1 h-2 w-2 rounded-full bg-amber-500" /><span className="font-semibold">+24 h</span><span className="ml-2 text-muted-foreground">surcharge</span></p><p className="relative"><span className="absolute -left-[21px] top-1 h-2 w-2 rounded-full bg-rose-500" /><span className="font-semibold">+48 h</span><span className="ml-2 text-muted-foreground">17 commandes impactées</span></p></div><p className="mt-5 text-lg font-semibold">4 800 € <span className="text-sm font-normal text-muted-foreground">de coût potentiel</span></p></div>
             <div className={cn("rounded-2xl border p-5 transition-colors", applied ? "border-emerald-500/30 bg-emerald-500/[0.07]" : "border-emerald-500/20 bg-emerald-500/[0.04]")}>
