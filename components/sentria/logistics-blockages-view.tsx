@@ -44,6 +44,7 @@ const stateStyle = {
   risk: { dot: "bg-rose-500", text: "text-rose-700 dark:text-rose-400", ring: "border-rose-500/25 bg-rose-500/10" },
 }
 
+
 export function LogisticsBlockagesView() {
   const [selected, setSelected] = useState<FlowStage>("Transport")
   const [applied, setApplied] = useState(false)
