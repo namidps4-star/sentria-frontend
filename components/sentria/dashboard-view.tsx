@@ -20,6 +20,7 @@ import {
 } from "lucide-react"
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
+import { LogisticsBlockagesView } from "./logistics-blockages-view"
 
 const API = "https://sentria-8btn.onrender.com"
 
@@ -53,7 +54,6 @@ type Recommendation = {
   action_category: string
 }
 
-// Matches the `category` field set in pipeline/action_map.py
 const CATEGORY_ICON: Record<string, typeof Wrench> = {
   maintenance: Wrench,
   fuel: Fuel,
@@ -78,8 +78,7 @@ const CATEGORY_LABEL: Record<string, string> = {
   other: "Autre",
 }
 
-// Plain-language consequence of ignoring each category, shown on
-// recommendation cards so the value of acting is obvious at a glance.
+
 const IMPACT_HINT: Record<string, string> = {
   maintenance: "Évite un arrêt non planifié de plusieurs heures",
   fuel: "Évite une immobilisation faute de carburant",
@@ -120,22 +119,17 @@ const SECTOR_META: Record<
       },
       {
         label: "Alertes critiques",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta:
           a.filter((x) => x.severity === "CRITICAL").length > 0
             ? "À traiter"
             : "OK",
-        up:
-          a.filter((x) => x.severity === "CRITICAL").length === 0,
+        up: a.filter((x) => x.severity === "CRITICAL").length === 0,
         spark: [9, 8, 7, 8, 6, 5, 4],
       },
       {
         label: "Warnings",
-        value: String(
-          a.filter((x) => x.severity === "WARNING").length
-        ),
+        value: String(a.filter((x) => x.severity === "WARNING").length),
         delta: "Surveillance",
         up: true,
         spark: [8, 7, 9, 6, 8, 10, 12],
@@ -161,18 +155,14 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: "Machines en panne imminente",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta: "Arrêt immédiat",
         up: false,
         spark: [2, 4, 3, 6, 5, 8, 7],
       },
       {
         label: "Usure élevée",
-        value: String(
-          a.filter((x) => x.severity === "WARNING").length
-        ),
+        value: String(a.filter((x) => x.severity === "WARNING").length),
         delta: "Surveiller",
         up: true,
         spark: [4, 5, 6, 5, 7, 8, 9],
@@ -205,9 +195,7 @@ const SECTOR_META: Record<
           x.message.toLowerCase().includes("wear") ||
           x.message.toLowerCase().includes("usure")
       ).length,
-      a.filter((x) =>
-        x.message.toLowerCase().includes("torque")
-      ).length,
+      a.filter((x) => x.message.toLowerCase().includes("torque")).length,
     ],
   },
 
@@ -215,18 +203,14 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: "Ruptures critiques",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta: "Commander maintenant",
         up: false,
         spark: [3, 2, 4, 5, 3, 4, 6],
       },
       {
         label: "Stocks bas",
-        value: String(
-          a.filter((x) => x.severity === "WARNING").length
-        ),
+        value: String(a.filter((x) => x.severity === "WARNING").length),
         delta: "À surveiller",
         up: true,
         spark: [2, 3, 3, 4, 5, 4, 5],
@@ -270,9 +254,7 @@ const SECTOR_META: Record<
           x.message.toLowerCase().includes("froid") ||
           x.message.toLowerCase().includes("cold")
       ).length,
-      a.filter((x) =>
-        x.message.toLowerCase().includes("expir")
-      ).length,
+      a.filter((x) => x.message.toLowerCase().includes("expir")).length,
     ],
   },
 
@@ -280,9 +262,7 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: "Pertes probables",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta: "Livraison urgente",
         up: false,
         spark: [1, 2, 2, 3, 4, 3, 5],
@@ -310,9 +290,7 @@ const SECTOR_META: Record<
       {
         label: "Alertes temp.",
         value: String(
-          a.filter((x) =>
-            x.message.toLowerCase().includes("temp")
-          ).length
+          a.filter((x) => x.message.toLowerCase().includes("temp")).length
         ),
         delta: "Stockage",
         up: false,
@@ -332,12 +310,8 @@ const SECTOR_META: Record<
           x.message.toLowerCase().includes("retard") ||
           x.message.toLowerCase().includes("delay")
       ).length,
-      a.filter((x) =>
-        x.message.toLowerCase().includes("temp")
-      ).length,
-      a.filter((x) =>
-        x.message.toLowerCase().includes("stock")
-      ).length,
+      a.filter((x) => x.message.toLowerCase().includes("temp")).length,
+      a.filter((x) => x.message.toLowerCase().includes("stock")).length,
     ],
   },
 
@@ -345,9 +319,7 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: "Camions critiques",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta: "Immobiliser",
         up: false,
         spark: [1, 2, 1, 3, 2, 4, 3],
@@ -416,9 +388,7 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: "Équipements bloqués",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta: "Arrêt immédiat",
         up: false,
         spark: [1, 2, 2, 3, 3, 4, 5],
@@ -460,9 +430,7 @@ const SECTOR_META: Record<
     chartTitle: "Alertes port · 7 jours",
     barLabels: ["Cycles", "Attente", "Pression", "Carburant"],
     barData: (a) => [
-      a.filter((x) =>
-        x.message.toLowerCase().includes("cycle")
-      ).length,
+      a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
       a.filter(
         (x) =>
           x.message.toLowerCase().includes("attente") ||
@@ -485,9 +453,7 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: "Générateurs critiques",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta: "Intervenir",
         up: false,
         spark: [1, 2, 2, 3, 3, 4, 5],
@@ -553,10 +519,6 @@ const SECTOR_META: Record<
   },
 }
 
-// Step 3 of onboarding ("operations type") only applies within the
-// logistics sector. Each entry reshapes the KPI/chart vocabulary to
-// match what that specific operation actually cares about. "multi"
-// intentionally falls back to the generic SECTOR_META.logistics above.
 const OPS_TYPE_LABEL: Record<string, string> = {
   port: "Port & conteneurs",
   entrepot: "Entrepôt & manutention",
@@ -564,7 +526,10 @@ const OPS_TYPE_LABEL: Record<string, string> = {
   froid: "Chaîne du froid",
 }
 
-const LOGISTICS_OPS_META: Record<string, (typeof SECTOR_META)["logistics"]> = {
+const LOGISTICS_OPS_META: Record<
+  string,
+  (typeof SECTOR_META)["logistics"]
+> = {
   port: {
     kpis: (a) => [
       {
@@ -610,7 +575,7 @@ const LOGISTICS_OPS_META: Record<string, (typeof SECTOR_META)["logistics"]> = {
         spark: [0, 1, 1, 1, 2, 2, 3],
       },
     ],
-    chartTitle: "Activité quai et conteneurs \u00b7 7 jours",
+    chartTitle: "Activité quai et conteneurs · 7 jours",
     barLabels: ["Cycles grue", "Attente quai", "Pression", "Carburant"],
     barData: (a) => [
       a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
@@ -677,7 +642,7 @@ const LOGISTICS_OPS_META: Record<string, (typeof SECTOR_META)["logistics"]> = {
         spark: [0, 1, 1, 1, 2, 2, 3],
       },
     ],
-    chartTitle: "Activité entrepôt \u00b7 7 jours",
+    chartTitle: "Activité entrepôt · 7 jours",
     barLabels: ["Cycles", "Retards", "Capacité", "Carburant"],
     barData: (a) => [
       a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
@@ -742,7 +707,7 @@ const LOGISTICS_OPS_META: Record<string, (typeof SECTOR_META)["logistics"]> = {
         spark: [0, 1, 1, 1, 2, 2, 3],
       },
     ],
-    chartTitle: "Activité flotte \u00b7 7 jours",
+    chartTitle: "Activité flotte · 7 jours",
     barLabels: ["Surchauffe", "Huile", "Pneus", "Carburant"],
     barData: (a) => [
       a.filter((x) => x.message.toLowerCase().includes("surchauffe")).length,
@@ -795,7 +760,7 @@ const LOGISTICS_OPS_META: Record<string, (typeof SECTOR_META)["logistics"]> = {
         spark: [0, 1, 1, 1, 2, 2, 3],
       },
     ],
-    chartTitle: "Activité chaîne du froid \u00b7 7 jours",
+    chartTitle: "Activité chaîne du froid · 7 jours",
     barLabels: ["Cycles", "Temp. hors seuil", "Pression", "Carburant"],
     barData: (a) => [
       a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
@@ -822,34 +787,38 @@ export function DashboardView({
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [recommendations, setRecommendations] = useState<Recommendation[]>([])
   const [uploadSector, setUploadSector] = useState("industry")
-  const [filterSector, setFilterSector] = useState("all")
+
+  const [filterSector, setFilterSector] = useState(() => {
+    if (typeof window === "undefined") {
+      return "all"
+    }
+
+    const savedSector = localStorage.getItem("sentria_sector")
+
+    return savedSector || "all"
+  })
+
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState("")
 
-  const [activeSectors, setActiveSectors] = useState<string[]>(
-    () => {
-      if (typeof window === "undefined") {
-        return ["industry"]
-      }
-
-      try {
-        const stored = JSON.parse(
-          localStorage.getItem("sentria_sectors") ||
-            '["industry"]'
-        )
-
-        return Array.isArray(stored) && stored.length > 0
-          ? stored
-          : ["industry"]
-      } catch {
-        return ["industry"]
-      }
+  const [activeSectors, setActiveSectors] = useState<string[]>(() => {
+    if (typeof window === "undefined") {
+      return ["industry"]
     }
-  )
 
-  // Step 3 of onboarding ("operations type"), only meaningful when the
-  // logistics sector is active. Drives which KPI/chart vocabulary from
-  // LOGISTICS_OPS_META is shown, see the `meta` computation below.
+    try {
+      const stored = JSON.parse(
+        localStorage.getItem("sentria_sectors") || '["industry"]'
+      )
+
+      return Array.isArray(stored) && stored.length > 0
+        ? stored
+        : ["industry"]
+    } catch {
+      return ["industry"]
+    }
+  })
+
   const [opsType, setOpsType] = useState<string | null>(() => {
     if (typeof window === "undefined") return null
     return localStorage.getItem("sentria_ops_type")
@@ -859,8 +828,7 @@ export function DashboardView({
     const refreshSectors = () => {
       try {
         const stored = JSON.parse(
-          localStorage.getItem("sentria_sectors") ||
-            '["industry"]'
+          localStorage.getItem("sentria_sectors") || '["industry"]'
         )
 
         setActiveSectors(
@@ -873,6 +841,12 @@ export function DashboardView({
       }
 
       setOpsType(localStorage.getItem("sentria_ops_type"))
+
+      const savedSector = localStorage.getItem("sentria_sector")
+
+      if (savedSector) {
+        setFilterSector(savedSector)
+      }
     }
 
     window.addEventListener(
@@ -888,7 +862,6 @@ export function DashboardView({
     }
   }, [])
 
-
   useEffect(() => {
     if (
       activeSectors.length > 0 &&
@@ -899,6 +872,7 @@ export function DashboardView({
 
     if (
       filterSector !== "all" &&
+      filterSector !== "logistics" &&
       !activeSectors.includes(filterSector)
     ) {
       setFilterSector("all")
@@ -920,10 +894,17 @@ export function DashboardView({
     fetch(`${API}/recommendations?limit=20&lang=fr`)
       .then((r) => r.json())
       .then((d) => {
-        setRecommendations(Array.isArray(d?.recommendations) ? d.recommendations : [])
+        setRecommendations(
+          Array.isArray(d?.recommendations)
+            ? d.recommendations
+            : []
+        )
       })
       .catch((err) => {
-        console.error("Failed to load recommendations:", err)
+        console.error(
+          "Failed to load recommendations:",
+          err
+        )
       })
   }
 
@@ -962,9 +943,7 @@ export function DashboardView({
 
       const data = await res.json()
 
-      setUploadMsg(
-        data.message ?? "Fichier traité."
-      )
+      setUploadMsg(data.message ?? "Fichier traité.")
 
       await new Promise((r) =>
         setTimeout(r, 1500)
@@ -979,9 +958,7 @@ export function DashboardView({
       setFilterSector(uploadSector)
     } catch (error) {
       console.error(error)
-      setUploadMsg(
-        "Erreur lors de l'upload."
-      )
+      setUploadMsg("Erreur lors de l'upload.")
     } finally {
       setUploading(false)
       e.target.value = ""
@@ -1037,12 +1014,9 @@ export function DashboardView({
         const alertDate = new Date(a.date)
 
         return (
-          alertDate.getFullYear() ===
-            d.getFullYear() &&
-          alertDate.getMonth() ===
-            d.getMonth() &&
-          alertDate.getDate() ===
-            d.getDate()
+          alertDate.getFullYear() === d.getFullYear() &&
+          alertDate.getMonth() === d.getMonth() &&
+          alertDate.getDate() === d.getDate()
         )
       }).length
     }
@@ -1050,9 +1024,36 @@ export function DashboardView({
 
   /*
    * ============================================================
-   * DASHBOARD
+   * LOGISTICS
    * ============================================================
+   *
+   * filterSector is the single source of truth for which view is
+   * showing. LogisticsBlockagesView doesn't accept an onBack prop,
+   * so the back affordance lives here and just resets the sector.
    */
+  if (filterSector === "logistics") {
+    return (
+      <div className="space-y-4">
+        <button
+          type="button"
+          onClick={() => {
+            setFilterSector("all")
+            localStorage.setItem("sentria_sector", "all")
+          }}
+          className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+        >
+          ← Retour au tableau de bord
+        </button>
+        <LogisticsBlockagesView
+  opsType={
+    opsType && ["port", "entrepot", "transport", "expedition", "froid", "multi"].includes(opsType)
+      ? (opsType as "port" | "entrepot" | "transport" | "expedition" | "froid" | "multi")
+      : undefined
+  }
+/>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -1093,27 +1094,32 @@ export function DashboardView({
       {/* RECOMMENDATIONS */}
       {filteredRecommendations.length > 0 ? (() => {
         const [top, ...rest] = filteredRecommendations
-        const TopIcon = CATEGORY_ICON[top.action_category] ?? Sparkles
+        const TopIcon =
+          CATEGORY_ICON[top.action_category] ?? Sparkles
         const topCritical = top.severity === "CRITICAL"
         const topRiskPct =
           typeof top.risk_score === "number"
-            ? Math.round(top.risk_score > 1 ? Math.min(top.risk_score, 100) : top.risk_score * 100)
+            ? Math.round(
+                top.risk_score > 1
+                  ? Math.min(top.risk_score, 100)
+                  : top.risk_score * 100
+              )
             : null
 
-        // How many times this exact equipment has shown up in the last 7
-        // days of real alert history. A recurring problem is more urgent
-        // than a one-off, even at the same severity.
         const cutoff = new Date()
         cutoff.setDate(cutoff.getDate() - 7)
+
         const recurrenceOf = (equipment: string) =>
           alerts.filter(
-            (a) => a.equipment === equipment && new Date(a.date) >= cutoff
+            (a) =>
+              a.equipment === equipment &&
+              new Date(a.date) >= cutoff
           ).length
+
         const topRecurrence = recurrenceOf(top.equipment)
 
         return (
           <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6">
-            {/* soft ambient glow, purely decorative */}
             <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-accent/20 blur-3xl" />
 
             <div className="relative flex flex-wrap items-start justify-between gap-3">
@@ -1140,7 +1146,6 @@ export function DashboardView({
             </div>
 
             <div className="relative mt-6 flex flex-col gap-4 lg:flex-row">
-              {/* spotlight: the single most urgent item */}
               <div className="flex w-full shrink-0 flex-col justify-between rounded-2xl border border-transparent bg-gradient-to-br from-accent/20 via-card to-card p-5 ring-1 ring-accent/40 lg:w-72">
                 <div>
                   <div className="flex items-center justify-between gap-2">
@@ -1165,7 +1170,8 @@ export function DashboardView({
                   <div className="mt-3 flex items-start gap-1.5 rounded-lg bg-background/60 px-2.5 py-2">
                     <Shield className="mt-0.5 h-3 w-3 shrink-0 text-accent-foreground" />
                     <p className="text-[11px] leading-4 text-muted-foreground">
-                      {IMPACT_HINT[top.action_category] ?? IMPACT_HINT.other}
+                      {IMPACT_HINT[top.action_category] ??
+                        IMPACT_HINT.other}
                     </p>
                   </div>
 
@@ -1191,7 +1197,8 @@ export function DashboardView({
                     </span>
 
                     <span className="text-[10px] text-muted-foreground">
-                      {CATEGORY_LABEL[top.action_category] ?? "Autre"}
+                      {CATEGORY_LABEL[top.action_category] ??
+                        "Autre"}
                     </span>
                   </div>
 
@@ -1201,11 +1208,16 @@ export function DashboardView({
                         <div
                           className={cn(
                             "h-full rounded-full transition-all duration-500",
-                            topCritical ? "bg-destructive" : "bg-amber-500"
+                            topCritical
+                              ? "bg-destructive"
+                              : "bg-amber-500"
                           )}
-                          style={{ width: `${topRiskPct}%` }}
+                          style={{
+                            width: `${topRiskPct}%`,
+                          }}
                         />
                       </div>
+
                       <span className="shrink-0 text-[10px] font-medium text-muted-foreground">
                         {topRiskPct}%
                       </span>
@@ -1214,20 +1226,27 @@ export function DashboardView({
                 </div>
               </div>
 
-              {/* queue: the remaining priorities, scrollable so the panel stays compact */}
               {rest.length > 0 && (
                 <div className="scrollbar-hide -mx-1 flex flex-1 snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-1">
                   {rest.map((rec, idx) => {
                     const rank = idx + 2
-                    const Icon = CATEGORY_ICON[rec.action_category] ?? Sparkles
-                    const isCritical = rec.severity === "CRITICAL"
-                    const recurrence = recurrenceOf(rec.equipment)
+                    const Icon =
+                      CATEGORY_ICON[rec.action_category] ??
+                      Sparkles
+                    const isCritical =
+                      rec.severity === "CRITICAL"
+                    const recurrence = recurrenceOf(
+                      rec.equipment
+                    )
 
                     return (
                       <div
                         key={`${rec.equipment}-${rec.alert_key}-${idx}`}
                         className="group flex w-64 shrink-0 snap-start flex-col rounded-2xl border border-border bg-background p-4 transition-all duration-300 ease-out animate-in fade-in slide-in-from-right-2 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-lg"
-                        style={{ animationDelay: `${idx * 70}ms`, animationFillMode: "backwards" }}
+                        style={{
+                          animationDelay: `${idx * 70}ms`,
+                          animationFillMode: "backwards",
+                        }}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span
@@ -1273,7 +1292,9 @@ export function DashboardView({
 
                           {rec.sector && (
                             <span className="truncate text-[9px] uppercase tracking-wider text-muted-foreground">
-                              {SECTORS.find((s) => s.key === rec.sector)?.label ?? rec.sector}
+                              {SECTORS.find(
+                                (s) => s.key === rec.sector
+                              )?.label ?? rec.sector}
                             </span>
                           )}
                         </div>
@@ -1295,7 +1316,10 @@ export function DashboardView({
       {/* SECTOR FILTER */}
       <div className="flex flex-wrap gap-2">
         <button
-          onClick={() => setFilterSector("all")}
+          onClick={() => {
+            setFilterSector("all")
+            localStorage.setItem("sentria_sector", "all")
+          }}
           className={cn(
             "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
             filterSector === "all"
@@ -1316,9 +1340,10 @@ export function DashboardView({
         ).map((s) => (
           <button
             key={s.key}
-            onClick={() =>
+            onClick={() => {
               setFilterSector(s.key)
-            }
+              localStorage.setItem("sentria_sector", s.key)
+            }}
             className={cn(
               "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
               filterSector === s.key
@@ -1339,12 +1364,14 @@ export function DashboardView({
         ))}
       </div>
 
-      {filterSector === "logistics" && opsType && LOGISTICS_OPS_META[opsType] && (
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[11px] font-medium text-accent-foreground">
-          <Shield className="h-3 w-3" />
-          Vue adaptée : {OPS_TYPE_LABEL[opsType]}
-        </div>
-      )}
+      {filterSector === "logistics" &&
+        opsType &&
+        LOGISTICS_OPS_META[opsType] && (
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[11px] font-medium text-accent-foreground">
+            <Shield className="h-3 w-3" />
+            Vue adaptée : {OPS_TYPE_LABEL[opsType]}
+          </div>
+        )}
 
       {/* KPIs */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -1384,9 +1411,7 @@ export function DashboardView({
               data={k.spark}
               className={cn(
                 "mt-2 h-9 w-full",
-                k.up
-                  ? "text-accent"
-                  : "text-destructive"
+                k.up ? "text-accent" : "text-destructive"
               )}
             />
           </div>
@@ -1462,9 +1487,7 @@ export function DashboardView({
             ).map((s) => (
               <button
                 key={s.key}
-                onClick={() =>
-                  setUploadSector(s.key)
-                }
+                onClick={() => setUploadSector(s.key)}
                 className={cn(
                   "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors",
                   uploadSector === s.key
@@ -1480,9 +1503,7 @@ export function DashboardView({
           <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90">
             <Upload className="h-4 w-4" />
 
-            {uploading
-              ? "Traitement…"
-              : "Importer CSV"}
+            {uploading ? "Traitement…" : "Importer CSV"}
 
             <input
               type="file"
@@ -1587,8 +1608,7 @@ export function DashboardView({
                       <span
                         className={cn(
                           "rounded-full px-2.5 py-1 text-xs font-semibold",
-                          alert.severity ===
-                            "CRITICAL"
+                          alert.severity === "CRITICAL"
                             ? "bg-destructive/10 text-destructive"
                             : "bg-amber-500/15 text-amber-600"
                         )}
