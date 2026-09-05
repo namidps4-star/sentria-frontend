@@ -1,133 +1,181 @@
-"use client";
+"use client"
 
-import { ViewKey } from "./app-shell";
+import {
+  LayoutDashboard,
+  Factory,
+  Sparkles,
+  CreditCard,
+  User,
+  Settings,
+  FileText,
+  PanelLeftClose,
+  PanelLeftOpen,
+  X,
+} from "lucide-react"
+
+export type ViewKey =
+  | "dashboard"
+  | "sites"
+  | "ask"
+  | "pricing"
+  | "profile"
+  | "settings"
+  | "report"
 
 interface SidebarProps {
-  active: ViewKey;
-  onNavigate: (view: ViewKey) => void;
-  open: boolean;
-  onClose: () => void;
-  collapsed: boolean;
-  onToggleCollapse: () => void;
+  active: ViewKey
+  onNavigate: (view: ViewKey) => void
+  open: boolean
+  onClose: () => void
 }
 
-const items: { id: ViewKey; label: string; icon: string }[] = [
+const items: {
+  id: ViewKey
+  label: string
+  icon: typeof LayoutDashboard
+}[] = [
   {
     id: "dashboard",
     label: "Dashboard",
-    icon: "⌂",
+    icon: LayoutDashboard,
   },
   {
-    id: "chat",
-    label: "Chat",
-    icon: "◉",
+    id: "sites",
+    label: "Sites",
+    icon: Factory,
   },
   {
-    id: "agents",
-    label: "Agents",
-    icon: "✦",
+    id: "ask",
+    label: "Ask SentrIA",
+    icon: Sparkles,
   },
   {
-    id: "knowledge",
-    label: "Knowledge",
-    icon: "◇",
+    id: "report",
+    label: "Rapport",
+    icon: FileText,
+  },
+  {
+    id: "pricing",
+    label: "Abonnement",
+    icon: CreditCard,
+  },
+  {
+    id: "profile",
+    label: "Profil",
+    icon: User,
   },
   {
     id: "settings",
-    label: "Settings",
-    icon: "⚙",
+    label: "Paramètres",
+    icon: Settings,
   },
-];
+]
 
-export default function Sidebar({
+export function Sidebar({
   active,
   onNavigate,
   open,
   onClose,
-  collapsed,
-  onToggleCollapse,
 }: SidebarProps) {
   return (
     <>
       {open && (
         <button
-          aria-label="Close sidebar"
+          type="button"
+          aria-label="Fermer le menu"
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-black/30 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
         />
       )}
 
       <aside
         className={[
           "fixed z-50",
-          "left-8 top-8 bottom-8",
+          "left-4 top-4 bottom-4",
+          "w-[240px]",
+          "overflow-hidden",
           "rounded-[28px]",
-          "bg-[#181818]",
           "border border-white/10",
+          "bg-[#181818]",
           "shadow-2xl",
-          "transition-all duration-300",
-          "lg:block",
-          collapsed ? "w-[60px]" : "w-[240px]",
-          open ? "translate-x-0" : "-translate-x-[120%] lg:translate-x-0",
+          "transition-transform duration-300",
+          "lg:left-8 lg:top-8 lg:bottom-8",
+          open
+            ? "translate-x-0"
+            : "-translate-x-[120%] lg:translate-x-0",
         ].join(" ")}
       >
-        <div className="flex h-full flex-col overflow-hidden rounded-[28px]">
-          <div className="flex h-16 shrink-0 items-center px-3">
-            {!collapsed && (
-              <div className="px-2 text-sm font-semibold text-white">
-                SentrIA
+        <div className="flex h-full flex-col">
+          <div className="flex h-[72px] shrink-0 items-center px-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-sm font-bold text-black">
+                S
               </div>
-            )}
+
+              <span className="text-sm font-semibold text-white">
+                SentrIA
+              </span>
+            </div>
 
             <button
-              onClick={onToggleCollapse}
-              className={[
-                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-                "text-white/70 transition hover:bg-white/10 hover:text-white",
-                collapsed ? "mx-auto" : "ml-auto",
-              ].join(" ")}
-              aria-label="Toggle sidebar"
+              type="button"
+              onClick={onClose}
+              className="ml-auto flex h-9 w-9 items-center justify-center rounded-xl text-white/50 transition hover:bg-white/10 hover:text-white lg:hidden"
             >
-              {collapsed ? "→" : "←"}
+              <X className="h-4 w-4" />
             </button>
           </div>
 
-          <nav className="flex flex-1 flex-col gap-2 px-2 py-4">
-            {items.map((item) => {
-              const isActive = active === item.id;
+          <div className="px-3">
+            <div className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/30">
+              Navigation
+            </div>
 
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    onNavigate(item.id);
-                    onClose();
-                  }}
-                  className={[
-                    "flex h-11 items-center rounded-xl transition",
-                    collapsed
-                      ? "justify-center"
-                      : "gap-3 px-3 text-left",
-                    isActive
-                      ? "bg-white text-black"
-                      : "text-white/60 hover:bg-white/10 hover:text-white",
-                  ].join(" ")}
-                >
-                  <span className="flex w-5 justify-center text-base">
-                    {item.icon}
-                  </span>
+            <nav className="space-y-1">
+              {items.map((item) => {
+                const Icon = item.icon
+                const selected = active === item.id
 
-                  {!collapsed && (
-                    <span className="truncate text-sm font-medium">
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      onNavigate(item.id)
+                      onClose()
+                    }}
+                    className={[
+                      "flex w-full items-center gap-3 rounded-xl px-3 py-2.5",
+                      "text-sm transition-all duration-200",
+                      selected
+                        ? "bg-white text-black shadow-sm"
+                        : "text-white/55 hover:bg-white/10 hover:text-white",
+                    ].join(" ")}
+                  >
+                    <Icon className="h-[18px] w-[18px] shrink-0" />
+
+                    <span className="truncate">
                       {item.label}
                     </span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
+                  </button>
+                )
+              })}
+            </nav>
+          </div>
+
+          <div className="mt-auto p-3">
+            <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">
+              <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/30">
+                SentrIA
+              </div>
+
+              <p className="text-xs leading-5 text-white/50">
+                Intelligence opérationnelle augmentée par l’IA.
+              </p>
+            </div>
+          </div>
         </div>
       </aside>
     </>
-  );
+  )
 }
