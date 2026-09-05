@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
@@ -79,46 +78,196 @@ type OpsType = {
 }
 
 const SECTORS: SectorConfig[] = [
-  { id: "industry", label: "Industrie", description: "Machines, production et maintenance", icon: Factory },
-  { id: "health", label: "Santé", description: "Stocks, chaîne du froid et produits", icon: HeartPulse },
-  { id: "agriculture", label: "Agriculture", description: "Récoltes, stockage et transport", icon: Wheat },
-  { id: "transportation", label: "Transport", description: "Flotte, moteurs et maintenance", icon: Truck },
-  { id: "logistics", label: "Logistique", description: "Port, équipements et flux", icon: Ship },
-  { id: "energy", label: "Énergie", description: "Générateurs, carburant et température", icon: Zap },
+  {
+    id: "industry",
+    label: "Industrie",
+    description: "Machines, production et maintenance",
+    icon: Factory,
+  },
+  {
+    id: "health",
+    label: "Santé",
+    description: "Stocks, chaîne du froid et produits",
+    icon: HeartPulse,
+  },
+  {
+    id: "agriculture",
+    label: "Agriculture",
+    description: "Récoltes, stockage et transport",
+    icon: Wheat,
+  },
+  {
+    id: "transportation",
+    label: "Transport",
+    description: "Flotte, moteurs et maintenance",
+    icon: Truck,
+  },
+  {
+    id: "logistics",
+    label: "Logistique",
+    description: "Port, équipements et flux",
+    icon: Ship,
+  },
+  {
+    id: "energy",
+    label: "Énergie",
+    description: "Générateurs, carburant et température",
+    icon: Zap,
+  },
 ]
 
 const EQUIPMENT_BY_SECTOR: Record<Sector, Equipment[]> = {
   industry: [
-    { id: "machines", label: "Machines de production", description: "Usure, vibrations et pannes", icon: Cog },
-    { id: "motors", label: "Moteurs", description: "Performance et anomalies", icon: Activity },
-    { id: "temperature", label: "Température", description: "Surchauffe et dérives thermiques", icon: Thermometer },
-    { id: "pressure", label: "Pression", description: "Pression hydraulique et pneumatique", icon: Gauge },
-    { id: "production", label: "Production", description: "Cycles, rendement et arrêts", icon: Boxes },
-    { id: "maintenance", label: "Maintenance", description: "Révisions et interventions", icon: ShieldCheck },
+    {
+      id: "machines",
+      label: "Machines de production",
+      description: "Usure, vibrations et pannes",
+      icon: Cog,
+    },
+    {
+      id: "motors",
+      label: "Moteurs",
+      description: "Performance et anomalies",
+      icon: Activity,
+    },
+    {
+      id: "temperature",
+      label: "Température",
+      description: "Surchauffe et dérives thermiques",
+      icon: Thermometer,
+    },
+    {
+      id: "pressure",
+      label: "Pression",
+      description: "Pression hydraulique et pneumatique",
+      icon: Gauge,
+    },
+    {
+      id: "production",
+      label: "Production",
+      description: "Cycles, rendement et arrêts",
+      icon: Boxes,
+    },
+    {
+      id: "maintenance",
+      label: "Maintenance",
+      description: "Révisions et interventions",
+      icon: ShieldCheck,
+    },
   ],
   health: [
-    { id: "stocks", label: "Stocks", description: "Niveaux bas et risques de rupture", icon: Package },
-    { id: "cold-chain", label: "Chaîne du froid", description: "Température et conservation", icon: Snowflake },
-    { id: "temperature", label: "Température", description: "Surveillance des conditions de stockage", icon: Thermometer },
-    { id: "expiry", label: "Péremption", description: "Produits proches de l'expiration", icon: CalendarClock },
-    { id: "medications", label: "Médicaments", description: "Disponibilité et risque de rupture", icon: HeartPulse },
-    { id: "storage", label: "Stockage", description: "Conditions et capacité", icon: Warehouse },
+    {
+      id: "stocks",
+      label: "Stocks",
+      description: "Niveaux bas et risques de rupture",
+      icon: Package,
+    },
+    {
+      id: "cold-chain",
+      label: "Chaîne du froid",
+      description: "Température et conservation",
+      icon: Snowflake,
+    },
+    {
+      id: "temperature",
+      label: "Température",
+      description: "Surveillance des conditions de stockage",
+      icon: Thermometer,
+    },
+    {
+      id: "expiry",
+      label: "Péremption",
+      description: "Produits proches de l'expiration",
+      icon: CalendarClock,
+    },
+    {
+      id: "medications",
+      label: "Médicaments",
+      description: "Disponibilité et risque de rupture",
+      icon: HeartPulse,
+    },
+    {
+      id: "storage",
+      label: "Stockage",
+      description: "Conditions et capacité",
+      icon: Warehouse,
+    },
   ],
   agriculture: [
-    { id: "crops", label: "Récoltes", description: "Pertes et risques de production", icon: Wheat },
-    { id: "storage", label: "Stockage", description: "Conditions et conservation", icon: Warehouse },
-    { id: "temperature", label: "Température", description: "Conditions de conservation", icon: Thermometer },
-    { id: "transport", label: "Transport", description: "Retards et livraisons", icon: Truck },
-    { id: "stocks", label: "Stocks", description: "Disponibilité des produits", icon: Package },
-    { id: "irrigation", label: "Irrigation", description: "Eau et fonctionnement des systèmes", icon: Droplets },
+    {
+      id: "crops",
+      label: "Récoltes",
+      description: "Pertes et risques de production",
+      icon: Wheat,
+    },
+    {
+      id: "storage",
+      label: "Stockage",
+      description: "Conditions et conservation",
+      icon: Warehouse,
+    },
+    {
+      id: "temperature",
+      label: "Température",
+      description: "Conditions de conservation",
+      icon: Thermometer,
+    },
+    {
+      id: "transport",
+      label: "Transport",
+      description: "Retards et livraisons",
+      icon: Truck,
+    },
+    {
+      id: "stocks",
+      label: "Stocks",
+      description: "Disponibilité des produits",
+      icon: Package,
+    },
+    {
+      id: "irrigation",
+      label: "Irrigation",
+      description: "Eau et fonctionnement des systèmes",
+      icon: Droplets,
+    },
   ],
   transportation: [
-    { id: "vehicles", label: "Véhicules", description: "État général de la flotte", icon: Truck },
-    { id: "engine", label: "Moteurs", description: "Performance et anomalies", icon: Activity },
-    { id: "oil", label: "Huile", description: "Niveaux et maintenance", icon: Droplets },
-    { id: "fuel", label: "Carburant", description: "Niveau et consommation", icon: Fuel },
-    { id: "tires", label: "Pneus", description: "Usure et pression", icon: Gauge },
-    { id: "maintenance", label: "Maintenance", description: "Révisions et interventions", icon: ShieldCheck },
+    {
+      id: "vehicles",
+      label: "Véhicules",
+      description: "État général de la flotte",
+      icon: Truck,
+    },
+    {
+      id: "engine",
+      label: "Moteurs",
+      description: "Performance et anomalies",
+      icon: Activity,
+    },
+    {
+      id: "oil",
+      label: "Huile",
+      description: "Niveaux et maintenance",
+      icon: Droplets,
+    },
+    {
+      id: "fuel",
+      label: "Carburant",
+      description: "Niveau et consommation",
+      icon: Fuel,
+    },
+    {
+      id: "tires",
+      label: "Pneus",
+      description: "Usure et pression",
+      icon: Gauge,
+    },
+    {
+      id: "maintenance",
+      label: "Maintenance",
+      description: "Révisions et interventions",
+      icon: ShieldCheck,
+    },
   ],
   logistics: [
     {
@@ -166,12 +315,42 @@ const EQUIPMENT_BY_SECTOR: Record<Sector, Equipment[]> = {
     },
   ],
   energy: [
-    { id: "generators", label: "Générateurs", description: "Performance et disponibilité", icon: Zap },
-    { id: "fuel", label: "Carburant", description: "Niveau et réapprovisionnement", icon: Fuel },
-    { id: "temperature", label: "Température", description: "Surchauffe et conditions thermiques", icon: Thermometer },
-    { id: "oil", label: "Huile", description: "Niveau et maintenance", icon: Droplets },
-    { id: "load", label: "Charge", description: "Surcharge et capacité", icon: BatteryCharging },
-    { id: "sensors", label: "Capteurs", description: "Données et connectivité", icon: Radio },
+    {
+      id: "generators",
+      label: "Générateurs",
+      description: "Performance et disponibilité",
+      icon: Zap,
+    },
+    {
+      id: "fuel",
+      label: "Carburant",
+      description: "Niveau et réapprovisionnement",
+      icon: Fuel,
+    },
+    {
+      id: "temperature",
+      label: "Température",
+      description: "Surchauffe et conditions thermiques",
+      icon: Thermometer,
+    },
+    {
+      id: "oil",
+      label: "Huile",
+      description: "Niveau et maintenance",
+      icon: Droplets,
+    },
+    {
+      id: "load",
+      label: "Charge",
+      description: "Surcharge et capacité",
+      icon: BatteryCharging,
+    },
+    {
+      id: "sensors",
+      label: "Capteurs",
+      description: "Données et connectivité",
+      icon: Radio,
+    },
   ],
 }
 
@@ -262,7 +441,7 @@ function ContainerYardPreview() {
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div>
           <p className="text-xs font-semibold text-foreground">
-            Aperçu — Terminal conteneurs
+            Aperçu, Terminal conteneurs
           </p>
           <p className="text-[11px] text-muted-foreground">
             Exemple avec vos futures données
@@ -274,10 +453,12 @@ function ContainerYardPreview() {
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
             Normal
           </span>
+
           <span className="inline-flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
             À surveiller
           </span>
+
           <span className="inline-flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
             Bloqué
@@ -327,103 +508,139 @@ function ContainerYardPreview() {
 
 function WaitingTimePreview() {
   const [tick, setTick] = useState(0)
+  const [showRecommendation, setShowRecommendation] = useState(false)
 
   useEffect(() => {
     const interval = setInterval(() => {
       setTick((value) => value + 1)
     }, 1800)
 
-    return () => clearInterval(interval)
+    const recommendationTimer = setTimeout(() => {
+      setShowRecommendation(true)
+    }, 850)
+
+    return () => {
+      clearInterval(interval)
+      clearTimeout(recommendationTimer)
+    }
   }, [])
 
   const scenarios = [
-    { waiting: 14, predicted: 28, queue: 5, window: 42 },
-    { waiting: 18, predicted: 34, queue: 7, window: 36 },
-    { waiting: 23, predicted: 41, queue: 9, window: 29 },
-    { waiting: 29, predicted: 52, queue: 12, window: 21 },
+    {
+      waiting: 14,
+      predicted: 28,
+      queue: 5,
+      window: 42,
+    },
+    {
+      waiting: 18,
+      predicted: 34,
+      queue: 7,
+      window: 36,
+    },
+    {
+      waiting: 23,
+      predicted: 41,
+      queue: 9,
+      window: 29,
+    },
+    {
+      waiting: 29,
+      predicted: 52,
+      queue: 12,
+      window: 21,
+    },
   ]
 
   const current = scenarios[tick % scenarios.length]
 
   return (
-    <div className="mt-5 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 text-white shadow-lg">
-      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+    <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-background">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div>
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <Radar className="h-4 w-4 text-cyan-400" />
-            Radar des temps d&apos;attente
-          </div>
-          <p className="mt-1 text-[11px] text-slate-400">
-            Sentria anticipe les files avant qu&apos;elles ne deviennent critiques.
+          <p className="text-xs font-semibold text-foreground">
+            Aperçu, Radar des temps d&apos;attente
+          </p>
+
+          <p className="text-[11px] text-muted-foreground">
+            SentrIA anticipe les files avant qu&apos;elles ne deviennent
+            critiques.
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-cyan-300">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-400" />
-          Live
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-accent-foreground">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
+          Analyse
         </div>
       </div>
 
       <div className="p-4">
         <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
-            <p className="text-[9px] uppercase tracking-wider text-slate-500">
+          <div className="rounded-xl border border-border bg-card p-3">
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">
               Maintenant
             </p>
-            <p className="mt-1 text-xl font-bold">
+
+            <p className="mt-1 text-xl font-bold text-foreground">
               {current.waiting}
-              <span className="ml-1 text-[10px] font-normal text-slate-500">
+              <span className="ml-1 text-[10px] font-normal text-muted-foreground">
                 min
               </span>
             </p>
-            <p className="mt-1 text-[9px] text-slate-500">
+
+            <p className="mt-1 text-[9px] text-muted-foreground">
               {current.queue} véhicules
             </p>
           </div>
 
-          <div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.06] p-3">
-            <p className="text-[9px] uppercase tracking-wider text-amber-400/70">
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-3">
+            <p className="text-[9px] uppercase tracking-wider text-amber-600 dark:text-amber-400">
               Prévision
             </p>
-            <p className="mt-1 text-xl font-bold text-amber-300">
+
+            <p className="mt-1 text-xl font-bold text-amber-600 dark:text-amber-400">
               {current.predicted}
-              <span className="ml-1 text-[10px] font-normal text-amber-500/70">
+              <span className="ml-1 text-[10px] font-normal text-amber-600/70 dark:text-amber-400/70">
                 min
               </span>
             </p>
-            <p className="mt-1 text-[9px] text-slate-500">
+
+            <p className="mt-1 text-[9px] text-muted-foreground">
               dans 30 min
             </p>
           </div>
 
-          <div className="rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06] p-3">
-            <p className="text-[9px] uppercase tracking-wider text-cyan-400/70">
+          <div className="rounded-xl border border-accent/30 bg-accent/[0.08] p-3">
+            <p className="text-[9px] uppercase tracking-wider text-accent-foreground">
               Pour agir
             </p>
-            <p className="mt-1 text-xl font-bold text-cyan-300">
+
+            <p className="mt-1 text-xl font-bold text-accent-foreground">
               {current.window}
-              <span className="ml-1 text-[10px] font-normal text-cyan-500/70">
+              <span className="ml-1 text-[10px] font-normal text-accent-foreground/70">
                 min
               </span>
             </p>
-            <p className="mt-1 text-[9px] text-slate-500">
+
+            <p className="mt-1 text-[9px] text-muted-foreground">
               avant le pic
             </p>
           </div>
         </div>
 
-        <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4">
+        <div className="mt-4 rounded-xl border border-border bg-card p-4">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-[10px] font-semibold text-slate-300">
+            <span className="text-[10px] font-semibold text-foreground">
               Flux vers le quai
             </span>
-            <span className="text-[9px] text-slate-500">
+
+            <span className="text-[9px] text-muted-foreground">
               Situation simulée
             </span>
           </div>
 
           <div className="relative h-16">
-            <div className="absolute left-0 right-0 top-7 h-2 rounded-full bg-slate-800" />
+            <div className="absolute left-0 right-0 top-7 h-2 rounded-full bg-muted" />
 
             {[0, 1, 2, 3, 4, 5, 6].map((vehicle) => (
               <div
@@ -433,18 +650,26 @@ function WaitingTimePreview() {
                   left: `${5 + ((vehicle * 12 + tick * 4) % 75)}%`,
                 }}
               >
-                <div className="h-7 w-10 rounded-md border border-amber-400/30 bg-amber-400/10">
-                  <div className="mx-auto mt-2 h-1 w-4 rounded-full bg-slate-500" />
+                <div
+                  className={cn(
+                    "h-7 w-10 rounded-md border transition-colors duration-500",
+                    vehicle >= 5
+                      ? "border-amber-500/50 bg-amber-500/[0.10]"
+                      : "border-border bg-muted"
+                  )}
+                >
+                  <div className="mx-auto mt-2 h-1 w-4 rounded-full bg-muted-foreground/50" />
                 </div>
               </div>
             ))}
 
-            <div className="absolute right-0 top-0 flex h-16 w-20 items-center justify-center rounded-lg border border-red-400/30 bg-red-400/[0.06]">
+            <div className="absolute right-0 top-0 flex h-16 w-20 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/[0.06]">
               <div className="text-center">
-                <div className="text-[9px] font-semibold text-red-300">
+                <div className="text-[9px] font-semibold text-red-600 dark:text-red-400">
                   Goulot
                 </div>
-                <div className="text-[8px] text-red-400/70">
+
+                <div className="text-[8px] text-red-600/70 dark:text-red-400/70">
                   Contrôle
                 </div>
               </div>
@@ -452,28 +677,38 @@ function WaitingTimePreview() {
           </div>
         </div>
 
-        <div className="mt-4 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06] p-3">
-          <div className="flex gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cyan-400/10">
-              <Sparkles className="h-4 w-4 text-cyan-300" />
-            </div>
+        <div
+          className={cn(
+            "mt-4 flex items-start gap-3 rounded-xl border border-l-2 border-border border-l-accent bg-card px-3.5 py-3 transition-all duration-500",
+            showRecommendation
+              ? "translate-y-0 opacity-100"
+              : "translate-y-1 opacity-0"
+          )}
+        >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/15">
+            <Sparkles className="h-4 w-4 text-accent-foreground" />
+          </div>
 
-            <div>
-              <p className="text-[11px] font-semibold text-cyan-200">
-                Sentria recommande d&apos;agir maintenant
-              </p>
-              <p className="mt-1 text-[10px] leading-5 text-slate-400">
-                Le temps d&apos;attente augmente plus vite que la normale.
-                Réaffecter temporairement une ressource au contrôle peut
-                éviter le pic prévu dans {current.window} minutes.
-              </p>
-            </div>
+          <div>
+            <p className="text-[11px] font-semibold text-foreground">
+              SentrIA recommande d&apos;agir maintenant
+            </p>
+
+            <p className="mt-1 text-[10px] leading-5 text-muted-foreground">
+              Le temps d&apos;attente augmente plus vite que la normale.
+              Réaffecter temporairement une ressource au contrôle peut éviter
+              le pic prévu dans{" "}
+              <span className="font-semibold text-foreground">
+                {current.window} minutes
+              </span>
+              .
+            </p>
           </div>
         </div>
 
-        <p className="mt-3 text-center text-[9px] text-slate-600">
-          Exemple illustratif — les prévisions réelles seront calculées à partir
-          de vos données opérationnelles.
+        <p className="mt-3 text-center text-[9px] text-muted-foreground/70">
+          Exemple illustratif. Les prévisions réelles seront calculées à
+          partir de vos données opérationnelles.
         </p>
       </div>
     </div>
@@ -550,14 +785,8 @@ export function OnboardingView({
 
   function chooseSector(id: Sector) {
     setSector(id)
-
-    // Changing the sector means the previous sector's priorities
-    // and logistics operation type are no longer valid.
     setSelectedEquipment([])
     setOpsType(null)
-
-    // Always return to the first onboarding step when a sector
-    // is explicitly selected.
     setStep(1)
   }
 
@@ -593,14 +822,6 @@ export function OnboardingView({
   function previousStep() {
     if (step <= 1) return
 
-    /*
-     * IMPORTANT:
-     * This navigation belongs to the onboarding flow.
-     *
-     * Step 2 ("Vos priorités") -> Step 1 ("Votre secteur")
-     *
-     * Do NOT use dashboard filters or setFilterSector() here.
-     */
     setStep((current) => Math.max(1, current - 1))
   }
 
@@ -667,7 +888,6 @@ export function OnboardingView({
   return (
     <div className="fixed inset-0 z-50 animate-in fade-in zoom-in-[0.98] overflow-y-auto bg-background duration-200 ease-out motion-reduce:animate-none">
       <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 md:px-8 md:py-12">
-        {/* HERO */}
         <div className="rounded-3xl bg-foreground p-6 text-background md:p-10">
           <div className="max-w-3xl">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
@@ -686,11 +906,11 @@ export function OnboardingView({
           </div>
         </div>
 
-        {/* PROGRESS */}
         <div className="rounded-3xl border border-border bg-card p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="font-semibold">Configuration</p>
+
               <p className="mt-1 text-xs text-muted-foreground">
                 Étape {step} sur {totalSteps}
               </p>
@@ -711,7 +931,6 @@ export function OnboardingView({
           </div>
         </div>
 
-        {/* STEP PILLS */}
         <div
           className={cn(
             "grid grid-cols-1 gap-3",
@@ -770,7 +989,6 @@ export function OnboardingView({
           })}
         </div>
 
-        {/* CURRENT STEP */}
         <div className="rounded-3xl border border-border bg-card p-6 md:p-8">
           <div className="flex flex-col gap-8">
             <div className="flex gap-4">
@@ -793,7 +1011,6 @@ export function OnboardingView({
               </div>
             </div>
 
-            {/* STEP 1 — SECTOR */}
             {step === 1 && (
               <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                 {SECTORS.map((item) => {
@@ -814,6 +1031,7 @@ export function OnboardingView({
                     >
                       <div className="flex w-full items-center justify-between">
                         <Icon className="h-5 w-5" />
+
                         {active && <Check className="h-4 w-4" />}
                       </div>
 
@@ -837,7 +1055,6 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 2 — OUTCOMES */}
             {step === 2 && sector && (
               <div>
                 <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
@@ -922,7 +1139,6 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 3 — OPERATIONS */}
             {step === opsStepNumber && hasOpsStep && (
               <div>
                 <div className="flex flex-wrap gap-2">
@@ -958,7 +1174,6 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* DATA SOURCES */}
             {step === sourcesStepNumber && (
               <div>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -1054,7 +1269,6 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* ACTIONS */}
             <div className="flex flex-wrap justify-between gap-3">
               <div>
                 {step > 1 && (
@@ -1095,4 +1309,3 @@ export function OnboardingView({
     </div>
   )
 }
-
