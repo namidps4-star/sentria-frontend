@@ -798,9 +798,6 @@ export function DashboardView({
     return savedSector || "all"
   })
 
-  const [showLogisticsBlockages, setShowLogisticsBlockages] =
-    useState(false)
-
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState("")
 
@@ -1030,61 +1027,68 @@ export function DashboardView({
    * LOGISTICS
    * ============================================================
    *
-   * IMPORTANT:
-   * LogisticsBlockagesView does NOT accept an onBack prop.
-   * Therefore we render it without props.
-   *
-   * filterSector stays "logistics", so when the logistics view
-   * closes/returns through its own navigation, the dashboard
-   * keeps Logistique selected.
+   * filterSector is the single source of truth for which view is
+   * showing. LogisticsBlockagesView doesn't accept an onBack prop,
+   * so the back affordance lives here and just resets the sector.
    */
-  if (showLogisticsBlockages) {
-    return <LogisticsBlockagesView />
+  if (filterSector === "logistics") {
+    return (
+      <div className="space-y-4">
+        <button
+          type="button"
+          onClick={() => {
+            setFilterSector("all")
+            localStorage.setItem("sentria_sector", "all")
+          }}
+          className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+        >
+          ← Retour au tableau de bord
+        </button>
+        <LogisticsBlockagesView
+  opsType={
+    opsType && ["port", "entrepot", "transport", "expedition", "froid", "multi"].includes(opsType)
+      ? (opsType as "port" | "entrepot" | "transport" | "expedition" | "froid" | "multi")
+      : undefined
+  }
+/>
+      </div>
+    )
   }
 
   return (
     <div className="space-y-6">
       {/* HERO */}
-      <div className="relative overflow-hidden rounded-3xl bg-foreground p-6 text-background md:p-9">
-        <div
-          className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-accent/20 blur-3xl"
-          aria-hidden="true"
-        />
+      <div className="flex flex-col gap-4 rounded-3xl bg-foreground p-6 text-background md:flex-row md:items-center md:justify-between md:p-8">
+        <div className="max-w-xl">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+            <Zap className="h-3.5 w-3.5" />
+            Temps réel
+          </span>
 
-        <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <div className="max-w-xl">
-            <span className="inline-flex items-center gap-2 rounded-full border border-background/15 bg-background/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-background/80">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent" />
-              </span>
-              Surveillance en temps réel
-            </span>
+          <h2 className="mt-3 text-balance font-heading text-2xl font-bold leading-tight md:text-3xl">
+            Vue globale de vos opérations critiques.
+          </h2>
 
-            <h2 className="mt-4 text-balance font-heading text-[28px] font-bold leading-[1.15] tracking-tight md:text-4xl">
-              Vue globale de vos opérations critiques.
-            </h2>
-
-            <p className="mt-3 max-w-md text-pretty text-sm leading-relaxed text-background/60">
-              SentrIA surveille vos alertes en temps réel — machines,
-              stocks, flottes, équipements — partout dans le monde.
-            </p>
-          </div>
-
-          <button
-            onClick={() =>
-              document
-                .getElementById("alerts-table")
-                ?.scrollIntoView({
-                  behavior: "smooth",
-                })
-            }
-            className="group inline-flex shrink-0 cursor-pointer items-center gap-2 self-start rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-all duration-200 hover:gap-3 hover:shadow-[0_0_0_4px] hover:shadow-accent/20"
-          >
-            Voir les alertes
-            <ArrowUpRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-          </button>
+          <p className="mt-2 text-pretty text-sm text-background/70">
+            SentrIA surveille vos alertes en temps réel ·
+            machines, stocks, flottes, équipements · partout
+            dans le monde.
+          </p>
         </div>
+
+        <button
+          onClick={() =>
+            document
+              .getElementById("alerts-table")
+              ?.scrollIntoView({
+                behavior: "smooth",
+              })
+          }
+          className="inline-flex items-center gap-2 self-start rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02]"
+        >
+          Voir les alertes
+          <ArrowUpRight className="h-4 w-4" />
+        </button>
       </div>
 
       {/* RECOMMENDATIONS */}
@@ -1310,28 +1314,21 @@ export function DashboardView({
       ) : null}
 
       {/* SECTOR FILTER */}
-      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card p-1.5">
+      <div className="flex flex-wrap gap-2">
         <button
           onClick={() => {
             setFilterSector("all")
-            setShowLogisticsBlockages(false)
+            localStorage.setItem("sentria_sector", "all")
           }}
           className={cn(
-            "cursor-pointer rounded-xl px-4 py-2 text-xs font-semibold transition-all duration-200",
+            "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
             filterSector === "all"
-              ? "bg-foreground text-background shadow-sm"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              ? "border-foreground bg-foreground text-background"
+              : "border-border bg-background hover:bg-muted"
           )}
         >
           Tous
-          <span
-            className={cn(
-              "ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] tabular-nums",
-              filterSector === "all"
-                ? "bg-background/15"
-                : "bg-muted"
-            )}
-          >
+          <span className="ml-1.5 text-[10px] opacity-60">
             {alerts.length}
           </span>
         </button>
@@ -1345,30 +1342,18 @@ export function DashboardView({
             key={s.key}
             onClick={() => {
               setFilterSector(s.key)
-
-              if (s.key === "logistics") {
-                setShowLogisticsBlockages(true)
-              } else {
-                setShowLogisticsBlockages(false)
-              }
+              localStorage.setItem("sentria_sector", s.key)
             }}
             className={cn(
-              "cursor-pointer rounded-xl px-4 py-2 text-xs font-semibold transition-all duration-200",
+              "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
               filterSector === s.key
-                ? "bg-foreground text-background shadow-sm"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? "border-foreground bg-foreground text-background"
+                : "border-border bg-background hover:bg-muted"
             )}
           >
             {s.label}
 
-            <span
-              className={cn(
-                "ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] tabular-nums",
-                filterSector === s.key
-                  ? "bg-background/15"
-                  : "bg-muted"
-              )}
-            >
+            <span className="ml-1.5 text-[10px] opacity-60">
               {
                 alerts.filter(
                   (a) => a.sector === s.key
@@ -1393,16 +1378,16 @@ export function DashboardView({
         {kpis.map((k) => (
           <div
             key={k.label}
-            className="group rounded-3xl border border-border bg-card p-5 transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/15 hover:shadow-md"
+            className="rounded-3xl border border-border bg-card p-5"
           >
-            <div className="flex items-start justify-between gap-2">
-              <span className="text-sm leading-tight text-muted-foreground">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm text-muted-foreground">
                 {k.label}
               </span>
 
               <span
                 className={cn(
-                  "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
                   k.up
                     ? "bg-accent/25 text-accent-foreground"
                     : "bg-destructive/10 text-destructive"
@@ -1418,14 +1403,14 @@ export function DashboardView({
               </span>
             </div>
 
-            <p className="mt-4 font-heading text-3xl font-bold tracking-tight tabular-nums">
+            <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
               {k.value}
             </p>
 
             <Sparkline
               data={k.spark}
               className={cn(
-                "mt-3 h-9 w-full transition-opacity duration-200 group-hover:opacity-100",
+                "mt-2 h-9 w-full",
                 k.up ? "text-accent" : "text-destructive"
               )}
             />
@@ -1438,23 +1423,17 @@ export function DashboardView({
         <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
           <div className="flex items-center justify-between">
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-heading text-lg font-bold">
-                  {meta.chartTitle}
-                </h3>
+              <h3 className="font-heading text-lg font-bold">
+                {meta.chartTitle}
+              </h3>
 
-                <span className="rounded-full bg-accent/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-accent-foreground">
-                  Live
-                </span>
-              </div>
-
-              <p className="mt-0.5 text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 7 derniers jours
               </p>
             </div>
 
             <button
-              className="cursor-pointer rounded-lg p-2 text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground"
+              className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
               aria-label="Options"
             >
               <MoreHorizontal className="h-5 w-5" />
@@ -1469,16 +1448,14 @@ export function DashboardView({
 
         <div className="rounded-3xl border border-border bg-card p-6">
           <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/20">
-              <Activity className="h-4 w-4 text-accent-foreground" />
-            </span>
+            <Activity className="h-5 w-5 text-accent-foreground" />
 
             <h3 className="font-heading text-lg font-bold">
               Répartition
             </h3>
           </div>
 
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             {meta.barLabels.join(" · ")}
           </p>
 
@@ -1492,23 +1469,17 @@ export function DashboardView({
       </div>
 
       {/* UPLOAD */}
-      <div className="flex flex-col gap-6 rounded-3xl border border-dashed border-border bg-card p-6 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/20">
-              <Upload className="h-4 w-4 text-accent-foreground" />
-            </span>
+      <div className="rounded-3xl border border-border bg-card p-6">
+        <h3 className="font-heading text-lg font-bold">
+          Importer des données
+        </h3>
 
-            <h3 className="font-heading text-lg font-bold">
-              Importer des données
-            </h3>
-          </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Choisissez un secteur puis importez votre CSV.
+        </p>
 
-          <p className="mt-2 text-sm text-muted-foreground">
-            Choisissez un secteur puis importez votre CSV.
-          </p>
-
-          <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap gap-2">
             {SECTORS.filter(
               (s) =>
                 s.key !== "all" &&
@@ -1518,7 +1489,7 @@ export function DashboardView({
                 key={s.key}
                 onClick={() => setUploadSector(s.key)}
                 className={cn(
-                  "cursor-pointer rounded-full border px-4 py-1.5 text-sm font-semibold transition-all duration-150",
+                  "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors",
                   uploadSector === s.key
                     ? "border-foreground bg-foreground text-background"
                     : "border-border bg-background hover:bg-muted"
@@ -1529,20 +1500,7 @@ export function DashboardView({
             ))}
           </div>
 
-          <p className="mt-3 text-xs text-muted-foreground">
-            Secteur sélectionné :{" "}
-            <span className="font-semibold text-foreground">
-              {
-                SECTORS.find(
-                  (s) => s.key === uploadSector
-                )?.label
-              }
-            </span>
-          </p>
-        </div>
-
-        <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-all duration-150 hover:shadow-[0_0_0_4px] hover:shadow-accent/20">
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90">
             <Upload className="h-4 w-4" />
 
             {uploading ? "Traitement…" : "Importer CSV"}
@@ -1555,41 +1513,46 @@ export function DashboardView({
               disabled={uploading}
             />
           </label>
-
-          {uploadMsg && (
-            <p className="text-sm font-medium text-green-600">
-              {uploadMsg}
-            </p>
-          )}
         </div>
+
+        {uploadMsg && (
+          <p className="mt-3 text-sm font-medium text-green-600">
+            {uploadMsg}
+          </p>
+        )}
+
+        <p className="mt-2 text-xs text-muted-foreground">
+          Secteur :{" "}
+          <span className="font-semibold text-foreground">
+            {
+              SECTORS.find(
+                (s) => s.key === uploadSector
+              )?.label
+            }
+          </span>
+        </p>
       </div>
 
       {/* ALERTS */}
       <div
         id="alerts-table"
-        className="overflow-hidden rounded-3xl border border-border bg-card"
+        className="rounded-3xl border border-border bg-card"
       >
-        <div className="flex items-center justify-between border-b border-border p-6">
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted">
-              <Cpu className="h-4 w-4" />
-            </span>
+        <div className="flex items-center justify-between p-6 pb-4">
+          <div className="flex items-center gap-2">
+            <Cpu className="h-5 w-5" />
 
-            <div>
-              <h3 className="font-heading text-lg font-bold leading-tight">
-                Alertes
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                {
-                  SECTORS.find(
-                    (s) => s.key === filterSector
-                  )?.label
-                }
-              </p>
-            </div>
+            <h3 className="font-heading text-lg font-bold">
+              Alertes ·{" "}
+              {
+                SECTORS.find(
+                  (s) => s.key === filterSector
+                )?.label
+              }
+            </h3>
           </div>
 
-          <button className="inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90">
+          <button className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90">
             Tout voir
             <ArrowUpRight className="h-4 w-4" />
           </button>
@@ -1598,24 +1561,24 @@ export function DashboardView({
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-muted/40 text-left text-[11px] uppercase tracking-wider text-muted-foreground">
-                <th className="px-6 py-3 font-semibold">
+              <tr className="border-y border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
+                <th className="px-6 py-3 font-medium">
                   Actif
                 </th>
 
-                <th className="px-6 py-3 font-semibold">
+                <th className="px-6 py-3 font-medium">
                   Message
                 </th>
 
-                <th className="px-6 py-3 font-semibold">
+                <th className="px-6 py-3 font-medium">
                   Secteur
                 </th>
 
-                <th className="px-6 py-3 font-semibold">
+                <th className="px-6 py-3 font-medium">
                   Sévérité
                 </th>
 
-                <th className="px-6 py-3 font-semibold">
+                <th className="px-6 py-3 font-medium">
                   Date
                 </th>
               </tr>
@@ -1627,13 +1590,13 @@ export function DashboardView({
                 .map((alert, i) => (
                   <tr
                     key={`${alert.equipment}-${alert.date}-${i}`}
-                    className="border-b border-border/70 last:border-0 transition-colors duration-150 hover:bg-muted/50"
+                    className="border-b border-border last:border-0 transition-colors hover:bg-muted/50"
                   >
                     <td className="px-6 py-4 font-semibold">
                       {alert.equipment}
                     </td>
 
-                    <td className="max-w-xs truncate px-6 py-4 text-muted-foreground">
+                    <td className="px-6 py-4 text-muted-foreground">
                       {alert.message}
                     </td>
 
@@ -1644,25 +1607,17 @@ export function DashboardView({
                     <td className="px-6 py-4">
                       <span
                         className={cn(
-                          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
+                          "rounded-full px-2.5 py-1 text-xs font-semibold",
                           alert.severity === "CRITICAL"
                             ? "bg-destructive/10 text-destructive"
                             : "bg-amber-500/15 text-amber-600"
                         )}
                       >
-                        <span
-                          className={cn(
-                            "h-1.5 w-1.5 rounded-full",
-                            alert.severity === "CRITICAL"
-                              ? "bg-destructive"
-                              : "bg-amber-500"
-                          )}
-                        />
                         {alert.severity}
                       </span>
                     </td>
 
-                    <td className="whitespace-nowrap px-6 py-4 text-muted-foreground">
+                    <td className="px-6 py-4 text-muted-foreground">
                       {new Date(
                         alert.date
                       ).toLocaleString("fr-FR")}
@@ -1673,7 +1628,7 @@ export function DashboardView({
               {filteredAlerts.length === 0 && (
                 <tr>
                   <td
-                    className="px-6 py-10 text-center text-muted-foreground"
+                    className="px-6 py-8 text-muted-foreground"
                     colSpan={5}
                   >
                     Aucune alerte pour ce secteur.
