@@ -25,7 +25,7 @@ const META: Record<ViewKey, { title: string; subtitle: string }> = {
   },
   ask: {
     title: "Ask SentrIA",
-    subtitle: "Votre analyste augmenté par l'IA",
+    subtitle: "Votre analyste augmenté par l’IA",
   },
   pricing: {
     title: "Abonnement",
@@ -44,8 +44,6 @@ const META: Record<ViewKey, { title: string; subtitle: string }> = {
     subtitle: "Analyse détaillée de vos opérations",
   },
 }
-
-
 
 export function AppShell() {
   const [view, setView] = useState<ViewKey>("dashboard")
@@ -71,7 +69,7 @@ export function AppShell() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground">
       {showOnboarding && (
         <OnboardingView
           onComplete={() => setShowOnboarding(false)}
@@ -94,34 +92,36 @@ export function AppShell() {
 
       <div
         className={[
-          "flex min-w-0 flex-1 flex-col transition-all duration-300",
+          "min-h-screen px-4 py-4 transition-all duration-300",
+          "lg:px-8 lg:py-8",
           collapsed
-            ? "lg:ml-[108px]"
-            : "lg:ml-[290px]",
+            ? "lg:pl-[108px]"
+            : "lg:pl-[290px]",
         ].join(" ")}
       >
-        <Topbar
-          title={META[view].title}
-          subtitle={META[view].subtitle}
-          onMenu={() => setOpen(true)}
-          search={search}
-          onSearch={handleSearch}
-        />
+        <div className="flex min-h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-[32px] bg-card shadow-sm lg:min-h-[calc(100vh-4rem)]">
+          <Topbar
+            title={META[view].title}
+            subtitle={META[view].subtitle}
+            onMenu={() => setOpen(true)}
+            search={search}
+            onSearch={handleSearch}
+          />
 
-        <main className="flex-1 p-4 lg:p-8">
-          {view === "dashboard" && (
-            <DashboardView search={search} />
-          )}
+          <main className="flex-1 p-4 lg:p-8">
+            {view === "dashboard" && (
+              <DashboardView search={search} />
+            )}
 
-          {view === "sites" && <SitesView />}
-          {view === "ask" && <AskView />}
-          {view === "pricing" && <PricingView />}
-          {view === "profile" && <ProfileView />}
-          {view === "settings" && <SettingsView />}
-          {view === "report" && <ReportView />}
-        </main>
+            {view === "sites" && <SitesView />}
+            {view === "ask" && <AskView />}
+            {view === "pricing" && <PricingView />}
+            {view === "profile" && <ProfileView />}
+            {view === "settings" && <SettingsView />}
+            {view === "report" && <ReportView />}
+          </main>
+        </div>
       </div>
     </div>
   )
 }
-
