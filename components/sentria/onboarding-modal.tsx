@@ -325,6 +325,161 @@ function ContainerYardPreview() {
   )
 }
 
+function WaitingTimePreview() {
+  const [tick, setTick] = useState(0)
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTick((value) => value + 1)
+    }, 1800)
+
+    return () => clearInterval(interval)
+  }, [])
+
+  const scenarios = [
+    { waiting: 14, predicted: 28, queue: 5, window: 42 },
+    { waiting: 18, predicted: 34, queue: 7, window: 36 },
+    { waiting: 23, predicted: 41, queue: 9, window: 29 },
+    { waiting: 29, predicted: 52, queue: 12, window: 21 },
+  ]
+
+  const current = scenarios[tick % scenarios.length]
+
+  return (
+    <div className="mt-5 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 text-white shadow-lg">
+      <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <Radar className="h-4 w-4 text-cyan-400" />
+            Radar des temps d&apos;attente
+          </div>
+          <p className="mt-1 text-[11px] text-slate-400">
+            Sentria anticipe les files avant qu&apos;elles ne deviennent critiques.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-1.5 rounded-full border border-cyan-400/20 bg-cyan-400/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-cyan-300">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-400" />
+          Live
+        </div>
+      </div>
+
+      <div className="p-4">
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
+            <p className="text-[9px] uppercase tracking-wider text-slate-500">
+              Maintenant
+            </p>
+            <p className="mt-1 text-xl font-bold">
+              {current.waiting}
+              <span className="ml-1 text-[10px] font-normal text-slate-500">
+                min
+              </span>
+            </p>
+            <p className="mt-1 text-[9px] text-slate-500">
+              {current.queue} véhicules
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-amber-400/20 bg-amber-400/[0.06] p-3">
+            <p className="text-[9px] uppercase tracking-wider text-amber-400/70">
+              Prévision
+            </p>
+            <p className="mt-1 text-xl font-bold text-amber-300">
+              {current.predicted}
+              <span className="ml-1 text-[10px] font-normal text-amber-500/70">
+                min
+              </span>
+            </p>
+            <p className="mt-1 text-[9px] text-slate-500">
+              dans 30 min
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06] p-3">
+            <p className="text-[9px] uppercase tracking-wider text-cyan-400/70">
+              Pour agir
+            </p>
+            <p className="mt-1 text-xl font-bold text-cyan-300">
+              {current.window}
+              <span className="ml-1 text-[10px] font-normal text-cyan-500/70">
+                min
+              </span>
+            </p>
+            <p className="mt-1 text-[9px] text-slate-500">
+              avant le pic
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-[10px] font-semibold text-slate-300">
+              Flux vers le quai
+            </span>
+            <span className="text-[9px] text-slate-500">
+              Situation simulée
+            </span>
+          </div>
+
+          <div className="relative h-16">
+            <div className="absolute left-0 right-0 top-7 h-2 rounded-full bg-slate-800" />
+
+            {[0, 1, 2, 3, 4, 5, 6].map((vehicle) => (
+              <div
+                key={vehicle}
+                className="absolute top-4 transition-all duration-1000"
+                style={{
+                  left: `${5 + ((vehicle * 12 + tick * 4) % 75)}%`,
+                }}
+              >
+                <div className="h-7 w-10 rounded-md border border-amber-400/30 bg-amber-400/10">
+                  <div className="mx-auto mt-2 h-1 w-4 rounded-full bg-slate-500" />
+                </div>
+              </div>
+            ))}
+
+            <div className="absolute right-0 top-0 flex h-16 w-20 items-center justify-center rounded-lg border border-red-400/30 bg-red-400/[0.06]">
+              <div className="text-center">
+                <div className="text-[9px] font-semibold text-red-300">
+                  Goulot
+                </div>
+                <div className="text-[8px] text-red-400/70">
+                  Contrôle
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl border border-cyan-400/20 bg-cyan-400/[0.06] p-3">
+          <div className="flex gap-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cyan-400/10">
+              <Sparkles className="h-4 w-4 text-cyan-300" />
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold text-cyan-200">
+                Sentria recommande d&apos;agir maintenant
+              </p>
+              <p className="mt-1 text-[10px] leading-5 text-slate-400">
+                Le temps d&apos;attente augmente plus vite que la normale.
+                Réaffecter temporairement une ressource au contrôle peut
+                éviter le pic prévu dans {current.window} minutes.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <p className="mt-3 text-center text-[9px] text-slate-600">
+          Exemple illustratif — les prévisions réelles seront calculées à partir
+          de vos données opérationnelles.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export function OnboardingView({
   onComplete,
 }: {
@@ -391,6 +546,7 @@ export function OnboardingView({
   ]
 
   const currentMeta = STEP_META[step - 1] ?? STEP_META[0]
+  const CurrentStepIcon = currentMeta.icon
 
   function chooseSector(id: Sector) {
     setSector(id)
@@ -619,7 +775,7 @@ export function OnboardingView({
           <div className="flex flex-col gap-8">
             <div className="flex gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent/20 text-accent-foreground">
-                <currentMeta.icon className="h-7 w-7" />
+                <CurrentStepIcon className="h-7 w-7" />
               </div>
 
               <div>
@@ -712,7 +868,7 @@ export function OnboardingView({
                         )}
                       >
                         {disabled && (
-                          <span className="absolute right-4 top-4 rounded-full bg-muted px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                          <span className="absolute right-4 top-4 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-700 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
                             Bientôt disponible
                           </span>
                         )}
@@ -743,6 +899,11 @@ export function OnboardingView({
                     )
                   })}
                 </div>
+
+                {sector === "logistics" &&
+                  selectedEquipment.includes("wait") && (
+                    <WaitingTimePreview />
+                  )}
 
                 <div className="mt-4 flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
                   <span className="text-xs text-muted-foreground">
