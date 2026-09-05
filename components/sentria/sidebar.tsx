@@ -1,3 +1,4 @@
+
 "use client"
 
 import type { ViewKey } from "./types"
@@ -38,52 +39,23 @@ const sections: {
   {
     title: "OPERATIONS",
     items: [
-      {
-        id: "dashboard",
-        label: "Dashboard",
-        icon: LayoutDashboard,
-      },
-      {
-        id: "sites",
-        label: "Sites",
-        icon: Factory,
-      },
+      { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { id: "sites", label: "Sites", icon: Factory },
     ],
   },
   {
     title: "INTELLIGENCE",
     items: [
-      {
-        id: "ask",
-        label: "Ask SentrIA",
-        icon: Bot,
-        green: true,
-      },
-      {
-        id: "report",
-        label: "Rapport",
-        icon: FileBarChart,
-      },
+      { id: "ask", label: "Ask SentrIA", icon: Bot, green: true },
+      { id: "report", label: "Rapport", icon: FileBarChart },
     ],
   },
   {
     title: "STUDIO",
     items: [
-      {
-        id: "pricing",
-        label: "Abonnement",
-        icon: CreditCard,
-      },
-      {
-        id: "profile",
-        label: "Profil",
-        icon: User,
-      },
-      {
-        id: "settings",
-        label: "Paramètres",
-        icon: Settings,
-      },
+      { id: "pricing", label: "Abonnement", icon: CreditCard },
+      { id: "profile", label: "Profil", icon: User },
+      { id: "settings", label: "Paramètres", icon: Settings },
     ],
   },
 ]
@@ -124,7 +96,6 @@ export function Sidebar({
         ].join(" ")}
       >
         <div className="flex h-full flex-col overflow-hidden rounded-[28px]">
-          {/* LOGO */}
           <div
             className={[
               "flex h-[76px] shrink-0 items-center",
@@ -167,7 +138,6 @@ export function Sidebar({
             )}
           </div>
 
-          {/* NAVIGATION */}
           <nav className="flex flex-1 flex-col overflow-y-auto px-3 py-3">
             {sections.map((section, sectionIndex) => (
               <div key={section.title}>
@@ -225,6 +195,12 @@ export function Sidebar({
                           </span>
                         )}
 
+                        {collapsed && (
+                          <span className="pointer-events-none absolute left-full top-1/2 z-[100] ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-sidebar px-3 py-2 text-xs font-medium text-sidebar-foreground opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100">
+                            {item.label}
+                          </span>
+                        )}
+
                         {item.id === "ask" && !collapsed && (
                           <Sparkles className="ml-auto h-3.5 w-3.5 text-accent" />
                         )}
@@ -259,7 +235,6 @@ export function Sidebar({
             )}
           </nav>
 
-          {/* COLLAPSED TOGGLE */}
           {collapsed && (
             <div className="shrink-0 border-t border-white/10 p-3">
               <button
