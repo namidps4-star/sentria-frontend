@@ -789,45 +789,64 @@ const LOGISTICS_OPS_META: Record<
   },
 }
 
+/*
+ * IMPORTANT
+ *
+ * This is only a dashboard view.
+ * Nothing from this component is rendered by onboarding.
+ *
+ * Onboarding only needs to save:
+ *   "wait"
+ *
+ * The dashboard reads that saved priority and renders this view
+ * when the user enters Logistique.
+ */
 function getSavedLogisticsPriority(): LogisticsPriority {
   if (typeof window === "undefined") {
     return "blockages"
   }
 
-  try {
-    const stored = JSON.parse(
-      localStorage.getItem("sentria_equipment") || "[]"
-    )
+  const sources = [
+    localStorage.getItem("sentria_equipment"),
+    localStorage.getItem("sentria_monitoring"),
+  ]
 
-    if (!Array.isArray(stored)) {
-      return "blockages"
-    }
+  for (const source of sources) {
+    if (!source) continue
 
-    if (stored.includes("wait")) {
-      return "wait"
-    }
+    try {
+      const stored = JSON.parse(source)
 
-    if (stored.includes("blockages")) {
-      return "blockages"
-    }
+      if (!Array.isArray(stored)) {
+        continue
+      }
 
-    if (stored.includes("cost")) {
-      return "cost"
-    }
+      if (stored.includes("wait")) {
+        return "wait"
+      }
 
-    if (stored.includes("anticipate")) {
-      return "anticipate"
-    }
+      if (stored.includes("blockages")) {
+        return "blockages"
+      }
 
-    if (stored.includes("recommend")) {
-      return "recommend"
-    }
+      if (stored.includes("cost")) {
+        return "cost"
+      }
 
-    if (stored.includes("resources")) {
-      return "resources"
+      if (stored.includes("anticipate")) {
+        return "anticipate"
+      }
+
+      if (stored.includes("recommend")) {
+        return "recommend"
+      }
+
+      if (stored.includes("resources")) {
+        return "resources"
+      }
+    } catch {
+      continue
     }
-  } catch {
-    return "blockages"
   }
 
   return "blockages"
@@ -1474,6 +1493,19 @@ export function DashboardView({
     }
   )
 
+  /*
+   * THIS IS THE IMPORTANT PART.
+   *
+   * The waiting-time experience is rendered here,
+   * inside DashboardView.
+   *
+   * It is NOT part of onboarding.
+   *
+   * If onboarding saved "wait", entering Logistique
+   * renders LogisticsWaitingView.
+   *
+   * Otherwise the existing blockage experience renders.
+   */
   if (filterSector === "logistics") {
     const normalizedOpsType =
       opsType &&
@@ -2122,4 +2154,3 @@ export function DashboardView({
     </div>
   )
 }
-
