@@ -1,189 +1,57 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { Sidebar, type ViewKey } from "./sidebar"
-import { Topbar } from "./topbar"
-import { DashboardView } from "./dashboard-view"
-import { SitesView } from "./sites-view"
-import { AskView } from "./ask-view"
-import { PricingView } from "./pricing-view"
-import { ProfileView } from "./profile-view"
-import { SettingsView } from "./settings-view"
-import { OnboardingView } from "./onboarding-modal"
-import { ReportView } from "./report-view"
+import { ReactNode } from "react";
+import Sidebar from "./sidebar";
 
-const META: Record<ViewKey, { title: string; subtitle: string }> = {
-  dashboard: {
-    title: "Dashboard",
-    subtitle: "Vue globale des opérations",
-  },
-  sites: {
-    title: "Sites",
-    subtitle: "Gérez vos usines, ateliers et clients",
-  },
-  ask: {
-    title: "Ask SentrIA",
-    subtitle: "Votre analyste augmenté par l’IA",
-  },
-  pricing: {
-    title: "Abonnement",
-    subtitle: "Choisissez le plan adapté à vos opérations",
-  },
-  profile: {
-    title: "Profil",
-    subtitle: "Votre compte et votre activité",
-  },
-  settings: {
-    title: "Paramètres",
-    subtitle: "Langue, notifications et organisation",
-  },
-  report: {
-    title: "Rapport",
-    subtitle: "Analyse détaillée de vos opérations",
-  },
+export type ViewKey =
+  | "dashboard"
+  | "chat"
+  | "agents"
+  | "knowledge"
+  | "settings";
+
+interface AppShellProps {
+  children: ReactNode;
+  active: ViewKey;
+  onNavigate: (view: ViewKey) => void;
+  sidebarOpen: boolean;
+  onSidebarClose: () => void;
+  sidebarCollapsed: boolean;
+  onSidebarToggle: () => void;
 }
 
-export function AppShell() {
-  const [view, setView] = useState<ViewKey>("dashboard")
-  const [open, setOpen] = useState(false)
-  const [collapsed, setCollapsed] = useState(true)
-  const [search, setSearch] = useState("")
-  const [showOnboarding, setShowOnboarding] = useState(false)
-
-  useEffect(() => {
-    const onboarded = localStorage.getItem("sentria_onboarded")
-
-    if (!onboarded) {
-      setShowOnboarding(true)
-    }
-
-    const savedSidebarState = localStorage.getItem(
-      "sentria_sidebar_collapsed"
-    )
-
-    if (savedSidebarState !== null) {
-      setCollapsed(savedSidebarState === "true")
-    }
-  }, [])
-
-  function toggleSidebar() {
-    setCollapsed((current) => {
-      const next = !current
-
-      localStorage.setItem(
-        "sentria_sidebar_collapsed",
-        String(next)
-      )
-
-      return next
-    })
-  }
-
-  function handleNavigate(nextView: ViewKey) {
-    setView(nextView)
-    setSearch("")
-  }
-
-  function handleSearch(value: string) {
-    setSearch(value)
-
-    if (value.trim()) {
-      setView("dashboard")
-    }
-  }
-
+export default function AppShell({
+  children,
+  active,
+  onNavigate,
+  sidebarOpen,
+  onSidebarClose,
+  sidebarCollapsed,
+  onSidebarToggle,
+}: AppShellProps) {
   return (
-    <div className="min-h-screen bg-background lg:p-4">
-      {showOnboarding && (
-        <OnboardingView
-          onComplete={() => setShowOnboarding(false)}
-        />
-      )}
-
-      {/* OUTER DARK FRAME */}
-      <div
-        className="
-          relative
-          min-h-screen
-          overflow-hidden
-          bg-sidebar
-          lg:min-h-[calc(100vh-2rem)]
-          lg:rounded-[32px]
-        "
-      >
-        {/* FLOATING SIDEBAR */}
+    <div className="min-h-screen bg-[#111111] p-4">
+      <div className="relative min-h-[calc(100vh-2rem)] overflow-hidden rounded-[32px] bg-[#111111]">
         <Sidebar
-          active={view}
-          onNavigate={handleNavigate}
-          open={open}
-          onClose={() => setOpen(false)}
-          collapsed={collapsed}
-          onToggleCollapse={toggleSidebar}
+          active={active}
+          onNavigate={onNavigate}
+          open={sidebarOpen}
+          onClose={onSidebarClose}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={onSidebarToggle}
         />
 
-        {/* MAIN AREA */}
-        <div
+        <main
           className={[
-            "relative",
-            "min-h-screen",
-            "transition-[padding] duration-300 ease-out",
-            "lg:min-h-[calc(100vh-2rem)]",
-            collapsed
-              ? "lg:pl-[92px]"
-              : "lg:pl-[264px]",
+            "min-h-[calc(100vh-2rem)] transition-all duration-300",
+            sidebarCollapsed ? "lg:pl-[92px]" : "lg:pl-[272px]",
           ].join(" ")}
         >
-          {/* MAIN WHITE PANEL */}
-          <div
-            className="
-              min-h-screen
-              overflow-hidden
-              bg-background
-              lg:min-h-[calc(100vh-2rem)]
-              lg:rounded-[30px]
-              lg:border
-              lg:border-border
-              lg:shadow-[0_10px_35px_rgba(0,0,0,0.08)]
-            "
-          >
-            <div className="flex min-h-screen flex-col lg:min-h-[calc(100vh-2rem)]">
-              <Topbar
-                title={META[view].title}
-                subtitle={META[view].subtitle}
-                onMenu={() => setOpen(true)}
-                search={search}
-                onSearch={handleSearch}
-              />
-
-              <main
-                className="
-                  min-h-0
-                  flex-1
-                  overflow-y-auto
-                  p-4
-                  lg:p-8
-                "
-              >
-                {view === "dashboard" && (
-                  <DashboardView search={search} />
-                )}
-
-                {view === "sites" && <SitesView />}
-
-                {view === "ask" && <AskView />}
-
-                {view === "pricing" && <PricingView />}
-
-                {view === "profile" && <ProfileView />}
-
-                {view === "settings" && <SettingsView />}
-
-                {view === "report" && <ReportView />}
-              </main>
-            </div>
+          <div className="min-h-[calc(100vh-2rem)] rounded-[30px] bg-white">
+            {children}
           </div>
-        </div>
+        </main>
       </div>
     </div>
-  )
+  );
 }
