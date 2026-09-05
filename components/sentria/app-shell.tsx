@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useState } from "react"
@@ -47,10 +46,7 @@ const META: Record<ViewKey, { title: string; subtitle: string }> = {
 export function AppShell() {
   const [view, setView] = useState<ViewKey>("dashboard")
   const [open, setOpen] = useState(false)
-
-  // SentrIA starts compact: icons only.
   const [collapsed, setCollapsed] = useState(true)
-
   const [search, setSearch] = useState("")
   const [showOnboarding, setShowOnboarding] = useState(false)
 
@@ -97,14 +93,14 @@ export function AppShell() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-0 lg:p-4">
+    <div className="min-h-screen bg-background lg:p-4">
       {showOnboarding && (
         <OnboardingView
           onComplete={() => setShowOnboarding(false)}
         />
       )}
 
-      {/* Outer SentrIA frame */}
+      {/* OUTER DARK FRAME */}
       <div
         className="
           relative
@@ -115,6 +111,7 @@ export function AppShell() {
           lg:rounded-[32px]
         "
       >
+        {/* FLOATING SIDEBAR */}
         <Sidebar
           active={view}
           onNavigate={handleNavigate}
@@ -124,70 +121,69 @@ export function AppShell() {
           onToggleCollapse={toggleSidebar}
         />
 
-        {/* Main dashboard surface */}
+        {/* MAIN AREA */}
         <div
           className={[
             "relative",
-            "flex min-h-screen flex-col",
-            "transition-[margin] duration-300 ease-out",
+            "min-h-screen",
+            "transition-[padding] duration-300 ease-out",
             "lg:min-h-[calc(100vh-2rem)]",
             collapsed
-              ? "lg:ml-[92px]"
-              : "lg:ml-[264px]",
+              ? "lg:pl-[92px]"
+              : "lg:pl-[264px]",
           ].join(" ")}
         >
+          {/* MAIN WHITE PANEL */}
           <div
             className="
-              flex
-              min-h-0
-              flex-1
-              flex-col
+              min-h-screen
               overflow-hidden
               bg-background
-              rounded-none
+              lg:min-h-[calc(100vh-2rem)]
               lg:rounded-[30px]
               lg:border
               lg:border-border
               lg:shadow-[0_10px_35px_rgba(0,0,0,0.08)]
             "
           >
-            <Topbar
-              title={META[view].title}
-              subtitle={META[view].subtitle}
-              onMenu={() => setOpen(true)}
-              search={search}
-              onSearch={handleSearch}
-            />
+            <div className="flex min-h-screen flex-col lg:min-h-[calc(100vh-2rem)]">
+              <Topbar
+                title={META[view].title}
+                subtitle={META[view].subtitle}
+                onMenu={() => setOpen(true)}
+                search={search}
+                onSearch={handleSearch}
+              />
 
-            <main
-              className="
-                min-h-0
-                flex-1
-                overflow-y-auto
-                p-4
-                lg:p-8
-              "
-            >
-              {view === "dashboard" && (
-                <DashboardView search={search} />
-              )}
+              <main
+                className="
+                  min-h-0
+                  flex-1
+                  overflow-y-auto
+                  p-4
+                  lg:p-8
+                "
+              >
+                {view === "dashboard" && (
+                  <DashboardView search={search} />
+                )}
 
-              {view === "sites" && <SitesView />}
+                {view === "sites" && <SitesView />}
 
-              {view === "ask" && <AskView />}
+                {view === "ask" && <AskView />}
 
-              {view === "pricing" && <PricingView />}
+                {view === "pricing" && <PricingView />}
 
-              {view === "profile" && <ProfileView />}
+                {view === "profile" && <ProfileView />}
 
-              {view === "settings" && <SettingsView />}
+                {view === "settings" && <SettingsView />}
 
-              {view === "report" && <ReportView />}
-            </main>
+                {view === "report" && <ReportView />}
+              </main>
+            </div>
           </div>
         </div>
       </div>
     </div>
   )
 }
-
