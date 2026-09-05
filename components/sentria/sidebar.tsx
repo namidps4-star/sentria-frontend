@@ -103,7 +103,7 @@ export function Sidebar({
           type="button"
           aria-label="Close sidebar"
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-black/30 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/20 lg:hidden"
         />
       )}
 
@@ -124,7 +124,7 @@ export function Sidebar({
         ].join(" ")}
       >
         <div className="flex h-full flex-col overflow-hidden rounded-[28px]">
-          {/* HEADER */}
+          {/* LOGO */}
           <div
             className={[
               "flex h-[76px] shrink-0 items-center",
@@ -133,8 +133,8 @@ export function Sidebar({
           >
             {!collapsed && (
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15">
-                  <Brain className="h-5 w-5 text-emerald-400" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/15">
+                  <Brain className="h-5 w-5 text-accent" />
                 </div>
 
                 <div className="flex flex-col">
@@ -150,8 +150,8 @@ export function Sidebar({
             )}
 
             {collapsed && (
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15">
-                <Brain className="h-5 w-5 text-emerald-400" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/15">
+                <Brain className="h-5 w-5 text-accent" />
               </div>
             )}
 
@@ -160,7 +160,7 @@ export function Sidebar({
                 type="button"
                 onClick={onToggleCollapse}
                 aria-label="Collapse sidebar"
-                className="ml-auto flex h-9 w-9 items-center justify-center rounded-xl text-sidebar-foreground/50 transition hover:bg-emerald-500/10 hover:text-emerald-400"
+                className="ml-auto flex h-9 w-9 items-center justify-center rounded-xl text-sidebar-foreground/50 transition hover:bg-accent/10 hover:text-accent"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -172,11 +172,11 @@ export function Sidebar({
             {sections.map((section, sectionIndex) => (
               <div key={section.title}>
                 {sectionIndex > 0 && (
-                  <div className="my-4 h-px w-full bg-white/10" />
+                  <div className="my-4 h-px w-full bg-white/15" />
                 )}
 
                 {!collapsed && (
-                  <div className="mb-2 px-3 text-[10px] font-semibold tracking-[0.16em] text-sidebar-foreground/35">
+                  <div className="mb-2 px-3 text-[10px] font-semibold tracking-[0.16em] text-sidebar-foreground/40">
                     {section.title}
                   </div>
                 )}
@@ -201,19 +201,19 @@ export function Sidebar({
                             : "gap-3 px-3 text-left",
                           isActive
                             ? item.green
-                              ? "bg-emerald-500/12 text-emerald-400"
+                              ? "bg-accent/10 text-accent"
                               : "bg-sidebar-primary text-sidebar-primary-foreground"
-                            : "text-sidebar-foreground/65 hover:bg-emerald-500/10 hover:text-emerald-400",
+                            : "text-sidebar-foreground/65 hover:bg-accent/10 hover:text-accent",
                         ].join(" ")}
                       >
                         <Icon
                           className={[
                             "h-[18px] w-[18px] shrink-0 transition-colors",
                             isActive && item.green
-                              ? "text-emerald-400"
+                              ? "text-accent"
                               : "",
                             !isActive
-                              ? "group-hover:text-emerald-400"
+                              ? "group-hover:text-accent"
                               : "",
                           ].join(" ")}
                           strokeWidth={1.8}
@@ -226,7 +226,7 @@ export function Sidebar({
                         )}
 
                         {item.id === "ask" && !collapsed && (
-                          <Sparkles className="ml-auto h-3.5 w-3.5 text-emerald-400/70" />
+                          <Sparkles className="ml-auto h-3.5 w-3.5 text-accent" />
                         )}
                       </button>
                     )
@@ -235,13 +235,12 @@ export function Sidebar({
               </div>
             ))}
 
-            {/* AI STATUS */}
             {!collapsed && (
               <div className="mt-auto pt-6">
                 <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
                   <div className="flex items-center gap-2">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10">
-                      <Bot className="h-4 w-4 text-emerald-400" />
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/10">
+                      <Bot className="h-4 w-4 text-accent" />
                     </div>
 
                     <div className="min-w-0">
@@ -250,7 +249,7 @@ export function Sidebar({
                       </div>
 
                       <div className="flex items-center gap-1.5 text-[10px] text-sidebar-foreground/40">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                        <span className="h-1.5 w-1.5 rounded-full bg-accent" />
                         Intelligence online
                       </div>
                     </div>
@@ -267,7 +266,7 @@ export function Sidebar({
                 type="button"
                 onClick={onToggleCollapse}
                 aria-label="Expand sidebar"
-                className="flex h-10 w-full items-center justify-center rounded-xl text-sidebar-foreground/50 transition hover:bg-emerald-500/10 hover:text-emerald-400"
+                className="flex h-10 w-full items-center justify-center rounded-xl text-sidebar-foreground/50 transition hover:bg-accent/10 hover:text-accent"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
