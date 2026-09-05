@@ -66,14 +66,14 @@ export function AppShell() {
   }
 
   return (
-    <div className="min-h-screen bg-[#111111] p-0 lg:p-4">
+    <div className="min-h-screen bg-muted p-0 lg:p-4">
       {showOnboarding && (
         <OnboardingView
           onComplete={() => setShowOnboarding(false)}
         />
       )}
 
-      <div className="relative min-h-screen overflow-hidden rounded-none bg-[#111111] lg:min-h-[calc(100vh-2rem)] lg:rounded-[32px]">
+      <div className="relative min-h-screen overflow-hidden lg:min-h-[calc(100vh-2rem)]">
         <Sidebar
           active={view}
           onNavigate={(v) => {
@@ -84,8 +84,8 @@ export function AppShell() {
           onClose={() => setOpen(false)}
         />
 
-        <div className="min-h-screen lg:ml-[268px] lg:min-h-[calc(100vh-2rem)]">
-          <div className="flex min-h-screen flex-col overflow-hidden bg-background lg:min-h-[calc(100vh-2rem)] lg:rounded-[32px]">
+        <div className="min-h-screen lg:ml-[268px] lg:min-h-[calc(100vh-2rem)] lg:pr-0">
+          <div className="flex min-h-screen flex-col overflow-hidden bg-background lg:min-h-[calc(100vh-2rem)] lg:rounded-[2rem] lg:border lg:border-border lg:shadow-sm">
             <Topbar
               title={META[view].title}
               subtitle={META[view].subtitle}
