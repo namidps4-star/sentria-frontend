@@ -100,7 +100,7 @@ interface Signal {
   label: string
   value: string
   width: string // literal tailwind class, e.g. "w-[82%]"
-  tone: string // literal tailwind class, e.g. "bg-rose-500"
+  tone: string // literal tailwind class, e.g. "bg-destructive"
 }
 
 interface ProjectionStep {
@@ -147,9 +147,9 @@ const OPS_TYPE_CONFIGS: Record<Exclude<OpsType, "multi">, OpsTypeConfig> = {
       riskPercent: 68,
       globalRisk: 34,
       signals: [
-        { label: "Retards récents", value: "+23%", width: "w-[82%]", tone: "bg-rose-500" },
+        { label: "Retards récents", value: "+23%", width: "w-[82%]", tone: "bg-destructive" },
         { label: "Capacité transport", value: "−14%", width: "w-[42%]", tone: "bg-amber-500" },
-        { label: "Volume demain", value: "+31%", width: "w-[91%]", tone: "bg-rose-500" },
+        { label: "Volume demain", value: "+31%", width: "w-[91%]", tone: "bg-destructive" },
       ],
       narrative: "Ces signaux convergent vers une surcharge probable demain matin. 11 commandes prioritaires sont concernées.",
       projection: [
@@ -181,7 +181,7 @@ const OPS_TYPE_CONFIGS: Record<Exclude<OpsType, "multi">, OpsTypeConfig> = {
       riskPercent: 71,
       globalRisk: 38,
       signals: [
-        { label: "Temps d'immobilisation", value: "96 h", width: "w-[88%]", tone: "bg-rose-500" },
+        { label: "Temps d'immobilisation", value: "96 h", width: "w-[88%]", tone: "bg-destructive" },
         { label: "Frais de stockage cumulés", value: "+540 €", width: "w-[65%]", tone: "bg-amber-500" },
         { label: "Créneaux d'enlèvement dispo", value: "−30%", width: "w-[35%]", tone: "bg-amber-500" },
       ],
@@ -215,7 +215,7 @@ const OPS_TYPE_CONFIGS: Record<Exclude<OpsType, "multi">, OpsTypeConfig> = {
       riskPercent: 64,
       globalRisk: 33,
       signals: [
-        { label: "Taux d'occupation zone B", value: "+27%", width: "w-[86%]", tone: "bg-rose-500" },
+        { label: "Taux d'occupation zone B", value: "+27%", width: "w-[86%]", tone: "bg-destructive" },
         { label: "Temps de picking moyen", value: "+18%", width: "w-[58%]", tone: "bg-amber-500" },
         { label: "Commandes en attente", value: "64", width: "w-[70%]", tone: "bg-amber-500" },
       ],
@@ -249,7 +249,7 @@ const OPS_TYPE_CONFIGS: Record<Exclude<OpsType, "multi">, OpsTypeConfig> = {
       riskPercent: 59,
       globalRisk: 30,
       signals: [
-        { label: "Retard de préparation", value: "+34%", width: "w-[80%]", tone: "bg-rose-500" },
+        { label: "Retard de préparation", value: "+34%", width: "w-[80%]", tone: "bg-destructive" },
         { label: "Taux de rebut emballage", value: "+9%", width: "w-[40%]", tone: "bg-amber-500" },
         { label: "Commandes urgentes", value: "22", width: "w-[55%]", tone: "bg-amber-500" },
       ],
@@ -283,9 +283,9 @@ const OPS_TYPE_CONFIGS: Record<Exclude<OpsType, "multi">, OpsTypeConfig> = {
       riskPercent: 76,
       globalRisk: 41,
       signals: [
-        { label: "Écart de température", value: "+4.2°C", width: "w-[90%]", tone: "bg-rose-500" },
+        { label: "Écart de température", value: "+4.2°C", width: "w-[90%]", tone: "bg-destructive" },
         { label: "Durée hors plage", value: "38 min", width: "w-[62%]", tone: "bg-amber-500" },
-        { label: "Produits sensibles concernés", value: "120 kg", width: "w-[70%]", tone: "bg-rose-500" },
+        { label: "Produits sensibles concernés", value: "120 kg", width: "w-[70%]", tone: "bg-destructive" },
       ],
       narrative: "Le capteur IoT du camion #12 signale une sortie de plage de température depuis 38 minutes. 120 kg de produits sensibles sont concernés.",
       projection: [
@@ -339,9 +339,21 @@ function composeMultiConfig(selected: Exclude<OpsType, "multi">[]): OpsTypeConfi
 }
 
 const stateStyle = {
-  good: { dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-400", ring: "border-emerald-500/25 bg-emerald-500/10" },
-  watch: { dot: "bg-amber-500", text: "text-amber-700 dark:text-amber-400", ring: "border-amber-500/25 bg-amber-500/10" },
-  risk: { dot: "bg-rose-500", text: "text-rose-700 dark:text-rose-400", ring: "border-rose-500/25 bg-rose-500/10" },
+  good: {
+    dot: "bg-accent",
+    text: "text-accent-foreground",
+    ring: "border-accent/30 bg-accent/15",
+  },
+  watch: {
+    dot: "bg-amber-500",
+    text: "text-amber-600",
+    ring: "border-amber-500/25 bg-amber-500/10",
+  },
+  risk: {
+    dot: "bg-destructive",
+    text: "text-destructive",
+    ring: "border-destructive/25 bg-destructive/10",
+  },
 }
 
 const stateLabel: Record<StageStatus, string> = { good: "Fluide", watch: "Sous tension", risk: "Rupture" }
@@ -391,7 +403,12 @@ export function LogisticsBlockagesView({
   const SelectedIcon = selectedStage.icon
   const { flagship } = config
 
-  const riskColor = flagship.globalRisk >= 50 ? "#f43f5e" : flagship.globalRisk >= 30 ? "#f59e0b" : "#10b981"
+  const riskColor =
+    flagship.globalRisk >= 50
+      ? "var(--destructive)"
+      : flagship.globalRisk >= 30
+        ? "#f59e0b"
+        : "var(--accent)"
   const riskLabel = flagship.globalRisk >= 50 ? "Critique" : flagship.globalRisk >= 30 ? "Sous tension" : "Sous contrôle"
 
   const focusMessage =
@@ -402,171 +419,374 @@ export function LogisticsBlockagesView({
         : `${selectedStage.name} est stable. SentrIA continue de le surveiller.`
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 pb-10">
-      <section className="relative overflow-hidden rounded-[2rem] border border-border bg-card p-5 shadow-sm sm:p-7">
-        <div className="absolute -right-24 -top-32 h-72 w-72 rounded-full bg-emerald-400/10 blur-3xl" />
-        <div className="relative flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+    <div className="mx-auto max-w-7xl space-y-4 pb-10">
+      {/* HEADER */}
+      <section className="rounded-3xl border border-border bg-card p-6 sm:p-8">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
           <div>
-            <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-400">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/15"><Radar className="h-3.5 w-3.5" /></span>
+            <span className="inline-flex items-center gap-2 rounded-full bg-accent/20 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-accent-foreground">
+              <Radar className="h-3.5 w-3.5" />
               SentrIA Flow
-            </div>
-            <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Votre flux, avant qu&apos;il ne casse.</h2>
-            <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">Suivez la santé de chaque étape. SentrIA vous montre le prochain point de rupture et la décision qui protège vos opérations.</p>
+            </span>
+
+            <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight sm:text-4xl">
+              Votre flux, avant qu&apos;il ne casse.
+            </h2>
+
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
+              Suivez la santé de chaque étape. SentrIA vous montre le
+              prochain point de rupture et la décision qui protège vos
+              opérations.
+            </p>
           </div>
-          <div className="flex items-center gap-4 rounded-2xl border border-border bg-background/70 px-4 py-3">
+
+          <div className="flex shrink-0 items-center gap-4 rounded-2xl bg-foreground p-4 text-background">
             <div
-              className="relative grid h-12 w-12 place-items-center rounded-full"
-              style={{ background: `conic-gradient(${riskColor} 0deg ${(flagship.globalRisk / 100) * 360}deg, #e5e7eb ${(flagship.globalRisk / 100) * 360}deg 360deg)` }}
+              className="relative grid h-14 w-14 shrink-0 place-items-center rounded-full"
+              style={{
+                background: `conic-gradient(${riskColor} 0deg ${(flagship.globalRisk / 100) * 360}deg, rgba(255,255,255,0.12) ${(flagship.globalRisk / 100) * 360}deg 360deg)`,
+              }}
             >
-              <div className="grid h-9 w-9 place-items-center rounded-full bg-card text-sm font-bold">{flagship.globalRisk}</div>
+              <div className="grid h-11 w-11 place-items-center rounded-full bg-foreground text-base font-bold">
+                {flagship.globalRisk}
+              </div>
             </div>
-            <div><p className="text-xs font-medium text-muted-foreground">Risque global</p><p className="text-sm font-semibold">{riskLabel} <span className="text-muted-foreground">/ 100</span></p></div>
+
+            <div>
+              <p className="text-xs font-medium text-background/60">
+                Risque global
+              </p>
+              <p className="text-sm font-semibold">
+                {riskLabel}{" "}
+                <span className="text-background/50">/ 100</span>
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="relative mt-8 overflow-x-auto pb-1">
-          <div className="flex items-center justify-between gap-1 px-2" style={{ minWidth: Math.max(stages.length * 120, 480) }}>
+        {/* STAGE PIPELINE */}
+        <div className="mt-8 overflow-x-auto pb-1">
+          <div
+            className="flex items-center justify-between gap-1"
+            style={{ minWidth: Math.max(stages.length * 120, 480) }}
+          >
             {stages.map((stage, index) => {
               const Icon = stage.icon
               const style = stateStyle[stage.status]
               const isSelected = selected === stage.id
               const isTemplate = stage.dataState === "template"
+
               return (
                 <div className="flex flex-1 items-center" key={stage.id}>
-                  <button onClick={() => setSelected(stage.id)} className="group flex w-24 flex-col items-center gap-2 text-center" aria-pressed={isSelected}>
-                    <span className={cn("grid h-12 w-12 place-items-center rounded-2xl border transition-all", style.ring, isSelected && "scale-110 shadow-lg shadow-black/5", isTemplate && "border-dashed opacity-60")}>
+                  <button
+                    onClick={() => setSelected(stage.id)}
+                    aria-pressed={isSelected}
+                    className="group flex w-24 cursor-pointer flex-col items-center gap-2 text-center"
+                  >
+                    <span
+                      className={cn(
+                        "grid h-14 w-14 place-items-center rounded-2xl border-2 transition-all duration-200",
+                        style.ring,
+                        isSelected && "scale-110 border-foreground shadow-md",
+                        isTemplate && "border-dashed opacity-60"
+                      )}
+                    >
                       <Icon className={cn("h-5 w-5", style.text)} />
                     </span>
-                    <span className="text-[11px] font-semibold text-foreground">{stage.name}</span>
-                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground"><span className={cn("h-1.5 w-1.5 rounded-full", style.dot)} />{stateLabel[stage.status]}</span>
+
+                    <span className="text-[11px] font-bold text-foreground">
+                      {stage.name}
+                    </span>
+
+                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                      <span className={cn("h-1.5 w-1.5 rounded-full", style.dot)} />
+                      {stateLabel[stage.status]}
+                    </span>
+
                     {isTemplate && (
                       <span className="flex items-center gap-0.5 text-[9px] font-medium text-muted-foreground/70">
                         <Clock3 className="h-2.5 w-2.5" /> à confirmer
                       </span>
                     )}
                   </button>
-                  {index < stages.length - 1 && <div className={cn("mx-1 h-1 flex-1 rounded-full", stage.status === "risk" ? "bg-gradient-to-r from-rose-300 to-amber-300" : "bg-emerald-200 dark:bg-emerald-900/60")} />}
+
+                  {index < stages.length - 1 && (
+                    <div
+                      className={cn(
+                        "mx-1 h-1 flex-1 rounded-full",
+                        stage.status === "risk" ? "bg-destructive/30" : "bg-accent/30"
+                      )}
+                    />
+                  )}
                 </div>
               )
             })}
           </div>
         </div>
-        <div className="relative mt-6 flex items-center gap-3 rounded-2xl border border-rose-500/15 bg-rose-500/[0.06] p-3 text-sm">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-rose-500 text-white"><SelectedIcon className="h-4 w-4" /></span>
-          <p>{focusMessage}</p>
-          <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground" />
+
+        {/* SELECTED STAGE BANNER */}
+        <div className="mt-6 flex items-center gap-3 rounded-2xl bg-destructive/10 p-4">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-destructive text-white">
+            <SelectedIcon className="h-4 w-4" />
+          </span>
+
+          <p className="text-sm">{focusMessage}</p>
+
+          <ChevronRight className="ml-auto h-4 w-4 shrink-0 text-muted-foreground" />
         </div>
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(300px,.8fr)]">
-        <section className="overflow-hidden rounded-[2rem] border border-rose-500/20 bg-card shadow-sm">
-          <div className="border-b border-border p-5 sm:p-7">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(300px,.8fr)]">
+        {/* MAIN FLAGSHIP CARD */}
+        <section className="overflow-hidden rounded-3xl border border-border bg-card">
+          <div className="border-b border-border p-6 sm:p-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-rose-600 dark:text-rose-400"><CircleAlert className="h-4 w-4" /> Avant le blocage</div>
-                <h3 className="text-2xl font-semibold tracking-tight">{flagship.title}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{flagship.subtitle}</p>
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-destructive/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-destructive">
+                  <CircleAlert className="h-3.5 w-3.5" />
+                  Avant le blocage
+                </div>
+
+                <h3 className="font-heading text-2xl font-bold tracking-tight">
+                  {flagship.title}
+                </h3>
+
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {flagship.subtitle}
+                </p>
               </div>
-              <span className="rounded-full bg-rose-500/10 px-3 py-1.5 text-sm font-bold text-rose-700 dark:text-rose-400">{flagship.riskPercent}% de risque</span>
+
+              <span className="rounded-full bg-destructive px-4 py-2 text-sm font-bold text-white">
+                {flagship.riskPercent}% de risque
+              </span>
             </div>
-            <div className="mt-6 grid gap-3 sm:grid-cols-3">
+
+            {/* SIGNALS */}
+            <div className="mt-8 grid gap-3 sm:grid-cols-3">
               {flagship.signals.map((signal) => (
-                <div key={signal.label} className="rounded-2xl bg-muted/60 p-3">
-                  <div className="flex items-baseline justify-between gap-2"><span className="text-xs text-muted-foreground">{signal.label}</span><span className="text-sm font-bold">{signal.value}</span></div>
-                  <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-border"><div className={cn("h-full rounded-full", signal.tone, signal.width)} /></div>
+                <div key={signal.label} className="rounded-2xl bg-muted/60 p-4">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {signal.label}
+                    </span>
+
+                    <span className="font-heading text-base font-bold">
+                      {signal.value}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-border">
+                    <div className={cn("h-full rounded-full", signal.tone, signal.width)} />
+                  </div>
                 </div>
               ))}
             </div>
-            <p className="mt-5 border-l-2 border-rose-400 pl-3 text-sm leading-6 text-muted-foreground">{flagship.narrative}</p>
+
+            <p className="mt-6 rounded-2xl bg-muted/50 p-4 text-sm leading-relaxed text-muted-foreground">
+              {flagship.narrative}
+            </p>
           </div>
 
-          <div className="grid gap-5 p-5 sm:p-7 lg:grid-cols-[.7fr_1.3fr]">
-            <div className="rounded-2xl bg-muted/55 p-5">
-              <p className="text-xs font-bold uppercase tracking-[0.13em] text-muted-foreground">Si rien ne change</p>
-              <div className="mt-5 space-y-3 border-l border-dashed border-border pl-4 text-sm">
+          <div className="grid gap-4 p-6 sm:p-8 lg:grid-cols-[.7fr_1.3fr]">
+            {/* TIMELINE - dark card */}
+            <div className="rounded-2xl bg-foreground p-5 text-background">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-background/50">
+                Si rien ne change
+              </p>
+
+              <div className="mt-5 space-y-4 border-l border-dashed border-background/25 pl-4 text-sm">
                 {flagship.projection.map((step) => (
                   <p key={step.time} className="relative">
-                    {step.tone && <span className={cn("absolute -left-[21px] top-1 h-2 w-2 rounded-full", step.tone === "amber" ? "bg-amber-500" : "bg-rose-500")} />}
-                    <span className="font-semibold">{step.time}</span><span className="ml-2 text-muted-foreground">{step.detail}</span>
+                    {step.tone && (
+                      <span
+                        className={cn(
+                          "absolute -left-[21px] top-1 h-2 w-2 rounded-full",
+                          step.tone === "amber" ? "bg-amber-500" : "bg-destructive"
+                        )}
+                      />
+                    )}
+                    <span className="font-semibold">{step.time}</span>
+                    <span className="ml-2 text-background/60">{step.detail}</span>
                   </p>
                 ))}
               </div>
-              <p className="mt-5 text-lg font-semibold">{flagship.costEstimate} <span className="text-sm font-normal text-muted-foreground">de coût potentiel</span></p>
+
+              <p className="mt-5 font-heading text-2xl font-bold">
+                {flagship.costEstimate}{" "}
+                <span className="text-sm font-normal text-background/50">
+                  de coût potentiel
+                </span>
+              </p>
             </div>
-            <div className={cn("rounded-2xl border p-5 transition-colors", applied ? "border-emerald-500/30 bg-emerald-500/[0.07]" : "border-emerald-500/20 bg-emerald-500/[0.04]")}>
+
+            {/* RECOMMENDATION - accent brand card */}
+            <div
+              className={cn(
+                "rounded-2xl border-2 p-5 transition-colors duration-200",
+                applied ? "border-accent bg-accent/15" : "border-accent/40 bg-accent/5"
+              )}
+            >
               <div className="flex items-start gap-3">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-500 text-white"><ShieldCheck className="h-5 w-5" /></span>
+                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent text-accent-foreground">
+                  <ShieldCheck className="h-5 w-5" />
+                </span>
+
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.13em] text-emerald-700 dark:text-emerald-400">SentrIA propose</p>
-                  <h4 className="mt-1 font-semibold">{flagship.recommendation.title}</h4>
-                  <p className="mt-1 text-sm text-muted-foreground">{flagship.recommendation.detail}</p>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-accent-foreground">
+                    SentrIA propose
+                  </p>
+
+                  <h4 className="mt-1 font-heading text-base font-bold">
+                    {flagship.recommendation.title}
+                  </h4>
+
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {flagship.recommendation.detail}
+                  </p>
                 </div>
               </div>
-              <div className="mt-5 grid grid-cols-3 gap-2 text-center">
-                <div><p className="text-xs text-muted-foreground">Risque</p><p className="mt-1 font-bold text-rose-600 line-through decoration-rose-300">{flagship.recommendation.beforeRisk}%</p></div>
-                <div className="pt-5 text-muted-foreground"><ArrowRight className="mx-auto h-4 w-4" /></div>
-                <div><p className="text-xs text-muted-foreground">Après action</p><p className="mt-1 font-bold text-emerald-600">{flagship.recommendation.afterRisk}%</p></div>
+
+              <div className="mt-5 grid grid-cols-3 items-center gap-2 text-center">
+                <div>
+                  <p className="text-xs text-muted-foreground">Risque</p>
+                  <p className="mt-1 font-heading text-lg font-bold text-destructive line-through decoration-2">
+                    {flagship.recommendation.beforeRisk}%
+                  </p>
+                </div>
+
+                <ArrowRight className="mx-auto h-4 w-4 text-muted-foreground" />
+
+                <div>
+                  <p className="text-xs text-muted-foreground">Après action</p>
+                  <p className="mt-1 font-heading text-lg font-bold text-accent-foreground">
+                    {flagship.recommendation.afterRisk}%
+                  </p>
+                </div>
               </div>
-              <button onClick={() => setApplied(!applied)} className={cn("mt-5 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all", applied ? "bg-emerald-600 text-white" : "bg-primary text-primary-foreground hover:opacity-90")}>
-                <span>{applied ? "Protection activée" : "Éviter ce blocage"}</span>{applied ? <Check className="h-4 w-4" /> : <Zap className="h-4 w-4" />}
+
+              <button
+                onClick={() => setApplied(!applied)}
+                className={cn(
+                  "mt-5 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200",
+                  applied
+                    ? "bg-accent text-accent-foreground"
+                    : "bg-foreground text-background hover:opacity-90"
+                )}
+              >
+                <span>{applied ? "Protection activée" : "Éviter ce blocage"}</span>
+                {applied ? <Check className="h-4 w-4" /> : <Zap className="h-4 w-4" />}
               </button>
             </div>
           </div>
         </section>
 
-        <aside className="rounded-[2rem] border border-border bg-card p-5 shadow-sm sm:p-6">
+        {/* SIDEBAR: BREAKPOINTS ACCORDION */}
+        <aside className="rounded-3xl border border-border bg-card p-5 sm:p-6">
           <div className="flex items-center justify-between">
-            <div><p className="text-xs font-bold uppercase tracking-[0.15em] text-muted-foreground">Points de rupture</p><h3 className="mt-1 text-lg font-semibold">À protéger maintenant</h3></div>
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-muted"><Radar className="h-4 w-4" /></span>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                Points de rupture
+              </p>
+              <h3 className="mt-1 font-heading text-lg font-bold">
+                À protéger maintenant
+              </h3>
+            </div>
+
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-muted">
+              <Radar className="h-4 w-4" />
+            </span>
           </div>
-          <div className="mt-5 space-y-2">
+
+          <div className="mt-5 space-y-2.5">
             {config.breakpoints.map((point) => {
               const active = point.primitiveId === selected
               const isOpen = expandedBreakpoint === point.primitiveId
               const primitive = PRIMITIVES[point.primitiveId]
               const PrimitiveIcon = primitive.icon
-              const toneClasses = point.tone === "risk"
-                ? { pill: "bg-rose-500 text-white", ring: "bg-rose-500/10 text-rose-600" }
-                : { pill: "bg-amber-500 text-white", ring: "bg-amber-500/10 text-amber-600" }
+              const toneClasses =
+                point.tone === "risk"
+                  ? { pill: "bg-destructive text-white", ring: "bg-destructive/10 text-destructive" }
+                  : { pill: "bg-amber-500 text-white", ring: "bg-amber-500/10 text-amber-600" }
 
               return (
-                <div key={point.primitiveId} className={cn("overflow-hidden rounded-2xl border transition-all", active ? "border-primary" : "border-border")}>
+                <div
+                  key={point.primitiveId}
+                  className={cn(
+                    "overflow-hidden rounded-2xl border-2 transition-all duration-200",
+                    active ? "border-foreground" : "border-border"
+                  )}
+                >
                   <button
                     onClick={() => {
                       setSelected(point.primitiveId)
                       setExpandedBreakpoint(isOpen ? null : point.primitiveId)
                     }}
-                    className={cn("flex w-full items-center gap-3 p-3.5 text-left transition-colors", active ? "bg-muted/70" : "hover:bg-muted/40")}
+                    className={cn(
+                      "flex w-full cursor-pointer items-center gap-3 p-4 text-left transition-colors duration-150",
+                      active ? "bg-muted/70" : "hover:bg-muted/40"
+                    )}
                   >
                     <span className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-xl", toneClasses.ring)}>
                       <PrimitiveIcon className="h-4 w-4" />
                     </span>
+
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="truncate font-semibold">{primitive.name}</p>
-                        <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide", toneClasses.pill)}>
+
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                            toneClasses.pill
+                          )}
+                        >
                           {point.tone === "risk" ? "Risque" : "À surveiller"}
                         </span>
                       </div>
-                      <p className="mt-0.5 truncate text-xs text-muted-foreground">{point.title}</p>
+
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {point.title}
+                      </p>
                     </div>
-                    <span className={cn("shrink-0 text-sm font-bold", point.tone === "risk" ? "text-rose-600" : "text-amber-600")}>{point.risk}%</span>
-                    <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", isOpen && "rotate-180")} />
+
+                    <span
+                      className={cn(
+                        "shrink-0 font-heading text-sm font-bold",
+                        point.tone === "risk" ? "text-destructive" : "text-amber-600"
+                      )}
+                    >
+                      {point.risk}%
+                    </span>
+
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200",
+                        isOpen && "rotate-180"
+                      )}
+                    />
                   </button>
 
                   {isOpen && (
-                    <div className="space-y-3 border-t border-border bg-background/60 p-3.5">
+                    <div className="space-y-3 border-t border-border bg-muted/30 p-4">
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-muted-foreground">Impact estimé</span>
                         <span className="font-semibold text-foreground">{point.impact}</span>
                       </div>
+
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">SentrIA surveille ici</p>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          SentrIA surveille ici
+                        </p>
+
                         <ul className="mt-1.5 space-y-1">
                           {primitive.signalDna.map((signal) => (
                             <li key={signal} className="flex items-center gap-1.5 text-xs text-foreground">
-                              <span className={cn("h-1 w-1 rounded-full", point.tone === "risk" ? "bg-rose-500" : "bg-amber-500")} />
+                              <span
+                                className={cn(
+                                  "h-1 w-1 rounded-full",
+                                  point.tone === "risk" ? "bg-destructive" : "bg-amber-500"
+                                )}
+                              />
                               {signal}
                             </li>
                           ))}
@@ -578,9 +798,10 @@ export function LogisticsBlockagesView({
               )
             })}
           </div>
-          <div className="mt-6 flex items-center gap-3 rounded-2xl bg-muted/60 p-4">
-            <PackageCheck className="h-5 w-5 text-emerald-600" />
-            <p className="text-xs leading-5 text-muted-foreground">{flagship.footerNote}</p>
+
+          <div className="mt-6 flex items-center gap-3 rounded-2xl bg-accent/15 p-4">
+            <PackageCheck className="h-5 w-5 shrink-0 text-accent-foreground" />
+            <p className="text-xs leading-relaxed text-muted-foreground">{flagship.footerNote}</p>
           </div>
         </aside>
       </div>
