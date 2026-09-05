@@ -170,20 +170,6 @@ export function Sidebar({
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        {/* Collapse / expand handle */}
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          aria-label={expanded ? "Réduire le menu" : "Développer le menu"}
-          className={cn(
-            "absolute -right-3 top-[26px] z-10 flex h-6 w-6 items-center justify-center rounded-full",
-            "border border-sidebar-border bg-sidebar-primary text-sidebar-primary-foreground shadow-md",
-            "transition-transform hover:scale-105",
-          )}
-        >
-          {expanded ? <ChevronLeft className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-        </button>
-
         {/* Logo */}
         <div className={cn("flex h-[76px] shrink-0 items-center", expanded ? "justify-between px-5" : "justify-center px-2")}>
           <div className="flex items-center gap-2.5">
@@ -205,7 +191,7 @@ export function Sidebar({
         </div>
 
         {/* Navigation */}
-        <nav className={cn("flex flex-1 flex-col overflow-y-auto overflow-x-hidden py-4", expanded ? "px-3" : "items-center px-3")}>
+        <nav className={cn("flex flex-1 flex-col overflow-y-auto py-4", expanded ? "px-3" : "items-center px-3")}>
           {NAV_SECTIONS.map((section, sectionIndex) => (
             <div
               key={section.title}
@@ -320,6 +306,29 @@ export function Sidebar({
               <span className="whitespace-nowrap text-[9px] text-sidebar-foreground/25">Support SentrIA</span>
             )}
             {!expanded && <RailTooltip label="Support SentrIA" />}
+          </div>
+
+          {/* Collapse / expand toggle — subtle, fully contained ghost control */}
+          <div className={cn("group relative border-t border-sidebar-border pt-2", expanded ? "w-full" : "flex w-full justify-center")}>
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              aria-label={expanded ? "Réduire le menu" : "Développer le menu"}
+              className={cn(
+                "flex items-center gap-2 rounded-xl text-sidebar-foreground/30 transition-colors duration-150",
+                "hover:bg-sidebar-accent hover:text-sidebar-foreground/70",
+                expanded ? "w-full justify-start px-3 py-2" : "h-9 w-9 justify-center",
+              )}
+            >
+              {expanded ? (
+                <ChevronLeft className="h-3.5 w-3.5 shrink-0" strokeWidth={1.8} />
+              ) : (
+                <ChevronRight className="h-3.5 w-3.5 shrink-0" strokeWidth={1.8} />
+              )}
+              {expanded && <span className="text-[11px] font-medium">Réduire</span>}
+            </button>
+
+            {!expanded && <RailTooltip label="Développer" />}
           </div>
         </div>
       </aside>

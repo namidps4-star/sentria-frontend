@@ -41,38 +41,38 @@ export function AppShell() {
   }
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
-
-      {/* Onboarding modal — shows only on first visit */}
+    <div className="min-h-screen bg-accent lg:p-6 xl:p-10">
+      {/* Onboarding modal — shows only on first visit, overlays the whole viewport */}
       {showOnboarding && (
         <OnboardingView onComplete={() => setShowOnboarding(false)} />
       )}
 
-      <Sidebar
-        active={view}
-        onNavigate={(v) => { setView(v); setSearch("") }}
-        open={open}
-        onClose={() => setOpen(false)}
-      />
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar
-          title={META[view].title}
-          subtitle={META[view].subtitle}
-          onMenu={() => setOpen(true)}
-          search={search}
-          onSearch={handleSearch}
+      <div className="mx-auto flex min-h-screen w-full max-w-[1680px] overflow-hidden bg-background text-foreground lg:min-h-[calc(100vh-3rem)] lg:rounded-[2rem] lg:border lg:border-black/10 lg:shadow-2xl xl:min-h-[calc(100vh-5rem)]">
+        <Sidebar
+          active={view}
+          onNavigate={(v) => { setView(v); setSearch("") }}
+          open={open}
+          onClose={() => setOpen(false)}
         />
-        <main className="flex-1 p-4 lg:p-8">
-          {view === "dashboard" && <DashboardView search={search} />}
-          {view === "sites"     && <SitesView />}
-          {view === "ask"       && <AskView />}
-          {view === "pricing"   && <PricingView />}
-          {view === "profile"   && <ProfileView />}
-          {view === "settings"  && <SettingsView />}
-          {view === "report"    && <ReportView />}
 
-        </main>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Topbar
+            title={META[view].title}
+            subtitle={META[view].subtitle}
+            onMenu={() => setOpen(true)}
+            search={search}
+            onSearch={handleSearch}
+          />
+          <main className="flex-1 overflow-y-auto p-4 lg:p-8">
+            {view === "dashboard" && <DashboardView search={search} />}
+            {view === "sites"     && <SitesView />}
+            {view === "ask"       && <AskView />}
+            {view === "pricing"   && <PricingView />}
+            {view === "profile"   && <ProfileView />}
+            {view === "settings"  && <SettingsView />}
+            {view === "report"    && <ReportView />}
+          </main>
+        </div>
       </div>
     </div>
   )
