@@ -155,6 +155,7 @@ const EQUIPMENT_BY_SECTOR: Record<Sector, Equipment[]> = {
       icon: ShieldCheck,
     },
   ],
+
   health: [
     {
       id: "stocks",
@@ -193,6 +194,7 @@ const EQUIPMENT_BY_SECTOR: Record<Sector, Equipment[]> = {
       icon: Warehouse,
     },
   ],
+
   agriculture: [
     {
       id: "crops",
@@ -231,6 +233,7 @@ const EQUIPMENT_BY_SECTOR: Record<Sector, Equipment[]> = {
       icon: Droplets,
     },
   ],
+
   transportation: [
     {
       id: "vehicles",
@@ -269,6 +272,7 @@ const EQUIPMENT_BY_SECTOR: Record<Sector, Equipment[]> = {
       icon: ShieldCheck,
     },
   ],
+
   logistics: [
     {
       id: "blockages",
@@ -314,6 +318,7 @@ const EQUIPMENT_BY_SECTOR: Record<Sector, Equipment[]> = {
       comingSoon: true,
     },
   ],
+
   energy: [
     {
       id: "generators",
@@ -405,7 +410,11 @@ function ContainerYardPreview() {
       setTimeout(() => {
         setStatuses((current) => {
           const next = [...current]
-          amberIndexes.forEach((i) => (next[i] = "watch"))
+
+          amberIndexes.forEach((i) => {
+            next[i] = "watch"
+          })
+
           return next
         })
       }, 450)
@@ -431,7 +440,11 @@ function ContainerYardPreview() {
       }, 1750)
     )
 
-    timers.push(setTimeout(() => setShowRecommendation(true), 2100))
+    timers.push(
+      setTimeout(() => {
+        setShowRecommendation(true)
+      }, 2100)
+    )
 
     return () => timers.forEach(clearTimeout)
   }, [amberIndexes])
@@ -443,6 +456,7 @@ function ContainerYardPreview() {
           <p className="text-xs font-semibold text-foreground">
             Aperçu, Terminal conteneurs
           </p>
+
           <p className="text-[11px] text-muted-foreground">
             Exemple avec vos futures données
           </p>
@@ -500,215 +514,6 @@ function ContainerYardPreview() {
           <span className="font-semibold text-amber-600">18h</span>, contre 4h
           en moyenne. Vérifier le document douanier avant qu&apos;il ne
           déclenche des frais de stockage.
-        </p>
-      </div>
-    </div>
-  )
-}
-
-function WaitingTimePreview() {
-  const [tick, setTick] = useState(0)
-  const [showRecommendation, setShowRecommendation] = useState(false)
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTick((value) => value + 1)
-    }, 1800)
-
-    const recommendationTimer = setTimeout(() => {
-      setShowRecommendation(true)
-    }, 850)
-
-    return () => {
-      clearInterval(interval)
-      clearTimeout(recommendationTimer)
-    }
-  }, [])
-
-  const scenarios = [
-    {
-      waiting: 14,
-      predicted: 28,
-      queue: 5,
-      window: 42,
-    },
-    {
-      waiting: 18,
-      predicted: 34,
-      queue: 7,
-      window: 36,
-    },
-    {
-      waiting: 23,
-      predicted: 41,
-      queue: 9,
-      window: 29,
-    },
-    {
-      waiting: 29,
-      predicted: 52,
-      queue: 12,
-      window: 21,
-    },
-  ]
-
-  const current = scenarios[tick % scenarios.length]
-
-  return (
-    <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-background">
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <div>
-          <p className="text-xs font-semibold text-foreground">
-            Aperçu, Radar des temps d&apos;attente
-          </p>
-
-          <p className="text-[11px] text-muted-foreground">
-            SentrIA anticipe les files avant qu&apos;elles ne deviennent
-            critiques.
-          </p>
-        </div>
-
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-accent-foreground">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
-          Analyse
-        </div>
-      </div>
-
-      <div className="p-4">
-        <div className="grid grid-cols-3 gap-2">
-          <div className="rounded-xl border border-border bg-card p-3">
-            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">
-              Maintenant
-            </p>
-
-            <p className="mt-1 text-xl font-bold text-foreground">
-              {current.waiting}
-              <span className="ml-1 text-[10px] font-normal text-muted-foreground">
-                min
-              </span>
-            </p>
-
-            <p className="mt-1 text-[9px] text-muted-foreground">
-              {current.queue} véhicules
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-3">
-            <p className="text-[9px] uppercase tracking-wider text-amber-600 dark:text-amber-400">
-              Prévision
-            </p>
-
-            <p className="mt-1 text-xl font-bold text-amber-600 dark:text-amber-400">
-              {current.predicted}
-              <span className="ml-1 text-[10px] font-normal text-amber-600/70 dark:text-amber-400/70">
-                min
-              </span>
-            </p>
-
-            <p className="mt-1 text-[9px] text-muted-foreground">
-              dans 30 min
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-accent/30 bg-accent/[0.08] p-3">
-            <p className="text-[9px] uppercase tracking-wider text-accent-foreground">
-              Pour agir
-            </p>
-
-            <p className="mt-1 text-xl font-bold text-accent-foreground">
-              {current.window}
-              <span className="ml-1 text-[10px] font-normal text-accent-foreground/70">
-                min
-              </span>
-            </p>
-
-            <p className="mt-1 text-[9px] text-muted-foreground">
-              avant le pic
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-4 rounded-xl border border-border bg-card p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <span className="text-[10px] font-semibold text-foreground">
-              Flux vers le quai
-            </span>
-
-            <span className="text-[9px] text-muted-foreground">
-              Situation simulée
-            </span>
-          </div>
-
-          <div className="relative h-16">
-            <div className="absolute left-0 right-0 top-7 h-2 rounded-full bg-muted" />
-
-            {[0, 1, 2, 3, 4, 5, 6].map((vehicle) => (
-              <div
-                key={vehicle}
-                className="absolute top-4 transition-all duration-1000"
-                style={{
-                  left: `${5 + ((vehicle * 12 + tick * 4) % 75)}%`,
-                }}
-              >
-                <div
-                  className={cn(
-                    "h-7 w-10 rounded-md border transition-colors duration-500",
-                    vehicle >= 5
-                      ? "border-amber-500/50 bg-amber-500/[0.10]"
-                      : "border-border bg-muted"
-                  )}
-                >
-                  <div className="mx-auto mt-2 h-1 w-4 rounded-full bg-muted-foreground/50" />
-                </div>
-              </div>
-            ))}
-
-            <div className="absolute right-0 top-0 flex h-16 w-20 items-center justify-center rounded-lg border border-red-500/30 bg-red-500/[0.06]">
-              <div className="text-center">
-                <div className="text-[9px] font-semibold text-red-600 dark:text-red-400">
-                  Goulot
-                </div>
-
-                <div className="text-[8px] text-red-600/70 dark:text-red-400/70">
-                  Contrôle
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div
-          className={cn(
-            "mt-4 flex items-start gap-3 rounded-xl border border-l-2 border-border border-l-accent bg-card px-3.5 py-3 transition-all duration-500",
-            showRecommendation
-              ? "translate-y-0 opacity-100"
-              : "translate-y-1 opacity-0"
-          )}
-        >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent/15">
-            <Sparkles className="h-4 w-4 text-accent-foreground" />
-          </div>
-
-          <div>
-            <p className="text-[11px] font-semibold text-foreground">
-              SentrIA recommande d&apos;agir maintenant
-            </p>
-
-            <p className="mt-1 text-[10px] leading-5 text-muted-foreground">
-              Le temps d&apos;attente augmente plus vite que la normale.
-              Réaffecter temporairement une ressource au contrôle peut éviter
-              le pic prévu dans{" "}
-              <span className="font-semibold text-foreground">
-                {current.window} minutes
-              </span>
-              .
-            </p>
-          </div>
-        </div>
-
-        <p className="mt-3 text-center text-[9px] text-muted-foreground/70">
-          Exemple illustratif. Les prévisions réelles seront calculées à
-          partir de vos données opérationnelles.
         </p>
       </div>
     </div>
@@ -1116,11 +921,6 @@ export function OnboardingView({
                     )
                   })}
                 </div>
-
-                {sector === "logistics" &&
-                  selectedEquipment.includes("wait") && (
-                    <WaitingTimePreview />
-                  )}
 
                 <div className="mt-4 flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
                   <span className="text-xs text-muted-foreground">
