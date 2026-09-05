@@ -45,6 +45,8 @@ const META: Record<ViewKey, { title: string; subtitle: string }> = {
   },
 }
 
+
+
 export function AppShell() {
   const [view, setView] = useState<ViewKey>("dashboard")
   const [open, setOpen] = useState(false)
