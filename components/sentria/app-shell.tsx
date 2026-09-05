@@ -1,118 +1,99 @@
 
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Sidebar } from "./sidebar"
 import type { ViewKey } from "./types"
-import { Topbar } from "./topbar"
-import { DashboardView } from "./dashboard-view"
-import { SitesView } from "./sites-view"
-import { AskView } from "./ask-view"
-import { PricingView } from "./pricing-view"
-import { ProfileView } from "./profile-view"
-import { SettingsView } from "./settings-view"
-import { OnboardingView } from "./onboarding-modal"
-import { ReportView } from "./report-view"
 
-const META: Record<ViewKey, { title: string; subtitle: string }> = {
-  dashboard: {
-    title: "Dashboard",
-    subtitle: "Vue globale des opérations",
-  },
-  sites: {
-    title: "Sites",
-    subtitle: "Gérez vos usines, ateliers et clients",
-  },
-  ask: {
-    title: "Ask SentrIA",
-    subtitle: "Votre analyste augmenté par l'IA",
-  },
-  pricing: {
-    title: "Abonnement",
-    subtitle: "Choisissez le plan adapté à vos opérations",
-  },
-  profile: {
-    title: "Profil",
-    subtitle: "Votre compte et votre activité",
-  },
-  settings: {
-    title: "Paramètres",
-    subtitle: "Langue, notifications et organisation",
-  },
-  report: {
-    title: "Rapport",
-    subtitle: "Analyse détaillée de vos opérations",
-  },
+interface AppShellProps {
+  children: React.ReactNode
+  activeView: ViewKey
+  onNavigate: (view: ViewKey) => void
+  search?: string
+  onSearchChange?: (value: string) => void
 }
 
-export function AppShell() {
-  const [view, setView] = useState<ViewKey>("dashboard")
-  const [open, setOpen] = useState(false)
-  const [search, setSearch] = useState("")
-  const [showOnboarding, setShowOnboarding] = useState(false)
+export function AppShell({
+  children,
+  activeView,
+  onNavigate,
+  search = "",
+  onSearchChange,
+}: AppShellProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
 
-  useEffect(() => {
-    const onboarded = localStorage.getItem("sentria_onboarded")
-
-    if (!onboarded) {
-      setShowOnboarding(true)
-    }
-  }, [])
-
-  function handleSearch(value: string) {
-    setSearch(value)
-
-    if (value.trim()) {
-      setView("dashboard")
-    }
-  }
-
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
-      {showOnboarding && (
-        <OnboardingView
-          onComplete={() => setShowOnboarding(false)}
-        />
-      )}
-
-      <Sidebar
-        active={view}
-        onNavigate={(v) => {
-          setView(v)
-          setSearch("")
-        }}
-        open={open}
-        onClose={() => setOpen(false)}
-        collapsed={collapsed}
-        onToggleCollapse={() =>
-          setCollapsed((current) => !current)
-        }
-      />
-
-      <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar
-          title={META[view].title}
-          subtitle={META[view].subtitle}
-          onMenu={() => setOpen(true)}
-          search={search}
-          onSearch={handleSearch}
+    <div className="min-h-screen bg-white p-0 lg:p-4">
+      <div className="relative min-h-screen bg-white lg:min-h-[calc(100vh-2rem)]">
+        <Sidebar
+          active={activeView}
+          onNavigate={onNavigate}
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          collapsed={collapsed}
+          onToggleCollapse={() =>
+            setCollapsed((current) => !current)
+          }
         />
 
-        <main className="flex-1 p-4 lg:p-8">
-          {view === "dashboard" && (
-            <DashboardView search={search} />
-          )}
+        <div
+          className={[
+            "min-h-screen transition-all duration-300",
+            "lg:min-h-[calc(100vh-2rem)]",
+            "lg:py-4 lg:pr-4",
+            collapsed
+              ? "lg:ml-[84px]"
+              : "lg:ml-[260px]",
+          ].join(" ")}
+        >
+          <div className="flex min-h-screen flex-col overflow-hidden bg-background lg:h-[calc(100vh-4rem)] lg:min-h-0 lg:rounded-[32px] lg:border lg:border-border lg:shadow-sm">
+            <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-background px-4 lg:px-6">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSidebarOpen(true)}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl border border-border text-muted-foreground transition hover:bg-muted hover:text-foreground lg:hidden"
+                  aria-label="Open sidebar"
+                >
+                  <span className="flex flex-col gap-1">
+                    <span className="h-px w-4 bg-current" />
+                    <span className="h-px w-4 bg-current" />
+                    <span className="h-px w-4 bg-current" />
+                  </span>
+                </button>
 
-          {view === "sites" && <SitesView />}
-          {view === "ask" && <AskView />}
-          {view === "pricing" && <PricingView />}
-          {view === "profile" && <ProfileView />}
-          {view === "settings" && <SettingsView />}
-          {view === "report" && <ReportView />}
-        </main>
+                <div>
+                  <h1 className="font-heading text-base font-bold">
+                    SentrIA
+                  </h1>
+
+                  <p className="hidden text-xs text-muted-foreground sm:block">
+                    Industrial Intelligence
+                  </p>
+                </div>
+              </div>
+
+              {onSearchChange && (
+                <div className="hidden w-full max-w-sm md:block">
+                  <input
+                    value={search}
+                    onChange={(event) =>
+                      onSearchChange(event.target.value)
+                    }
+                    placeholder="Rechercher..."
+                    className="h-9 w-full rounded-xl border border-border bg-background px-3 text-sm outline-none transition focus:border-accent"
+                  />
+                </div>
+              )}
+            </header>
+
+            <main className="min-h-0 flex-1 overflow-y-auto p-4 lg:p-8">
+              {children}
+            </main>
+          </div>
+        </div>
       </div>
     </div>
   )
 }
-
