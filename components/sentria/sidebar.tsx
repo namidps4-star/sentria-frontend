@@ -1,13 +1,20 @@
 "use client"
 
-export type ViewKey =
-  | "dashboard"
-  | "sites"
-  | "ask"
-  | "pricing"
-  | "profile"
-  | "settings"
-  | "report"
+import type { ViewKey } from "./app-shell"
+import {
+  LayoutDashboard,
+  Factory,
+  Sparkles,
+  FileBarChart3,
+  CreditCard,
+  User,
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  Bot,
+  Brain,
+  BookOpen,
+} from "lucide-react"
 
 interface SidebarProps {
   active: ViewKey
@@ -18,45 +25,67 @@ interface SidebarProps {
   onToggleCollapse: () => void
 }
 
-const items: {
+type SidebarItem = {
   id: ViewKey
   label: string
-  icon: string
+  icon: React.ElementType
+  green?: boolean
+}
+
+const sections: {
+  title: string
+  items: SidebarItem[]
 }[] = [
   {
-    id: "dashboard",
-    label: "Dashboard",
-    icon: "⌂",
+    title: "OPERATIONS",
+    items: [
+      {
+        id: "dashboard",
+        label: "Dashboard",
+        icon: LayoutDashboard,
+      },
+      {
+        id: "sites",
+        label: "Sites",
+        icon: Factory,
+      },
+    ],
   },
   {
-    id: "sites",
-    label: "Sites",
-    icon: "◇",
+    title: "INTELLIGENCE",
+    items: [
+      {
+        id: "ask",
+        label: "Ask SentrIA",
+        icon: Bot,
+        green: true,
+      },
+      {
+        id: "report",
+        label: "Rapport",
+        icon: FileBarChart3,
+      },
+    ],
   },
   {
-    id: "ask",
-    label: "Ask SentrIA",
-    icon: "◉",
-  },
-  {
-    id: "report",
-    label: "Rapport",
-    icon: "✦",
-  },
-  {
-    id: "pricing",
-    label: "Abonnement",
-    icon: "◆",
-  },
-  {
-    id: "profile",
-    label: "Profil",
-    icon: "○",
-  },
-  {
-    id: "settings",
-    label: "Paramètres",
-    icon: "⚙",
+    title: "STUDIO",
+    items: [
+      {
+        id: "pricing",
+        label: "Abonnement",
+        icon: CreditCard,
+      },
+      {
+        id: "profile",
+        label: "Profil",
+        icon: User,
+      },
+      {
+        id: "settings",
+        label: "Paramètres",
+        icon: Settings,
+      },
+    ],
   },
 ]
 
@@ -72,6 +101,7 @@ export function Sidebar({
     <>
       {open && (
         <button
+          type="button"
           aria-label="Close sidebar"
           onClick={onClose}
           className="fixed inset-0 z-40 bg-black/30 lg:hidden"
@@ -81,83 +111,168 @@ export function Sidebar({
       <aside
         className={[
           "fixed z-50",
-          "left-8 top-8 bottom-8",
+          "left-4 top-4 bottom-4",
+          "lg:left-8 lg:top-8 lg:bottom-8",
+          collapsed ? "w-[68px]" : "w-[250px]",
           "rounded-[28px]",
-          "bg-[#181818]",
-          "border border-white/10",
-          "shadow-2xl",
+          "bg-sidebar",
+          "border border-sidebar-border",
+          "shadow-lg",
           "transition-all duration-300",
-          "lg:block",
-          collapsed ? "w-[60px]" : "w-[240px]",
           open
             ? "translate-x-0"
             : "-translate-x-[120%] lg:translate-x-0",
         ].join(" ")}
       >
         <div className="flex h-full flex-col overflow-hidden rounded-[28px]">
-          {/* Header */}
-          <div className="flex h-16 shrink-0 items-center px-3">
+          {/* Logo / Header */}
+          <div
+            className={[
+              "flex h-[76px] shrink-0 items-center",
+              collapsed ? "justify-center px-2" : "px-4",
+            ].join(" ")}
+          >
             {!collapsed && (
-              <div className="px-2 text-sm font-semibold text-white">
-                SentrIA
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15">
+                  <Brain className="h-5 w-5 text-emerald-400" />
+                </div>
+
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold text-sidebar-foreground">
+                    SentrIA
+                  </span>
+                  <span className="text-[10px] text-sidebar-foreground/40">
+                    Industrial Intelligence
+                  </span>
+                </div>
               </div>
             )}
 
-            <button
-              type="button"
-              onClick={onToggleCollapse}
-              className={[
-                "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-                "text-white/70 transition",
-                "hover:bg-white/10 hover:text-white",
-                collapsed ? "mx-auto" : "ml-auto",
-              ].join(" ")}
-              aria-label={
-                collapsed
-                  ? "Expand sidebar"
-                  : "Collapse sidebar"
-              }
-            >
-              {collapsed ? "→" : "←"}
-            </button>
+            {collapsed && (
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15">
+                <Brain className="h-5 w-5 text-emerald-400" />
+              </div>
+            )}
+
+            {!collapsed && (
+              <button
+                type="button"
+                onClick={onToggleCollapse}
+                aria-label="Collapse sidebar"
+                className="ml-auto flex h-9 w-9 items-center justify-center rounded-xl text-sidebar-foreground/50 transition hover:bg-sidebar-accent hover:text-emerald-400"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+            )}
           </div>
 
           {/* Navigation */}
-          <nav className="flex flex-1 flex-col gap-2 px-2 py-4">
-            {items.map((item) => {
-              const isActive = active === item.id
+          <nav className="flex flex-1 flex-col overflow-y-auto px-3 py-3">
+            {sections.map((section, sectionIndex) => (
+              <div key={section.title}>
+                {sectionIndex > 0 && (
+                  <div className="my-4 h-px w-full bg-white/10" />
+                )}
 
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => {
-                    onNavigate(item.id)
-                    onClose()
-                  }}
-                  className={[
-                    "flex h-11 items-center rounded-xl transition",
-                    collapsed
-                      ? "justify-center"
-                      : "gap-3 px-3 text-left",
-                    isActive
-                      ? "bg-white text-black"
-                      : "text-white/60 hover:bg-white/10 hover:text-white",
-                  ].join(" ")}
-                >
-                  <span className="flex w-5 shrink-0 justify-center text-base">
-                    {item.icon}
-                  </span>
+                {!collapsed && (
+                  <div className="mb-2 px-3 text-[10px] font-semibold tracking-[0.16em] text-sidebar-foreground/35">
+                    {section.title}
+                  </div>
+                )}
 
-                  {!collapsed && (
-                    <span className="truncate text-sm font-medium">
-                      {item.label}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
+                <div className="flex flex-col gap-1">
+                  {section.items.map((item) => {
+                    const isActive = active === item.id
+                    const Icon = item.icon
+
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          onNavigate(item.id)
+                          onClose()
+                        }}
+                        className={[
+                          "group relative flex h-11 w-full items-center rounded-xl transition-all duration-200",
+                          collapsed
+                            ? "justify-center px-0"
+                            : "gap-3 px-3 text-left",
+                          isActive
+                            ? item.green
+                              ? "bg-emerald-500/12 text-emerald-400"
+                              : "bg-sidebar-primary text-sidebar-primary-foreground"
+                            : "text-sidebar-foreground/65 hover:bg-emerald-500/10 hover:text-emerald-400",
+                        ].join(" ")}
+                      >
+                        <Icon
+                          className={[
+                            "h-[18px] w-[18px] shrink-0 transition-colors",
+                            isActive && item.green
+                              ? "text-emerald-400"
+                              : "",
+                            !isActive
+                              ? "group-hover:text-emerald-400"
+                              : "",
+                          ].join(" ")}
+                          strokeWidth={1.8}
+                        />
+
+                        {!collapsed && (
+                          <span className="truncate text-sm font-medium">
+                            {item.label}
+                          </span>
+                        )}
+
+                        {item.id === "ask" && !collapsed && (
+                          <Sparkles className="ml-auto h-3.5 w-3.5 text-emerald-400/70" />
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+
+            {/* AI status */}
+            {!collapsed && (
+              <div className="mt-auto pt-6">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/10">
+                      <Bot className="h-4 w-4 text-emerald-400" />
+                    </div>
+
+                    <div className="min-w-0">
+                      <div className="text-xs font-medium text-sidebar-foreground">
+                        SentrIA active
+                      </div>
+
+                      <div className="flex items-center gap-1.5 text-[10px] text-sidebar-foreground/40">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                        Intelligence online
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </nav>
+
+          {/* Collapse button when collapsed */}
+          {collapsed && (
+            <div className="shrink-0 border-t border-white/10 p-3">
+              <button
+                type="button"
+                onClick={onToggleCollapse}
+                aria-label="Expand sidebar"
+                className="flex h-10 w-full items-center justify-center rounded-xl text-sidebar-foreground/50 transition hover:bg-emerald-500/10 hover:text-emerald-400"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
       </aside>
     </>
