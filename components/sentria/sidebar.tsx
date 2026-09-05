@@ -1,11 +1,11 @@
 "use client"
 
-import type { ViewKey } from "./app-shell"
+import type { ViewKey } from "./types"
 import {
   LayoutDashboard,
   Factory,
   Sparkles,
-  FileBarChart3,
+  FileBarChart,
   CreditCard,
   User,
   Settings,
@@ -13,7 +13,6 @@ import {
   ChevronRight,
   Bot,
   Brain,
-  BookOpen,
 } from "lucide-react"
 
 interface SidebarProps {
@@ -63,7 +62,7 @@ const sections: {
       {
         id: "report",
         label: "Rapport",
-        icon: FileBarChart3,
+        icon: FileBarChart,
       },
     ],
   },
@@ -125,7 +124,7 @@ export function Sidebar({
         ].join(" ")}
       >
         <div className="flex h-full flex-col overflow-hidden rounded-[28px]">
-          {/* Logo / Header */}
+          {/* HEADER */}
           <div
             className={[
               "flex h-[76px] shrink-0 items-center",
@@ -142,6 +141,7 @@ export function Sidebar({
                   <span className="text-sm font-semibold text-sidebar-foreground">
                     SentrIA
                   </span>
+
                   <span className="text-[10px] text-sidebar-foreground/40">
                     Industrial Intelligence
                   </span>
@@ -160,14 +160,14 @@ export function Sidebar({
                 type="button"
                 onClick={onToggleCollapse}
                 aria-label="Collapse sidebar"
-                className="ml-auto flex h-9 w-9 items-center justify-center rounded-xl text-sidebar-foreground/50 transition hover:bg-sidebar-accent hover:text-emerald-400"
+                className="ml-auto flex h-9 w-9 items-center justify-center rounded-xl text-sidebar-foreground/50 transition hover:bg-emerald-500/10 hover:text-emerald-400"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
             )}
           </div>
 
-          {/* Navigation */}
+          {/* NAVIGATION */}
           <nav className="flex flex-1 flex-col overflow-y-auto px-3 py-3">
             {sections.map((section, sectionIndex) => (
               <div key={section.title}>
@@ -235,7 +235,7 @@ export function Sidebar({
               </div>
             ))}
 
-            {/* AI status */}
+            {/* AI STATUS */}
             {!collapsed && (
               <div className="mt-auto pt-6">
                 <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
@@ -260,7 +260,7 @@ export function Sidebar({
             )}
           </nav>
 
-          {/* Collapse button when collapsed */}
+          {/* COLLAPSED TOGGLE */}
           {collapsed && (
             <div className="shrink-0 border-t border-white/10 p-3">
               <button
