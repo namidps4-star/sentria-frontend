@@ -32,63 +32,63 @@ const NAV_SECTIONS: {
     badge?: string
   }[]
 }[] = [
-    {
-      title: "Overview",
-      items: [
-        {
-          key: "dashboard",
-          label: "Dashboard",
-          icon: LayoutDashboard,
-        },
-      ],
-    },
-    {
-      title: "Operations",
-      items: [
-        {
-          key: "sites",
-          label: "Sites",
-          icon: Building2,
-        },
-      ],
-    },
-    {
-      title: "Intelligence",
-      items: [
-        {
-          key: "ask",
-          label: "Ask SentrIA",
-          icon: Sparkles,
-          badge: "IA",
-        },
-        {
-          key: "report",
-          label: "Rapports",
-          icon: FileText,
-        },
-      ],
-    },
-    {
-      title: "Account",
-      items: [
-        {
-          key: "pricing",
-          label: "Abonnement",
-          icon: CreditCard,
-        },
-        {
-          key: "profile",
-          label: "Profil",
-          icon: User,
-        },
-        {
-          key: "settings",
-          label: "Paramètres",
-          icon: Settings,
-        },
-      ],
-    },
-  ]
+  {
+    title: "Overview",
+    items: [
+      {
+        key: "dashboard",
+        label: "Dashboard",
+        icon: LayoutDashboard,
+      },
+    ],
+  },
+  {
+    title: "Operations",
+    items: [
+      {
+        key: "sites",
+        label: "Sites",
+        icon: Building2,
+      },
+    ],
+  },
+  {
+    title: "Intelligence",
+    items: [
+      {
+        key: "ask",
+        label: "Ask SentrIA",
+        icon: Sparkles,
+        badge: "IA",
+      },
+      {
+        key: "report",
+        label: "Rapports",
+        icon: FileText,
+      },
+    ],
+  },
+  {
+    title: "Account",
+    items: [
+      {
+        key: "pricing",
+        label: "Abonnement",
+        icon: CreditCard,
+      },
+      {
+        key: "profile",
+        label: "Profil",
+        icon: User,
+      },
+      {
+        key: "settings",
+        label: "Paramètres",
+        icon: Settings,
+      },
+    ],
+  },
+]
 
 export function Sidebar({
   active,
@@ -140,9 +140,7 @@ export function Sidebar({
           {NAV_SECTIONS.map((section, sectionIndex) => (
             <div
               key={section.title}
-              className={cn(
-                sectionIndex > 0 && "mt-6",
-              )}
+              className={cn(sectionIndex > 0 && "mt-6")}
             >
               <p className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.18em] text-sidebar-foreground/30">
                 {section.title}
@@ -165,7 +163,6 @@ export function Sidebar({
                         "group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5",
                         "text-sm font-medium",
                         "transition-all duration-200",
-
                         isActive
                           ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
                           : "text-sidebar-foreground/55 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",

@@ -1,7 +1,9 @@
 "use client"
 
 import { useState } from "react"
+
 import { Globe, Bell, Moon, Check, Building2, Mail } from "lucide-react"
+
 import { cn } from "@/lib/utils"
 
 const LANGUAGES = [
@@ -31,6 +33,7 @@ const UI: Record<string, Record<string, string>> = {
     cancel: "Annuler",
     save: "Enregistrer",
   },
+
   en: {
     title: "Language & region",
     subtitle: "The interface adapts to your territory.",
@@ -48,6 +51,7 @@ const UI: Record<string, Record<string, string>> = {
     cancel: "Cancel",
     save: "Save",
   },
+
   es: {
     title: "Idioma & región",
     subtitle: "La interfaz se adapta a su territorio.",
@@ -65,6 +69,7 @@ const UI: Record<string, Record<string, string>> = {
     cancel: "Cancelar",
     save: "Guardar",
   },
+
   pt: {
     title: "Idioma & região",
     subtitle: "A interface adapta-se ao seu território.",
@@ -82,6 +87,7 @@ const UI: Record<string, Record<string, string>> = {
     cancel: "Cancelar",
     save: "Guardar",
   },
+
   ar: {
     title: "اللغة والمنطقة",
     subtitle: "تتكيف الواجهة مع منطقتك.",
@@ -99,6 +105,7 @@ const UI: Record<string, Record<string, string>> = {
     cancel: "إلغاء",
     save: "حفظ",
   },
+
   sw: {
     title: "Lugha & eneo",
     subtitle: "Kiolesura kinabadilika kulingana na eneo lako.",
