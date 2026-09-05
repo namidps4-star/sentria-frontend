@@ -90,7 +90,14 @@ export function AppShell() {
         }
       />
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div
+        className={[
+          "flex min-w-0 flex-1 flex-col transition-all duration-300",
+          collapsed
+            ? "lg:ml-[108px]"
+            : "lg:ml-[290px]",
+        ].join(" ")}
+      >
         <Topbar
           title={META[view].title}
           subtitle={META[view].subtitle}
