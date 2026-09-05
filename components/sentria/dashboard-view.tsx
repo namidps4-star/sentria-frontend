@@ -17,11 +17,11 @@ import {
   Package,
   Radar,
   Shield,
-  Timer,
 } from "lucide-react"
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
 import { LogisticsBlockagesView } from "./logistics-blockages-view"
+import { LogisticsWaitingView } from "./logistics-waiting-view"
 
 const API = "https://sentria-8btn.onrender.com"
 
@@ -789,436 +789,48 @@ const LOGISTICS_OPS_META: Record<
   },
 }
 
-/*
- * IMPORTANT
- *
- * This is only a dashboard view.
- * Nothing from this component is rendered by onboarding.
- *
- * Onboarding only needs to save:
- *   "wait"
- *
- * The dashboard reads that saved priority and renders this view
- * when the user enters Logistique.
- */
 function getSavedLogisticsPriority(): LogisticsPriority {
   if (typeof window === "undefined") {
     return "blockages"
   }
 
-  const sources = [
-    localStorage.getItem("sentria_equipment"),
-    localStorage.getItem("sentria_monitoring"),
-  ]
+  try {
+    const stored = JSON.parse(
+      localStorage.getItem("sentria_equipment") || "[]"
+    )
 
-  for (const source of sources) {
-    if (!source) continue
-
-    try {
-      const stored = JSON.parse(source)
-
-      if (!Array.isArray(stored)) {
-        continue
-      }
-
-      if (stored.includes("wait")) {
-        return "wait"
-      }
-
-      if (stored.includes("blockages")) {
-        return "blockages"
-      }
-
-      if (stored.includes("cost")) {
-        return "cost"
-      }
-
-      if (stored.includes("anticipate")) {
-        return "anticipate"
-      }
-
-      if (stored.includes("recommend")) {
-        return "recommend"
-      }
-
-      if (stored.includes("resources")) {
-        return "resources"
-      }
-    } catch {
-      continue
+    if (!Array.isArray(stored)) {
+      return "blockages"
     }
+
+    if (stored.includes("wait")) {
+      return "wait"
+    }
+
+    if (stored.includes("blockages")) {
+      return "blockages"
+    }
+
+    if (stored.includes("cost")) {
+      return "cost"
+    }
+
+    if (stored.includes("anticipate")) {
+      return "anticipate"
+    }
+
+    if (stored.includes("recommend")) {
+      return "recommend"
+    }
+
+    if (stored.includes("resources")) {
+      return "resources"
+    }
+  } catch {
+    return "blockages"
   }
 
   return "blockages"
-}
-
-function LogisticsWaitingView({
-  opsType,
-}: {
-  opsType?: "port" | "entrepot" | "transport" | "expedition" | "froid" | "multi"
-}) {
-  const [tick, setTick] = useState(0)
-
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      setTick((value) => value + 1)
-    }, 1200)
-
-    return () => window.clearInterval(interval)
-  }, [])
-
-  const opsLabel =
-    opsType === "port"
-      ? "Port & conteneurs"
-      : opsType === "entrepot"
-        ? "Entrepôt & manutention"
-        : opsType === "transport"
-          ? "Transport & distribution"
-          : opsType === "expedition"
-            ? "Expédition"
-            : opsType === "froid"
-              ? "Chaîne du froid"
-              : opsType === "multi"
-                ? "Opérations logistiques"
-                : "Opérations logistiques"
-
-  const waitingMinutes = 18 + (tick % 4)
-  const predictedMinutes = 11 + ((tick + 1) % 3)
-  const availableMinutes = 7 + (tick % 3)
-
-  const vehicles = [
-    {
-      id: "V-204",
-      position: 18 + ((tick * 2) % 18),
-      status: "En approche",
-    },
-    {
-      id: "V-118",
-      position: 42 + ((tick * 1.5) % 16),
-      status: "En attente",
-    },
-    {
-      id: "V-073",
-      position: 67 + ((tick * 1.2) % 10),
-      status: "Prioritaire",
-    },
-  ]
-
-  return (
-    <div className="space-y-4">
-      <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6 md:p-8">
-        <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-accent/20 blur-3xl" />
-
-        <div className="relative">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-accent/15 px-3 py-1.5 text-xs font-semibold text-accent-foreground">
-                <Timer className="h-3.5 w-3.5" />
-                Réduire les temps d'attente
-              </div>
-
-              <h2 className="mt-4 font-heading text-2xl font-bold tracking-tight md:text-3xl">
-                Fluidifier les opérations avant que la file ne se forme.
-              </h2>
-
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                SentrIA détecte les temps d'attente, identifie les points de
-                congestion et vous indique où agir en priorité.
-              </p>
-            </div>
-
-            <div className="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent-foreground">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
-              </span>
-              Analyse en temps réel
-            </div>
-          </div>
-
-          <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-border bg-background p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">
-                  Attente actuelle
-                </span>
-                <Clock3 className="h-4 w-4 text-muted-foreground" />
-              </div>
-
-              <div className="mt-2 flex items-end gap-1.5">
-                <span className="font-heading text-3xl font-bold tabular-nums">
-                  {waitingMinutes}
-                </span>
-                <span className="mb-1 text-xs text-muted-foreground">
-                  min
-                </span>
-              </div>
-
-              <p className="mt-1 text-xs text-muted-foreground">
-                File principale
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-border bg-background p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-muted-foreground">
-                  Prévision
-                </span>
-                <TrendingDown className="h-4 w-4 text-accent-foreground" />
-              </div>
-
-              <div className="mt-2 flex items-end gap-1.5">
-                <span className="font-heading text-3xl font-bold tabular-nums">
-                  {predictedMinutes}
-                </span>
-                <span className="mb-1 text-xs text-muted-foreground">
-                  min
-                </span>
-              </div>
-
-              <p className="mt-1 text-xs text-accent-foreground">
-                Après action recommandée
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-accent/30 bg-accent/10 p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-accent-foreground">
-                  Temps pour agir
-                </span>
-                <Zap className="h-4 w-4 text-accent-foreground" />
-              </div>
-
-              <div className="mt-2 flex items-end gap-1.5">
-                <span className="font-heading text-3xl font-bold tabular-nums text-accent-foreground">
-                  {availableMinutes}
-                </span>
-                <span className="mb-1 text-xs text-accent-foreground/70">
-                  min
-                </span>
-              </div>
-
-              <p className="mt-1 text-xs text-accent-foreground/80">
-                Avant aggravation de la file
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h3 className="font-heading text-lg font-bold">
-                Flux opérationnel
-              </h3>
-
-              <p className="mt-1 text-sm text-muted-foreground">
-                Équipements approchant de la zone d'attente.
-              </p>
-            </div>
-
-            <span className="rounded-full border border-border bg-background px-3 py-1 text-[11px] font-medium text-muted-foreground">
-              {opsLabel}
-            </span>
-          </div>
-
-          <div className="mt-8">
-            <div className="relative h-36 overflow-hidden rounded-2xl border border-border bg-background">
-              <div className="absolute left-6 right-6 top-1/2 h-px -translate-y-1/2 bg-border" />
-
-              <div className="absolute left-[78%] top-4 bottom-4 w-px bg-destructive/40" />
-
-              <div className="absolute left-[78%] top-2 -translate-x-1/2 rounded-full bg-destructive/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-destructive">
-                Zone d'attente
-              </div>
-
-              {vehicles.map((vehicle, index) => (
-                <div
-                  key={vehicle.id}
-                  className="absolute top-1/2 flex -translate-y-1/2 items-center gap-2 transition-all duration-700 ease-out"
-                  style={{
-                    left: `${Math.min(vehicle.position, 76)}%`,
-                  }}
-                >
-                  <div
-                    className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-xl border shadow-sm",
-                      index === 2
-                        ? "border-accent/40 bg-accent/15 text-accent-foreground"
-                        : "border-border bg-card text-foreground"
-                    )}
-                  >
-                    <Package className="h-4 w-4" />
-                  </div>
-
-                  <div className="hidden min-w-20 rounded-lg border border-border bg-card px-2 py-1 shadow-sm sm:block">
-                    <p className="text-[10px] font-bold">{vehicle.id}</p>
-                    <p className="text-[9px] text-muted-foreground">
-                      {vehicle.status}
-                    </p>
-                  </div>
-                </div>
-              ))}
-
-              <div className="absolute bottom-3 left-6 text-[9px] uppercase tracking-wider text-muted-foreground">
-                Flux entrant
-              </div>
-
-              <div className="absolute bottom-3 right-6 text-[9px] uppercase tracking-wider text-muted-foreground">
-                Quai
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-3xl border border-border bg-card p-6">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-accent-foreground" />
-
-            <h3 className="font-heading text-lg font-bold">
-              Recommandation SentrIA
-            </h3>
-          </div>
-
-          <div className="mt-5 rounded-2xl border border-accent/30 bg-accent/10 p-4">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-accent-foreground">
-                <Zap className="h-3.5 w-3.5" />
-              </span>
-
-              <span className="text-xs font-bold uppercase tracking-wider text-accent-foreground">
-                Action prioritaire
-              </span>
-            </div>
-
-            <p className="mt-4 text-sm font-semibold leading-5">
-              Réaffecter temporairement l'équipement disponible vers la zone
-              de traitement prioritaire.
-            </p>
-
-            <p className="mt-2 text-xs leading-5 text-muted-foreground">
-              Cette action peut réduire la file estimée avant le prochain pic
-              d'arrivée.
-            </p>
-          </div>
-
-          <div className="mt-4 space-y-2">
-            <div className="flex items-center justify-between rounded-xl border border-border bg-background px-3 py-2.5">
-              <span className="text-xs text-muted-foreground">
-                Niveau de congestion
-              </span>
-
-              <span className="text-xs font-bold text-amber-600">
-                Modéré
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between rounded-xl border border-border bg-background px-3 py-2.5">
-              <span className="text-xs text-muted-foreground">
-                Tendance
-              </span>
-
-              <span className="inline-flex items-center gap-1 text-xs font-bold text-accent-foreground">
-                <TrendingDown className="h-3 w-3" />
-                En baisse
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between rounded-xl border border-border bg-background px-3 py-2.5">
-              <span className="text-xs text-muted-foreground">
-                Priorité
-              </span>
-
-              <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-bold text-accent-foreground">
-                Haute
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-3xl border border-border bg-card p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="font-heading text-lg font-bold">
-              Points d'attente détectés
-            </h3>
-
-            <p className="mt-1 text-sm text-muted-foreground">
-              SentrIA classe les zones selon leur impact opérationnel.
-            </p>
-          </div>
-
-          <span className="rounded-full bg-accent/15 px-3 py-1 text-[11px] font-semibold text-accent-foreground">
-            3 zones surveillées
-          </span>
-        </div>
-
-        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
-          {[
-            {
-              name: "Zone quai principal",
-              wait: "18 min",
-              impact: "Fort",
-            },
-            {
-              name: "Contrôle entrée",
-              wait: "9 min",
-              impact: "Modéré",
-            },
-            {
-              name: "Zone chargement",
-              wait: "6 min",
-              impact: "Faible",
-            },
-          ].map((zone, index) => (
-            <div
-              key={zone.name}
-              className={cn(
-                "rounded-2xl border bg-background p-4",
-                index === 0
-                  ? "border-accent/40 ring-1 ring-accent/20"
-                  : "border-border"
-              )}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold">{zone.name}</p>
-
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Temps d'attente estimé
-                  </p>
-                </div>
-
-                <Clock3 className="h-4 w-4 text-muted-foreground" />
-              </div>
-
-              <div className="mt-4 flex items-end justify-between">
-                <span className="font-heading text-2xl font-bold">
-                  {zone.wait}
-                </span>
-
-                <span
-                  className={cn(
-                    "rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                    zone.impact === "Fort"
-                      ? "bg-destructive/10 text-destructive"
-                      : zone.impact === "Modéré"
-                        ? "bg-amber-500/15 text-amber-600"
-                        : "bg-accent/15 text-accent-foreground"
-                  )}
-                >
-                  {zone.impact}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
 }
 
 export function DashboardView({
@@ -1493,19 +1105,6 @@ export function DashboardView({
     }
   )
 
-  /*
-   * THIS IS THE IMPORTANT PART.
-   *
-   * The waiting-time experience is rendered here,
-   * inside DashboardView.
-   *
-   * It is NOT part of onboarding.
-   *
-   * If onboarding saved "wait", entering Logistique
-   * renders LogisticsWaitingView.
-   *
-   * Otherwise the existing blockage experience renders.
-   */
   if (filterSector === "logistics") {
     const normalizedOpsType =
       opsType &&
@@ -1567,9 +1166,8 @@ export function DashboardView({
           </h2>
 
           <p className="mt-2 text-pretty text-sm text-background/70">
-            SentrIA surveille vos alertes en temps réel ·
-            machines, stocks, flottes, équipements · partout
-            dans le monde.
+            SentrIA surveille vos alertes en temps réel, machines, stocks,
+            flottes, équipements, partout dans le monde.
           </p>
         </div>
 
@@ -2014,7 +1612,7 @@ export function DashboardView({
           <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90">
             <Upload className="h-4 w-4" />
 
-            {uploading ? "Traitement…" : "Importer CSV"}
+            {uploading ? "Traitement..." : "Importer CSV"}
 
             <input
               type="file"
