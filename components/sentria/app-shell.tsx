@@ -96,7 +96,7 @@ export function AppShell() {
         className={[
           "flex min-w-0 flex-1 flex-col p-4 transition-all duration-300",
           "lg:py-8 lg:pl-0 lg:pr-8",
-          collapsed ? "lg:ml-[92px]" : "lg:ml-[274px]",
+          collapsed ? "lg:ml-[120px]" : "lg:ml-[302px]",
         ].join(" ")}
       >
         {/* The floating rounded card, matching the sidebar's rounded-[28px]
@@ -129,4 +129,3 @@ export function AppShell() {
     </div>
   )
 }
-
