@@ -198,7 +198,7 @@ export function Sidebar({
                           isActive
                             ? item.green
                               ? "bg-accent/10 text-accent"
-                              : "bg-sidebar-primary text-sidebar-primary-foreground"
+                              : "bg-card text-foreground shadow-sm"
                             : "text-sidebar-foreground/65 hover:bg-accent/10 hover:text-accent",
                         ].join(" ")}
                       >
@@ -219,6 +219,12 @@ export function Sidebar({
 
                         {item.id === "ask" && !collapsed && (
                           <Sparkles className="ml-auto h-3.5 w-3.5 text-accent" />
+                        )}
+
+                        {collapsed && (
+                          <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-foreground px-2.5 py-1.5 text-xs font-medium text-background opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100">
+                            {item.label}
+                          </span>
                         )}
                       </button>
                     )
