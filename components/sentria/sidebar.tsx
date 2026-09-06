@@ -121,7 +121,7 @@ export function Sidebar({
           open ? "translate-x-0" : "-translate-x-[120%] lg:translate-x-0",
         ].join(" ")}
       >
-        <div className="flex h-full flex-col overflow-hidden rounded-[28px]">
+        <div className="flex h-full flex-col rounded-[28px]">
           {/* LOGO */}
           <div
             className={[
@@ -193,12 +193,15 @@ export function Sidebar({
                           onClose()
                         }}
                         className={[
-                          "group relative flex h-11 w-full items-center rounded-xl transition-all duration-200",
-                          collapsed ? "justify-center px-0" : "gap-3 px-3 text-left",
+                          "group relative flex h-11 w-full items-center transition-all duration-200",
+                          collapsed ? "justify-center rounded-xl px-0" : "gap-3 pl-3 text-left",
+                          isActive && !collapsed
+                            ? "-mr-3 rounded-l-full rounded-r-none pr-6"
+                            : "mr-0 rounded-xl pr-3",
                           isActive
                             ? item.green
                               ? "bg-accent/10 text-accent"
-                              : "bg-sidebar-primary text-sidebar-primary-foreground"
+                              : "bg-card text-foreground shadow-sm"
                             : "text-sidebar-foreground/65 hover:bg-accent/10 hover:text-accent",
                         ].join(" ")}
                       >
@@ -219,6 +222,12 @@ export function Sidebar({
 
                         {item.id === "ask" && !collapsed && (
                           <Sparkles className="ml-auto h-3.5 w-3.5 text-accent" />
+                        )}
+
+                        {collapsed && (
+                          <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-foreground px-2.5 py-1.5 text-xs font-medium text-background opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100">
+                            {item.label}
+                          </span>
                         )}
                       </button>
                     )

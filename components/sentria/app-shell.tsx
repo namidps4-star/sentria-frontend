@@ -68,10 +68,11 @@ export function AppShell() {
   }
 
   return (
-    // `h-screen overflow-hidden` on the shell + `overflow-y-auto` only inside
-    // the content card is what locks the sidebar AND the topbar in place:
-    // the page itself never scrolls, only the card's own content does.
-    <div className="flex h-screen overflow-hidden bg-background text-foreground">
+    // `h-screen` on the shell (no overflow-hidden here — that would clip the
+    // sidebar's hover tooltips and active-tab notch, since ancestor overflow
+    // clips fixed-position children too). Locking is achieved structurally:
+    // every child is height-bound via flex stretch, and only <main> scrolls.
+    <div className="flex h-screen bg-background text-foreground">
       {showOnboarding && (
         <OnboardingView onComplete={() => setShowOnboarding(false)} />
       )}
@@ -129,4 +130,3 @@ export function AppShell() {
     </div>
   )
 }
-
