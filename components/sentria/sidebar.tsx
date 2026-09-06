@@ -1,3 +1,4 @@
+
 "use client"
 
 import type { ViewKey } from "./types"
@@ -118,10 +119,12 @@ export function Sidebar({
           "border border-sidebar-border",
           "shadow-lg",
           "transition-all duration-300",
-          open ? "translate-x-0" : "-translate-x-[120%] lg:translate-x-0",
+          open
+            ? "translate-x-0"
+            : "-translate-x-[120%] lg:translate-x-0",
         ].join(" ")}
       >
-        <div className="flex h-full flex-col overflow-hidden rounded-[28px]">
+        <div className="flex h-full flex-col overflow-visible rounded-[28px]">
           {/* LOGO */}
           <div
             className={[
@@ -166,7 +169,7 @@ export function Sidebar({
           </div>
 
           {/* NAVIGATION */}
-          <nav className="flex flex-1 flex-col overflow-y-auto px-3 py-3">
+          <nav className="flex flex-1 flex-col px-3 py-3">
             {sections.map((section, sectionIndex) => (
               <div key={section.title}>
                 {sectionIndex > 0 && (
@@ -194,37 +197,69 @@ export function Sidebar({
                         }}
                         className={[
                           "group relative flex h-11 w-full items-center rounded-xl transition-all duration-200",
-                          collapsed ? "justify-center px-0" : "gap-3 px-3 text-left",
+                          collapsed
+                            ? "justify-center px-0"
+                            : "gap-3 px-3 text-left",
                           isActive
                             ? item.green
                               ? "bg-accent/10 text-accent"
-                              : "bg-card text-foreground shadow-sm"
+                              : "bg-sidebar-primary text-sidebar-primary-foreground"
                             : "text-sidebar-foreground/65 hover:bg-accent/10 hover:text-accent",
                         ].join(" ")}
                       >
                         <Icon
                           className={[
                             "h-[18px] w-[18px] shrink-0 transition-colors",
-                            isActive && item.green ? "text-accent" : "",
-                            !isActive ? "group-hover:text-accent" : "",
+                            isActive && item.green
+                              ? "text-accent"
+                              : "",
+                            !isActive
+                              ? "group-hover:text-accent"
+                              : "",
                           ].join(" ")}
                           strokeWidth={1.8}
                         />
 
+                        {/* NORMAL LABEL */}
                         {!collapsed && (
                           <span className="truncate text-sm font-medium">
                             {item.label}
                           </span>
                         )}
 
-                        {item.id === "ask" && !collapsed && (
-                          <Sparkles className="ml-auto h-3.5 w-3.5 text-accent" />
-                        )}
-
+                        {/* HOVER LABEL WHEN COLLAPSED */}
                         {collapsed && (
-                          <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-foreground px-2.5 py-1.5 text-xs font-medium text-background opacity-0 shadow-lg transition-opacity duration-150 group-hover:opacity-100">
+                          <span
+                            className="
+                              pointer-events-none
+                              absolute
+                              left-full
+                              top-1/2
+                              z-[100]
+                              ml-3
+                              -translate-y-1/2
+                              whitespace-nowrap
+                              rounded-lg
+                              bg-sidebar
+                              px-3
+                              py-2
+                              text-xs
+                              font-medium
+                              text-sidebar-foreground
+                              shadow-lg
+                              opacity-0
+                              transition-all
+                              duration-150
+                              group-hover:translate-x-0
+                              group-hover:opacity-100
+                            "
+                          >
                             {item.label}
                           </span>
+                        )}
+
+                        {item.id === "ask" && !collapsed && (
+                          <Sparkles className="ml-auto h-3.5 w-3.5 text-accent" />
                         )}
                       </button>
                     )
