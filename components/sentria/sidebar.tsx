@@ -110,8 +110,8 @@ export function Sidebar({
       <aside
         className={[
           "fixed z-50",
-          "left-4 top-4 bottom-4",
-          "lg:left-8 lg:top-8 lg:bottom-8",
+          "left-2 top-2 bottom-2",
+          "lg:left-3 lg:top-3 lg:bottom-3",
           collapsed ? "w-[68px]" : "w-[250px]",
           "rounded-[28px]",
           "bg-sidebar",
