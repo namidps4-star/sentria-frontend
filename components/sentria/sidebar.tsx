@@ -1,277 +1,285 @@
 "use client"
 
-import type { ViewKey } from "./types"
 import {
   LayoutDashboard,
-  Factory,
+  Building2,
   Sparkles,
-  FileBarChart,
-  CreditCard,
   User,
   Settings,
-  ChevronLeft,
-  ChevronRight,
-  Bot,
-  Brain,
+  CreditCard,
+  Zap,
+  LifeBuoy,
+  FileText,
+  type LucideIcon,
 } from "lucide-react"
+import { cn } from "@/lib/utils"
 
-interface SidebarProps {
-  active: ViewKey
-  onNavigate: (view: ViewKey) => void
-  open: boolean
-  onClose: () => void
-  collapsed: boolean
-  onToggleCollapse: () => void
-}
+export type ViewKey =
+  | "dashboard"
+  | "sites"
+  | "ask"
+  | "report"
+  | "pricing"
+  | "profile"
+  | "settings"
 
-type SidebarItem = {
-  id: ViewKey
-  label: string
-  icon: React.ElementType
-  green?: boolean
-}
-
-const sections: {
+const NAV_SECTIONS: {
   title: string
-  items: SidebarItem[]
+  items: {
+    key: ViewKey
+    label: string
+    icon: LucideIcon
+    badge?: string
+  }[]
 }[] = [
-  {
-    title: "OPERATIONS",
-    items: [
-      {
-        id: "dashboard",
-        label: "Dashboard",
-        icon: LayoutDashboard,
-      },
-      {
-        id: "sites",
-        label: "Sites",
-        icon: Factory,
-      },
-    ],
-  },
-  {
-    title: "INTELLIGENCE",
-    items: [
-      {
-        id: "ask",
-        label: "Ask SentrIA",
-        icon: Bot,
-        green: true,
-      },
-      {
-        id: "report",
-        label: "Rapport",
-        icon: FileBarChart,
-      },
-    ],
-  },
-  {
-    title: "STUDIO",
-    items: [
-      {
-        id: "pricing",
-        label: "Abonnement",
-        icon: CreditCard,
-      },
-      {
-        id: "profile",
-        label: "Profil",
-        icon: User,
-      },
-      {
-        id: "settings",
-        label: "Paramètres",
-        icon: Settings,
-      },
-    ],
-  },
-]
+    {
+      title: "Overview",
+      items: [
+        {
+          key: "dashboard",
+          label: "Dashboard",
+          icon: LayoutDashboard,
+        },
+      ],
+    },
+    {
+      title: "Operations",
+      items: [
+        {
+          key: "sites",
+          label: "Sites",
+          icon: Building2,
+        },
+      ],
+    },
+    {
+      title: "Intelligence",
+      items: [
+        {
+          key: "ask",
+          label: "Ask SentrIA",
+          icon: Sparkles,
+          badge: "IA",
+        },
+        {
+          key: "report",
+          label: "Rapports",
+          icon: FileText,
+        },
+      ],
+    },
+    {
+      title: "Account",
+      items: [
+        {
+          key: "pricing",
+          label: "Abonnement",
+          icon: CreditCard,
+        },
+        {
+          key: "profile",
+          label: "Profil",
+          icon: User,
+        },
+        {
+          key: "settings",
+          label: "Paramètres",
+          icon: Settings,
+        },
+      ],
+    },
+  ]
 
 export function Sidebar({
   active,
   onNavigate,
   open,
   onClose,
-  collapsed,
-  onToggleCollapse,
-}: SidebarProps) {
+}: {
+  active: ViewKey
+  onNavigate: (v: ViewKey) => void
+  open: boolean
+  onClose: () => void
+}) {
   return (
     <>
+      {/* Mobile overlay */}
       {open && (
-        <button
-          type="button"
-          aria-label="Close sidebar"
+        <div
+          className="fixed inset-0 z-30 bg-black/40 backdrop-blur-[2px] lg:hidden"
           onClick={onClose}
-          className="fixed inset-0 z-40 bg-black/20 lg:hidden"
+          aria-hidden="true"
         />
       )}
 
       <aside
-        className={[
-          "fixed z-50",
-          "left-4 top-4 bottom-4",
-          "lg:left-8 lg:top-8 lg:bottom-8",
-          collapsed ? "w-[68px]" : "w-[250px]",
-          "rounded-[28px]",
-          "bg-sidebar",
-          "border border-sidebar-border",
-          "shadow-lg",
-          "transition-all duration-300",
-          open
-            ? "translate-x-0"
-            : "-translate-x-[120%] lg:translate-x-0",
-        ].join(" ")}
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col",
+          "border-r border-sidebar-border",
+          "bg-sidebar text-sidebar-foreground",
+          "transition-transform duration-300",
+          "lg:static lg:z-auto lg:translate-x-0",
+          open ? "translate-x-0" : "-translate-x-full",
+        )}
       >
-        <div className="flex h-full flex-col overflow-hidden rounded-[28px]">
-          {/* LOGO */}
-          <div
-            className={[
-              "flex h-[76px] shrink-0 items-center",
-              collapsed ? "justify-center px-2" : "px-4",
-            ].join(" ")}
-          >
-            {!collapsed && (
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/15">
-                  <Brain className="h-5 w-5 text-accent" />
-                </div>
+        {/* Logo */}
+        <div className="flex h-[76px] items-center justify-between border-b border-sidebar-border px-5">
+          <img
+            src="/sentria logo.png"
+            alt="SentrIA"
+            className="h-11 w-auto object-contain"
+          />
 
-                <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-sidebar-foreground">
-                    SentrIA
-                  </span>
+          <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/25">
+            Ops
+          </span>
+        </div>
 
-                  <span className="text-[10px] text-sidebar-foreground/40">
-                    Industrial Intelligence
-                  </span>
-                </div>
-              </div>
-            )}
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto px-3 py-5">
+          {NAV_SECTIONS.map((section, sectionIndex) => (
+            <div
+              key={section.title}
+              className={cn(
+                sectionIndex > 0 && "mt-6",
+              )}
+            >
+              <p className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.18em] text-sidebar-foreground/30">
+                {section.title}
+              </p>
 
-            {collapsed && (
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/15">
-                <Brain className="h-5 w-5 text-accent" />
-              </div>
-            )}
+              <div className="space-y-1">
+                {section.items.map((item) => {
+                  const Icon = item.icon
+                  const isActive = active === item.key
 
-            {!collapsed && (
-              <button
-                type="button"
-                onClick={onToggleCollapse}
-                aria-label="Collapse sidebar"
-                className="ml-auto flex h-9 w-9 items-center justify-center rounded-xl text-sidebar-foreground/50 transition hover:bg-accent/10 hover:text-accent"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-            )}
-          </div>
+                  return (
+                    <button
+                      key={item.key}
+                      type="button"
+                      onClick={() => {
+                        onNavigate(item.key)
+                        onClose()
+                      }}
+                      className={cn(
+                        "group relative flex w-full items-center gap-3 rounded-xl px-3 py-2.5",
+                        "text-sm font-medium",
+                        "transition-all duration-200",
 
-          {/* NAVIGATION */}
-          <nav className="flex flex-1 flex-col overflow-y-auto px-3 py-3">
-            {sections.map((section, sectionIndex) => (
-              <div key={section.title}>
-                {sectionIndex > 0 && (
-                  <div className="my-4 h-px w-full bg-white/15" />
-                )}
+                        isActive
+                          ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
+                          : "text-sidebar-foreground/55 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      )}
+                    >
+                      {/* Active indicator */}
+                      {isActive && (
+                        <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-accent" />
+                      )}
 
-                {!collapsed && (
-                  <div className="mb-2 px-3 text-[10px] font-semibold tracking-[0.16em] text-sidebar-foreground/40">
-                    {section.title}
-                  </div>
-                )}
-
-                <div className="flex flex-col gap-1">
-                  {section.items.map((item) => {
-                    const isActive = active === item.id
-                    const Icon = item.icon
-
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => {
-                          onNavigate(item.id)
-                          onClose()
-                        }}
-                        className={[
-                          "group relative flex h-11 w-full items-center rounded-xl transition-all duration-200",
-                          collapsed
-                            ? "justify-center px-0"
-                            : "gap-3 px-3 text-left",
+                      <Icon
+                        className={cn(
+                          "h-4 w-4 shrink-0 transition-colors",
                           isActive
-                            ? item.green
-                              ? "bg-accent/10 text-accent"
-                              : "bg-sidebar-primary text-sidebar-primary-foreground"
-                            : "text-sidebar-foreground/65 hover:bg-accent/10 hover:text-accent",
-                        ].join(" ")}
-                      >
-                        <Icon
-                          className={[
-                            "h-[18px] w-[18px] shrink-0 transition-colors",
-                            isActive && item.green
-                              ? "text-accent"
-                              : "",
-                            !isActive
-                              ? "group-hover:text-accent"
-                              : "",
-                          ].join(" ")}
-                          strokeWidth={1.8}
-                        />
-
-                        {!collapsed && (
-                          <span className="truncate text-sm font-medium">
-                            {item.label}
-                          </span>
+                            ? "text-accent-foreground"
+                            : "text-sidebar-foreground/35 group-hover:text-sidebar-accent-foreground",
                         )}
+                        strokeWidth={1.8}
+                      />
 
-                        {item.id === "ask" && !collapsed && (
-                          <Sparkles className="ml-auto h-3.5 w-3.5 text-accent" />
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
+                      <span className="flex-1 text-left">
+                        {item.label}
+                      </span>
+
+                      {/* AI badge */}
+                      {item.badge && (
+                        <span className="rounded-full bg-accent px-2 py-0.5 text-[9px] font-bold text-accent-foreground">
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
-            ))}
-
-            {!collapsed && (
-              <div className="mt-auto pt-6">
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/10">
-                      <Bot className="h-4 w-4 text-accent" />
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="text-xs font-medium text-sidebar-foreground">
-                        SentrIA active
-                      </div>
-
-                      <div className="flex items-center gap-1.5 text-[10px] text-sidebar-foreground/40">
-                        <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                        Intelligence online
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </nav>
-
-          {/* COLLAPSED TOGGLE */}
-          {collapsed && (
-            <div className="shrink-0 border-t border-white/10 p-3">
-              <button
-                type="button"
-                onClick={onToggleCollapse}
-                aria-label="Expand sidebar"
-                className="flex h-10 w-full items-center justify-center rounded-xl text-sidebar-foreground/50 transition hover:bg-accent/10 hover:text-accent"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
             </div>
-          )}
+          ))}
+        </nav>
+
+        {/* Bottom area */}
+        <div className="border-t border-sidebar-border p-3">
+          {/* Pro card */}
+          <button
+            type="button"
+            onClick={() => {
+              onNavigate("pricing")
+              onClose()
+            }}
+            className="group mb-2 w-full rounded-2xl border border-sidebar-border bg-sidebar-accent p-4 text-left transition-colors hover:bg-sidebar-accent/70"
+          >
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent">
+                <Zap className="h-3.5 w-3.5 text-accent-foreground" />
+              </span>
+
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-accent-foreground">
+                  Plan Pro
+                </p>
+
+                <p className="mt-0.5 text-[9px] text-sidebar-foreground/40">
+                  Intelligence avancée
+                </p>
+              </div>
+            </div>
+
+            <p className="mt-3 text-[10px] leading-relaxed text-sidebar-foreground/45">
+              Sites illimités, IoT, rapports avancés et support prioritaire.
+            </p>
+
+            <div className="mt-3 flex items-center justify-between">
+              <span className="text-[10px] font-semibold text-sidebar-foreground">
+                Gérer mon abonnement
+              </span>
+
+              <span className="text-sm text-accent-foreground transition-transform group-hover:translate-x-0.5">
+                →
+              </span>
+            </div>
+          </button>
+
+          {/* User */}
+          <button
+            type="button"
+            onClick={() => {
+              onNavigate("profile")
+              onClose()
+            }}
+            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-sidebar-accent"
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground">
+              JK
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-sidebar-foreground">
+                Jean Kokou
+              </p>
+
+              <p className="mt-0.5 truncate text-[10px] text-sidebar-foreground/35">
+                Administrateur
+              </p>
+            </div>
+
+            <User className="h-4 w-4 text-sidebar-foreground/25" />
+          </button>
+
+          {/* Support */}
+          <div className="mt-1 flex items-center justify-center gap-1.5 py-2">
+            <LifeBuoy className="h-3 w-3 text-sidebar-foreground/20" />
+
+            <span className="text-[9px] text-sidebar-foreground/25">
+              Support SentrIA
+            </span>
+          </div>
         </div>
       </aside>
     </>
