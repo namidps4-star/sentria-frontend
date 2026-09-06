@@ -38,23 +38,52 @@ const sections: {
   {
     title: "OPERATIONS",
     items: [
-      { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-      { id: "sites", label: "Sites", icon: Factory },
+      {
+        id: "dashboard",
+        label: "Dashboard",
+        icon: LayoutDashboard,
+      },
+      {
+        id: "sites",
+        label: "Sites",
+        icon: Factory,
+      },
     ],
   },
   {
     title: "INTELLIGENCE",
     items: [
-      { id: "ask", label: "Ask SentrIA", icon: Bot, green: true },
-      { id: "report", label: "Rapport", icon: FileBarChart },
+      {
+        id: "ask",
+        label: "Ask SentrIA",
+        icon: Bot,
+        green: true,
+      },
+      {
+        id: "report",
+        label: "Rapport",
+        icon: FileBarChart,
+      },
     ],
   },
   {
     title: "STUDIO",
     items: [
-      { id: "pricing", label: "Abonnement", icon: CreditCard },
-      { id: "profile", label: "Profil", icon: User },
-      { id: "settings", label: "Paramètres", icon: Settings },
+      {
+        id: "pricing",
+        label: "Abonnement",
+        icon: CreditCard,
+      },
+      {
+        id: "profile",
+        label: "Profil",
+        icon: User,
+      },
+      {
+        id: "settings",
+        label: "Paramètres",
+        icon: Settings,
+      },
     ],
   },
 ]
@@ -89,12 +118,11 @@ export function Sidebar({
           "border border-sidebar-border",
           "shadow-lg",
           "transition-all duration-300",
-          open
-            ? "translate-x-0"
-            : "-translate-x-[120%] lg:translate-x-0",
+          open ? "translate-x-0" : "-translate-x-[120%] lg:translate-x-0",
         ].join(" ")}
       >
-        <div className="flex h-full flex-col overflow-visible rounded-[28px]">
+        <div className="flex h-full flex-col overflow-hidden rounded-[28px]">
+          {/* LOGO */}
           <div
             className={[
               "flex h-[76px] shrink-0 items-center",
@@ -137,7 +165,8 @@ export function Sidebar({
             )}
           </div>
 
-          <nav className="flex flex-1 flex-col px-3 py-3">
+          {/* NAVIGATION */}
+          <nav className="flex flex-1 flex-col overflow-y-auto px-3 py-3">
             {sections.map((section, sectionIndex) => (
               <div key={section.title}>
                 {sectionIndex > 0 && (
@@ -165,9 +194,7 @@ export function Sidebar({
                         }}
                         className={[
                           "group relative flex h-11 w-full items-center rounded-xl transition-all duration-200",
-                          collapsed
-                            ? "justify-center px-0"
-                            : "gap-3 px-3 text-left",
+                          collapsed ? "justify-center px-0" : "gap-3 px-3 text-left",
                           isActive
                             ? item.green
                               ? "bg-accent/10 text-accent"
@@ -178,24 +205,14 @@ export function Sidebar({
                         <Icon
                           className={[
                             "h-[18px] w-[18px] shrink-0 transition-colors",
-                            isActive && item.green
-                              ? "text-accent"
-                              : "",
-                            !isActive
-                              ? "group-hover:text-accent"
-                              : "",
+                            isActive && item.green ? "text-accent" : "",
+                            !isActive ? "group-hover:text-accent" : "",
                           ].join(" ")}
                           strokeWidth={1.8}
                         />
 
                         {!collapsed && (
                           <span className="truncate text-sm font-medium">
-                            {item.label}
-                          </span>
-                        )}
-
-                        {collapsed && (
-                          <span className="pointer-events-none absolute left-full top-1/2 z-[100] ml-3 -translate-y-1/2 whitespace-nowrap rounded-lg bg-sidebar px-3 py-2 text-xs font-medium text-sidebar-foreground opacity-0 shadow-lg transition-all duration-150 group-hover:translate-x-0 group-hover:opacity-100">
                             {item.label}
                           </span>
                         )}
@@ -234,6 +251,7 @@ export function Sidebar({
             )}
           </nav>
 
+          {/* COLLAPSED TOGGLE */}
           {collapsed && (
             <div className="shrink-0 border-t border-white/10 p-3">
               <button
