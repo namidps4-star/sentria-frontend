@@ -110,15 +110,17 @@ export function Sidebar({
       <aside
         className={[
           "fixed z-50",
-          "left-2 top-2 bottom-2",
-          "lg:left-3 lg:top-3 lg:bottom-3",
+          "left-4 top-4 bottom-4",
+          "lg:left-8 lg:top-8 lg:bottom-8",
           collapsed ? "w-[68px]" : "w-[250px]",
           "rounded-[28px]",
           "bg-sidebar",
           "border border-sidebar-border",
           "shadow-lg",
           "transition-all duration-300",
-          open ? "translate-x-0" : "-translate-x-[120%] lg:translate-x-0",
+          open
+            ? "translate-x-0"
+            : "-translate-x-[120%] lg:translate-x-0",
         ].join(" ")}
       >
         <div className="flex h-full flex-col overflow-hidden rounded-[28px]">
@@ -194,7 +196,9 @@ export function Sidebar({
                         }}
                         className={[
                           "group relative flex h-11 w-full items-center rounded-xl transition-all duration-200",
-                          collapsed ? "justify-center px-0" : "gap-3 px-3 text-left",
+                          collapsed
+                            ? "justify-center px-0"
+                            : "gap-3 px-3 text-left",
                           isActive
                             ? item.green
                               ? "bg-accent/10 text-accent"
@@ -205,8 +209,12 @@ export function Sidebar({
                         <Icon
                           className={[
                             "h-[18px] w-[18px] shrink-0 transition-colors",
-                            isActive && item.green ? "text-accent" : "",
-                            !isActive ? "group-hover:text-accent" : "",
+                            isActive && item.green
+                              ? "text-accent"
+                              : "",
+                            !isActive
+                              ? "group-hover:text-accent"
+                              : "",
                           ].join(" ")}
                           strokeWidth={1.8}
                         />
@@ -269,4 +277,3 @@ export function Sidebar({
     </>
   )
 }
-
