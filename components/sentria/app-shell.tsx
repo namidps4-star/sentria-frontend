@@ -68,9 +68,9 @@ export function AppShell() {
   }
 
   return (
-    // `h-screen overflow-hidden` on the shell + `overflow-y-auto` only on <main>
-    // is what locks the sidebar AND the topbar in place: the page itself never
-    // scrolls, only the content area under the topbar does.
+    // `h-screen overflow-hidden` on the shell + `overflow-y-auto` only inside
+    // the content card is what locks the sidebar AND the topbar in place:
+    // the page itself never scrolls, only the card's own content does.
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
       {showOnboarding && (
         <OnboardingView onComplete={() => setShowOnboarding(false)} />
@@ -88,33 +88,43 @@ export function AppShell() {
         onToggleCollapse={() => setCollapsed((current) => !current)}
       />
 
+      {/* Padding here (not margin on the card) is what creates the floating
+          gap around the card without the card's own height ever overflowing
+          its parent — the parent already has a fixed height from flex
+          stretch, and padding just eats into that space cleanly. */}
       <div
         className={[
-          "flex h-screen min-w-0 flex-1 flex-col overflow-hidden transition-all duration-300",
-          collapsed ? "lg:ml-[108px]" : "lg:ml-[290px]",
+          "flex min-w-0 flex-1 flex-col p-4 transition-all duration-300",
+          "lg:py-8 lg:pl-0 lg:pr-8",
+          collapsed ? "lg:ml-[92px]" : "lg:ml-[274px]",
         ].join(" ")}
       >
-        {/* shrink-0 keeps the topbar's own height fixed so it never gets
-            squashed or scrolled by the flex-1 content area below it */}
-        <div className="shrink-0">
-          <Topbar
-            title={META[view].title}
-            subtitle={META[view].subtitle}
-            onMenu={() => setOpen(true)}
-            search={search}
-            onSearch={handleSearch}
-          />
-        </div>
+        {/* The floating rounded card, matching the sidebar's rounded-[28px]
+            treatment: topbar + scrollable content live inside this one
+            card, so the whole shell reads as sidebar-card + content-card. */}
+        <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[28px] border border-border bg-card shadow-lg">
+          {/* shrink-0 keeps the topbar's own height fixed so it never gets
+              squashed or scrolled by the flex-1 content area below it */}
+          <div className="shrink-0">
+            <Topbar
+              title={META[view].title}
+              subtitle={META[view].subtitle}
+              onMenu={() => setOpen(true)}
+              search={search}
+              onSearch={handleSearch}
+            />
+          </div>
 
-        <main className="flex-1 overflow-y-auto p-4 lg:p-8">
-          {view === "dashboard" && <DashboardView search={search} />}
-          {view === "sites" && <SitesView />}
-          {view === "ask" && <AskView />}
-          {view === "pricing" && <PricingView />}
-          {view === "profile" && <ProfileView />}
-          {view === "settings" && <SettingsView />}
-          {view === "report" && <ReportView />}
-        </main>
+          <main className="flex-1 overflow-y-auto p-4 lg:p-8">
+            {view === "dashboard" && <DashboardView search={search} />}
+            {view === "sites" && <SitesView />}
+            {view === "ask" && <AskView />}
+            {view === "pricing" && <PricingView />}
+            {view === "profile" && <ProfileView />}
+            {view === "settings" && <SettingsView />}
+            {view === "report" && <ReportView />}
+          </main>
+        </div>
       </div>
     </div>
   )
