@@ -10,12 +10,14 @@ import {
   MoreHorizontal,
   Zap,
   Upload,
+  Sparkles,
   Shield,
   Ban,
   Clock3,
-  WalletCards,
+  CircleDollarSign,
   Radar,
-  Sparkles,
+  ListChecks,
+  Boxes,
 } from "lucide-react"
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
@@ -34,6 +36,7 @@ const SECTORS = [
   { key: "health", label: "Santé" },
   { key: "agriculture", label: "Agriculture" },
   { key: "transportation", label: "Transport" },
+  { key: "logistics", label: "Logistique" },
   { key: "energy", label: "Énergie" },
 ]
 
@@ -64,6 +67,80 @@ type LogisticsPriority =
   | "cost"
   | "anticipate"
   | "recommend"
+  | "resources"
+
+const LOGISTICS_PRIORITY_META: Record<
+  LogisticsPriority,
+  {
+    label: string
+    description: string
+    icon: typeof Ban
+  }
+> = {
+  blockages: {
+    label: "Blocages",
+    description: "Voir les blocages opérationnels",
+    icon: Ban,
+  },
+  wait: {
+    label: "Attente",
+    description: "Identifier les files et temps d'attente",
+    icon: Clock3,
+  },
+  cost: {
+    label: "Coûts",
+    description: "Surveiller les surcoûts logistiques",
+    icon: CircleDollarSign,
+  },
+  anticipate: {
+    label: "Anticipation",
+    description: "Anticiper les prochains incidents",
+    icon: Radar,
+  },
+  recommend: {
+    label: "Recommandations",
+    description: "Voir les actions recommandées",
+    icon: ListChecks,
+  },
+  resources: {
+    label: "Ressources",
+    description: "Suivre les ressources critiques",
+    icon: Boxes,
+  },
+}
+
+const LOGISTICS_PRIORITY_ORDER: LogisticsPriority[] = [
+  "blockages",
+  "wait",
+  "cost",
+  "anticipate",
+  "recommend",
+  "resources",
+]
+
+function getSavedLogisticsPriorities(): LogisticsPriority[] {
+  if (typeof window === "undefined") {
+    return ["blockages"]
+  }
+
+  try {
+    const stored = JSON.parse(
+      localStorage.getItem("sentria_equipment") || "[]"
+    )
+
+    if (!Array.isArray(stored)) {
+      return ["blockages"]
+    }
+
+    const selected = LOGISTICS_PRIORITY_ORDER.filter((priority) =>
+      stored.includes(priority)
+    )
+
+    return selected.length > 0 ? selected : ["blockages"]
+  } catch {
+    return ["blockages"]
+  }
+}
 
 const SECTOR_META: Record<
   string,
@@ -93,22 +170,17 @@ const SECTOR_META: Record<
       },
       {
         label: "Alertes critiques",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta:
           a.filter((x) => x.severity === "CRITICAL").length > 0
             ? "À traiter"
             : "OK",
-        up:
-          a.filter((x) => x.severity === "CRITICAL").length === 0,
+        up: a.filter((x) => x.severity === "CRITICAL").length === 0,
         spark: [9, 8, 7, 8, 6, 5, 4],
       },
       {
         label: "Warnings",
-        value: String(
-          a.filter((x) => x.severity === "WARNING").length
-        ),
+        value: String(a.filter((x) => x.severity === "WARNING").length),
         delta: "Surveillance",
         up: true,
         spark: [8, 7, 9, 6, 8, 10, 12],
@@ -134,18 +206,14 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: "Machines en panne imminente",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta: "Arrêt immédiat",
         up: false,
         spark: [2, 4, 3, 6, 5, 8, 7],
       },
       {
         label: "Usure élevée",
-        value: String(
-          a.filter((x) => x.severity === "WARNING").length
-        ),
+        value: String(a.filter((x) => x.severity === "WARNING").length),
         delta: "Surveiller",
         up: true,
         spark: [4, 5, 6, 5, 7, 8, 9],
@@ -178,9 +246,7 @@ const SECTOR_META: Record<
           x.message.toLowerCase().includes("wear") ||
           x.message.toLowerCase().includes("usure")
       ).length,
-      a.filter((x) =>
-        x.message.toLowerCase().includes("torque")
-      ).length,
+      a.filter((x) => x.message.toLowerCase().includes("torque")).length,
     ],
   },
 
@@ -188,18 +254,14 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: "Ruptures critiques",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta: "Commander maintenant",
         up: false,
         spark: [3, 2, 4, 5, 3, 4, 6],
       },
       {
         label: "Stocks bas",
-        value: String(
-          a.filter((x) => x.severity === "WARNING").length
-        ),
+        value: String(a.filter((x) => x.severity === "WARNING").length),
         delta: "À surveiller",
         up: true,
         spark: [2, 3, 3, 4, 5, 4, 5],
@@ -243,9 +305,7 @@ const SECTOR_META: Record<
           x.message.toLowerCase().includes("froid") ||
           x.message.toLowerCase().includes("cold")
       ).length,
-      a.filter((x) =>
-        x.message.toLowerCase().includes("expir")
-      ).length,
+      a.filter((x) => x.message.toLowerCase().includes("expir")).length,
     ],
   },
 
@@ -253,9 +313,7 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: "Pertes probables",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta: "Livraison urgente",
         up: false,
         spark: [1, 2, 2, 3, 4, 3, 5],
@@ -283,9 +341,7 @@ const SECTOR_META: Record<
       {
         label: "Alertes temp.",
         value: String(
-          a.filter((x) =>
-            x.message.toLowerCase().includes("temp")
-          ).length
+          a.filter((x) => x.message.toLowerCase().includes("temp")).length
         ),
         delta: "Stockage",
         up: false,
@@ -305,12 +361,8 @@ const SECTOR_META: Record<
           x.message.toLowerCase().includes("retard") ||
           x.message.toLowerCase().includes("delay")
       ).length,
-      a.filter((x) =>
-        x.message.toLowerCase().includes("temp")
-      ).length,
-      a.filter((x) =>
-        x.message.toLowerCase().includes("stock")
-      ).length,
+      a.filter((x) => x.message.toLowerCase().includes("temp")).length,
+      a.filter((x) => x.message.toLowerCase().includes("stock")).length,
     ],
   },
 
@@ -318,9 +370,7 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: "Camions critiques",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta: "Immobiliser",
         up: false,
         spark: [1, 2, 1, 3, 2, 4, 3],
@@ -385,13 +435,76 @@ const SECTOR_META: Record<
     ],
   },
 
+  logistics: {
+    kpis: (a) => [
+      {
+        label: "Équipements bloqués",
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
+        delta: "Arrêt immédiat",
+        up: false,
+        spark: [1, 2, 2, 3, 3, 4, 5],
+      },
+      {
+        label: "Files d'attente",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("attente") ||
+              x.message.toLowerCase().includes("wait")
+          ).length
+        ),
+        delta: "Conteneurs",
+        up: false,
+        spark: [2, 3, 3, 4, 4, 5, 6],
+      },
+      {
+        label: "Équipements actifs",
+        value: String(new Set(a.map((x) => x.equipment)).size),
+        delta: "Port",
+        up: true,
+        spark: [4, 5, 5, 6, 6, 7, 8],
+      },
+      {
+        label: "Alertes pression",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("pression") ||
+              x.message.toLowerCase().includes("pressure")
+          ).length
+        ),
+        delta: "Hydraulique",
+        up: false,
+        spark: [0, 1, 1, 1, 2, 2, 3],
+      },
+    ],
+    chartTitle: "Alertes port · 7 jours",
+    barLabels: ["Cycles", "Attente", "Pression", "Carburant"],
+    barData: (a) => [
+      a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("attente") ||
+          x.message.toLowerCase().includes("wait")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("pression") ||
+          x.message.toLowerCase().includes("pressure")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("carburant") ||
+          x.message.toLowerCase().includes("fuel")
+      ).length,
+    ],
+  },
+
   energy: {
     kpis: (a) => [
       {
         label: "Générateurs critiques",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta: "Intervenir",
         up: false,
         spark: [1, 2, 2, 3, 3, 4, 5],
@@ -468,15 +581,13 @@ const OPS_TYPE_LABEL: Record<string, string> = {
 
 const LOGISTICS_OPS_META: Record<
   string,
-  (typeof SECTOR_META)["all"]
+  (typeof SECTOR_META)["logistics"]
 > = {
   port: {
     kpis: (a) => [
       {
         label: "Conteneurs bloqués",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta: "Arrêt immédiat",
         up: false,
         spark: [1, 2, 2, 3, 3, 4, 5],
@@ -520,9 +631,7 @@ const LOGISTICS_OPS_META: Record<
     chartTitle: "Activité quai et conteneurs · 7 jours",
     barLabels: ["Cycles grue", "Attente quai", "Pression", "Carburant"],
     barData: (a) => [
-      a.filter((x) =>
-        x.message.toLowerCase().includes("cycle")
-      ).length,
+      a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
       a.filter(
         (x) =>
           x.message.toLowerCase().includes("attente") ||
@@ -546,9 +655,7 @@ const LOGISTICS_OPS_META: Record<
     kpis: (a) => [
       {
         label: "Zones bloquées",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta: "Arrêt immédiat",
         up: false,
         spark: [1, 2, 2, 3, 3, 4, 5],
@@ -591,9 +698,7 @@ const LOGISTICS_OPS_META: Record<
     chartTitle: "Activité entrepôt · 7 jours",
     barLabels: ["Cycles", "Retards", "Capacité", "Carburant"],
     barData: (a) => [
-      a.filter((x) =>
-        x.message.toLowerCase().includes("cycle")
-      ).length,
+      a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
       a.filter(
         (x) =>
           x.message.toLowerCase().includes("retard") ||
@@ -616,9 +721,7 @@ const LOGISTICS_OPS_META: Record<
     kpis: (a) => [
       {
         label: "Véhicules bloqués",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta: "Arrêt immédiat",
         up: false,
         spark: [1, 2, 2, 3, 3, 4, 5],
@@ -660,15 +763,9 @@ const LOGISTICS_OPS_META: Record<
     chartTitle: "Activité flotte · 7 jours",
     barLabels: ["Surchauffe", "Huile", "Pneus", "Carburant"],
     barData: (a) => [
-      a.filter((x) =>
-        x.message.toLowerCase().includes("surchauffe")
-      ).length,
-      a.filter((x) =>
-        x.message.toLowerCase().includes("huile")
-      ).length,
-      a.filter((x) =>
-        x.message.toLowerCase().includes("pneus")
-      ).length,
+      a.filter((x) => x.message.toLowerCase().includes("surchauffe")).length,
+      a.filter((x) => x.message.toLowerCase().includes("huile")).length,
+      a.filter((x) => x.message.toLowerCase().includes("pneus")).length,
       a.filter(
         (x) =>
           x.message.toLowerCase().includes("carburant") ||
@@ -681,9 +778,7 @@ const LOGISTICS_OPS_META: Record<
     kpis: (a) => [
       {
         label: "Ruptures chaîne du froid",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta: "Arrêt immédiat",
         up: false,
         spark: [1, 2, 2, 3, 3, 4, 5],
@@ -691,9 +786,7 @@ const LOGISTICS_OPS_META: Record<
       {
         label: "Alertes température",
         value: String(
-          a.filter((x) =>
-            x.message.toLowerCase().includes("temp")
-          ).length
+          a.filter((x) => x.message.toLowerCase().includes("temp")).length
         ),
         delta: "Seuil dépassé",
         up: false,
@@ -723,12 +816,8 @@ const LOGISTICS_OPS_META: Record<
     chartTitle: "Activité chaîne du froid · 7 jours",
     barLabels: ["Cycles", "Temp. hors seuil", "Pression", "Carburant"],
     barData: (a) => [
-      a.filter((x) =>
-        x.message.toLowerCase().includes("cycle")
-      ).length,
-      a.filter((x) =>
-        x.message.toLowerCase().includes("temp")
-      ).length,
+      a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
+      a.filter((x) => x.message.toLowerCase().includes("temp")).length,
       a.filter(
         (x) =>
           x.message.toLowerCase().includes("pression") ||
@@ -743,56 +832,13 @@ const LOGISTICS_OPS_META: Record<
   },
 }
 
-function getSavedLogisticsPriority(): LogisticsPriority {
-  if (typeof window === "undefined") {
-    return "blockages"
-  }
-
-  try {
-    const stored = JSON.parse(
-      localStorage.getItem("sentria_equipment") || "[]"
-    )
-
-    if (!Array.isArray(stored)) {
-      return "blockages"
-    }
-
-    if (stored.includes("wait")) {
-      return "wait"
-    }
-
-    if (stored.includes("blockages")) {
-      return "blockages"
-    }
-
-    if (stored.includes("cost")) {
-      return "cost"
-    }
-
-    if (stored.includes("anticipate")) {
-      return "anticipate"
-    }
-
-    if (stored.includes("recommend")) {
-      return "recommend"
-    }
-  } catch {
-    return "blockages"
-  }
-
-  return "blockages"
-}
-
 export function DashboardView({
   search = "",
 }: {
   search?: string
 }) {
   const [alerts, setAlerts] = useState<Alert[]>([])
-  const [recommendations, setRecommendations] = useState<
-    Recommendation[]
-  >([])
-
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([])
   const [uploadSector, setUploadSector] = useState("industry")
 
   const [filterSector, setFilterSector] = useState(() => {
@@ -800,14 +846,7 @@ export function DashboardView({
       return "all"
     }
 
-    const savedSector = localStorage.getItem("sentria_sector")
-
-    // Logistics is now accessed through dedicated dashboard buttons.
-    if (savedSector === "logistics") {
-      return "all"
-    }
-
-    return savedSector || "all"
+    return localStorage.getItem("sentria_sector") || "all"
   })
 
   const [uploading, setUploading] = useState(false)
@@ -839,17 +878,36 @@ export function DashboardView({
     return localStorage.getItem("sentria_ops_type")
   })
 
-  const [logisticsPriority, setLogisticsPriority] =
-    useState<LogisticsPriority>(() =>
-      getSavedLogisticsPriority()
-    )
+  /*
+   * IMPORTANT:
+   * Before, the dashboard stored only ONE logistics priority.
+   *
+   * If onboarding selected:
+   *   ["blockages", "wait", "cost"]
+   *
+   * only "wait" was returned because getSavedLogisticsPriority()
+   * used a fixed priority order and stopped at the first match.
+   *
+   * We now keep:
+   *   logisticsPriorities = ALL selected onboarding views
+   *
+   * and:
+   *   activeLogisticsView = the view currently opened.
+   */
+  const [logisticsPriorities, setLogisticsPriorities] = useState<
+    LogisticsPriority[]
+  >(() => getSavedLogisticsPriorities())
+
+  const [activeLogisticsView, setActiveLogisticsView] =
+    useState<LogisticsPriority>(() => {
+      return getSavedLogisticsPriorities()[0] ?? "blockages"
+    })
 
   useEffect(() => {
     const refreshSectors = () => {
       try {
         const stored = JSON.parse(
-          localStorage.getItem("sentria_sectors") ||
-            '["industry"]'
+          localStorage.getItem("sentria_sectors") || '["industry"]'
         )
 
         setActiveSectors(
@@ -862,17 +920,34 @@ export function DashboardView({
       }
 
       setOpsType(localStorage.getItem("sentria_ops_type"))
-      setLogisticsPriority(getSavedLogisticsPriority())
+
+      const priorities = getSavedLogisticsPriorities()
+
+      setLogisticsPriorities(priorities)
+
+      setActiveLogisticsView((current) =>
+        priorities.includes(current)
+          ? current
+          : priorities[0] ?? "blockages"
+      )
 
       const savedSector = localStorage.getItem("sentria_sector")
 
-      if (savedSector && savedSector !== "logistics") {
+      if (savedSector) {
         setFilterSector(savedSector)
       }
     }
 
     const refreshPriority = () => {
-      setLogisticsPriority(getSavedLogisticsPriority())
+      const priorities = getSavedLogisticsPriorities()
+
+      setLogisticsPriorities(priorities)
+
+      setActiveLogisticsView((current) =>
+        priorities.includes(current)
+          ? current
+          : priorities[0] ?? "blockages"
+      )
     }
 
     window.addEventListener(
@@ -885,7 +960,10 @@ export function DashboardView({
       refreshSectors
     )
 
-    window.addEventListener("storage", refreshPriority)
+    window.addEventListener(
+      "storage",
+      refreshSectors
+    )
 
     return () => {
       window.removeEventListener(
@@ -898,7 +976,10 @@ export function DashboardView({
         refreshSectors
       )
 
-      window.removeEventListener("storage", refreshPriority)
+      window.removeEventListener(
+        "storage",
+        refreshSectors
+      )
     }
   }, [])
 
@@ -910,13 +991,47 @@ export function DashboardView({
       setUploadSector(activeSectors[0])
     }
 
+    /*
+     * Logistics is NOT part of the normal sector filter anymore.
+     *
+     * It is opened only through the logistics views selected
+     * during onboarding.
+     */
+    if (
+      filterSector === "logistics" &&
+      !activeSectors.includes("logistics")
+    ) {
+      setFilterSector("all")
+      localStorage.setItem("sentria_sector", "all")
+    }
+
     if (
       filterSector !== "all" &&
+      filterSector !== "logistics" &&
       !activeSectors.includes(filterSector)
     ) {
       setFilterSector("all")
+      localStorage.setItem("sentria_sector", "all")
     }
-  }, [activeSectors, uploadSector, filterSector])
+  }, [
+    activeSectors,
+    uploadSector,
+    filterSector,
+  ])
+
+  useEffect(() => {
+    /*
+     * If the user no longer has any logistics view selected,
+     * never leave the dashboard stuck on the logistics screen.
+     */
+    if (
+      logisticsPriorities.length === 0 &&
+      filterSector === "logistics"
+    ) {
+      setFilterSector("all")
+      localStorage.setItem("sentria_sector", "all")
+    }
+  }, [logisticsPriorities, filterSector])
 
   useEffect(() => {
     fetch(`${API}/alerts`)
@@ -1021,7 +1136,9 @@ export function DashboardView({
 
       setUploadMsg(data.message ?? "Fichier traité.")
 
-      await new Promise((r) => setTimeout(r, 1500))
+      await new Promise((r) =>
+        setTimeout(r, 1500)
+      )
 
       const r2 = await fetch(`${API}/alerts`)
       const d2 = await r2.json()
@@ -1030,6 +1147,10 @@ export function DashboardView({
       refreshRecommendations()
 
       setFilterSector(uploadSector)
+      localStorage.setItem(
+        "sentria_sector",
+        uploadSector
+      )
     } catch (error) {
       console.error(error)
       setUploadMsg("Erreur lors de l'upload.")
@@ -1039,32 +1160,32 @@ export function DashboardView({
     }
   }
 
-  /*
-   * Dedicated logistics navigation.
-   *
-   * This is the important change:
-   * clicking a logistics action does NOT require the user
-   * to first select "Logistique" beside "Tous".
-   */
-  function openLogisticsView(priority: LogisticsPriority) {
-    setLogisticsPriority(priority)
+  function openLogisticsView(
+    priority: LogisticsPriority
+  ) {
+    /*
+     * Only allow a logistics view that was actually selected
+     * during onboarding.
+     */
+    if (!logisticsPriorities.includes(priority)) {
+      return
+    }
 
-    localStorage.setItem(
-      "sentria_equipment",
-      JSON.stringify([priority])
-    )
+    setActiveLogisticsView(priority)
+    setFilterSector("logistics")
 
     localStorage.setItem(
       "sentria_sector",
       "logistics"
     )
-
-    setFilterSector("logistics")
   }
 
-  function returnToDashboard() {
+  function backToDashboard() {
     setFilterSector("all")
-    localStorage.setItem("sentria_sector", "all")
+    localStorage.setItem(
+      "sentria_sector",
+      "all"
+    )
   }
 
   const filteredAlerts = alerts
@@ -1095,10 +1216,11 @@ export function DashboardView({
     .slice(0, 5)
 
   const meta =
-    filterSector === "logistics" && opsType
-      ? LOGISTICS_OPS_META[opsType] ??
-        SECTOR_META.all
-      : SECTOR_META[filterSector] ?? SECTOR_META.all
+    (filterSector === "logistics" && opsType
+      ? LOGISTICS_OPS_META[opsType]
+      : undefined) ??
+    SECTOR_META[filterSector] ??
+    SECTOR_META.all
 
   const kpis = meta.kpis(filteredAlerts)
   const barData = meta.barData(filteredAlerts)
@@ -1123,12 +1245,6 @@ export function DashboardView({
     }
   )
 
-  /*
-   * LOGISTICS VIEWS
-   *
-   * These are now accessed from the dedicated dashboard
-   * buttons instead of the sector pill.
-   */
   if (filterSector === "logistics") {
     const normalizedOpsType =
       opsType &&
@@ -1153,29 +1269,123 @@ export function DashboardView({
       <div className="space-y-4">
         <button
           type="button"
-          onClick={returnToDashboard}
+          onClick={backToDashboard}
           className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
         >
           ← Retour au tableau de bord
         </button>
 
-        {logisticsPriority === "recommend" ? (
+        <div className="rounded-3xl border border-border bg-card p-5">
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-accent-foreground" />
+
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Vue logistique
+              </p>
+            </div>
+
+            <h2 className="font-heading text-xl font-bold">
+              {LOGISTICS_PRIORITY_META[
+                activeLogisticsView
+              ].label}
+            </h2>
+
+            <p className="text-sm text-muted-foreground">
+              {LOGISTICS_PRIORITY_META[
+                activeLogisticsView
+              ].description}
+            </p>
+          </div>
+
+          {logisticsPriorities.length > 1 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {logisticsPriorities.map(
+                (priority) => {
+                  const item =
+                    LOGISTICS_PRIORITY_META[
+                      priority
+                    ]
+
+                  const Icon = item.icon
+
+                  return (
+                    <button
+                      key={priority}
+                      type="button"
+                      onClick={() =>
+                        openLogisticsView(
+                          priority
+                        )
+                      }
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+                        activeLogisticsView ===
+                          priority
+                          ? "border-foreground bg-foreground text-background"
+                          : "border-border bg-background hover:bg-muted"
+                      )}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+
+                      {item.label}
+                    </button>
+                  )
+                }
+              )}
+            </div>
+          )}
+        </div>
+
+        {activeLogisticsView === "recommend" ? (
           <RecommendationsBoard
-            recommendations={filteredRecommendations}
+            recommendations={
+              filteredRecommendations
+            }
             opsType={normalizedOpsType}
           />
-        ) : logisticsPriority === "wait" ? (
+        ) : activeLogisticsView === "wait" ? (
           <LogisticsWaitingView
             opsType={normalizedOpsType}
           />
-        ) : logisticsPriority === "cost" ? (
+        ) : activeLogisticsView === "cost" ? (
           <LogisticsCostView
             opsType={normalizedOpsType}
           />
-        ) : logisticsPriority === "anticipate" ? (
+        ) : activeLogisticsView === "anticipate" ? (
           <LogisticsAnticipateView
             opsType={normalizedOpsType}
           />
+        ) : activeLogisticsView ===
+          "resources" ? (
+          /*
+           * There is currently no LogisticsResourcesView
+           * component imported in this file.
+           *
+           * We deliberately do NOT route "resources" to
+           * another view because that would make the
+           * onboarding selection open the wrong screen.
+           */
+          <div className="rounded-3xl border border-border bg-card p-8">
+            <div className="flex items-start gap-4">
+              <div className="rounded-2xl bg-muted p-3">
+                <Boxes className="h-5 w-5" />
+              </div>
+
+              <div>
+                <h3 className="font-heading text-lg font-bold">
+                  Ressources
+                </h3>
+
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Cette vue a bien été sélectionnée
+                  pendant l'onboarding, mais son écran
+                  opérationnel n'est pas encore
+                  branché au dashboard.
+                </p>
+              </div>
+            </div>
+          </div>
         ) : (
           <LogisticsBlockagesView
             opsType={normalizedOpsType}
@@ -1200,9 +1410,8 @@ export function DashboardView({
           </h2>
 
           <p className="mt-2 text-pretty text-sm text-background/70">
-            SentrIA surveille vos alertes en temps réel,
-            machines, stocks, flottes, équipements,
-            partout dans le monde.
+            SentrIA surveille vos alertes en temps réel, machines, stocks,
+            flottes, équipements, partout dans le monde.
           </p>
         </div>
 
@@ -1224,7 +1433,9 @@ export function DashboardView({
       {/* RECOMMENDATIONS */}
       <RecommendationsPanel
         recommendations={filteredRecommendations}
-        totalRecommendationsCount={recommendations.length}
+        totalRecommendationsCount={
+          recommendations.length
+        }
         alerts={alerts}
       />
 
@@ -1252,16 +1463,25 @@ export function DashboardView({
           </span>
         </button>
 
+        {/*
+         * LOGISTICS IS INTENTIONALLY EXCLUDED HERE.
+         *
+         * The old generic "Logistique" button was the problem:
+         * it opened only ONE logistics priority.
+         *
+         * Logistics access is now rendered separately below,
+         * based ONLY on onboarding selections.
+         */}
         {SECTORS.filter(
           (s) =>
             s.key !== "all" &&
+            s.key !== "logistics" &&
             activeSectors.includes(s.key)
         ).map((s) => (
           <button
             key={s.key}
             onClick={() => {
               setFilterSector(s.key)
-
               localStorage.setItem(
                 "sentria_sector",
                 s.key
@@ -1287,169 +1507,84 @@ export function DashboardView({
         ))}
       </div>
 
-      {/* ===================================================== */}
-      {/* LOGISTICS COMMAND ACCESS                               */}
-      {/* ===================================================== */}
-      <section className="rounded-3xl border border-border bg-card p-5 md:p-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-accent-foreground" />
+      {/* SELECTED LOGISTICS VIEWS */}
+      {activeSectors.includes("logistics") &&
+        logisticsPriorities.length > 0 && (
+          <section className="rounded-3xl border border-border bg-card p-5">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-accent-foreground" />
+
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Vos vues logistiques
+                </p>
+              </div>
 
               <h3 className="font-heading text-lg font-bold">
-                Opérations logistiques
+                Accès opérationnels
               </h3>
+
+              <p className="text-sm text-muted-foreground">
+                Seules les vues sélectionnées pendant
+                l'onboarding apparaissent ici.
+              </p>
             </div>
 
-            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-              Accédez directement aux vues opérationnelles
-              sans passer par le filtre secteur.
-            </p>
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {logisticsPriorities.map(
+                (priority) => {
+                  const item =
+                    LOGISTICS_PRIORITY_META[
+                      priority
+                    ]
 
-            {opsType &&
-              LOGISTICS_OPS_META[opsType] && (
-                <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[11px] font-medium text-accent-foreground">
-                  <Shield className="h-3 w-3" />
+                  const Icon = item.icon
 
-                  Vue adaptée :{" "}
-                  {OPS_TYPE_LABEL[opsType]}
-                </div>
+                  return (
+                    <button
+                      key={priority}
+                      type="button"
+                      onClick={() =>
+                        openLogisticsView(
+                          priority
+                        )
+                      }
+                      className="group rounded-2xl border border-border bg-background p-4 text-left transition-all hover:-translate-y-0.5 hover:border-foreground/30 hover:bg-muted/50"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="rounded-xl bg-muted p-2.5 transition-colors group-hover:bg-foreground group-hover:text-background">
+                          <Icon className="h-4 w-4" />
+                        </div>
+
+                        <ArrowUpRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                      </div>
+
+                      <div className="mt-4">
+                        <p className="font-heading text-sm font-bold">
+                          {item.label}
+                        </p>
+
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                          {item.description}
+                        </p>
+                      </div>
+                    </button>
+                  )
+                }
               )}
+            </div>
+          </section>
+        )}
+
+      {filterSector === "logistics" &&
+        opsType &&
+        LOGISTICS_OPS_META[opsType] && (
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[11px] font-medium text-accent-foreground">
+            <Shield className="h-3 w-3" />
+            Vue adaptée :{" "}
+            {OPS_TYPE_LABEL[opsType]}
           </div>
-        </div>
-
-        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {/* BLOCKAGES */}
-          <button
-            type="button"
-            onClick={() =>
-              openLogisticsView("blockages")
-            }
-            className="group rounded-2xl border border-border bg-background p-4 text-left transition-all hover:-translate-y-0.5 hover:border-foreground hover:bg-muted"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
-                <Ban className="h-4 w-4" />
-              </div>
-
-              <ArrowUpRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-            </div>
-
-            <p className="mt-4 font-heading text-sm font-bold">
-              Blocages
-            </p>
-
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Identifier les équipements et flux
-              immobilisés.
-            </p>
-          </button>
-
-          {/* WAIT */}
-          <button
-            type="button"
-            onClick={() =>
-              openLogisticsView("wait")
-            }
-            className="group rounded-2xl border border-border bg-background p-4 text-left transition-all hover:-translate-y-0.5 hover:border-foreground hover:bg-muted"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
-                <Clock3 className="h-4 w-4" />
-              </div>
-
-              <ArrowUpRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-            </div>
-
-            <p className="mt-4 font-heading text-sm font-bold">
-              Attente
-            </p>
-
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Voir les files, temps d'attente et
-              goulots opérationnels.
-            </p>
-          </button>
-
-          {/* COST */}
-          <button
-            type="button"
-            onClick={() =>
-              openLogisticsView("cost")
-            }
-            className="group rounded-2xl border border-border bg-background p-4 text-left transition-all hover:-translate-y-0.5 hover:border-foreground hover:bg-muted"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/15 text-accent-foreground">
-                <WalletCards className="h-4 w-4" />
-              </div>
-
-              <ArrowUpRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-            </div>
-
-            <p className="mt-4 font-heading text-sm font-bold">
-              Coûts
-            </p>
-
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Visualiser les pertes et coûts liés
-              aux opérations.
-            </p>
-          </button>
-
-          {/* ANTICIPATE */}
-          <button
-            type="button"
-            onClick={() =>
-              openLogisticsView("anticipate")
-            }
-            className="group rounded-2xl border border-border bg-background p-4 text-left transition-all hover:-translate-y-0.5 hover:border-foreground hover:bg-muted"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/15 text-accent-foreground">
-                <Radar className="h-4 w-4" />
-              </div>
-
-              <ArrowUpRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-            </div>
-
-            <p className="mt-4 font-heading text-sm font-bold">
-              Anticiper
-            </p>
-
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Détecter les risques avant qu'ils
-              deviennent des blocages.
-            </p>
-          </button>
-
-          {/* RECOMMENDATIONS */}
-          <button
-            type="button"
-            onClick={() =>
-              openLogisticsView("recommend")
-            }
-            className="group rounded-2xl border border-border bg-background p-4 text-left transition-all hover:-translate-y-0.5 hover:border-foreground hover:bg-muted"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/15 text-accent-foreground">
-                <Sparkles className="h-4 w-4" />
-              </div>
-
-              <ArrowUpRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-            </div>
-
-            <p className="mt-4 font-heading text-sm font-bold">
-              Recommandations
-            </p>
-
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Prioriser les actions à prendre sur
-              les opérations.
-            </p>
-          </button>
-        </div>
-      </section>
+        )}
 
       {/* KPIs */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -1567,7 +1702,9 @@ export function DashboardView({
             ).map((s) => (
               <button
                 key={s.key}
-                onClick={() => setUploadSector(s.key)}
+                onClick={() =>
+                  setUploadSector(s.key)
+                }
                 className={cn(
                   "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors",
                   uploadSector === s.key
