@@ -22,6 +22,7 @@ import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
 import { LogisticsBlockagesView } from "./logistics-blockages-view"
 import { LogisticsWaitingView } from "./logistics-waiting-view"
+import { LogisticsCostView } from "./logistics-cost-view"
 
 const API = "https://sentria-8btn.onrender.com"
 
@@ -1140,6 +1141,10 @@ export function DashboardView({
 
         {logisticsPriority === "wait" ? (
           <LogisticsWaitingView
+            opsType={normalizedOpsType}
+          />
+        ) : logisticsPriority === "cost" ? (
+          <LogisticsCostView
             opsType={normalizedOpsType}
           />
         ) : (
