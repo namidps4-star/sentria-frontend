@@ -20,6 +20,7 @@ import { LogisticsWaitingView } from "./logistics-waiting-view"
 import { LogisticsCostView } from "./logistics-cost-view"
 import { LogisticsAnticipateView } from "./logistics-anticipate-view"
 import { RecommendationsPanel } from "./recommendations-panel"
+import { RecommendationsBoard } from "./recommendations-board-view"
 
 const API = "https://sentria-8btn.onrender.com"
 
@@ -1101,10 +1102,8 @@ export function DashboardView({
         </button>
 
         {logisticsPriority === "recommend" ? (
-          <RecommendationsPanel
+          <RecommendationsBoard
             recommendations={filteredRecommendations}
-            totalRecommendationsCount={recommendations.length}
-            alerts={alerts}
             opsType={normalizedOpsType}
           />
         ) : logisticsPriority === "wait" ? (
