@@ -6,7 +6,7 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { cn } from "@/lib/utils"
 
-const API = "https://sentria-production.up.railway.app"
+const API = "https://sentria-8btn.onrender.com"
 
 const SUGGESTIONS = [
   { icon: MapPin, text: "Quels systèmes présentent un risque opérationnel croissant ?" },
