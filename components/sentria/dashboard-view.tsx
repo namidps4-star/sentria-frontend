@@ -43,6 +43,7 @@ type Alert = {
 }
 
 type Recommendation = {
+  id: string
   equipment: string
   sector?: string | null
   severity: "WARNING" | "CRITICAL" | string
@@ -940,11 +941,48 @@ export function DashboardView({
     fetch(`${API}/recommendations?limit=20&lang=fr`)
       .then((r) => r.json())
       .then((d) => {
-        setRecommendations(
-          Array.isArray(d?.recommendations)
-            ? d.recommendations
-            : []
-        )
+        if (!Array.isArray(d?.recommendations)) {
+          setRecommendations([])
+          return
+        }
+
+        const usedIds = new Set<string>()
+
+        const normalized: Recommendation[] =
+          d.recommendations.map(
+            (
+              rec: Omit<Recommendation, "id"> & {
+                id?: string | null
+              },
+              index: number
+            ) => {
+              const baseId =
+                rec.id ??
+                rec.alert_key ??
+                `${rec.equipment}-${rec.date}-${index}`
+
+              let id = String(baseId)
+
+              if (usedIds.has(id)) {
+                id = `${id}-${index}`
+              }
+
+              while (usedIds.has(id)) {
+                id = `${id}-${Math.random()
+                  .toString(36)
+                  .slice(2, 7)}`
+              }
+
+              usedIds.add(id)
+
+              return {
+                ...rec,
+                id,
+              }
+            }
+          )
+
+        setRecommendations(normalized)
       })
       .catch((err) => {
         console.error(
