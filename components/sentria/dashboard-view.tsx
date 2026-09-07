@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils"
 import { LogisticsBlockagesView } from "./logistics-blockages-view"
 import { LogisticsWaitingView } from "./logistics-waiting-view"
 import { LogisticsCostView } from "./logistics-cost-view"
+import { LogisticsAnticipateView } from "./logistics-anticipate-view"
 
 const API = "https://sentria-8btn.onrender.com"
 
@@ -1145,6 +1146,10 @@ export function DashboardView({
           />
         ) : logisticsPriority === "cost" ? (
           <LogisticsCostView
+            opsType={normalizedOpsType}
+          />
+        ) : logisticsPriority === "anticipate" ? (
+          <LogisticsAnticipateView
             opsType={normalizedOpsType}
           />
         ) : (
