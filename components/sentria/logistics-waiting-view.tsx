@@ -12,6 +12,7 @@ import {
   Activity,
   MapPin,
   Gauge,
+  Warehouse,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -315,68 +316,98 @@ export function LogisticsWaitingView({
             </span>
           </div>
 
-          <div className="mt-7">
-            <div className="relative h-48 overflow-hidden rounded-2xl border border-border bg-background">
-              <div className="absolute left-8 right-8 top-1/2 h-px -translate-y-1/2 bg-border" />
+          <div className="mt-7 rounded-2xl border border-border bg-background p-6">
+            {/* Checkpoint stepper — the journey a load takes through the site */}
+            <div className="relative flex items-start justify-between px-1">
+              <div className="absolute left-6 right-6 top-5 h-[3px] rounded-full bg-muted" />
+              <div
+                className="absolute left-6 top-5 h-[3px] rounded-full bg-accent transition-all duration-700 ease-out"
+                style={{
+                  width: `calc((100% - 48px) * ${scenario.flow / 100})`,
+                }}
+              />
 
-              <div className="absolute left-[76%] top-6 bottom-6 w-px bg-destructive/40" />
+              {[
+                {
+                  key: "entry",
+                  label: "Flux entrant",
+                  icon: Package,
+                  tone: "neutral" as const,
+                },
+                {
+                  key: "wait",
+                  label: "Zone d'attente",
+                  icon: Clock3,
+                  tone:
+                    congestion === "Élevée"
+                      ? ("destructive" as const)
+                      : congestion === "Modérée"
+                        ? ("amber" as const)
+                        : ("accent" as const),
+                },
+                {
+                  key: "dock",
+                  label: "Quai",
+                  icon: Warehouse,
+                  tone: "neutral" as const,
+                },
+              ].map((checkpoint) => {
+                const Icon = checkpoint.icon
 
-              <div className="absolute left-[76%] top-3 -translate-x-1/2 rounded-full bg-destructive/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-destructive">
-                Zone d'attente
-              </div>
+                return (
+                  <div
+                    key={checkpoint.key}
+                    className="relative z-10 flex flex-col items-center gap-2"
+                  >
+                    <div
+                      className={cn(
+                        "flex h-10 w-10 items-center justify-center rounded-full border",
+                        checkpoint.tone === "destructive"
+                          ? "border-destructive/40 bg-destructive text-destructive-foreground"
+                          : checkpoint.tone === "amber"
+                            ? "border-amber-500/40 bg-amber-500 text-white"
+                            : checkpoint.tone === "accent"
+                              ? "border-accent/40 bg-accent text-accent-foreground"
+                              : "border-border bg-card text-foreground"
+                      )}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </div>
 
-              {VEHICLES.map((vehicle, index) => {
-                const movement =
-                  ((tick * (index + 1) * 2) % 9)
-
-                const position = Math.min(
-                  vehicle.position + movement,
-                  73
+                    <span className="text-[11px] font-medium text-muted-foreground">
+                      {checkpoint.label}
+                    </span>
+                  </div>
                 )
+              })}
+            </div>
+
+            {/* Vehicles riding the line, positioned relative to the same track */}
+            <div className="relative mt-5 h-6">
+              {VEHICLES.map((vehicle, index) => {
+                const movement = (tick * (index + 1) * 2) % 9
+                const position = Math.min(vehicle.position + movement, 92)
 
                 return (
                   <div
                     key={vehicle.id}
-                    className="absolute top-1/2 flex -translate-y-1/2 items-center gap-2 transition-all duration-1000 ease-out"
-                    style={{
-                      left: `${position}%`,
-                    }}
+                    className="absolute top-0 flex -translate-x-1/2 items-center gap-1.5 transition-all duration-1000 ease-out"
+                    style={{ left: `${position}%` }}
                   >
-                    <div
+                    <span
                       className={cn(
-                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border shadow-sm",
+                        "h-2 w-2 rounded-full",
                         vehicle.status === "Prioritaire"
-                          ? "border-accent/40 bg-accent/15 text-accent-foreground"
-                          : "border-border bg-card text-foreground"
+                          ? "bg-accent"
+                          : "bg-muted-foreground/50"
                       )}
-                    >
-                      <Package className="h-4 w-4" />
-                    </div>
-
-                    <div className="hidden min-w-24 rounded-lg border border-border bg-card px-2.5 py-1.5 shadow-sm sm:block">
-                      <p className="text-[10px] font-bold">
-                        {vehicle.id}
-                      </p>
-
-                      <p className="text-[9px] text-muted-foreground">
-                        {vehicle.status}
-                      </p>
-                    </div>
+                    />
+                    <span className="whitespace-nowrap text-[10px] font-medium text-muted-foreground">
+                      {vehicle.id}
+                    </span>
                   </div>
                 )
               })}
-
-              <div className="absolute bottom-3 left-6 text-[9px] uppercase tracking-wider text-muted-foreground">
-                Flux entrant
-              </div>
-
-              <div className="absolute bottom-3 left-[76%] -translate-x-1/2 text-[9px] uppercase tracking-wider text-muted-foreground">
-                Seuil
-              </div>
-
-              <div className="absolute bottom-3 right-6 text-[9px] uppercase tracking-wider text-muted-foreground">
-                Quai
-              </div>
             </div>
           </div>
 
