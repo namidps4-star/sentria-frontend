@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
@@ -361,12 +360,36 @@ const EQUIPMENT_BY_SECTOR: Record<Sector, Equipment[]> = {
 }
 
 const OPS_TYPES: OpsType[] = [
-  { id: "port", label: "Port & conteneurs", icon: Anchor },
-  { id: "entrepot", label: "Entrepôt & manutention", icon: Warehouse },
-  { id: "transport", label: "Transport & distribution", icon: Truck },
-  { id: "expedition", label: "Préparation & expédition", icon: PackageSearch },
-  { id: "froid", label: "Chaîne du froid", icon: Snowflake },
-  { id: "multi", label: "Plusieurs activités", icon: Recycle },
+  {
+    id: "port",
+    label: "Port & conteneurs",
+    icon: Anchor,
+  },
+  {
+    id: "entrepot",
+    label: "Entrepôt & manutention",
+    icon: Warehouse,
+  },
+  {
+    id: "transport",
+    label: "Transport & distribution",
+    icon: Truck,
+  },
+  {
+    id: "expedition",
+    label: "Préparation & expédition",
+    icon: PackageSearch,
+  },
+  {
+    id: "froid",
+    label: "Chaîne du froid",
+    icon: Snowflake,
+  },
+  {
+    id: "multi",
+    label: "Plusieurs activités",
+    icon: Recycle,
+  },
 ]
 
 const DATA_SOURCES: DataSource[] = [
@@ -393,134 +416,6 @@ const DATA_SOURCES: DataSource[] = [
   },
 ]
 
-function ContainerYardPreview() {
-  const total = 32
-  const amberIndexes = useMemo(() => [5, 18, 26], [])
-  const redIndex = 11
-
-  const [statuses, setStatuses] = useState<
-    ("ok" | "watch" | "blocked")[]
-  >(() => Array(total).fill("ok"))
-
-  const [showRecommendation, setShowRecommendation] = useState(false)
-
-  useEffect(() => {
-    const timers: ReturnType<typeof setTimeout>[] = []
-
-    timers.push(
-      setTimeout(() => {
-        setStatuses((current) => {
-          const next = [...current]
-
-          amberIndexes.forEach((i) => {
-            next[i] = "watch"
-          })
-
-          return next
-        })
-      }, 450)
-    )
-
-    timers.push(
-      setTimeout(() => {
-        setStatuses((current) => {
-          const next = [...current]
-          next[redIndex] = "watch"
-          return next
-        })
-      }, 950)
-    )
-
-    timers.push(
-      setTimeout(() => {
-        setStatuses((current) => {
-          const next = [...current]
-          next[redIndex] = "blocked"
-          return next
-        })
-      }, 1750)
-    )
-
-    timers.push(
-      setTimeout(() => {
-        setShowRecommendation(true)
-      }, 2100)
-    )
-
-    return () => timers.forEach(clearTimeout)
-  }, [amberIndexes])
-
-  return (
-    <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-background">
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <div>
-          <p className="text-xs font-semibold text-foreground">
-            Aperçu, Terminal conteneurs
-          </p>
-
-          <p className="text-[11px] text-muted-foreground">
-            Exemple avec vos futures données
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            Normal
-          </span>
-
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-            À surveiller
-          </span>
-
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-            Bloqué
-          </span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-8 gap-1.5 p-4">
-        {statuses.map((status, i) => (
-          <div
-            key={i}
-            className={cn(
-              "aspect-[7/5] rounded-md border transition-colors duration-300",
-              status === "ok" &&
-                "border-emerald-500/25 bg-emerald-500/[0.06]",
-              status === "watch" &&
-                "border-amber-500/60 bg-amber-500/[0.12]",
-              status === "blocked" &&
-                "border-red-500 bg-red-500/[0.15]"
-            )}
-          />
-        ))}
-      </div>
-
-      <div
-        className={cn(
-          "mx-4 mb-4 flex items-start gap-3 rounded-xl border border-l-2 border-border border-l-red-500 bg-card px-3.5 py-3 transition-all duration-500",
-          showRecommendation
-            ? "translate-y-0 opacity-100"
-            : "translate-y-1 opacity-0"
-        )}
-      >
-        <span className="whitespace-nowrap font-mono text-[11px] text-muted-foreground">
-          CNT-0417
-        </span>
-
-        <p className="text-xs leading-5 text-foreground">
-          Immobile depuis{" "}
-          <span className="font-semibold text-amber-600">18h</span>, contre 4h
-          en moyenne. Vérifier le document douanier avant qu&apos;il ne
-          déclenche des frais de stockage.
-        </p>
-      </div>
-    </div>
-  )
-}
-
 export function OnboardingView({
   onComplete,
 }: {
@@ -528,6 +423,7 @@ export function OnboardingView({
 }) {
   useEffect(() => {
     const previous = document.body.style.overflow
+
     document.body.style.overflow = "hidden"
 
     return () => {
@@ -566,7 +462,9 @@ export function OnboardingView({
       icon: Building2,
     },
     {
-      title: hasOpsStep ? "Vos priorités" : "Que voulez-vous surveiller ?",
+      title: hasOpsStep
+        ? "Vos priorités"
+        : "Que voulez-vous surveiller ?",
       description: "Sélectionnez ce qui compte pour votre activité.",
       icon: Sparkles,
     },
@@ -574,14 +472,16 @@ export function OnboardingView({
       ? [
           {
             title: "Vos opérations",
-            description: "Précisez le type d'activité logistique.",
+            description:
+              "Précisez le type d'activité logistique.",
             icon: Anchor,
           },
         ]
       : []),
     {
       title: "Vos données",
-      description: "Connectez une source, ou configurez plus tard.",
+      description:
+        "Connectez une source, ou configurez plus tard.",
       icon: Database,
     },
   ]
@@ -643,6 +543,7 @@ export function OnboardingView({
 
       if (sector) {
         localStorage.setItem("sentria_sector", sector)
+
         localStorage.setItem(
           "sentria_sectors",
           JSON.stringify([sector])
@@ -673,7 +574,10 @@ export function OnboardingView({
         JSON.stringify(configureLater)
       )
 
-      window.dispatchEvent(new Event("sentria_sectors_updated"))
+      window.dispatchEvent(
+        new Event("sentria_sectors_updated")
+      )
+
       window.dispatchEvent(
         new Event("sentria_onboarding_completed")
       )
@@ -706,8 +610,9 @@ export function OnboardingView({
             </h1>
 
             <p className="mt-4 max-w-2xl text-sm leading-6 text-background/70 md:text-base">
-              Quelques étapes suffisent pour connecter vos données, configurer
-              vos secteurs et commencer à détecter les situations critiques.
+              Quelques étapes suffisent pour connecter vos données,
+              configurer vos secteurs et commencer à détecter les
+              situations critiques.
             </p>
           </div>
         </div>
@@ -838,7 +743,9 @@ export function OnboardingView({
                       <div className="flex w-full items-center justify-between">
                         <Icon className="h-5 w-5" />
 
-                        {active && <Check className="h-4 w-4" />}
+                        {active && (
+                          <Check className="h-4 w-4" />
+                        )}
                       </div>
 
                       <span className="mt-2 text-sm font-semibold">
@@ -870,7 +777,9 @@ export function OnboardingView({
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   {equipment.map((item) => {
                     const Icon = item.icon
-                    const active = selectedEquipment.includes(item.id)
+                    const active = selectedEquipment.includes(
+                      item.id
+                    )
                     const disabled = Boolean(item.comingSoon)
 
                     return (
@@ -878,7 +787,8 @@ export function OnboardingView({
                         key={item.id}
                         type="button"
                         onClick={() =>
-                          !disabled && toggleEquipment(item.id)
+                          !disabled &&
+                          toggleEquipment(item.id)
                         }
                         disabled={disabled}
                         className={cn(
@@ -970,8 +880,6 @@ export function OnboardingView({
                     )
                   })}
                 </div>
-
-                {opsType === "port" && <ContainerYardPreview />}
               </div>
             )}
 
@@ -980,7 +888,9 @@ export function OnboardingView({
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                   {DATA_SOURCES.map((source) => {
                     const Icon = source.icon
-                    const active = selectedSources.includes(source.id)
+                    const active = selectedSources.includes(
+                      source.id
+                    )
 
                     return (
                       <button
@@ -1060,9 +970,9 @@ export function OnboardingView({
                       </p>
 
                       <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
-                        SentrIA pourra être configuré avec votre ERP, vos
-                        capteurs ou vos fichiers CSV / Excel depuis votre
-                        espace, à tout moment.
+                        SentrIA pourra être configuré avec votre ERP,
+                        vos capteurs ou vos fichiers CSV / Excel depuis
+                        votre espace, à tout moment.
                       </p>
                     </div>
                   </div>
