@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect, useState } from "react"
@@ -11,8 +12,6 @@ import {
   Zap,
   Upload,
   Shield,
-  ChevronRight,
-  X,
 } from "lucide-react"
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
@@ -388,18 +387,27 @@ const SECTOR_META: Record<
       },
     ],
     chartTitle: "Alertes flotte · 7 jours",
-    barLabels: ["Critique", "Service", "Moteur"],
+    barLabels: ["Moteur", "Huile", "Carburant", "Pneus"],
     barData: (a) => [
-      a.filter((x) => x.severity === "CRITICAL").length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("service") ||
-          x.message.toLowerCase().includes("révision")
-      ).length,
       a.filter(
         (x) =>
           x.message.toLowerCase().includes("moteur") ||
           x.message.toLowerCase().includes("engine")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("huile") ||
+          x.message.toLowerCase().includes("oil")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("carburant") ||
+          x.message.toLowerCase().includes("fuel")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("pneu") ||
+          x.message.toLowerCase().includes("tire")
       ).length,
     ],
   },
@@ -407,45 +415,53 @@ const SECTOR_META: Record<
   logistics: {
     kpis: (a) => [
       {
-        label: "Blocages critiques",
+        label: "Équipements bloqués",
         value: String(
           a.filter((x) => x.severity === "CRITICAL").length
         ),
-        delta: "À débloquer",
+        delta: "Arrêt immédiat",
         up: false,
-        spark: [2, 3, 2, 4, 3, 5, 4],
+        spark: [1, 2, 2, 3, 3, 4, 5],
       },
       {
-        label: "Temps d'attente",
+        label: "Files d'attente",
         value: String(
-          a.filter((x) => x.severity === "WARNING").length
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("attente") ||
+              x.message.toLowerCase().includes("wait")
+          ).length
         ),
-        delta: "Surveillance",
-        up: true,
-        spark: [2, 3, 4, 3, 5, 4, 6],
+        delta: "Conteneurs",
+        up: false,
+        spark: [2, 3, 3, 4, 4, 5, 6],
       },
       {
-        label: "Opérations surveillées",
+        label: "Équipements actifs",
         value: String(new Set(a.map((x) => x.equipment)).size),
-        delta: "Live",
+        delta: "Port",
         up: true,
-        spark: [3, 4, 5, 5, 6, 7, 8],
+        spark: [4, 5, 5, 6, 6, 7, 8],
       },
       {
-        label: "Total alertes",
-        value: String(a.length),
-        delta: "Logistique",
-        up: true,
-        spark: [2, 3, 4, 4, 5, 6, 7],
+        label: "Alertes pression",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("pression") ||
+              x.message.toLowerCase().includes("pressure")
+          ).length
+        ),
+        delta: "Hydraulique",
+        up: false,
+        spark: [0, 1, 1, 1, 2, 2, 3],
       },
     ],
-    chartTitle: "Alertes logistiques · 7 jours",
-    barLabels: ["Blocages", "Attente", "Retard"],
+    chartTitle: "Alertes port · 7 jours",
+    barLabels: ["Cycles", "Attente", "Pression", "Carburant"],
     barData: (a) => [
-      a.filter(
-        (x) =>
-          x.severity === "CRITICAL" ||
-          x.message.toLowerCase().includes("bloc")
+      a.filter((x) =>
+        x.message.toLowerCase().includes("cycle")
       ).length,
       a.filter(
         (x) =>
@@ -454,8 +470,13 @@ const SECTOR_META: Record<
       ).length,
       a.filter(
         (x) =>
-          x.message.toLowerCase().includes("retard") ||
-          x.message.toLowerCase().includes("delay")
+          x.message.toLowerCase().includes("pression") ||
+          x.message.toLowerCase().includes("pressure")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("carburant") ||
+          x.message.toLowerCase().includes("fuel")
       ).length,
     ],
   },
@@ -463,259 +484,112 @@ const SECTOR_META: Record<
   energy: {
     kpis: (a) => [
       {
-        label: "Incidents critiques",
+        label: "Générateurs critiques",
         value: String(
           a.filter((x) => x.severity === "CRITICAL").length
         ),
-        delta: "Intervention",
+        delta: "Intervenir",
         up: false,
-        spark: [1, 2, 2, 3, 2, 4, 3],
+        spark: [1, 2, 2, 3, 3, 4, 5],
       },
       {
-        label: "Anomalies",
+        label: "Carburant bas",
         value: String(
-          a.filter((x) => x.severity === "WARNING").length
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("carburant") ||
+              x.message.toLowerCase().includes("fuel")
+          ).length
         ),
-        delta: "Surveiller",
-        up: true,
-        spark: [3, 4, 3, 5, 4, 6, 5],
+        delta: "Réapprovisionner",
+        up: false,
+        spark: [2, 2, 3, 3, 4, 4, 5],
       },
       {
-        label: "Équipements surveillés",
+        label: "Générateurs surveillés",
         value: String(new Set(a.map((x) => x.equipment)).size),
-        delta: "Réseau",
+        delta: "Actifs",
         up: true,
-        spark: [4, 5, 5, 6, 7, 7, 8],
+        spark: [3, 4, 4, 5, 5, 6, 7],
       },
       {
-        label: "Total alertes",
-        value: String(a.length),
-        delta: "Énergie",
-        up: true,
-        spark: [2, 3, 3, 4, 5, 5, 6],
+        label: "Alertes surchauffe",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("surchauffe") ||
+              x.message.toLowerCase().includes("overheat")
+          ).length
+        ),
+        delta: "Température",
+        up: false,
+        spark: [0, 0, 1, 1, 2, 2, 3],
       },
     ],
     chartTitle: "Alertes énergie · 7 jours",
-    barLabels: ["Critique", "Anomalie", "Réseau"],
+    barLabels: ["Carburant", "Surchauffe", "Huile", "Surcharge"],
     barData: (a) => [
-      a.filter((x) => x.severity === "CRITICAL").length,
-      a.filter((x) => x.severity === "WARNING").length,
-      a.filter((x) =>
-        x.message.toLowerCase().includes("réseau")
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("carburant") ||
+          x.message.toLowerCase().includes("fuel")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("surchauffe") ||
+          x.message.toLowerCase().includes("overheat")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("huile") ||
+          x.message.toLowerCase().includes("oil")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("surcharge") ||
+          x.message.toLowerCase().includes("overload")
       ).length,
     ],
   },
 }
 
 const OPS_TYPE_LABEL: Record<string, string> = {
-  port: "Port",
-  entrepot: "Entrepôt",
-  transport: "Transport",
+  port: "Port & conteneurs",
+  entrepot: "Entrepôt & manutention",
+  transport: "Transport & distribution",
   expedition: "Expédition",
   froid: "Chaîne du froid",
-  multi: "Multi-opérations",
+  multi: "Opérations logistiques",
 }
 
 const LOGISTICS_OPS_META: Record<
   string,
-  {
-    label: string
-  }
+  (typeof SECTOR_META)["logistics"]
 > = {
-  port: {
-    label: "Port",
-  },
-  entrepot: {
-    label: "Entrepôt",
-  },
-  transport: {
-    label: "Transport",
-  },
-  expedition: {
-    label: "Expédition",
-  },
-  froid: {
-    label: "Chaîne du froid",
-  },
-  multi: {
-    label: "Multi-opérations",
-  },
+  port: SECTOR_META.logistics,
+  entrepot: SECTOR_META.logistics,
+  transport: SECTOR_META.logistics,
+  expedition: SECTOR_META.logistics,
+  froid: SECTOR_META.logistics,
+  multi: SECTOR_META.logistics,
 }
 
-function normalizeSector(value: unknown) {
-  if (typeof value !== "string") return null
-
-  const normalized = value.trim().toLowerCase()
-
-  if (!normalized) return null
-
-  if (
-    normalized === "industry" ||
-    normalized === "industrie"
-  ) {
-    return "industry"
+function getSavedLogisticsPriorities(): LogisticsPriority[] {
+  if (typeof window === "undefined") {
+    return ["blockages"]
   }
-
-  if (
-    normalized === "health" ||
-    normalized === "santé" ||
-    normalized === "sante"
-  ) {
-    return "health"
-  }
-
-  if (
-    normalized === "agriculture" ||
-    normalized === "agri"
-  ) {
-    return "agriculture"
-  }
-
-  if (
-    normalized === "transportation" ||
-    normalized === "transport"
-  ) {
-    return "transportation"
-  }
-
-  if (
-    normalized === "logistics" ||
-    normalized === "logistique"
-  ) {
-    return "logistics"
-  }
-
-  if (
-    normalized === "energy" ||
-    normalized === "énergie" ||
-    normalized === "energie"
-  ) {
-    return "energy"
-  }
-
-  return normalized
-}
-
-function normalizeAlert(raw: any): Alert {
-  return {
-    equipment:
-      raw?.equipment ??
-      raw?.asset ??
-      raw?.machine ??
-      raw?.name ??
-      "Actif inconnu",
-    message:
-      raw?.message ??
-      raw?.alert ??
-      raw?.description ??
-      "Aucune description",
-    severity:
-      raw?.severity ??
-      raw?.level ??
-      raw?.status ??
-      "WARNING",
-    date:
-      raw?.date ??
-      raw?.timestamp ??
-      raw?.created_at ??
-      new Date().toISOString(),
-    sector:
-      normalizeSector(
-        raw?.sector ??
-          raw?.secteur ??
-          raw?.category
-      ),
-  }
-}
-
-function normalizeRecommendation(raw: any): Recommendation {
-  return {
-    id: String(
-      raw?.id ??
-        raw?.recommendation_id ??
-        raw?.alert_key ??
-        `${raw?.equipment ?? "equipment"}-${raw?.date ?? "date"}`
-    ),
-    equipment:
-      raw?.equipment ??
-      raw?.asset ??
-      raw?.machine ??
-      "Actif inconnu",
-    sector:
-      normalizeSector(
-        raw?.sector ??
-          raw?.secteur ??
-          raw?.category
-      ),
-    severity:
-      raw?.severity ??
-      raw?.level ??
-      "WARNING",
-    date:
-      raw?.date ??
-      raw?.timestamp ??
-      raw?.created_at ??
-      new Date().toISOString(),
-    message:
-      raw?.message ??
-      raw?.alert ??
-      raw?.description ??
-      "",
-    risk_score:
-      raw?.risk_score ??
-      raw?.riskScore ??
-      raw?.score ??
-      null,
-    alert_key:
-      raw?.alert_key ??
-      raw?.alertKey ??
-      null,
-    recommended_action:
-      raw?.recommended_action ??
-      raw?.recommendedAction ??
-      raw?.action ??
-      raw?.recommendation ??
-      "Aucune action recommandée.",
-    action_category:
-      raw?.action_category ??
-      raw?.actionCategory ??
-      raw?.category ??
-      "Général",
-  }
-}
-
-function getStoredPriorities(): LogisticsPriority[] {
-  if (typeof window === "undefined") return []
 
   try {
-    const raw =
-      localStorage.getItem("sentria_equipment")
+    const stored = JSON.parse(
+      localStorage.getItem("sentria_equipment") || "[]"
+    )
 
-    if (!raw) return []
+    if (!Array.isArray(stored)) {
+      return ["blockages"]
+    }
 
-    const parsed = JSON.parse(raw)
-
-    if (Array.isArray(parsed)) {
-      const priorities = parsed
-        .map((item) => {
-          if (typeof item === "string") {
-            return item
-          }
-
-          return (
-            item?.priority ??
-            item?.key ??
-            item?.type ??
-            item?.equipment ??
-            null
-          )
-        })
-        .filter(Boolean)
-        .map((value) =>
-          String(value).toLowerCase()
-        )
-
-      return priorities.filter((value): value is LogisticsPriority =>
+    const valid = stored.filter(
+      (value): value is LogisticsPriority =>
         [
           "blockages",
           "wait",
@@ -724,50 +598,16 @@ function getStoredPriorities(): LogisticsPriority[] {
           "recommend",
           "resources",
         ].includes(value)
-      )
-    }
+    )
 
-    if (
-      parsed &&
-      typeof parsed === "object"
-    ) {
-      const priorities = [
-        ...(Array.isArray(parsed.priorities)
-          ? parsed.priorities
-          : []),
-        ...(Array.isArray(parsed.logisticsPriorities)
-          ? parsed.logisticsPriorities
-          : []),
-      ]
-
-      return priorities
-        .map((value) =>
-          typeof value === "string"
-            ? value
-            : value?.priority ??
-              value?.key ??
-              null
-        )
-        .filter(Boolean)
-        .map((value) =>
-          String(value).toLowerCase()
-        )
-        .filter((value): value is LogisticsPriority =>
-          [
-            "blockages",
-            "wait",
-            "cost",
-            "anticipate",
-            "recommend",
-            "resources",
-          ].includes(value)
-        )
-    }
+    return valid.length > 0 ? valid : ["blockages"]
   } catch {
-    return []
+    return ["blockages"]
   }
+}
 
-  return []
+function getSavedLogisticsPriority(): LogisticsPriority {
+  return getSavedLogisticsPriorities()[0] ?? "blockages"
 }
 
 export function DashboardView({
@@ -776,309 +616,367 @@ export function DashboardView({
   search?: string
 }) {
   const [alerts, setAlerts] = useState<Alert[]>([])
-  const [recommendations, setRecommendations] =
-    useState<Recommendation[]>([])
-  const [filterSector, setFilterSector] =
-    useState("all")
-  const [uploadSector, setUploadSector] =
-    useState("industry")
-  const [uploading, setUploading] =
-    useState(false)
-  const [uploadMsg, setUploadMsg] =
-    useState("")
-  const [selectedAlertKey, setSelectedAlertKey] =
-    useState<string | null>(null)
+  const [recommendations, setRecommendations] = useState<
+    Recommendation[]
+  >([])
+
+  const [uploadSector, setUploadSector] = useState("industry")
+
+  const [filterSector, setFilterSector] = useState(() => {
+    if (typeof window === "undefined") {
+      return "all"
+    }
+
+    const saved = localStorage.getItem("sentria_sector")
+
+    // "logistics" is a navigation state, not a persisted default sector.
+    return saved === "logistics" ? "all" : saved || "all"
+  })
+
+  const [uploading, setUploading] = useState(false)
+  const [uploadMsg, setUploadMsg] = useState("")
+
+  const [activeSectors, setActiveSectors] = useState<string[]>(() => {
+    if (typeof window === "undefined") {
+      return ["industry"]
+    }
+
+    try {
+      const stored = JSON.parse(
+        localStorage.getItem("sentria_sectors") ||
+          '["industry"]'
+      )
+
+      return Array.isArray(stored) && stored.length > 0
+        ? stored
+        : ["industry"]
+    } catch {
+      return ["industry"]
+    }
+  })
+
+  const [opsType, setOpsType] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null
+
+    return localStorage.getItem("sentria_ops_type")
+  })
+
   const [logisticsPriority, setLogisticsPriority] =
     useState<LogisticsPriority | null>(null)
+
   const [selectedLogisticsPriorities, setSelectedLogisticsPriorities] =
-    useState<LogisticsPriority[]>([])
-  const [opsType, setOpsType] =
-    useState<string | null>(null)
+    useState<LogisticsPriority[]>(() =>
+      getSavedLogisticsPriorities()
+    )
 
   useEffect(() => {
-    const loadData = async () => {
+    const refreshSectors = () => {
       try {
-        const alertsResponse = await fetch(
-          `${API}/alerts`
+        const stored = JSON.parse(
+          localStorage.getItem("sentria_sectors") ||
+            '["industry"]'
         )
 
-        if (alertsResponse.ok) {
-          const data = await alertsResponse.json()
-
-          const normalized = Array.isArray(data)
-            ? data.map(normalizeAlert)
-            : Array.isArray(data?.alerts)
-            ? data.alerts.map(normalizeAlert)
-            : []
-
-          setAlerts(normalized)
-        }
+        setActiveSectors(
+          Array.isArray(stored) && stored.length > 0
+            ? stored
+            : ["industry"]
+        )
       } catch {
-        setAlerts([])
+        setActiveSectors(["industry"])
       }
 
-      try {
-        const recommendationsResponse =
-          await fetch(
-            `${API}/recommendations`
+      setOpsType(localStorage.getItem("sentria_ops_type"))
+
+      const priorities = getSavedLogisticsPriorities()
+
+      setSelectedLogisticsPriorities(priorities)
+
+      const savedSector = localStorage.getItem("sentria_sector")
+
+      if (savedSector && savedSector !== "logistics") {
+        setFilterSector(savedSector)
+      }
+    }
+
+    const refreshPriority = () => {
+      const priorities = getSavedLogisticsPriorities()
+
+      setSelectedLogisticsPriorities(priorities)
+
+      if (
+        logisticsPriority &&
+        !priorities.includes(logisticsPriority)
+      ) {
+        setLogisticsPriority(null)
+      }
+    }
+
+    window.addEventListener(
+      "sentria_sectors_updated",
+      refreshSectors
+    )
+
+    window.addEventListener(
+      "sentria_onboarding_completed",
+      refreshSectors
+    )
+
+    window.addEventListener("storage", refreshPriority)
+
+    return () => {
+      window.removeEventListener(
+        "sentria_sectors_updated",
+        refreshSectors
+      )
+
+      window.removeEventListener(
+        "sentria_onboarding_completed",
+        refreshSectors
+      )
+
+      window.removeEventListener("storage", refreshPriority)
+    }
+  }, [logisticsPriority])
+
+  useEffect(() => {
+    if (
+      activeSectors.length > 0 &&
+      !activeSectors.includes(uploadSector)
+    ) {
+      setUploadSector(activeSectors[0])
+    }
+
+    // Logistics can be opened through its dedicated navigation button
+    // even if it is not part of the normal sector filters.
+    if (
+      filterSector !== "all" &&
+      filterSector !== "logistics" &&
+      !activeSectors.includes(filterSector)
+    ) {
+      setFilterSector("all")
+      localStorage.setItem("sentria_sector", "all")
+    }
+  }, [activeSectors, uploadSector, filterSector])
+
+  useEffect(() => {
+    fetch(`${API}/alerts`)
+      .then((r) => r.json())
+      .then((d) => {
+        setAlerts(Array.isArray(d) ? d : [])
+      })
+      .catch((err) => {
+        console.error("Failed to load alerts:", err)
+      })
+  }, [])
+
+  function refreshRecommendations() {
+    fetch(`${API}/recommendations?limit=20&lang=fr`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (!Array.isArray(d?.recommendations)) {
+          setRecommendations([])
+          return
+        }
+
+        const usedIds = new Set<string>()
+
+        const normalized: Recommendation[] =
+          d.recommendations.map(
+            (
+              rec: Omit<Recommendation, "id"> & {
+                id?: string | null
+              },
+              index: number
+            ) => {
+              const baseId =
+                rec.id ??
+                [
+                  rec.alert_key ?? "",
+                  rec.equipment,
+                  rec.date,
+                  rec.action_category,
+                  rec.recommended_action,
+                ].join("::")
+
+              let id = String(baseId)
+
+              if (usedIds.has(id)) {
+                id = `${id}::${index}`
+              }
+
+              while (usedIds.has(id)) {
+                id = `${id}::${Math.random()
+                  .toString(36)
+                  .slice(2, 8)}`
+              }
+
+              usedIds.add(id)
+
+              return {
+                ...rec,
+                id,
+              }
+            }
           )
 
-        if (recommendationsResponse.ok) {
-          const data =
-            await recommendationsResponse.json()
-
-          const normalized = Array.isArray(data)
-            ? data.map(normalizeRecommendation)
-            : Array.isArray(data?.recommendations)
-            ? data.recommendations.map(
-                normalizeRecommendation
-              )
-            : []
-
-          setRecommendations(normalized)
-        }
-      } catch {
-        setRecommendations([])
-      }
-    }
-
-    loadData()
-  }, [])
+        setRecommendations(normalized)
+      })
+      .catch((err) => {
+        console.error(
+          "Failed to load recommendations:",
+          err
+        )
+      })
+  }
 
   useEffect(() => {
-    setSelectedLogisticsPriorities(
-      getStoredPriorities()
-    )
-
-    if (typeof window !== "undefined") {
-      const storedOpsType =
-        localStorage.getItem(
-          "sentria_ops_type"
-        )
-
-      if (storedOpsType) {
-        setOpsType(
-          storedOpsType.toLowerCase()
-        )
-      }
-    }
+    refreshRecommendations()
   }, [])
 
-  const activeSectors = Array.from(
-    new Set(
-      alerts
-        .map((alert) => alert.sector)
-        .filter(
-          (sector): sector is string =>
-            Boolean(sector)
-        )
-    )
-  )
-
-  const visibleSectors =
-    activeSectors.length > 0
-      ? activeSectors
-      : [
-          "industry",
-          "health",
-          "agriculture",
-          "transportation",
-          "logistics",
-          "energy",
-        ]
-
-  const filteredAlerts = alerts.filter(
-    (alert) =>
-      filterSector === "all" ||
-      alert.sector === filterSector
-  )
-
-  const filteredRecommendations =
-    recommendations.filter(
-      (recommendation) =>
-        filterSector === "all" ||
-        recommendation.sector === filterSector
-    )
-
-  const selectedAlert =
-    selectedAlertKey
-      ? alerts.find(
-          (alert) =>
-            `${alert.equipment}-${alert.date}` ===
-            selectedAlertKey
-        ) ?? null
-      : null
-
-  const matchedRecommendation =
-    selectedAlert
-      ? recommendations.find(
-          (recommendation) => {
-            const sameEquipment =
-              recommendation.equipment ===
-              selectedAlert.equipment
-
-            const sameSector =
-              !selectedAlert.sector ||
-              !recommendation.sector ||
-              recommendation.sector ===
-                selectedAlert.sector
-
-            const sameAlertKey =
-              recommendation.alert_key ===
-              `${selectedAlert.equipment}-${selectedAlert.date}`
-
-            return (
-              sameAlertKey ||
-              (sameEquipment && sameSector)
-            )
-          }
-        ) ?? null
-      : null
-
-  const meta =
-    SECTOR_META[filterSector] ??
-    SECTOR_META.all
-
-  const kpis = meta.kpis(
-    filteredAlerts
-  )
-
-  const chartData = Array.from(
-    { length: 7 },
-    (_, index) =>
-      filteredAlerts.filter(() => true)
-        .length +
-      index
-  )
-
-  const barData =
-    meta.barData(filteredAlerts)
-
-  const openLogisticsOverview = () => {
+  function openLogisticsOverview() {
+    setFilterSector("logistics")
     setLogisticsPriority(null)
-    setFilterSector("logistics")
 
-    if (typeof window !== "undefined") {
-      const storedOpsType =
-        localStorage.getItem(
-          "sentria_ops_type"
-        )
-
-      if (storedOpsType) {
-        setOpsType(
-          storedOpsType.toLowerCase()
-        )
-      }
-
-      localStorage.setItem(
-        "sentria_sector",
-        "logistics"
-      )
-    }
+    // Do not persist "logistics" as the default sector.
+    localStorage.removeItem("sentria_sector")
   }
 
-  const openLogisticsPriority = (
-    priority: LogisticsPriority
-  ) => {
-    setFilterSector("logistics")
+  function openLogisticsPriority(priority: LogisticsPriority) {
     setLogisticsPriority(priority)
+    setFilterSector("logistics")
 
-    if (typeof window !== "undefined") {
-      localStorage.setItem(
-        "sentria_sector",
-        "logistics"
-      )
-    }
+    // Do not persist "logistics".
+    localStorage.removeItem("sentria_sector")
   }
 
-  const returnToDashboard = () => {
+  function returnToDashboard() {
     setLogisticsPriority(null)
     setFilterSector("all")
-    setSelectedAlertKey(null)
-
-    if (typeof window !== "undefined") {
-      localStorage.setItem(
-        "sentria_sector",
-        "all"
-      )
-    }
+    localStorage.setItem("sentria_sector", "all")
   }
 
-  const handleUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file =
-      event.target.files?.[0]
+  async function handleUpload(
+    e: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const file = e.target.files?.[0]
 
     if (!file) return
 
     setUploading(true)
     setUploadMsg("")
 
-    try {
-      const formData = new FormData()
-      formData.append("file", file)
-      formData.append(
-        "sector",
-        uploadSector
-      )
+    const form = new FormData()
+    form.append("file", file)
 
-      const response = await fetch(
-        `${API}/upload`,
+    try {
+      const res = await fetch(
+        `${API}/upload?sector=${uploadSector}&lang=fr` +
+          (uploadSector === "logistics" && opsType
+            ? `&ops_type=${opsType}`
+            : ""),
         {
           method: "POST",
-          body: formData,
+          body: form,
         }
       )
 
-      if (!response.ok) {
-        throw new Error(
-          "Upload failed"
-        )
+      if (!res.ok) {
+        throw new Error("Upload failed")
       }
 
-      const data =
-        await response.json()
+      const data = await res.json()
 
-      setUploadMsg(
-        data?.message ??
-          "Import terminé avec succès."
-      )
+      setUploadMsg(data.message ?? "Fichier traité.")
 
-      const alertsResponse =
-        await fetch(`${API}/alerts`)
+      await new Promise((r) => setTimeout(r, 1500))
 
-      if (alertsResponse.ok) {
-        const alertsData =
-          await alertsResponse.json()
+      const r2 = await fetch(`${API}/alerts`)
+      const d2 = await r2.json()
 
-        const normalized =
-          Array.isArray(alertsData)
-            ? alertsData.map(normalizeAlert)
-            : Array.isArray(
-                alertsData?.alerts
-              )
-            ? alertsData.alerts.map(
-                normalizeAlert
-              )
-            : []
+      setAlerts(Array.isArray(d2) ? d2 : [])
 
-        setAlerts(normalized)
-      }
-    } catch {
-      setUploadMsg(
-        "Erreur lors de l'import du fichier."
-      )
+      refreshRecommendations()
+
+      setFilterSector(uploadSector)
+      localStorage.setItem("sentria_sector", uploadSector)
+    } catch (error) {
+      console.error(error)
+      setUploadMsg("Erreur lors de l'upload.")
     } finally {
       setUploading(false)
-      event.target.value = ""
+      e.target.value = ""
     }
   }
 
-  const renderLogisticsView = () => {
+  const filteredAlerts = alerts
+    .filter(
+      (a) =>
+        filterSector === "all" ||
+        a.sector === filterSector
+    )
+    .filter((a) => {
+      if (!search.trim()) return true
+
+      const q = search.toLowerCase()
+
+      return (
+        a.equipment.toLowerCase().includes(q) ||
+        a.message.toLowerCase().includes(q) ||
+        (a.sector ?? "").toLowerCase().includes(q) ||
+        a.severity.toLowerCase().includes(q)
+      )
+    })
+
+  const filteredRecommendations = recommendations
+    .filter(
+      (r) =>
+        filterSector === "all" ||
+        r.sector === filterSector
+    )
+    .slice(0, 5)
+
+  const meta =
+    filterSector === "logistics" && opsType
+      ? LOGISTICS_OPS_META[opsType] ??
+        SECTOR_META[filterSector] ??
+        SECTOR_META.all
+      : SECTOR_META[filterSector] ?? SECTOR_META.all
+
+  const kpis = meta.kpis(filteredAlerts)
+  const barData = meta.barData(filteredAlerts)
+
+  const chartData = Array.from(
+    { length: 7 },
+    (_, i) => {
+      const d = new Date()
+
+      d.setHours(0, 0, 0, 0)
+      d.setDate(d.getDate() - (6 - i))
+
+      return filteredAlerts.filter((a) => {
+        const alertDate = new Date(a.date)
+
+        return (
+          alertDate.getFullYear() === d.getFullYear() &&
+          alertDate.getMonth() === d.getMonth() &&
+          alertDate.getDate() === d.getDate()
+        )
+      }).length
+    }
+  )
+
+  if (filterSector === "logistics") {
     const normalizedOpsType =
       opsType &&
-      LOGISTICS_OPS_META[opsType]
+      [
+        "port",
+        "entrepot",
+        "transport",
+        "expedition",
+        "froid",
+        "multi",
+      ].includes(opsType)
         ? (opsType as
             | "port"
             | "entrepot"
@@ -1088,6 +986,13 @@ export function DashboardView({
             | "multi")
         : undefined
 
+    /*
+     * LOGISTICS OVERVIEW
+     *
+     * When the user clicks "Logistique" from the sector selector,
+     * logisticsPriority is null, so we show the overview instead
+     * of automatically opening Blocages.
+     */
     if (logisticsPriority === null) {
       return (
         <div className="space-y-6">
@@ -1368,20 +1273,6 @@ export function DashboardView({
         )}
       </div>
     )
-  }
-
-  if (
-    filterSector === "logistics" &&
-    logisticsPriority !== null
-  ) {
-    return renderLogisticsView()
-  }
-
-  if (
-    filterSector === "logistics" &&
-    logisticsPriority === null
-  ) {
-    return renderLogisticsView()
   }
 
   return (
@@ -1672,255 +1563,111 @@ export function DashboardView({
         </p>
       </div>
 
-      {/* ALERTS + DETAIL */}
       <div
-        className={cn(
-          "grid gap-4",
-          selectedAlert
-            ? "grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]"
-            : "grid-cols-1"
-        )}
+        id="alerts-table"
+        className="rounded-3xl border border-border bg-card"
       >
-        {/* ALERT LIST */}
-        <div
-          id="alerts-table"
-          className="rounded-3xl border border-border bg-card"
-        >
-          <div className="flex items-center justify-between p-6 pb-4">
-            <div className="flex items-center gap-2">
-              <Cpu className="h-5 w-5" />
+        <div className="flex items-center justify-between p-6 pb-4">
+          <div className="flex items-center gap-2">
+            <Cpu className="h-5 w-5" />
 
-              <h3 className="font-heading text-lg font-bold">
-                Alertes ·{" "}
-                {
-                  SECTORS.find(
-                    (s) => s.key === filterSector
-                  )?.label
-                }
-              </h3>
-            </div>
-
-            <button className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90">
-              Tout voir
-              <ArrowUpRight className="h-4 w-4" />
-            </button>
+            <h3 className="font-heading text-lg font-bold">
+              Alertes ·{" "}
+              {
+                SECTORS.find(
+                  (s) => s.key === filterSector
+                )?.label
+              }
+            </h3>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-y border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
-                  <th className="px-6 py-3 font-medium">
-                    Actif
-                  </th>
-
-                  <th className="px-6 py-3 font-medium">
-                    Message
-                  </th>
-
-                  <th className="px-6 py-3 font-medium">
-                    Secteur
-                  </th>
-
-                  <th className="px-6 py-3 font-medium">
-                    Sévérité
-                  </th>
-
-                  <th className="px-6 py-3 font-medium">
-                    Date
-                  </th>
-
-                  <th className="w-10 px-3 py-3" />
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredAlerts
-                  .slice(0, 20)
-                  .map((alert, i) => {
-                    const alertKey = `${alert.equipment}-${alert.date}`
-                    const isSelected =
-                      selectedAlertKey === alertKey
-
-                    return (
-                      <tr
-                        key={`${alert.equipment}-${alert.date}-${i}`}
-                        onClick={() =>
-                          setSelectedAlertKey(
-                            isSelected ? null : alertKey
-                          )
-                        }
-                        className={cn(
-                          "cursor-pointer border-b border-border last:border-0 transition-colors hover:bg-muted/50",
-                          isSelected && "bg-muted/50"
-                        )}
-                      >
-                        <td className="px-6 py-4 font-semibold">
-                          {alert.equipment}
-                        </td>
-
-                        <td className="px-6 py-4 text-muted-foreground">
-                          {alert.message}
-                        </td>
-
-                        <td className="px-6 py-4 capitalize text-muted-foreground">
-                          {alert.sector ?? "N/A"}
-                        </td>
-
-                        <td className="px-6 py-4">
-                          <span
-                            className={cn(
-                              "rounded-full px-2.5 py-1 text-xs font-semibold",
-                              alert.severity === "CRITICAL"
-                                ? "bg-destructive/10 text-destructive"
-                                : "bg-amber-500/15 text-amber-600"
-                            )}
-                          >
-                            {alert.severity}
-                          </span>
-                        </td>
-
-                        <td className="px-6 py-4 text-muted-foreground">
-                          {new Date(
-                            alert.date
-                          ).toLocaleString("fr-FR")}
-                        </td>
-
-                        {/* CLICKABLE INDICATOR */}
-                        <td className="px-3 py-4 text-muted-foreground">
-                          <ChevronRight
-                            className={cn(
-                              "h-4 w-4 transition-transform",
-                              isSelected && "rotate-90"
-                            )}
-                          />
-                        </td>
-                      </tr>
-                    )
-                  })}
-
-                {filteredAlerts.length === 0 && (
-                  <tr>
-                    <td
-                      className="px-6 py-8 text-muted-foreground"
-                      colSpan={6}
-                    >
-                      Aucune alerte pour ce secteur.
-                      Importez un CSV.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <button className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90">
+            Tout voir
+            <ArrowUpRight className="h-4 w-4" />
+          </button>
         </div>
 
-        {/* BLACK ALERT DETAIL — ONLY VISIBLE AFTER CLICK */}
-        {selectedAlert && (
-          <div className="h-fit rounded-3xl bg-foreground p-6 text-background">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-background/50">
-                  Détail de l'alerte
-                </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-y border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
+                <th className="px-6 py-3 font-medium">
+                  Actif
+                </th>
 
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <h4 className="font-heading text-xl font-bold">
-                    {selectedAlert.equipment}
-                  </h4>
+                <th className="px-6 py-3 font-medium">
+                  Message
+                </th>
 
-                  <span
-                    className={cn(
-                      "rounded-full px-2.5 py-1 text-xs font-semibold",
-                      selectedAlert.severity === "CRITICAL"
-                        ? "bg-destructive text-destructive-foreground"
-                        : "bg-amber-500 text-black"
-                    )}
-                  >
-                    {selectedAlert.severity}
-                  </span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setSelectedAlertKey(null)}
-                className="rounded-full p-2 text-background/60 transition-colors hover:bg-background/10 hover:text-background"
-                aria-label="Fermer le détail"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-1">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-background/50">
+                <th className="px-6 py-3 font-medium">
                   Secteur
-                </p>
+                </th>
 
-                <p className="mt-1 text-sm font-medium capitalize">
-                  {selectedAlert.sector ?? "N/A"}
-                </p>
-              </div>
+                <th className="px-6 py-3 font-medium">
+                  Sévérité
+                </th>
 
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-background/50">
+                <th className="px-6 py-3 font-medium">
                   Date
-                </p>
+                </th>
+              </tr>
+            </thead>
 
-                <p className="mt-1 text-sm font-medium">
-                  {new Date(
-                    selectedAlert.date
-                  ).toLocaleString("fr-FR")}
-                </p>
-              </div>
+            <tbody>
+              {filteredAlerts
+                .slice(0, 20)
+                .map((alert, i) => (
+                  <tr
+                    key={`${alert.equipment}-${alert.date}-${i}`}
+                    className="border-b border-border last:border-0 transition-colors hover:bg-muted/50"
+                  >
+                    <td className="px-6 py-4 font-semibold">
+                      {alert.equipment}
+                    </td>
 
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-background/50">
-                  Niveau de risque
-                </p>
+                    <td className="px-6 py-4 text-muted-foreground">
+                      {alert.message}
+                    </td>
 
-                <p className="mt-1 text-sm font-medium">
-                  {matchedRecommendation?.risk_score != null
-                    ? `${matchedRecommendation.risk_score}/100`
-                    : selectedAlert.severity === "CRITICAL"
-                    ? "Critique"
-                    : "À surveiller"}
-                </p>
-              </div>
-            </div>
+                    <td className="px-6 py-4 capitalize text-muted-foreground">
+                      {alert.sector ?? "N/A"}
+                    </td>
 
-            <div className="mt-6">
-              <p className="text-xs font-semibold uppercase tracking-wide text-background/50">
-                Message
-              </p>
+                    <td className="px-6 py-4">
+                      <span
+                        className={cn(
+                          "rounded-full px-2.5 py-1 text-xs font-semibold",
+                          alert.severity === "CRITICAL"
+                            ? "bg-destructive/10 text-destructive"
+                            : "bg-amber-500/15 text-amber-600"
+                        )}
+                      >
+                        {alert.severity}
+                      </span>
+                    </td>
 
-              <p className="mt-2 text-sm leading-6 text-background/80">
-                {selectedAlert.message}
-              </p>
-            </div>
+                    <td className="px-6 py-4 text-muted-foreground">
+                      {new Date(
+                        alert.date
+                      ).toLocaleString("fr-FR")}
+                    </td>
+                  </tr>
+                ))}
 
-            {matchedRecommendation && (
-              <div className="mt-6 border-t border-background/10 pt-5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-background/50">
-                  Recommandation
-                </p>
-
-                <p className="mt-2 text-sm leading-6 text-background/80">
-                  {matchedRecommendation.recommended_action}
-                </p>
-
-                <button
-                  type="button"
-                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-background px-4 py-2 text-sm font-semibold text-foreground transition-opacity hover:opacity-90"
-                >
-                  Voir la recommandation
-                  <ArrowUpRight className="h-4 w-4" />
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+              {filteredAlerts.length === 0 && (
+                <tr>
+                  <td
+                    className="px-6 py-8 text-muted-foreground"
+                    colSpan={5}
+                  >
+                    Aucune alerte pour ce secteur.
+                    Importez un CSV.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )
