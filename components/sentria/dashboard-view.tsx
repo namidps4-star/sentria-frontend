@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useState } from "react"
@@ -12,6 +11,8 @@ import {
   Zap,
   Upload,
   Shield,
+  ChevronRight,
+  X,
 } from "lucide-react"
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
@@ -629,7 +630,6 @@ export function DashboardView({
 
     const saved = localStorage.getItem("sentria_sector")
 
-    // "logistics" is a navigation state, not a persisted default sector.
     return saved === "logistics" ? "all" : saved || "all"
   })
 
@@ -668,6 +668,9 @@ export function DashboardView({
     useState<LogisticsPriority[]>(() =>
       getSavedLogisticsPriorities()
     )
+
+  const [selectedAlertKey, setSelectedAlertKey] =
+    useState<string | null>(null)
 
   useEffect(() => {
     const refreshSectors = () => {
@@ -747,8 +750,6 @@ export function DashboardView({
       setUploadSector(activeSectors[0])
     }
 
-    // Logistics can be opened through its dedicated navigation button
-    // even if it is not part of the normal sector filters.
     if (
       filterSector !== "all" &&
       filterSector !== "logistics" &&
@@ -838,7 +839,6 @@ export function DashboardView({
     setFilterSector("logistics")
     setLogisticsPriority(null)
 
-    // Do not persist "logistics" as the default sector.
     localStorage.removeItem("sentria_sector")
   }
 
@@ -846,7 +846,6 @@ export function DashboardView({
     setLogisticsPriority(priority)
     setFilterSector("logistics")
 
-    // Do not persist "logistics".
     localStorage.removeItem("sentria_sector")
   }
 
@@ -966,6 +965,28 @@ export function DashboardView({
     }
   )
 
+  const selectedAlert =
+    filteredAlerts.find(
+      (a) =>
+        `${a.equipment}-${a.date}` === selectedAlertKey
+    ) ?? null
+
+  const matchedRecommendation =
+    selectedAlert
+      ? recommendations.find(
+          (r) =>
+            (r.alert_key &&
+              r.alert_key ===
+                `${selectedAlert.equipment}-${selectedAlert.date}`) ||
+            (r.equipment === selectedAlert.equipment &&
+              r.date === selectedAlert.date)
+        ) ??
+        recommendations.find(
+          (r) => r.equipment === selectedAlert.equipment
+        ) ??
+        null
+      : null
+
   if (filterSector === "logistics") {
     const normalizedOpsType =
       opsType &&
@@ -986,13 +1007,6 @@ export function DashboardView({
             | "multi")
         : undefined
 
-    /*
-     * LOGISTICS OVERVIEW
-     *
-     * When the user clicks "Logistique" from the sector selector,
-     * logisticsPriority is null, so we show the overview instead
-     * of automatically opening Blocages.
-     */
     if (logisticsPriority === null) {
       return (
         <div className="space-y-6">
@@ -1610,55 +1624,80 @@ export function DashboardView({
                 <th className="px-6 py-3 font-medium">
                   Date
                 </th>
+
+                <th className="w-10 px-3 py-3" />
               </tr>
             </thead>
 
             <tbody>
               {filteredAlerts
                 .slice(0, 20)
-                .map((alert, i) => (
-                  <tr
-                    key={`${alert.equipment}-${alert.date}-${i}`}
-                    className="border-b border-border last:border-0 transition-colors hover:bg-muted/50"
-                  >
-                    <td className="px-6 py-4 font-semibold">
-                      {alert.equipment}
-                    </td>
+                .map((alert, i) => {
+                  const alertKey = `${alert.equipment}-${alert.date}`
+                  const isSelected =
+                    selectedAlertKey === alertKey
 
-                    <td className="px-6 py-4 text-muted-foreground">
-                      {alert.message}
-                    </td>
+                  return (
+                    <tr
+                      key={`${alert.equipment}-${alert.date}-${i}`}
+                      onClick={() =>
+                        setSelectedAlertKey(
+                          isSelected ? null : alertKey
+                        )
+                      }
+                      className={cn(
+                        "cursor-pointer border-b border-border last:border-0 transition-colors hover:bg-muted/50",
+                        isSelected && "bg-muted/50"
+                      )}
+                    >
+                      <td className="px-6 py-4 font-semibold">
+                        {alert.equipment}
+                      </td>
 
-                    <td className="px-6 py-4 capitalize text-muted-foreground">
-                      {alert.sector ?? "N/A"}
-                    </td>
+                      <td className="px-6 py-4 text-muted-foreground">
+                        {alert.message}
+                      </td>
 
-                    <td className="px-6 py-4">
-                      <span
-                        className={cn(
-                          "rounded-full px-2.5 py-1 text-xs font-semibold",
-                          alert.severity === "CRITICAL"
-                            ? "bg-destructive/10 text-destructive"
-                            : "bg-amber-500/15 text-amber-600"
-                        )}
-                      >
-                        {alert.severity}
-                      </span>
-                    </td>
+                      <td className="px-6 py-4 capitalize text-muted-foreground">
+                        {alert.sector ?? "N/A"}
+                      </td>
 
-                    <td className="px-6 py-4 text-muted-foreground">
-                      {new Date(
-                        alert.date
-                      ).toLocaleString("fr-FR")}
-                    </td>
-                  </tr>
-                ))}
+                      <td className="px-6 py-4">
+                        <span
+                          className={cn(
+                            "rounded-full px-2.5 py-1 text-xs font-semibold",
+                            alert.severity === "CRITICAL"
+                              ? "bg-destructive/10 text-destructive"
+                              : "bg-amber-500/15 text-amber-600"
+                          )}
+                        >
+                          {alert.severity}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4 text-muted-foreground">
+                        {new Date(
+                          alert.date
+                        ).toLocaleString("fr-FR")}
+                      </td>
+
+                      <td className="px-3 py-4 text-muted-foreground">
+                        <ChevronRight
+                          className={cn(
+                            "h-4 w-4 transition-transform",
+                            isSelected && "rotate-90"
+                          )}
+                        />
+                      </td>
+                    </tr>
+                  )
+                })}
 
               {filteredAlerts.length === 0 && (
                 <tr>
                   <td
                     className="px-6 py-8 text-muted-foreground"
-                    colSpan={5}
+                    colSpan={6}
                   >
                     Aucune alerte pour ce secteur.
                     Importez un CSV.
@@ -1668,6 +1707,112 @@ export function DashboardView({
             </tbody>
           </table>
         </div>
+
+        {selectedAlert && (
+          <div className="mx-6 mb-6 mt-4 rounded-3xl bg-foreground p-6 text-background">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-background/50">
+                  Détail de l'alerte
+                </p>
+
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <h4 className="font-heading text-xl font-bold">
+                    {selectedAlert.equipment}
+                  </h4>
+
+                  <span
+                    className={cn(
+                      "rounded-full px-2.5 py-1 text-xs font-semibold",
+                      selectedAlert.severity === "CRITICAL"
+                        ? "bg-destructive text-destructive-foreground"
+                        : "bg-amber-500 text-black"
+                    )}
+                  >
+                    {selectedAlert.severity}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedAlertKey(null)}
+                className="rounded-full p-2 text-background/60 transition-colors hover:bg-background/10 hover:text-background"
+                aria-label="Fermer le détail"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-background/50">
+                  Secteur
+                </p>
+
+                <p className="mt-1 text-sm font-medium capitalize">
+                  {selectedAlert.sector ?? "N/A"}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-background/50">
+                  Date
+                </p>
+
+                <p className="mt-1 text-sm font-medium">
+                  {new Date(
+                    selectedAlert.date
+                  ).toLocaleString("fr-FR")}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-background/50">
+                  Niveau de risque
+                </p>
+
+                <p className="mt-1 text-sm font-medium">
+                  {matchedRecommendation?.risk_score != null
+                    ? `${matchedRecommendation.risk_score}/100`
+                    : selectedAlert.severity === "CRITICAL"
+                    ? "Critique"
+                    : "À surveiller"}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <p className="text-xs font-semibold uppercase tracking-wide text-background/50">
+                Message
+              </p>
+
+              <p className="mt-2 text-sm leading-6 text-background/80">
+                {selectedAlert.message}
+              </p>
+            </div>
+
+            {matchedRecommendation && (
+              <div className="mt-6 border-t border-background/10 pt-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-background/50">
+                  Recommandation
+                </p>
+
+                <p className="mt-2 text-sm leading-6 text-background/80">
+                  {matchedRecommendation.recommended_action}
+                </p>
+
+                <button
+                  type="button"
+                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-background px-4 py-2 text-sm font-semibold text-foreground transition-opacity hover:opacity-90"
+                >
+                  Voir la recommandation
+                  <ArrowUpRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
