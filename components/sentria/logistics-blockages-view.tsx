@@ -19,7 +19,6 @@ import {
   MapPin,
   PackageCheck,
   PackageOpen,
-  Plus,
   Radar,
   Send,
   ShieldCheck,
@@ -360,35 +359,6 @@ const stateStyle = {
 const stateLabel: Record<StageStatus, string> = { good: "Fluide", watch: "Sous tension", risk: "Rupture" }
 
 /* ------------------------------------------------------------------ */
-/*  Decorative watermark — dashed grid + soft dots, brand texture      */
-/*  used behind key panels so they feel graphic rather than flat.      */
-/* ------------------------------------------------------------------ */
-
-function GridDots({ variant = "light" }: { variant?: "light" | "dark" }) {
-  const line = variant === "dark" ? "rgba(255,255,255,0.09)" : "rgba(20,21,15,0.06)"
-  const dot = variant === "dark" ? "rgba(255,255,255,0.16)" : "rgba(20,21,15,0.07)"
-  const patternId = `grid-dots-${variant}`
-
-  return (
-    <svg
-      aria-hidden
-      className="pointer-events-none absolute inset-0 h-full w-full"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <defs>
-        <pattern id={patternId} width="56" height="56" patternUnits="userSpaceOnUse">
-          <path d="M 56 0 L 0 0 0 56" fill="none" stroke={line} strokeWidth="1" strokeDasharray="3 4" />
-        </pattern>
-      </defs>
-      <rect width="100%" height="100%" fill={`url(#${patternId})`} />
-      <circle cx="14%" cy="28%" r="13" fill={dot} />
-      <circle cx="87%" cy="65%" r="9" fill={dot} />
-      <circle cx="48%" cy="88%" r="7" fill={dot} />
-    </svg>
-  )
-}
-
-/* ------------------------------------------------------------------ */
 /*  Port yard — 3D live preview of the "cour" stage                    */
 /* ------------------------------------------------------------------ */
 
@@ -637,14 +607,8 @@ export function LogisticsBlockagesView({
   return (
     <div className="mx-auto max-w-7xl space-y-4 pb-10">
       {/* HEADER */}
-      <section className="relative overflow-hidden rounded-3xl border-2 border-foreground/10 bg-card p-6 sm:p-8">
-        <GridDots variant="light" />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-24 -top-28 h-72 w-72 rounded-full bg-accent/25 blur-3xl"
-        />
-
-        <div className="relative flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+      <section className="rounded-3xl border border-border bg-card p-6 sm:p-8">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <span className="inline-flex items-center gap-2 rounded-full bg-accent/20 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-accent-foreground">
               <Radar className="h-3.5 w-3.5" />
@@ -652,7 +616,7 @@ export function LogisticsBlockagesView({
             </span>
 
             <h2 className="mt-4 font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-              Votre flux, <span className="text-accent-foreground">avant</span> qu&apos;il ne casse.
+              Votre flux, avant qu&apos;il ne casse.
             </h2>
 
             <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
@@ -662,11 +626,7 @@ export function LogisticsBlockagesView({
             </p>
           </div>
 
-          <div className="relative flex shrink-0 items-center gap-4 overflow-hidden rounded-2xl bg-foreground p-4 text-background">
-            <GridDots variant="dark" />
-            <Plus className="pointer-events-none absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-background/25" />
-            <Plus className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-background/25" />
-
+          <div className="flex shrink-0 items-center gap-4 rounded-2xl bg-foreground p-4 text-background">
             <div
               className="relative grid h-14 w-14 shrink-0 place-items-center rounded-full"
               style={{
@@ -678,7 +638,7 @@ export function LogisticsBlockagesView({
               </div>
             </div>
 
-            <div className="relative">
+            <div>
               <p className="text-xs font-medium text-background/60">
                 Risque global
               </p>
@@ -691,7 +651,7 @@ export function LogisticsBlockagesView({
         </div>
 
         {/* STAGE PIPELINE */}
-        <div className="relative mt-8 overflow-x-auto pb-1">
+        <div className="mt-8 overflow-x-auto pb-1">
           <div
             className="flex items-center justify-between gap-1"
             style={{ minWidth: Math.max(stages.length * 120, 480) }}
@@ -737,18 +697,12 @@ export function LogisticsBlockagesView({
                   </button>
 
                   {index < stages.length - 1 && (
-                    <div className="relative mx-1 flex-1">
-                      <div
-                        className={cn(
-                          "h-1 rounded-full",
-                          stage.status === "risk" ? "bg-destructive/30" : "bg-accent/30"
-                        )}
-                      />
-                      <Plus
-                        aria-hidden
-                        className="pointer-events-none absolute left-1/2 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 text-muted-foreground/50"
-                      />
-                    </div>
+                    <div
+                      className={cn(
+                        "mx-1 h-1 flex-1 rounded-full",
+                        stage.status === "risk" ? "bg-destructive/30" : "bg-accent/30"
+                      )}
+                    />
                   )}
                 </div>
               )
@@ -757,7 +711,7 @@ export function LogisticsBlockagesView({
         </div>
 
         {/* SELECTED STAGE BANNER */}
-        <div className="relative mt-6 flex items-center gap-3 rounded-2xl border-2 border-destructive/20 bg-destructive/10 p-4">
+        <div className="mt-6 flex items-center gap-3 rounded-2xl bg-destructive/10 p-4">
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-destructive text-white">
             <SelectedIcon className="h-4 w-4" />
           </span>
@@ -770,10 +724,8 @@ export function LogisticsBlockagesView({
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(300px,.8fr)]">
         {/* MAIN FLAGSHIP CARD */}
-        <section className="relative overflow-hidden rounded-3xl border-2 border-foreground/10 bg-card">
-          <GridDots variant="light" />
-
-          <div className="relative border-b-2 border-border p-6 sm:p-8">
+        <section className="overflow-hidden rounded-3xl border border-border bg-card">
+          <div className="border-b border-border p-6 sm:p-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-destructive/10 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-destructive">
@@ -798,7 +750,7 @@ export function LogisticsBlockagesView({
             {/* SIGNALS */}
             <div className="mt-8 grid gap-3 sm:grid-cols-3">
               {flagship.signals.map((signal) => (
-                <div key={signal.label} className="rounded-2xl border border-border/60 bg-muted/60 p-4">
+                <div key={signal.label} className="rounded-2xl bg-muted/60 p-4">
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="text-xs text-muted-foreground">
                       {signal.label}
@@ -830,16 +782,14 @@ export function LogisticsBlockagesView({
             )}
           </div>
 
-          <div className="relative grid gap-4 p-6 sm:p-8 lg:grid-cols-[.7fr_1.3fr]">
+          <div className="grid gap-4 p-6 sm:p-8 lg:grid-cols-[.7fr_1.3fr]">
             {/* TIMELINE - dark card */}
-            <div className="relative overflow-hidden rounded-2xl bg-foreground p-5 text-background">
-              <GridDots variant="dark" />
-
-              <p className="relative text-[11px] font-bold uppercase tracking-wide text-background/50">
+            <div className="rounded-2xl bg-foreground p-5 text-background">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-background/50">
                 Si rien ne change
               </p>
 
-              <div className="relative mt-5 space-y-4 border-l border-dashed border-background/25 pl-4 text-sm">
+              <div className="mt-5 space-y-4 border-l border-dashed border-background/25 pl-4 text-sm">
                 {flagship.projection.map((step) => (
                   <p key={step.time} className="relative">
                     {step.tone && (
@@ -856,7 +806,7 @@ export function LogisticsBlockagesView({
                 ))}
               </div>
 
-              <p className="relative mt-5 font-heading text-2xl font-bold">
+              <p className="mt-5 font-heading text-2xl font-bold">
                 {flagship.costEstimate}{" "}
                 <span className="text-sm font-normal text-background/50">
                   de coût potentiel
@@ -912,7 +862,7 @@ export function LogisticsBlockagesView({
               <button
                 onClick={() => setApplied(!applied)}
                 className={cn(
-                  "mt-5 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold tracking-tight transition-all duration-200",
+                  "mt-5 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all duration-200",
                   applied
                     ? "bg-accent text-accent-foreground"
                     : "bg-foreground text-background hover:opacity-90"
@@ -926,10 +876,8 @@ export function LogisticsBlockagesView({
         </section>
 
         {/* SIDEBAR: BREAKPOINTS ACCORDION */}
-        <aside className="relative overflow-hidden rounded-3xl border-2 border-foreground/10 bg-card p-5 sm:p-6">
-          <GridDots variant="light" />
-
-          <div className="relative flex items-center justify-between">
+        <aside className="rounded-3xl border border-border bg-card p-5 sm:p-6">
+          <div className="flex items-center justify-between">
             <div>
               <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
                 Points de rupture
@@ -944,7 +892,7 @@ export function LogisticsBlockagesView({
             </span>
           </div>
 
-          <div className="relative mt-5 space-y-2.5">
+          <div className="mt-5 space-y-2.5">
             {config.breakpoints.map((point) => {
               const active = point.primitiveId === selected
               const isOpen = expandedBreakpoint === point.primitiveId
@@ -1047,7 +995,7 @@ export function LogisticsBlockagesView({
             })}
           </div>
 
-          <div className="relative mt-6 flex items-center gap-3 rounded-2xl border border-accent/30 bg-accent/15 p-4">
+          <div className="mt-6 flex items-center gap-3 rounded-2xl bg-accent/15 p-4">
             <PackageCheck className="h-5 w-5 shrink-0 text-accent-foreground" />
             <p className="text-xs leading-relaxed text-muted-foreground">{flagship.footerNote}</p>
           </div>
