@@ -12,10 +12,9 @@ import {
   Upload,
   Sparkles,
   Shield,
-  Download,
   Search,
   X,
-  ChevronDown,
+  ChevronRight,
 } from "lucide-react"
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
@@ -850,20 +849,14 @@ export function DashboardView({
   const [logisticsPriority, setLogisticsPriority] =
     useState<LogisticsPriority>(() => getSavedLogisticsPriority())
 
-  // --- Filtres locaux de la table d'alertes + panneau de détail au clic ---
-  // Purement présentationnel, n'affecte aucune donnée existante.
+  // --- Alerts table filter bar + detail panel state (additive, doesn't touch business logic above) ---
   const [statusFilter, setStatusFilter] = useState<
-    "all" | "critical" | "warning"
+    "all" | "CRITICAL" | "WARNING"
   >("all")
-  const [periodFilter, setPeriodFilter] = useState<"all" | "7" | "30">("all")
-  const [tableQuery, setTableQuery] = useState("")
-  const [selectedAlertKey, setSelectedAlertKey] = useState<string | null>(
-    null
-  )
-
-  useEffect(() => {
-    setSelectedAlertKey(null)
-  }, [filterSector, statusFilter, periodFilter, tableQuery])
+  const [dateFrom, setDateFrom] = useState("")
+  const [dateTo, setDateTo] = useState("")
+  const [tableSearch, setTableSearch] = useState("")
+  const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null)
 
   useEffect(() => {
     const refreshSectors = () => {
@@ -1087,37 +1080,34 @@ export function DashboardView({
       )
     })
 
-  const filteredRecommendations = recommendations
-    .filter(
-      (r) =>
-        filterSector === "all" ||
-        r.sector === filterSector
-    )
-    .slice(0, 5)
-
-  // --- Table d'alertes : filtres statut / période / recherche locale ---
-  const periodMs =
-    periodFilter === "7"
-      ? 7 * 24 * 60 * 60 * 1000
-      : periodFilter === "30"
-      ? 30 * 24 * 60 * 60 * 1000
-      : null
-
+  // Extra layer applied only to the alerts table below (KPIs/charts above keep
+  // using `filteredAlerts` untouched, per the "don't touch existing logic" rule).
   const tableAlerts = filteredAlerts.filter((a) => {
-    if (statusFilter === "critical" && a.severity !== "CRITICAL")
-      return false
-    if (statusFilter === "warning" && a.severity !== "WARNING") return false
-
-    if (periodMs && Date.now() - new Date(a.date).getTime() > periodMs) {
+    if (statusFilter !== "all" && a.severity !== statusFilter) {
       return false
     }
 
-    if (tableQuery.trim()) {
-      const q = tableQuery.toLowerCase()
+    if (dateFrom) {
+      const from = new Date(dateFrom)
+      from.setHours(0, 0, 0, 0)
+
+      if (new Date(a.date) < from) return false
+    }
+
+    if (dateTo) {
+      const to = new Date(dateTo)
+      to.setHours(23, 59, 59, 999)
+
+      if (new Date(a.date) > to) return false
+    }
+
+    if (tableSearch.trim()) {
+      const q = tableSearch.toLowerCase()
 
       if (
         !a.equipment.toLowerCase().includes(q) &&
-        !a.message.toLowerCase().includes(q)
+        !a.message.toLowerCase().includes(q) &&
+        !(a.sector ?? "").toLowerCase().includes(q)
       ) {
         return false
       }
@@ -1126,22 +1116,16 @@ export function DashboardView({
     return true
   })
 
-  const selectedAlert =
-    tableAlerts.find(
-      (a) => `${a.equipment}-${a.date}` === selectedAlertKey
-    ) ?? null
+  const tableFiltersActive =
+    statusFilter !== "all" || !!dateFrom || !!dateTo || !!tableSearch
 
-  const matchedRecommendation = selectedAlert
-    ? recommendations.find(
-        (r) =>
-          r.equipment === selectedAlert.equipment &&
-          r.date === selectedAlert.date
-      ) ??
-      recommendations.find(
-        (r) => r.equipment === selectedAlert.equipment
-      ) ??
-      null
-    : null
+  const filteredRecommendations = recommendations
+    .filter(
+      (r) =>
+        filterSector === "all" ||
+        r.sector === filterSector
+    )
+    .slice(0, 5)
 
   const meta =
     (filterSector === "logistics" && opsType
@@ -1340,66 +1324,47 @@ export function DashboardView({
 
       {/* KPIs */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {kpis.map((k) => {
-          const maxSpark = Math.max(...k.spark, 1)
-          const trackPct = Math.min(
-            100,
-            Math.round((k.spark[k.spark.length - 1] / maxSpark) * 100)
-          )
+        {kpis.map((k) => (
+          <div
+            key={k.label}
+            className="rounded-3xl border border-border bg-card p-5"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm text-muted-foreground">
+                {k.label}
+              </span>
 
-          return (
-            <div
-              key={k.label}
-              className="rounded-3xl border border-border bg-card p-5"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-sm text-muted-foreground">
-                  {k.label}
-                </span>
-
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
-                    k.up
-                      ? "bg-accent/25 text-accent-foreground"
-                      : "bg-destructive/10 text-destructive"
-                  )}
-                >
-                  {k.up ? (
-                    <TrendingUp className="h-3 w-3" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3" />
-                  )}
-
-                  {k.delta}
-                </span>
-              </div>
-
-              <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
-                {k.value}
-              </p>
-
-              <Sparkline
-                data={k.spark}
+              <span
                 className={cn(
-                  "mt-2 h-9 w-full",
-                  k.up ? "text-accent" : "text-destructive"
+                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
+                  k.up
+                    ? "bg-accent/25 text-accent-foreground"
+                    : "bg-destructive/10 text-destructive"
                 )}
-              />
+              >
+                {k.up ? (
+                  <TrendingUp className="h-3 w-3" />
+                ) : (
+                  <TrendingDown className="h-3 w-3" />
+                )}
 
-              {/* Accent inspiré de la référence : fine barre de tendance sous le sparkline */}
-              <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className={cn(
-                    "h-full rounded-full",
-                    k.up ? "bg-accent" : "bg-destructive"
-                  )}
-                  style={{ width: `${trackPct}%` }}
-                />
-              </div>
+                {k.delta}
+              </span>
             </div>
-          )
-        })}
+
+            <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
+              {k.value}
+            </p>
+
+            <Sparkline
+              data={k.spark}
+              className={cn(
+                "mt-2 h-9 w-full",
+                k.up ? "text-accent" : "text-destructive"
+              )}
+            />
+          </div>
+        ))}
       </div>
 
       {/* CHARTS */}
@@ -1536,63 +1501,115 @@ export function DashboardView({
             </h3>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted">
-              <Download className="h-4 w-4" />
-              Exporter
-            </button>
-
-            <button className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90">
-              Tout voir
-              <ArrowUpRight className="h-4 w-4" />
-            </button>
-          </div>
+          <button className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90">
+            Tout voir
+            <ArrowUpRight className="h-4 w-4" />
+          </button>
         </div>
 
-        {/* FILTER BAR */}
-        <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-4">
-          <div className="relative">
-            <select
-              value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter(
-                  e.target.value as "all" | "critical" | "warning"
-                )
-              }
-              className="appearance-none rounded-full border border-border bg-background py-2 pl-4 pr-9 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-muted"
-            >
-              <option value="all">Tous les statuts</option>
-              <option value="critical">Critiques</option>
-              <option value="warning">Warnings</option>
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          </div>
+        {/* Detail panel — same dark surface as the hero, only appears on row click */}
+        {selectedAlert && (
+          <div className="mx-6 mb-4 flex flex-col gap-4 rounded-3xl bg-foreground p-5 text-background sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span
+                  className={cn(
+                    "rounded-full px-2.5 py-1 text-xs font-semibold",
+                    selectedAlert.severity === "CRITICAL"
+                      ? "bg-destructive/20 text-destructive"
+                      : "bg-accent/25 text-accent-foreground"
+                  )}
+                >
+                  {selectedAlert.severity}
+                </span>
 
-          <div className="relative">
-            <select
-              value={periodFilter}
-              onChange={(e) =>
-                setPeriodFilter(e.target.value as "all" | "7" | "30")
-              }
-              className="appearance-none rounded-full border border-border bg-background py-2 pl-4 pr-9 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-muted"
-            >
-              <option value="all">Toutes les dates</option>
-              <option value="7">7 derniers jours</option>
-              <option value="30">30 derniers jours</option>
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          </div>
+                <span className="text-xs capitalize text-background/60">
+                  {selectedAlert.sector ?? "N/A"}
+                </span>
 
-          <div className="relative ml-auto w-full sm:w-64">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <span className="text-xs text-background/40">
+                  {new Date(selectedAlert.date).toLocaleString("fr-FR")}
+                </span>
+              </div>
+
+              <h4 className="mt-2 font-heading text-xl font-bold">
+                {selectedAlert.equipment}
+              </h4>
+
+              <p className="mt-1 max-w-xl text-sm text-background/70">
+                {selectedAlert.message}
+              </p>
+            </div>
+
+            <button
+              onClick={() => setSelectedAlert(null)}
+              className="inline-flex items-center gap-1.5 self-start rounded-full bg-accent px-4 py-2 text-xs font-semibold text-accent-foreground transition-transform hover:scale-[1.02]"
+            >
+              <X className="h-3.5 w-3.5" />
+              Fermer
+            </button>
+          </div>
+        )}
+
+        {/* Filter bar: status, date range (du / au), search */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-border px-6 pb-4">
+          <select
+            value={statusFilter}
+            onChange={(e) =>
+              setStatusFilter(
+                e.target.value as "all" | "CRITICAL" | "WARNING"
+              )
+            }
+            className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-accent focus:outline-none focus:ring-2 focus:ring-accent/40"
+          >
+            <option value="all">Tous statuts</option>
+            <option value="CRITICAL">Critique</option>
+            <option value="WARNING">Warning</option>
+          </select>
+
+          <div className="flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:border-accent">
+            <span className="text-muted-foreground">Du</span>
             <input
-              type="text"
-              value={tableQuery}
-              onChange={(e) => setTableQuery(e.target.value)}
-              placeholder="Rechercher un actif..."
-              className="w-full rounded-full border border-border bg-background py-2 pl-9 pr-4 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-accent"
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="bg-transparent text-foreground focus:outline-none"
             />
           </div>
+
+          <div className="flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs transition-colors hover:border-accent">
+            <span className="text-muted-foreground">Au</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="bg-transparent text-foreground focus:outline-none"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 transition-colors hover:border-accent focus-within:border-accent sm:ml-auto">
+            <Search className="h-3.5 w-3.5 text-muted-foreground" />
+            <input
+              value={tableSearch}
+              onChange={(e) => setTableSearch(e.target.value)}
+              placeholder="Rechercher un actif, un message..."
+              className="w-40 bg-transparent text-xs text-foreground placeholder:text-muted-foreground focus:outline-none sm:w-56"
+            />
+          </div>
+
+          {tableFiltersActive && (
+            <button
+              onClick={() => {
+                setStatusFilter("all")
+                setDateFrom("")
+                setDateTo("")
+                setTableSearch("")
+              }}
+              className="text-xs font-medium text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            >
+              Réinitialiser
+            </button>
+          )}
         </div>
 
         <div className="overflow-x-auto">
@@ -1618,178 +1635,75 @@ export function DashboardView({
                 <th className="px-6 py-3 font-medium">
                   Date
                 </th>
+
+                <th className="px-6 py-3 font-medium" aria-hidden />
               </tr>
             </thead>
 
             <tbody>
               {tableAlerts
                 .slice(0, 20)
-                .map((alert, i) => {
-                  const key = `${alert.equipment}-${alert.date}`
-                  const isSelected = selectedAlertKey === key
+                .map((alert, i) => (
+                  <tr
+                    key={`${alert.equipment}-${alert.date}-${i}`}
+                    onClick={() => setSelectedAlert(alert)}
+                    className={cn(
+                      "group cursor-pointer border-b border-border last:border-0 transition-colors hover:bg-accent/10",
+                      selectedAlert === alert && "bg-accent/10"
+                    )}
+                  >
+                    <td className="px-6 py-4 font-semibold">
+                      {alert.equipment}
+                    </td>
 
-                  return (
-                    <tr
-                      key={`${key}-${i}`}
-                      onClick={() =>
-                        setSelectedAlertKey(isSelected ? null : key)
-                      }
-                      className={cn(
-                        "cursor-pointer border-b border-border last:border-0 transition-colors hover:bg-muted/50",
-                        isSelected && "bg-muted/60"
-                      )}
-                    >
-                      <td className="px-6 py-4 font-semibold">
-                        <div className="flex items-center gap-2.5">
-                          <span
-                            className={cn(
-                              "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold uppercase",
-                              alert.severity === "CRITICAL"
-                                ? "bg-destructive/10 text-destructive"
-                                : "bg-accent/20 text-accent-foreground"
-                            )}
-                          >
-                            {alert.equipment.slice(0, 2)}
-                          </span>
-                          {alert.equipment}
-                        </div>
-                      </td>
+                    <td className="px-6 py-4 text-muted-foreground">
+                      {alert.message}
+                    </td>
 
-                      <td className="px-6 py-4 text-muted-foreground">
-                        {alert.message}
-                      </td>
+                    <td className="px-6 py-4 capitalize text-muted-foreground">
+                      {alert.sector ?? "N/A"}
+                    </td>
 
-                      <td className="px-6 py-4 capitalize text-muted-foreground">
-                        {alert.sector ?? "N/A"}
-                      </td>
+                    <td className="px-6 py-4">
+                      <span
+                        className={cn(
+                          "rounded-full px-2.5 py-1 text-xs font-semibold",
+                          alert.severity === "CRITICAL"
+                            ? "bg-destructive/10 text-destructive"
+                            : "bg-amber-500/15 text-amber-600"
+                        )}
+                      >
+                        {alert.severity}
+                      </span>
+                    </td>
 
-                      <td className="px-6 py-4">
-                        <span
-                          className={cn(
-                            "rounded-full px-2.5 py-1 text-xs font-semibold",
-                            alert.severity === "CRITICAL"
-                              ? "bg-destructive/10 text-destructive"
-                              : "bg-amber-500/15 text-amber-600"
-                          )}
-                        >
-                          {alert.severity}
-                        </span>
-                      </td>
+                    <td className="px-6 py-4 text-muted-foreground">
+                      {new Date(
+                        alert.date
+                      ).toLocaleString("fr-FR")}
+                    </td>
 
-                      <td className="px-6 py-4 text-muted-foreground">
-                        {new Date(
-                          alert.date
-                        ).toLocaleString("fr-FR")}
-                      </td>
-                    </tr>
-                  )
-                })}
+                    <td className="px-6 py-4">
+                      <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground transition-all group-hover:translate-x-0.5 group-hover:text-accent-foreground" />
+                    </td>
+                  </tr>
+                ))}
 
               {tableAlerts.length === 0 && (
                 <tr>
                   <td
                     className="px-6 py-8 text-muted-foreground"
-                    colSpan={5}
+                    colSpan={6}
                   >
-                    Aucune alerte pour ces filtres.
-                    Essayez d&apos;élargir la période ou la recherche.
+                    {alerts.length === 0
+                      ? "Aucune alerte pour ce secteur. Importez un CSV."
+                      : "Aucune alerte ne correspond à ces filtres."}
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-
-        {/* DÉTAIL AU CLIC, même fond que le hero pour rester cohérent */}
-        {selectedAlert && (
-          <div className="rounded-b-3xl bg-foreground p-6 text-background sm:p-8">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-xs text-background/50">
-                  Détail de l&apos;alerte
-                </p>
-                <h4 className="mt-1 font-heading text-xl font-bold">
-                  {selectedAlert.equipment}
-                </h4>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span
-                  className={cn(
-                    "rounded-full px-3 py-1 text-xs font-bold",
-                    selectedAlert.severity === "CRITICAL"
-                      ? "bg-destructive/20 text-destructive"
-                      : "bg-amber-500/20 text-amber-400"
-                  )}
-                >
-                  {selectedAlert.severity}
-                </span>
-
-                <button
-                  onClick={() => setSelectedAlertKey(null)}
-                  aria-label="Fermer le détail"
-                  className="rounded-full bg-background/10 p-1.5 text-background/70 transition-colors hover:bg-background/20 hover:text-background"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-xl bg-background/5 p-3">
-                <span className="flex items-center gap-1.5 text-[11px] text-background/50">
-                  <Shield className="h-3 w-3" />
-                  Secteur
-                </span>
-                <p className="mt-1 text-sm font-semibold capitalize">
-                  {selectedAlert.sector ?? "N/A"}
-                </p>
-              </div>
-
-              <div className="rounded-xl bg-background/5 p-3">
-                <span className="flex items-center gap-1.5 text-[11px] text-background/50">
-                  <Cpu className="h-3 w-3" />
-                  Score de risque
-                </span>
-                <p className="mt-1 text-sm font-semibold">
-                  {matchedRecommendation?.risk_score ?? "N/A"}
-                </p>
-              </div>
-
-              <div className="rounded-xl bg-background/5 p-3">
-                <span className="flex items-center gap-1.5 text-[11px] text-background/50">
-                  <Activity className="h-3 w-3" />
-                  Date
-                </span>
-                <p className="mt-1 text-sm font-semibold">
-                  {new Date(selectedAlert.date).toLocaleString("fr-FR")}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-xl bg-background/5 p-4">
-              <p className="text-xs text-background/50">Message</p>
-              <p className="mt-1 text-sm text-background/90">
-                {selectedAlert.message}
-              </p>
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-background/5 p-4">
-              <div className="min-w-0">
-                <p className="text-xs text-background/50">Recommandation</p>
-                <p className="mt-1 text-sm font-medium">
-                  {matchedRecommendation?.recommended_action ??
-                    "Analyse en cours"}
-                </p>
-              </div>
-
-              <button className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-xs font-bold text-accent-foreground transition-transform hover:scale-[1.02]">
-                Voir la recommandation
-                <ArrowUpRight className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )
