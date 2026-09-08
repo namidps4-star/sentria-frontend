@@ -770,7 +770,11 @@ function getStoredPriorities(): LogisticsPriority[] {
   return []
 }
 
-export function DashboardView() {
+export function DashboardView({
+  search = "",
+}: {
+  search?: string
+}) {
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [recommendations, setRecommendations] =
     useState<Recommendation[]>([])
