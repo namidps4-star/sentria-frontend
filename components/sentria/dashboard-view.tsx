@@ -13,6 +13,9 @@ import {
   Sparkles,
   Shield,
   Download,
+  Search,
+  X,
+  ChevronDown,
 } from "lucide-react"
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
@@ -847,6 +850,21 @@ export function DashboardView({
   const [logisticsPriority, setLogisticsPriority] =
     useState<LogisticsPriority>(() => getSavedLogisticsPriority())
 
+  // --- Filtres locaux de la table d'alertes + panneau de détail au clic ---
+  // Purement présentationnel, n'affecte aucune donnée existante.
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "critical" | "warning"
+  >("all")
+  const [periodFilter, setPeriodFilter] = useState<"all" | "7" | "30">("all")
+  const [tableQuery, setTableQuery] = useState("")
+  const [selectedAlertKey, setSelectedAlertKey] = useState<string | null>(
+    null
+  )
+
+  useEffect(() => {
+    setSelectedAlertKey(null)
+  }, [filterSector, statusFilter, periodFilter, tableQuery])
+
   useEffect(() => {
     const refreshSectors = () => {
       try {
@@ -1076,6 +1094,54 @@ export function DashboardView({
         r.sector === filterSector
     )
     .slice(0, 5)
+
+  // --- Table d'alertes : filtres statut / période / recherche locale ---
+  const periodMs =
+    periodFilter === "7"
+      ? 7 * 24 * 60 * 60 * 1000
+      : periodFilter === "30"
+      ? 30 * 24 * 60 * 60 * 1000
+      : null
+
+  const tableAlerts = filteredAlerts.filter((a) => {
+    if (statusFilter === "critical" && a.severity !== "CRITICAL")
+      return false
+    if (statusFilter === "warning" && a.severity !== "WARNING") return false
+
+    if (periodMs && Date.now() - new Date(a.date).getTime() > periodMs) {
+      return false
+    }
+
+    if (tableQuery.trim()) {
+      const q = tableQuery.toLowerCase()
+
+      if (
+        !a.equipment.toLowerCase().includes(q) &&
+        !a.message.toLowerCase().includes(q)
+      ) {
+        return false
+      }
+    }
+
+    return true
+  })
+
+  const selectedAlert =
+    tableAlerts.find(
+      (a) => `${a.equipment}-${a.date}` === selectedAlertKey
+    ) ?? null
+
+  const matchedRecommendation = selectedAlert
+    ? recommendations.find(
+        (r) =>
+          r.equipment === selectedAlert.equipment &&
+          r.date === selectedAlert.date
+      ) ??
+      recommendations.find(
+        (r) => r.equipment === selectedAlert.equipment
+      ) ??
+      null
+    : null
 
   const meta =
     (filterSector === "logistics" && opsType
@@ -1483,6 +1549,52 @@ export function DashboardView({
           </div>
         </div>
 
+        {/* FILTER BAR */}
+        <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-4">
+          <div className="relative">
+            <select
+              value={statusFilter}
+              onChange={(e) =>
+                setStatusFilter(
+                  e.target.value as "all" | "critical" | "warning"
+                )
+              }
+              className="appearance-none rounded-full border border-border bg-background py-2 pl-4 pr-9 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-muted"
+            >
+              <option value="all">Tous les statuts</option>
+              <option value="critical">Critiques</option>
+              <option value="warning">Warnings</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          </div>
+
+          <div className="relative">
+            <select
+              value={periodFilter}
+              onChange={(e) =>
+                setPeriodFilter(e.target.value as "all" | "7" | "30")
+              }
+              className="appearance-none rounded-full border border-border bg-background py-2 pl-4 pr-9 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-muted"
+            >
+              <option value="all">Toutes les dates</option>
+              <option value="7">7 derniers jours</option>
+              <option value="30">30 derniers jours</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          </div>
+
+          <div className="relative ml-auto w-full sm:w-64">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              value={tableQuery}
+              onChange={(e) => setTableQuery(e.target.value)}
+              placeholder="Rechercher un actif..."
+              className="w-full rounded-full border border-border bg-background py-2 pl-9 pr-4 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-accent"
+            />
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -1510,72 +1622,174 @@ export function DashboardView({
             </thead>
 
             <tbody>
-              {filteredAlerts
+              {tableAlerts
                 .slice(0, 20)
-                .map((alert, i) => (
-                  <tr
-                    key={`${alert.equipment}-${alert.date}-${i}`}
-                    className="border-b border-border last:border-0 transition-colors hover:bg-muted/50"
-                  >
-                    <td className="px-6 py-4 font-semibold">
-                      <div className="flex items-center gap-2.5">
+                .map((alert, i) => {
+                  const key = `${alert.equipment}-${alert.date}`
+                  const isSelected = selectedAlertKey === key
+
+                  return (
+                    <tr
+                      key={`${key}-${i}`}
+                      onClick={() =>
+                        setSelectedAlertKey(isSelected ? null : key)
+                      }
+                      className={cn(
+                        "cursor-pointer border-b border-border last:border-0 transition-colors hover:bg-muted/50",
+                        isSelected && "bg-muted/60"
+                      )}
+                    >
+                      <td className="px-6 py-4 font-semibold">
+                        <div className="flex items-center gap-2.5">
+                          <span
+                            className={cn(
+                              "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold uppercase",
+                              alert.severity === "CRITICAL"
+                                ? "bg-destructive/10 text-destructive"
+                                : "bg-accent/20 text-accent-foreground"
+                            )}
+                          >
+                            {alert.equipment.slice(0, 2)}
+                          </span>
+                          {alert.equipment}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4 text-muted-foreground">
+                        {alert.message}
+                      </td>
+
+                      <td className="px-6 py-4 capitalize text-muted-foreground">
+                        {alert.sector ?? "N/A"}
+                      </td>
+
+                      <td className="px-6 py-4">
                         <span
                           className={cn(
-                            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold uppercase",
+                            "rounded-full px-2.5 py-1 text-xs font-semibold",
                             alert.severity === "CRITICAL"
                               ? "bg-destructive/10 text-destructive"
-                              : "bg-accent/20 text-accent-foreground"
+                              : "bg-amber-500/15 text-amber-600"
                           )}
                         >
-                          {alert.equipment.slice(0, 2)}
+                          {alert.severity}
                         </span>
-                        {alert.equipment}
-                      </div>
-                    </td>
+                      </td>
 
-                    <td className="px-6 py-4 text-muted-foreground">
-                      {alert.message}
-                    </td>
+                      <td className="px-6 py-4 text-muted-foreground">
+                        {new Date(
+                          alert.date
+                        ).toLocaleString("fr-FR")}
+                      </td>
+                    </tr>
+                  )
+                })}
 
-                    <td className="px-6 py-4 capitalize text-muted-foreground">
-                      {alert.sector ?? "N/A"}
-                    </td>
-
-                    <td className="px-6 py-4">
-                      <span
-                        className={cn(
-                          "rounded-full px-2.5 py-1 text-xs font-semibold",
-                          alert.severity === "CRITICAL"
-                            ? "bg-destructive/10 text-destructive"
-                            : "bg-amber-500/15 text-amber-600"
-                        )}
-                      >
-                        {alert.severity}
-                      </span>
-                    </td>
-
-                    <td className="px-6 py-4 text-muted-foreground">
-                      {new Date(
-                        alert.date
-                      ).toLocaleString("fr-FR")}
-                    </td>
-                  </tr>
-                ))}
-
-              {filteredAlerts.length === 0 && (
+              {tableAlerts.length === 0 && (
                 <tr>
                   <td
                     className="px-6 py-8 text-muted-foreground"
                     colSpan={5}
                   >
-                    Aucune alerte pour ce secteur.
-                    Importez un CSV.
+                    Aucune alerte pour ces filtres.
+                    Essayez d&apos;élargir la période ou la recherche.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+
+        {/* DÉTAIL AU CLIC, même fond que le hero pour rester cohérent */}
+        {selectedAlert && (
+          <div className="rounded-b-3xl bg-foreground p-6 text-background sm:p-8">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs text-background/50">
+                  Détail de l&apos;alerte
+                </p>
+                <h4 className="mt-1 font-heading text-xl font-bold">
+                  {selectedAlert.equipment}
+                </h4>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    "rounded-full px-3 py-1 text-xs font-bold",
+                    selectedAlert.severity === "CRITICAL"
+                      ? "bg-destructive/20 text-destructive"
+                      : "bg-amber-500/20 text-amber-400"
+                  )}
+                >
+                  {selectedAlert.severity}
+                </span>
+
+                <button
+                  onClick={() => setSelectedAlertKey(null)}
+                  aria-label="Fermer le détail"
+                  className="rounded-full bg-background/10 p-1.5 text-background/70 transition-colors hover:bg-background/20 hover:text-background"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="rounded-xl bg-background/5 p-3">
+                <span className="flex items-center gap-1.5 text-[11px] text-background/50">
+                  <Shield className="h-3 w-3" />
+                  Secteur
+                </span>
+                <p className="mt-1 text-sm font-semibold capitalize">
+                  {selectedAlert.sector ?? "N/A"}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-background/5 p-3">
+                <span className="flex items-center gap-1.5 text-[11px] text-background/50">
+                  <Cpu className="h-3 w-3" />
+                  Score de risque
+                </span>
+                <p className="mt-1 text-sm font-semibold">
+                  {matchedRecommendation?.risk_score ?? "N/A"}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-background/5 p-3">
+                <span className="flex items-center gap-1.5 text-[11px] text-background/50">
+                  <Activity className="h-3 w-3" />
+                  Date
+                </span>
+                <p className="mt-1 text-sm font-semibold">
+                  {new Date(selectedAlert.date).toLocaleString("fr-FR")}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-xl bg-background/5 p-4">
+              <p className="text-xs text-background/50">Message</p>
+              <p className="mt-1 text-sm text-background/90">
+                {selectedAlert.message}
+              </p>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-background/5 p-4">
+              <div className="min-w-0">
+                <p className="text-xs text-background/50">Recommandation</p>
+                <p className="mt-1 text-sm font-medium">
+                  {matchedRecommendation?.recommended_action ??
+                    "Analyse en cours"}
+                </p>
+              </div>
+
+              <button className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-xs font-bold text-accent-foreground transition-transform hover:scale-[1.02]">
+                Voir la recommandation
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
