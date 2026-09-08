@@ -1573,247 +1573,347 @@ export function DashboardView({
         </p>
       </div>
 
+      {/* =========================================================
+          ALERTS — ROUNDED BLACK DETAIL PANEL
+          ========================================================= */}
       <div
         id="alerts-table"
-        className="rounded-3xl border border-border bg-card"
+        className="overflow-hidden rounded-[32px] border border-border bg-card shadow-sm"
       >
-        <div className="flex items-center justify-between p-6 pb-4">
-          <div className="flex items-center gap-2">
-            <Cpu className="h-5 w-5" />
+        <div className="flex items-center justify-between gap-4 px-6 pb-5 pt-6 md:px-7 md:pt-7">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-foreground text-background">
+              <Cpu className="h-5 w-5" />
+            </div>
 
-            <h3 className="font-heading text-lg font-bold">
-              Alertes ·{" "}
-              {
-                SECTORS.find(
-                  (s) => s.key === filterSector
-                )?.label
-              }
-            </h3>
+            <div className="min-w-0">
+              <h3 className="font-heading text-lg font-bold">
+                Alertes ·{" "}
+                {
+                  SECTORS.find(
+                    (s) => s.key === filterSector
+                  )?.label
+                }
+              </h3>
+
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {filteredAlerts.length} alerte
+                {filteredAlerts.length > 1 ? "s" : ""} détectée
+                {filteredAlerts.length > 1 ? "s" : ""}
+              </p>
+            </div>
           </div>
 
-          <button className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90">
+          <button
+            type="button"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90"
+          >
             Tout voir
             <ArrowUpRight className="h-4 w-4" />
           </button>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-y border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
-                <th className="px-6 py-3 font-medium">
-                  Actif
-                </th>
+        <div
+          className={cn(
+            "grid",
+            selectedAlert
+              ? "grid-cols-1 lg:grid-cols-[minmax(0,1fr)_390px]"
+              : "grid-cols-1"
+          )}
+        >
+          {/* ALERT LIST */}
+          <div
+            className={cn(
+              "min-w-0 overflow-x-auto",
+              selectedAlert &&
+                "border-t border-border lg:border-r"
+            )}
+          >
+            <table className="w-full min-w-[760px] text-sm">
+              <thead>
+                <tr className="border-y border-border bg-muted/30 text-left text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                  <th className="px-6 py-3.5 font-semibold">
+                    Actif
+                  </th>
 
-                <th className="px-6 py-3 font-medium">
-                  Message
-                </th>
+                  <th className="px-6 py-3.5 font-semibold">
+                    Message
+                  </th>
 
-                <th className="px-6 py-3 font-medium">
-                  Secteur
-                </th>
+                  <th className="px-6 py-3.5 font-semibold">
+                    Secteur
+                  </th>
 
-                <th className="px-6 py-3 font-medium">
-                  Sévérité
-                </th>
+                  <th className="px-6 py-3.5 font-semibold">
+                    Sévérité
+                  </th>
 
-                <th className="px-6 py-3 font-medium">
-                  Date
-                </th>
+                  <th className="px-6 py-3.5 font-semibold">
+                    Date
+                  </th>
 
-                <th className="w-12 px-4 py-3" />
-              </tr>
-            </thead>
-
-            <tbody>
-              {filteredAlerts
-                .slice(0, 20)
-                .map((alert, i) => {
-                  const key = `${alert.equipment}-${alert.date}`
-                  const isSelected = selectedAlertKey === key
-
-                  return (
-                    <tr
-                      key={`${alert.equipment}-${alert.date}-${i}`}
-                      onClick={() =>
-                        setSelectedAlertKey(
-                          isSelected ? null : key
-                        )
-                      }
-                      className="cursor-pointer border-b border-border last:border-0 transition-colors hover:bg-muted/50"
-                    >
-                      <td className="px-6 py-4 font-semibold">
-                        {alert.equipment}
-                      </td>
-
-                      <td className="px-6 py-4 text-muted-foreground">
-                        {alert.message}
-                      </td>
-
-                      <td className="px-6 py-4 capitalize text-muted-foreground">
-                        {alert.sector ?? "N/A"}
-                      </td>
-
-                      <td className="px-6 py-4">
-                        <span
-                          className={cn(
-                            "rounded-full px-2.5 py-1 text-xs font-semibold",
-                            alert.severity === "CRITICAL"
-                              ? "bg-destructive/10 text-destructive"
-                              : "bg-amber-500/15 text-amber-600"
-                          )}
-                        >
-                          {alert.severity}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-4 text-muted-foreground">
-                        {new Date(
-                          alert.date
-                        ).toLocaleString("fr-FR")}
-                      </td>
-
-                      <td className="px-4 py-4 text-right">
-                        <span
-                          className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors group-hover:bg-muted"
-                          aria-label={
-                            isSelected
-                              ? "Masquer le détail"
-                              : "Voir le détail"
-                          }
-                        >
-                          {isSelected ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )}
-                        </span>
-                      </td>
-                    </tr>
-                  )
-                })}
-
-              {filteredAlerts.length === 0 && (
-                <tr>
-                  <td
-                    className="px-6 py-8 text-muted-foreground"
-                    colSpan={6}
-                  >
-                    Aucune alerte pour ce secteur.
-                    Importez un CSV.
-                  </td>
+                  <th className="w-14 px-4 py-3.5" />
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
 
-        {selectedAlert && (
-          <div className="m-6 rounded-3xl bg-foreground p-6 text-background">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wider text-background/60">
-                  Détail de l'alerte
-                </p>
+              <tbody>
+                {filteredAlerts
+                  .slice(0, 20)
+                  .map((alert, i) => {
+                    const key = `${alert.equipment}-${alert.date}`
+                    const isSelected =
+                      selectedAlertKey === key
 
-                <div className="mt-2 flex flex-wrap items-center gap-3">
-                  <h3 className="font-heading text-xl font-bold">
-                    {selectedAlert.equipment}
-                  </h3>
+                    return (
+                      <tr
+                        key={`${alert.equipment}-${alert.date}-${i}`}
+                        onClick={() =>
+                          setSelectedAlertKey(
+                            isSelected ? null : key
+                          )
+                        }
+                        className={cn(
+                          "cursor-pointer border-b border-border transition-colors last:border-0 hover:bg-muted/50",
+                          isSelected &&
+                            "bg-muted/60"
+                        )}
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={cn(
+                                "h-2.5 w-2.5 shrink-0 rounded-full",
+                                alert.severity ===
+                                  "CRITICAL"
+                                  ? "bg-destructive"
+                                  : "bg-amber-500"
+                              )}
+                            />
 
-                  <span
-                    className={cn(
-                      "rounded-full px-2.5 py-1 text-xs font-semibold",
-                      selectedAlert.severity === "CRITICAL"
-                        ? "bg-destructive text-destructive-foreground"
-                        : "bg-amber-500 text-white"
-                    )}
+                            <span className="font-semibold">
+                              {alert.equipment}
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="max-w-[340px] truncate px-6 py-4 text-muted-foreground">
+                          {alert.message}
+                        </td>
+
+                        <td className="px-6 py-4 capitalize text-muted-foreground">
+                          {alert.sector ?? "N/A"}
+                        </td>
+
+                        <td className="px-6 py-4">
+                          <span
+                            className={cn(
+                              "inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                              alert.severity ===
+                                "CRITICAL"
+                                ? "bg-destructive/10 text-destructive"
+                                : "bg-amber-500/15 text-amber-600"
+                            )}
+                          >
+                            {alert.severity}
+                          </span>
+                        </td>
+
+                        <td className="whitespace-nowrap px-6 py-4 text-muted-foreground">
+                          {new Date(
+                            alert.date
+                          ).toLocaleString("fr-FR")}
+                        </td>
+
+                        <td className="px-4 py-4 text-right">
+                          <span
+                            className={cn(
+                              "inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors",
+                              isSelected
+                                ? "bg-foreground text-background"
+                                : "text-muted-foreground hover:bg-muted"
+                            )}
+                            aria-label={
+                              isSelected
+                                ? "Masquer le détail"
+                                : "Voir le détail"
+                            }
+                          >
+                            {isSelected ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+
+                {filteredAlerts.length === 0 && (
+                  <tr>
+                    <td
+                      className="px-6 py-12 text-center text-sm text-muted-foreground"
+                      colSpan={6}
+                    >
+                      Aucune alerte pour ce secteur.
+                      Importez un CSV.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* BLACK ALERT DETAIL PANEL */}
+          {selectedAlert && (
+            <div className="min-w-0 bg-foreground text-background">
+              <div className="flex h-full flex-col p-6 md:p-7">
+                {/* PANEL HEADER */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-background/45">
+                      Détail de l'alerte
+                    </p>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2.5">
+                      <h3 className="truncate font-heading text-xl font-bold">
+                        {selectedAlert.equipment}
+                      </h3>
+
+                      <span
+                        className={cn(
+                          "rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide",
+                          selectedAlert.severity ===
+                            "CRITICAL"
+                            ? "bg-destructive text-destructive-foreground"
+                            : "bg-amber-500 text-black"
+                        )}
+                      >
+                        {selectedAlert.severity}
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedAlertKey(null)
+                    }
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-background/10 bg-background/5 text-background/55 transition-colors hover:bg-background/10 hover:text-background"
+                    aria-label="Fermer le détail"
                   >
-                    {selectedAlert.severity}
-                  </span>
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                {/* METRICS */}
+                <div className="mt-7 grid grid-cols-2 gap-2.5">
+                  <div className="rounded-2xl border border-background/10 bg-background/[0.045] p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-background/40">
+                      Secteur
+                    </p>
+
+                    <p className="mt-2 text-sm font-semibold capitalize text-background/90">
+                      {selectedAlert.sector ?? "N/A"}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-background/10 bg-background/[0.045] p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-background/40">
+                      Risque
+                    </p>
+
+                    <p className="mt-2 text-sm font-semibold text-background/90">
+                      {matchedRecommendation?.risk_score !=
+                      null
+                        ? `${matchedRecommendation.risk_score}/100`
+                        : selectedAlert.severity ===
+                          "CRITICAL"
+                        ? "Critique"
+                        : "À surveiller"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* DATE */}
+                <div className="mt-2.5 rounded-2xl border border-background/10 bg-background/[0.045] p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-background/40">
+                    Détectée le
+                  </p>
+
+                  <p className="mt-2 text-sm font-medium text-background/90">
+                    {new Date(
+                      selectedAlert.date
+                    ).toLocaleString("fr-FR")}
+                  </p>
+                </div>
+
+                {/* MESSAGE */}
+                <div className="mt-6 border-t border-background/10 pt-6">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-background/40">
+                    Message
+                  </p>
+
+                  <p className="mt-3 text-sm leading-6 text-background/80">
+                    {selectedAlert.message}
+                  </p>
+                </div>
+
+                {/* RECOMMENDATION */}
+                {matchedRecommendation && (
+                  <div className="mt-6 rounded-2xl border border-background/10 bg-background/[0.06] p-5">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-accent-foreground">
+                        <Zap className="h-4 w-4" />
+                      </div>
+
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-background/50">
+                        Recommandation
+                      </p>
+                    </div>
+
+                    <p className="mt-4 text-sm leading-6 text-background/85">
+                      {
+                        matchedRecommendation.recommended_action
+                      }
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        document
+                          .getElementById(
+                            "recommendations"
+                          )
+                          ?.scrollIntoView({
+                            behavior: "smooth",
+                          })
+                      }}
+                      className="mt-5 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2.5 text-xs font-bold text-accent-foreground transition-transform hover:scale-[1.02]"
+                    >
+                      Voir la recommandation
+                      <ArrowUpRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+
+                {/* BOTTOM STATUS */}
+                <div className="mt-auto hidden pt-7 lg:block">
+                  <div className="flex items-center justify-between border-t border-background/10 pt-5">
+                    <span className="text-[10px] uppercase tracking-[0.14em] text-background/35">
+                      SentrIA monitoring
+                    </span>
+
+                    <span className="flex items-center gap-1.5 text-[10px] font-semibold text-background/60">
+                      <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+                      Actif
+                    </span>
+                  </div>
                 </div>
               </div>
-
-              <button
-                type="button"
-                onClick={() => setSelectedAlertKey(null)}
-                className="rounded-full p-2 text-background/60 transition-colors hover:bg-background/10 hover:text-background"
-                aria-label="Fermer le détail"
-              >
-                <X className="h-5 w-5" />
-              </button>
             </div>
-
-            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <div>
-                <p className="text-xs font-medium text-background/50">
-                  Secteur
-                </p>
-                <p className="mt-1 text-sm font-semibold capitalize">
-                  {selectedAlert.sector ?? "N/A"}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-xs font-medium text-background/50">
-                  Risque
-                </p>
-                <p className="mt-1 text-sm font-semibold">
-                  {matchedRecommendation?.risk_score != null
-                    ? `${matchedRecommendation.risk_score}/100`
-                    : "Non disponible"}
-                </p>
-              </div>
-
-              <div>
-                <p className="text-xs font-medium text-background/50">
-                  Date
-                </p>
-                <p className="mt-1 text-sm font-semibold">
-                  {new Date(
-                    selectedAlert.date
-                  ).toLocaleString("fr-FR")}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <p className="text-xs font-medium text-background/50">
-                Message
-              </p>
-              <p className="mt-1 text-sm leading-6 text-background/90">
-                {selectedAlert.message}
-              </p>
-            </div>
-
-            {matchedRecommendation && (
-              <div className="mt-6 rounded-2xl border border-background/15 bg-background/10 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-background/50">
-                  Recommandation
-                </p>
-
-                <p className="mt-2 text-sm leading-6 text-background/90">
-                  {matchedRecommendation.recommended_action}
-                </p>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    document
-                      .getElementById("recommendations")
-                      ?.scrollIntoView({
-                        behavior: "smooth",
-                      })
-                  }}
-                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-xs font-semibold text-accent-foreground transition-opacity hover:opacity-90"
-                >
-                  Voir la recommandation
-                  <ArrowUpRight className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )
