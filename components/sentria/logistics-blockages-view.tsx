@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import type { LucideIcon } from "lucide-react"
 import {
   Anchor,
@@ -359,6 +359,191 @@ const stateStyle = {
 const stateLabel: Record<StageStatus, string> = { good: "Fluide", watch: "Sous tension", risk: "Rupture" }
 
 /* ------------------------------------------------------------------ */
+/*  Port yard — 3D live preview of the "cour" stage                    */
+/* ------------------------------------------------------------------ */
+
+function PortYardPreview({
+  containerRef,
+  hoursImmobile,
+}: {
+  containerRef: string
+  hoursImmobile: string
+}) {
+  const cols = 7
+  const rows = 3
+  const total = rows * cols
+  const blockedIndex = 10
+  const watchIndexes = useMemo(() => [2, 5, 16], [])
+
+  const [statuses, setStatuses] = useState<("idle" | "good" | "watch" | "risk")[]>(
+    () => Array(total).fill("idle")
+  )
+  const [showTag, setShowTag] = useState(false)
+
+  useEffect(() => {
+    const timers: ReturnType<typeof setTimeout>[] = []
+
+    for (let i = 0; i < total; i++) {
+      timers.push(
+        setTimeout(() => {
+          setStatuses((current) => {
+            const next = [...current]
+            next[i] = "good"
+            return next
+          })
+        }, 20 * i)
+      )
+    }
+
+    const base = total * 20
+
+    timers.push(
+      setTimeout(() => {
+        setStatuses((current) => {
+          const next = [...current]
+          watchIndexes.forEach((i) => (next[i] = "watch"))
+          return next
+        })
+      }, base + 350)
+    )
+
+    timers.push(
+      setTimeout(() => {
+        setStatuses((current) => {
+          const next = [...current]
+          next[blockedIndex] = "risk"
+          return next
+        })
+      }, base + 1100)
+    )
+
+    timers.push(setTimeout(() => setShowTag(true), base + 1500))
+
+    return () => timers.forEach(clearTimeout)
+  }, [watchIndexes])
+
+  const toneClass = {
+    idle: "",
+    good: "text-accent-foreground",
+    watch: "text-amber-600",
+    risk: "text-destructive",
+  } as const
+
+  const faceClass = {
+    idle: "border-transparent bg-transparent",
+    good: "border-accent/30 bg-accent/15",
+    watch: "border-amber-500/50 bg-amber-500/25",
+    risk: "border-destructive bg-destructive/40",
+  } as const
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border bg-muted/40">
+      <style>{`
+        @keyframes port-crate-settle {
+          from { transform: translateZ(-50px) rotateX(15deg); opacity: 0; }
+          to { transform: translateZ(0) rotateX(0deg); opacity: 1; }
+        }
+        @keyframes port-yard-breathe {
+          0%, 100% { transform: rotateX(52deg) rotateZ(-6deg) translateY(0px); }
+          50% { transform: rotateX(52deg) rotateZ(-6deg) translateY(-3px); }
+        }
+        @keyframes port-crate-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 45%, transparent); }
+          50% { box-shadow: 0 0 0 8px color-mix(in srgb, currentColor 0%, transparent); }
+        }
+      `}</style>
+
+      <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
+        <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+          Vue cour · en direct
+        </p>
+        <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-accent" /> Fluide
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Sous tension
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-destructive" /> Rupture
+          </span>
+        </div>
+      </div>
+
+      <div className="relative px-6 py-8 [perspective:1300px]">
+        <div
+          className="mx-auto grid w-fit gap-2.5 [transform-style:preserve-3d]"
+          style={{
+            gridTemplateColumns: `repeat(${cols}, 38px)`,
+            animation: "port-yard-breathe 6.5s ease-in-out infinite",
+          }}
+        >
+          {statuses.map((status, i) => {
+            const isIdle = status === "idle"
+            const isRisk = status === "risk"
+
+            return (
+              <div
+                key={i}
+                className={cn("relative h-7 w-9", toneClass[status])}
+                style={{
+                  transformStyle: "preserve-3d",
+                  opacity: isIdle ? 0 : 1,
+                  animation: isIdle ? undefined : "port-crate-settle 0.35s ease-out forwards",
+                  transform: isRisk ? "translateZ(12px)" : "translateZ(0px)",
+                  transition: "transform 0.4s ease-out",
+                }}
+              >
+                <div
+                  className={cn("absolute inset-0 rounded-[3px] border", faceClass[status])}
+                  style={{
+                    transform: "translateZ(7px)",
+                    animation:
+                      status === "risk"
+                        ? "port-crate-pulse 1.3s ease-out infinite"
+                        : status === "watch"
+                          ? "port-crate-pulse 1.7s ease-out infinite"
+                          : undefined,
+                  }}
+                />
+                <div
+                  className={cn(
+                    "absolute inset-x-0 bottom-0 h-1.5 rounded-b-[3px]",
+                    status === "risk"
+                      ? "bg-destructive/70"
+                      : status === "watch"
+                        ? "bg-amber-600/60"
+                        : status === "good"
+                          ? "bg-accent/40"
+                          : "bg-transparent"
+                  )}
+                  style={{ transform: "rotateX(-90deg) translateZ(-3.5px)", transformOrigin: "bottom" }}
+                />
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      <div
+        className={cn(
+          "mx-4 mb-4 flex items-start gap-3 rounded-xl border border-l-2 border-border border-l-destructive bg-card px-3.5 py-3 transition-all duration-500",
+          showTag ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0"
+        )}
+      >
+        <span className="whitespace-nowrap font-mono text-[11px] text-muted-foreground">
+          {containerRef}
+        </span>
+        <p className="text-xs leading-5 text-foreground">
+          Immobile depuis <span className="font-semibold text-destructive">{hoursImmobile}</span>.
+          Point de rupture identifié sur cette cour.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
 
@@ -403,6 +588,7 @@ export function LogisticsBlockagesView({
   const SelectedIcon = selectedStage.icon
   const { flagship } = config
 
+  
   const riskColor =
     flagship.globalRisk >= 50
       ? "var(--destructive)"
@@ -585,6 +771,15 @@ export function LogisticsBlockagesView({
             <p className="mt-6 rounded-2xl bg-muted/50 p-4 text-sm leading-relaxed text-muted-foreground">
               {flagship.narrative}
             </p>
+
+            {selectedStage.id === "cour" && (
+              <div className="mt-6">
+                <PortYardPreview
+                  containerRef="MSKU-2201"
+                  hoursImmobile={flagship.signals[0]?.value ?? "96 h"}
+                />
+              </div>
+            )}
           </div>
 
           <div className="grid gap-4 p-6 sm:p-8 lg:grid-cols-[.7fr_1.3fr]">
