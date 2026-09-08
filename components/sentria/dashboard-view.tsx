@@ -12,12 +12,9 @@ import {
   Upload,
   Sparkles,
   Shield,
-  Check,
-  Calendar,
   Download,
-  Filter,
 } from "lucide-react"
-import { AreaChart, BarChart } from "./charts"
+import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
 import { LogisticsBlockagesView } from "./logistics-blockages-view"
 import { LogisticsWaitingView } from "./logistics-waiting-view"
@@ -850,17 +847,6 @@ export function DashboardView({
   const [logisticsPriority, setLogisticsPriority] =
     useState<LogisticsPriority>(() => getSavedLogisticsPriority())
 
-  // --- État additionnel pour le panneau liste + détail du tableau de bord ---
-  // N'affecte aucune donnée existante : purement présentationnel.
-  const [listTab, setListTab] = useState<"all" | "critical" | "warning">(
-    "all"
-  )
-  const [selectedIndex, setSelectedIndex] = useState(0)
-
-  useEffect(() => {
-    setSelectedIndex(0)
-  }, [filterSector, listTab])
-
   useEffect(() => {
     const refreshSectors = () => {
       try {
@@ -1121,53 +1107,6 @@ export function DashboardView({
     }
   )
 
-  // --- Données dérivées pour le panneau liste + détail (présentationnel) ---
-  const listFilteredAlerts = filteredAlerts.filter((a) => {
-    if (listTab === "all") return true
-    if (listTab === "critical") return a.severity === "CRITICAL"
-    return a.severity === "WARNING"
-  })
-
-  const selectedAlert =
-    listFilteredAlerts[selectedIndex] ?? listFilteredAlerts[0] ?? null
-
-  const matchedRecommendation = selectedAlert
-    ? recommendations.find(
-        (r) =>
-          r.equipment === selectedAlert.equipment &&
-          r.date === selectedAlert.date
-      ) ??
-      recommendations.find((r) => r.equipment === selectedAlert.equipment) ??
-      null
-    : null
-
-  const resolutionSteps = [
-    {
-      label: "Détectée",
-      done: !!selectedAlert,
-      caption: selectedAlert
-        ? new Date(selectedAlert.date).toLocaleDateString("fr-FR")
-        : "",
-    },
-    {
-      label: "Analysée",
-      done: !!matchedRecommendation,
-      caption: matchedRecommendation
-        ? new Date(matchedRecommendation.date).toLocaleDateString("fr-FR")
-        : "En attente",
-    },
-    {
-      label: "Recommandation générée",
-      done: !!matchedRecommendation?.recommended_action,
-      caption: matchedRecommendation?.action_category ?? "En attente",
-    },
-    {
-      label: "Action à traiter",
-      done: false,
-      caption: "À vous de jouer",
-    },
-  ]
-
   if (filterSector === "logistics") {
     const normalizedOpsType =
       opsType &&
@@ -1228,42 +1167,38 @@ export function DashboardView({
   }
 
   return (
-    <div className="space-y-5">
-      {/* HEADER */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/15 px-2.5 py-1 text-xs font-semibold text-accent-foreground">
-            <Zap className="h-3 w-3" />
+    <div className="space-y-6">
+      {/* HERO */}
+      <div className="flex flex-col gap-4 rounded-3xl bg-foreground p-6 text-background md:flex-row md:items-center md:justify-between md:p-8">
+        <div className="max-w-xl">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+            <Zap className="h-3.5 w-3.5" />
             Temps réel
           </span>
 
-          <h2 className="mt-2 font-heading text-2xl font-bold tracking-tight text-foreground">
-            Vue d&apos;ensemble
+          <h2 className="mt-3 text-balance font-heading text-2xl font-bold leading-tight md:text-3xl">
+            Vue globale de vos opérations critiques.
           </h2>
 
-          <p className="mt-1 text-sm text-muted-foreground">
-            Toutes vos alertes critiques, en un coup d&apos;œil.
+          <p className="mt-2 text-pretty text-sm text-background/70">
+            SentrIA surveille vos alertes en temps réel, machines, stocks,
+            flottes, équipements, partout dans le monde.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground transition-colors hover:bg-muted">
-            <Download className="h-4 w-4" />
-            Exporter
-          </button>
-
-          <button
-            onClick={() =>
-              document
-                .getElementById("alerts-panel")
-                ?.scrollIntoView({ behavior: "smooth" })
-            }
-            className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02]"
-          >
-            Voir les alertes
-            <ArrowUpRight className="h-4 w-4" />
-          </button>
-        </div>
+        <button
+          onClick={() =>
+            document
+              .getElementById("alerts-table")
+              ?.scrollIntoView({
+                behavior: "smooth",
+              })
+          }
+          className="inline-flex items-center gap-2 self-start rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02]"
+        >
+          Voir les alertes
+          <ArrowUpRight className="h-4 w-4" />
+        </button>
       </div>
 
       {/* RECOMMENDATIONS */}
@@ -1274,12 +1209,7 @@ export function DashboardView({
       />
 
       {/* SECTOR FILTER */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="mr-1 inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-          <Filter className="h-3.5 w-3.5" />
-          Filtrer
-        </span>
-
+      <div className="flex flex-wrap gap-2">
         <button
           onClick={() => {
             setFilterSector("all")
@@ -1289,10 +1219,11 @@ export function DashboardView({
             "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
             filterSector === "all"
               ? "border-foreground bg-foreground text-background"
-              : "border-border bg-card hover:bg-muted"
+              : "border-border bg-background hover:bg-muted"
           )}
         >
           Tous
+
           <span className="ml-1.5 text-[10px] opacity-60">
             {alerts.length}
           </span>
@@ -1316,10 +1247,11 @@ export function DashboardView({
               "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
               filterSector === s.key
                 ? "border-foreground bg-foreground text-background"
-                : "border-border bg-card hover:bg-muted"
+                : "border-border bg-background hover:bg-muted"
             )}
           >
             {s.label}
+
             <span className="ml-1.5 text-[10px] opacity-60">
               {
                 alerts.filter(
@@ -1344,7 +1276,7 @@ export function DashboardView({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((k) => {
           const maxSpark = Math.max(...k.spark, 1)
-          const pct = Math.min(
+          const trackPct = Math.min(
             100,
             Math.round((k.spark[k.spark.length - 1] / maxSpark) * 100)
           )
@@ -1372,299 +1304,36 @@ export function DashboardView({
                   ) : (
                     <TrendingDown className="h-3 w-3" />
                   )}
+
                   {k.delta}
                 </span>
               </div>
 
-              <p className="mt-3 font-heading text-3xl font-bold tracking-tight text-foreground">
+              <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
                 {k.value}
               </p>
 
-              <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-muted">
+              <Sparkline
+                data={k.spark}
+                className={cn(
+                  "mt-2 h-9 w-full",
+                  k.up ? "text-accent" : "text-destructive"
+                )}
+              />
+
+              {/* Accent inspiré de la référence : fine barre de tendance sous le sparkline */}
+              <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted">
                 <div
                   className={cn(
-                    "h-full rounded-full transition-all",
+                    "h-full rounded-full",
                     k.up ? "bg-accent" : "bg-destructive"
                   )}
-                  style={{ width: `${pct}%` }}
+                  style={{ width: `${trackPct}%` }}
                 />
               </div>
             </div>
           )
         })}
-      </div>
-
-      {/* ALERTES RÉCENTES + DÉTAIL */}
-      <div
-        id="alerts-panel"
-        className="rounded-3xl border border-border bg-card p-4 sm:p-6"
-      >
-        <div className="grid gap-4 lg:grid-cols-[380px_1fr] lg:gap-6">
-          {/* LISTE */}
-          <div className="flex flex-col">
-            <div className="flex items-center justify-between">
-              <h3 className="font-heading text-lg font-bold text-foreground">
-                Alertes récentes
-              </h3>
-            </div>
-
-            <div className="mt-3 flex items-center gap-1.5">
-              <button
-                onClick={() => setListTab("all")}
-                className={cn(
-                  "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-                  listTab === "all"
-                    ? "bg-accent text-accent-foreground"
-                    : "bg-muted text-muted-foreground hover:text-foreground"
-                )}
-              >
-                Toutes {filteredAlerts.length}
-              </button>
-              <button
-                onClick={() => setListTab("critical")}
-                className={cn(
-                  "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-                  listTab === "critical"
-                    ? "bg-accent text-accent-foreground"
-                    : "bg-muted text-muted-foreground hover:text-foreground"
-                )}
-              >
-                Critiques{" "}
-                {
-                  filteredAlerts.filter((a) => a.severity === "CRITICAL")
-                    .length
-                }
-              </button>
-              <button
-                onClick={() => setListTab("warning")}
-                className={cn(
-                  "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
-                  listTab === "warning"
-                    ? "bg-accent text-accent-foreground"
-                    : "bg-muted text-muted-foreground hover:text-foreground"
-                )}
-              >
-                Warnings{" "}
-                {
-                  filteredAlerts.filter((a) => a.severity === "WARNING")
-                    .length
-                }
-              </button>
-            </div>
-
-            <div className="mt-3 flex-1 space-y-1.5 overflow-y-auto pr-1">
-              {listFilteredAlerts.slice(0, 12).map((alert, i) => {
-                const isSelected = selectedAlert === alert
-
-                return (
-                  <button
-                    key={`${alert.equipment}-${alert.date}-${i}`}
-                    onClick={() => setSelectedIndex(i)}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition-colors",
-                      isSelected
-                        ? "border-foreground bg-foreground text-background"
-                        : "border-transparent hover:bg-muted"
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold uppercase",
-                        isSelected
-                          ? "bg-background/10 text-background"
-                          : alert.severity === "CRITICAL"
-                          ? "bg-destructive/10 text-destructive"
-                          : "bg-amber-500/15 text-amber-600"
-                      )}
-                    >
-                      {alert.equipment.slice(0, 2)}
-                    </span>
-
-                    <span className="min-w-0 flex-1">
-                      <span
-                        className={cn(
-                          "block truncate text-sm font-semibold",
-                          isSelected ? "text-background" : "text-foreground"
-                        )}
-                      >
-                        {alert.equipment}
-                      </span>
-                      <span
-                        className={cn(
-                          "block truncate text-xs",
-                          isSelected
-                            ? "text-background/60"
-                            : "text-muted-foreground"
-                        )}
-                      >
-                        {new Date(alert.date).toLocaleDateString("fr-FR")}
-                      </span>
-                    </span>
-
-                    <span
-                      className={cn(
-                        "shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold",
-                        isSelected
-                          ? "bg-accent text-accent-foreground"
-                          : alert.severity === "CRITICAL"
-                          ? "bg-destructive/10 text-destructive"
-                          : "bg-amber-500/15 text-amber-600"
-                      )}
-                    >
-                      {alert.severity}
-                    </span>
-                  </button>
-                )
-              })}
-
-              {listFilteredAlerts.length === 0 && (
-                <p className="px-3 py-8 text-center text-sm text-muted-foreground">
-                  Aucune alerte pour ce filtre.
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* DÉTAIL */}
-          <div className="rounded-2xl bg-foreground p-6 text-background">
-            {selectedAlert ? (
-              <>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs text-background/50">
-                      Détail de l&apos;alerte
-                    </p>
-                    <h4 className="mt-1 font-heading text-xl font-bold">
-                      {selectedAlert.equipment}
-                    </h4>
-                  </div>
-
-                  <span
-                    className={cn(
-                      "rounded-full px-3 py-1 text-xs font-bold",
-                      selectedAlert.severity === "CRITICAL"
-                        ? "bg-destructive/20 text-destructive"
-                        : "bg-amber-500/20 text-amber-400"
-                    )}
-                  >
-                    {selectedAlert.severity}
-                  </span>
-                </div>
-
-                <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                  <div className="rounded-xl bg-background/5 p-3">
-                    <span className="flex items-center gap-1.5 text-[11px] text-background/50">
-                      <Shield className="h-3 w-3" />
-                      Secteur
-                    </span>
-                    <p className="mt-1 text-sm font-semibold capitalize">
-                      {selectedAlert.sector ?? "N/A"}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-background/5 p-3">
-                    <span className="flex items-center gap-1.5 text-[11px] text-background/50">
-                      <Cpu className="h-3 w-3" />
-                      Score de risque
-                    </span>
-                    <p className="mt-1 text-sm font-semibold">
-                      {matchedRecommendation?.risk_score ?? "N/A"}
-                    </p>
-                  </div>
-                  <div className="rounded-xl bg-background/5 p-3">
-                    <span className="flex items-center gap-1.5 text-[11px] text-background/50">
-                      <Calendar className="h-3 w-3" />
-                      Date
-                    </span>
-                    <p className="mt-1 text-sm font-semibold">
-                      {new Date(selectedAlert.date).toLocaleDateString(
-                        "fr-FR"
-                      )}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <p className="text-xs text-background/50">
-                    Suivi de résolution
-                  </p>
-
-                  <div className="mt-3 flex items-center">
-                    {resolutionSteps.map((step, i) => (
-                      <div
-                        key={step.label}
-                        className="flex flex-1 items-center last:flex-none"
-                      >
-                        <div className="flex flex-col items-center gap-1.5">
-                          <span
-                            className={cn(
-                              "flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold",
-                              step.done
-                                ? "bg-accent text-accent-foreground"
-                                : "bg-background/10 text-background/40"
-                            )}
-                          >
-                            {step.done ? (
-                              <Check className="h-3.5 w-3.5" />
-                            ) : (
-                              i + 1
-                            )}
-                          </span>
-                          <span className="max-w-[80px] text-center text-[10px] leading-tight text-background/60">
-                            {step.label}
-                          </span>
-                        </div>
-
-                        {i < resolutionSteps.length - 1 && (
-                          <span
-                            className={cn(
-                              "mx-1.5 h-px flex-1",
-                              step.done ? "bg-accent" : "bg-background/10"
-                            )}
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-6 rounded-xl bg-background/5 p-4">
-                  <p className="text-xs text-background/50">Message</p>
-                  <p className="mt-1 text-sm text-background/90">
-                    {selectedAlert.message}
-                  </p>
-                </div>
-
-                <div className="mt-4 flex items-center justify-between gap-3 rounded-xl bg-background/5 p-4">
-                  <div className="min-w-0">
-                    <p className="text-xs text-background/50">
-                      Recommandation
-                    </p>
-                    <p className="mt-1 truncate text-sm font-medium">
-                      {matchedRecommendation?.recommended_action ??
-                        "Analyse en cours"}
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() =>
-                      document
-                        .getElementById("alerts-panel")
-                        ?.scrollIntoView({ behavior: "smooth" })
-                    }
-                    className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-xs font-bold text-accent-foreground transition-transform hover:scale-[1.02]"
-                  >
-                    Voir la recommandation
-                    <ArrowUpRight className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </>
-            ) : (
-              <p className="py-12 text-center text-sm text-background/60">
-                Sélectionnez une alerte pour voir le détail.
-              </p>
-            )}
-          </div>
-        </div>
       </div>
 
       {/* CHARTS */}
@@ -1780,6 +1449,133 @@ export function DashboardView({
             }
           </span>
         </p>
+      </div>
+
+      {/* ALERTS */}
+      <div
+        id="alerts-table"
+        className="rounded-3xl border border-border bg-card"
+      >
+        <div className="flex items-center justify-between p-6 pb-4">
+          <div className="flex items-center gap-2">
+            <Cpu className="h-5 w-5" />
+
+            <h3 className="font-heading text-lg font-bold">
+              Alertes ·{" "}
+              {
+                SECTORS.find(
+                  (s) => s.key === filterSector
+                )?.label
+              }
+            </h3>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted">
+              <Download className="h-4 w-4" />
+              Exporter
+            </button>
+
+            <button className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90">
+              Tout voir
+              <ArrowUpRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-y border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
+                <th className="px-6 py-3 font-medium">
+                  Actif
+                </th>
+
+                <th className="px-6 py-3 font-medium">
+                  Message
+                </th>
+
+                <th className="px-6 py-3 font-medium">
+                  Secteur
+                </th>
+
+                <th className="px-6 py-3 font-medium">
+                  Sévérité
+                </th>
+
+                <th className="px-6 py-3 font-medium">
+                  Date
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {filteredAlerts
+                .slice(0, 20)
+                .map((alert, i) => (
+                  <tr
+                    key={`${alert.equipment}-${alert.date}-${i}`}
+                    className="border-b border-border last:border-0 transition-colors hover:bg-muted/50"
+                  >
+                    <td className="px-6 py-4 font-semibold">
+                      <div className="flex items-center gap-2.5">
+                        <span
+                          className={cn(
+                            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold uppercase",
+                            alert.severity === "CRITICAL"
+                              ? "bg-destructive/10 text-destructive"
+                              : "bg-accent/20 text-accent-foreground"
+                          )}
+                        >
+                          {alert.equipment.slice(0, 2)}
+                        </span>
+                        {alert.equipment}
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-4 text-muted-foreground">
+                      {alert.message}
+                    </td>
+
+                    <td className="px-6 py-4 capitalize text-muted-foreground">
+                      {alert.sector ?? "N/A"}
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <span
+                        className={cn(
+                          "rounded-full px-2.5 py-1 text-xs font-semibold",
+                          alert.severity === "CRITICAL"
+                            ? "bg-destructive/10 text-destructive"
+                            : "bg-amber-500/15 text-amber-600"
+                        )}
+                      >
+                        {alert.severity}
+                      </span>
+                    </td>
+
+                    <td className="px-6 py-4 text-muted-foreground">
+                      {new Date(
+                        alert.date
+                      ).toLocaleString("fr-FR")}
+                    </td>
+                  </tr>
+                ))}
+
+              {filteredAlerts.length === 0 && (
+                <tr>
+                  <td
+                    className="px-6 py-8 text-muted-foreground"
+                    colSpan={5}
+                  >
+                    Aucune alerte pour ce secteur.
+                    Importez un CSV.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )
