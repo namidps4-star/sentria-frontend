@@ -1402,7 +1402,7 @@ export function DashboardView({
         })}
       </div>
 
-      {/* CHARTS */}
+      {/* CHARTS — restent sur fond clair (bg-card), jamais assombris par le panneau de détail */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
           <div className="flex items-center justify-between">
@@ -1520,7 +1520,7 @@ export function DashboardView({
       {/* ALERTS */}
       <div
         id="alerts-table"
-        className="rounded-3xl border border-border bg-card"
+        className="overflow-hidden rounded-3xl border border-border bg-card"
       >
         <div className="flex items-center justify-between p-6 pb-4">
           <div className="flex items-center gap-2">
@@ -1595,201 +1595,198 @@ export function DashboardView({
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-y border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
-                <th className="px-6 py-3 font-medium">
-                  Actif
-                </th>
+        {/*
+          Corps de la card : la table et le panneau de détail vivent dans la
+          même grille. Sans sélection -> une seule colonne (table pleine
+          largeur). Avec une alerte sélectionnée -> deux colonnes sur les
+          écrans larges, la table se réduit et un panneau sombre (même fond
+          que le hero) s'ouvre sur le côté, jamais en dessous.
+        */}
+        <div
+          className={cn(
+            "grid grid-cols-1 border-t border-border",
+            selectedAlert && "lg:grid-cols-[minmax(0,1fr)_360px]"
+          )}
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
+                  <th className="px-6 py-3 font-medium">Actif</th>
+                  <th className="px-6 py-3 font-medium">Message</th>
+                  <th className="px-6 py-3 font-medium">Secteur</th>
+                  <th className="px-6 py-3 font-medium">Sévérité</th>
+                  <th className="px-6 py-3 font-medium">Date</th>
+                </tr>
+              </thead>
 
-                <th className="px-6 py-3 font-medium">
-                  Message
-                </th>
+              <tbody>
+                {tableAlerts
+                  .slice(0, 20)
+                  .map((alert, i) => {
+                    const key = `${alert.equipment}-${alert.date}`
+                    const isSelected = selectedAlertKey === key
 
-                <th className="px-6 py-3 font-medium">
-                  Secteur
-                </th>
+                    return (
+                      <tr
+                        key={`${key}-${i}`}
+                        onClick={() =>
+                          setSelectedAlertKey(isSelected ? null : key)
+                        }
+                        className={cn(
+                          "cursor-pointer border-b border-border last:border-0 transition-colors hover:bg-accent/10",
+                          isSelected && "bg-accent/10"
+                        )}
+                      >
+                        <td className="px-6 py-4 font-semibold">
+                          <div className="flex items-center gap-2.5">
+                            <span
+                              className={cn(
+                                "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold uppercase",
+                                alert.severity === "CRITICAL"
+                                  ? "bg-destructive/10 text-destructive"
+                                  : "bg-accent/20 text-accent-foreground"
+                              )}
+                            >
+                              {alert.equipment.slice(0, 2)}
+                            </span>
+                            {alert.equipment}
+                          </div>
+                        </td>
 
-                <th className="px-6 py-3 font-medium">
-                  Sévérité
-                </th>
+                        <td className="max-w-xs truncate px-6 py-4 text-muted-foreground">
+                          {alert.message}
+                        </td>
 
-                <th className="px-6 py-3 font-medium">
-                  Date
-                </th>
-              </tr>
-            </thead>
+                        <td className="px-6 py-4 capitalize text-muted-foreground">
+                          {alert.sector ?? "N/A"}
+                        </td>
 
-            <tbody>
-              {tableAlerts
-                .slice(0, 20)
-                .map((alert, i) => {
-                  const key = `${alert.equipment}-${alert.date}`
-                  const isSelected = selectedAlertKey === key
-
-                  return (
-                    <tr
-                      key={`${key}-${i}`}
-                      onClick={() =>
-                        setSelectedAlertKey(isSelected ? null : key)
-                      }
-                      className={cn(
-                        "cursor-pointer border-b border-border last:border-0 transition-colors hover:bg-muted/50",
-                        isSelected && "bg-muted/60"
-                      )}
-                    >
-                      <td className="px-6 py-4 font-semibold">
-                        <div className="flex items-center gap-2.5">
+                        <td className="px-6 py-4">
                           <span
                             className={cn(
-                              "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold uppercase",
+                              "rounded-full px-2.5 py-1 text-xs font-semibold",
                               alert.severity === "CRITICAL"
                                 ? "bg-destructive/10 text-destructive"
-                                : "bg-accent/20 text-accent-foreground"
+                                : "bg-amber-500/15 text-amber-600"
                             )}
                           >
-                            {alert.equipment.slice(0, 2)}
+                            {alert.severity}
                           </span>
-                          {alert.equipment}
-                        </div>
-                      </td>
+                        </td>
 
-                      <td className="px-6 py-4 text-muted-foreground">
-                        {alert.message}
-                      </td>
+                        <td className="whitespace-nowrap px-6 py-4 text-muted-foreground">
+                          {new Date(alert.date).toLocaleString("fr-FR")}
+                        </td>
+                      </tr>
+                    )
+                  })}
 
-                      <td className="px-6 py-4 capitalize text-muted-foreground">
-                        {alert.sector ?? "N/A"}
-                      </td>
+                {tableAlerts.length === 0 && (
+                  <tr>
+                    <td
+                      className="px-6 py-8 text-muted-foreground"
+                      colSpan={5}
+                    >
+                      Aucune alerte pour ces filtres. Essayez d&apos;élargir
+                      la période ou la recherche.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
 
-                      <td className="px-6 py-4">
-                        <span
-                          className={cn(
-                            "rounded-full px-2.5 py-1 text-xs font-semibold",
-                            alert.severity === "CRITICAL"
-                              ? "bg-destructive/10 text-destructive"
-                              : "bg-amber-500/15 text-amber-600"
-                          )}
-                        >
-                          {alert.severity}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-4 text-muted-foreground">
-                        {new Date(
-                          alert.date
-                        ).toLocaleString("fr-FR")}
-                      </td>
-                    </tr>
-                  )
-                })}
-
-              {tableAlerts.length === 0 && (
-                <tr>
-                  <td
-                    className="px-6 py-8 text-muted-foreground"
-                    colSpan={5}
-                  >
-                    Aucune alerte pour ces filtres.
-                    Essayez d&apos;élargir la période ou la recherche.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* DÉTAIL AU CLIC, même fond que le hero pour rester cohérent */}
-        {selectedAlert && (
-          <div className="rounded-b-3xl bg-foreground p-6 text-background sm:p-8">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-xs text-background/50">
-                  Détail de l&apos;alerte
-                </p>
-                <h4 className="mt-1 font-heading text-xl font-bold">
-                  {selectedAlert.equipment}
-                </h4>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span
-                  className={cn(
-                    "rounded-full px-3 py-1 text-xs font-bold",
-                    selectedAlert.severity === "CRITICAL"
-                      ? "bg-destructive/20 text-destructive"
-                      : "bg-amber-500/20 text-amber-400"
-                  )}
-                >
-                  {selectedAlert.severity}
-                </span>
+          {/* PANNEAU LATÉRAL — même fond que le hero (bg-foreground), même
+              logique de hover/accent que le reste du dashboard */}
+          {selectedAlert && (
+            <div className="flex flex-col border-t border-border bg-foreground p-6 text-background lg:border-l lg:border-t-0">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs text-background/50">
+                    Détail de l&apos;alerte
+                  </p>
+                  <h4 className="mt-1 font-heading text-lg font-bold leading-tight">
+                    {selectedAlert.equipment}
+                  </h4>
+                </div>
 
                 <button
                   onClick={() => setSelectedAlertKey(null)}
                   aria-label="Fermer le détail"
-                  className="rounded-full bg-background/10 p-1.5 text-background/70 transition-colors hover:bg-background/20 hover:text-background"
+                  className="shrink-0 rounded-full bg-background/10 p-1.5 text-background/70 transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
-            </div>
 
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-xl bg-background/5 p-3">
-                <span className="flex items-center gap-1.5 text-[11px] text-background/50">
-                  <Shield className="h-3 w-3" />
-                  Secteur
-                </span>
-                <p className="mt-1 text-sm font-semibold capitalize">
-                  {selectedAlert.sector ?? "N/A"}
-                </p>
+              <span
+                className={cn(
+                  "mt-3 inline-flex w-fit items-center rounded-full px-3 py-1 text-xs font-bold",
+                  selectedAlert.severity === "CRITICAL"
+                    ? "bg-destructive/20 text-destructive"
+                    : "bg-accent/25 text-accent-foreground"
+                )}
+              >
+                {selectedAlert.severity}
+              </span>
+
+              <div className="mt-4 space-y-3">
+                <div className="rounded-xl bg-background/5 p-3">
+                  <span className="flex items-center gap-1.5 text-[11px] text-background/50">
+                    <Shield className="h-3 w-3" />
+                    Secteur
+                  </span>
+                  <p className="mt-1 text-sm font-semibold capitalize">
+                    {selectedAlert.sector ?? "N/A"}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-background/5 p-3">
+                  <span className="flex items-center gap-1.5 text-[11px] text-background/50">
+                    <Activity className="h-3 w-3" />
+                    Date
+                  </span>
+                  <p className="mt-1 text-sm font-semibold">
+                    {new Date(selectedAlert.date).toLocaleString("fr-FR")}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-background/5 p-3">
+                  <span className="flex items-center gap-1.5 text-[11px] text-background/50">
+                    <Cpu className="h-3 w-3" />
+                    Score de risque
+                  </span>
+                  <p className="mt-1 text-sm font-semibold">
+                    {matchedRecommendation?.risk_score ?? "N/A"}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-background/5 p-3">
+                  <p className="text-[11px] text-background/50">Message</p>
+                  <p className="mt-1 text-sm text-background/90">
+                    {selectedAlert.message}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-background/5 p-3">
+                  <p className="text-[11px] text-background/50">
+                    Recommandation
+                  </p>
+                  <p className="mt-1 text-sm font-medium">
+                    {matchedRecommendation?.recommended_action ??
+                      "Analyse en cours"}
+                  </p>
+                </div>
               </div>
 
-              <div className="rounded-xl bg-background/5 p-3">
-                <span className="flex items-center gap-1.5 text-[11px] text-background/50">
-                  <Cpu className="h-3 w-3" />
-                  Score de risque
-                </span>
-                <p className="mt-1 text-sm font-semibold">
-                  {matchedRecommendation?.risk_score ?? "N/A"}
-                </p>
-              </div>
-
-              <div className="rounded-xl bg-background/5 p-3">
-                <span className="flex items-center gap-1.5 text-[11px] text-background/50">
-                  <Activity className="h-3 w-3" />
-                  Date
-                </span>
-                <p className="mt-1 text-sm font-semibold">
-                  {new Date(selectedAlert.date).toLocaleString("fr-FR")}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-xl bg-background/5 p-4">
-              <p className="text-xs text-background/50">Message</p>
-              <p className="mt-1 text-sm text-background/90">
-                {selectedAlert.message}
-              </p>
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-background/5 p-4">
-              <div className="min-w-0">
-                <p className="text-xs text-background/50">Recommandation</p>
-                <p className="mt-1 text-sm font-medium">
-                  {matchedRecommendation?.recommended_action ??
-                    "Analyse en cours"}
-                </p>
-              </div>
-
-              <button className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-xs font-bold text-accent-foreground transition-transform hover:scale-[1.02]">
+              <button className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-xs font-bold text-accent-foreground transition-transform hover:scale-[1.02]">
                 Voir la recommandation
                 <ArrowUpRight className="h-3.5 w-3.5" />
               </button>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )
