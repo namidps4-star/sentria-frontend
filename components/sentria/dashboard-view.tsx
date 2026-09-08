@@ -74,18 +74,6 @@ const LOGISTICS_PRIORITY_LABELS: Record<
   resources: "Ressources",
 }
 
-const LOGISTICS_PRIORITY_ICONS: Record<
-  LogisticsPriority,
-  string
-> = {
-  blockages: "Blocages",
-  wait: "Attente",
-  cost: "Coûts",
-  anticipate: "Anticipation",
-  recommend: "Recommandations",
-  resources: "Ressources",
-}
-
 const SECTOR_META: Record<
   string,
   {
@@ -772,12 +760,6 @@ export function DashboardView({
               },
               index: number
             ) => {
-              /*
-               * Every recommendation gets its own stable ID.
-               *
-               * Do NOT use alert_key alone because several
-               * recommendations can have the same alert_key.
-               */
               const baseId =
                 rec.id ??
                 [
@@ -973,17 +955,19 @@ export function DashboardView({
               </span>
 
               {selectedLogisticsPriorities.map((priority) => (
-                <span
+                <button
                   key={priority}
+                  type="button"
+                  onClick={() => setLogisticsPriority(priority)}
                   className={cn(
-                    "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold",
+                    "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold transition-colors",
                     priority === logisticsPriority
                       ? "bg-accent text-accent-foreground"
-                      : "bg-muted text-foreground"
+                      : "bg-muted text-foreground hover:bg-muted/80"
                   )}
                 >
                   {LOGISTICS_PRIORITY_LABELS[priority]}
-                </span>
+                </button>
               ))}
             </div>
           </div>
@@ -1118,12 +1102,21 @@ export function DashboardView({
 
               {selectedLogisticsPriorities.map(
                 (priority) => (
-                  <span
+                  <button
                     key={priority}
-                    className="rounded-full bg-accent/15 px-2.5 py-1 text-[11px] font-semibold text-accent-foreground"
+                    type="button"
+                    onClick={() => {
+                      setLogisticsPriority(priority)
+                      setFilterSector("logistics")
+                      localStorage.setItem(
+                        "sentria_sector",
+                        "logistics"
+                      )
+                    }}
+                    className="rounded-full bg-accent/15 px-2.5 py-1 text-[11px] font-semibold text-accent-foreground transition-colors hover:bg-accent/25"
                   >
                     {LOGISTICS_PRIORITY_LABELS[priority]}
-                  </span>
+                  </button>
                 )
               )}
             </div>
