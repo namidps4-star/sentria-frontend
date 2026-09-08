@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect, useState } from "react"
@@ -72,6 +73,24 @@ const LOGISTICS_PRIORITY_LABELS: Record<
   anticipate: "Anticipation",
   recommend: "Recommandations",
   resources: "Ressources",
+}
+
+const LOGISTICS_PRIORITY_DESCRIPTIONS: Record<
+  LogisticsPriority,
+  string
+> = {
+  blockages:
+    "Identifiez les équipements, flux ou opérations actuellement bloqués.",
+  wait:
+    "Surveillez les files d'attente et les temps d'immobilisation.",
+  cost:
+    "Analysez les postes qui génèrent les coûts logistiques les plus importants.",
+  anticipate:
+    "Anticipez les risques et les perturbations à venir.",
+  recommend:
+    "Consultez les recommandations générées par SentrIA.",
+  resources:
+    "Suivez l'utilisation et la disponibilité de vos ressources.",
 }
 
 const SECTOR_META: Record<
@@ -608,7 +627,10 @@ export function DashboardView({
       return "all"
     }
 
-    return localStorage.getItem("sentria_sector") || "all"
+    const saved = localStorage.getItem("sentria_sector")
+
+    // "logistics" is a navigation state, not a persisted default sector.
+    return saved === "logistics" ? "all" : saved || "all"
   })
 
   const [uploading, setUploading] = useState(false)
@@ -640,9 +662,7 @@ export function DashboardView({
   })
 
   const [logisticsPriority, setLogisticsPriority] =
-    useState<LogisticsPriority>(() =>
-      getSavedLogisticsPriority()
-    )
+    useState<LogisticsPriority | null>(null)
 
   const [selectedLogisticsPriorities, setSelectedLogisticsPriorities] =
     useState<LogisticsPriority[]>(() =>
@@ -671,11 +691,10 @@ export function DashboardView({
       const priorities = getSavedLogisticsPriorities()
 
       setSelectedLogisticsPriorities(priorities)
-      setLogisticsPriority(priorities[0] ?? "blockages")
 
       const savedSector = localStorage.getItem("sentria_sector")
 
-      if (savedSector) {
+      if (savedSector && savedSector !== "logistics") {
         setFilterSector(savedSector)
       }
     }
@@ -684,7 +703,13 @@ export function DashboardView({
       const priorities = getSavedLogisticsPriorities()
 
       setSelectedLogisticsPriorities(priorities)
-      setLogisticsPriority(priorities[0] ?? "blockages")
+
+      if (
+        logisticsPriority &&
+        !priorities.includes(logisticsPriority)
+      ) {
+        setLogisticsPriority(null)
+      }
     }
 
     window.addEventListener(
@@ -712,7 +737,7 @@ export function DashboardView({
 
       window.removeEventListener("storage", refreshPriority)
     }
-  }, [])
+  }, [logisticsPriority])
 
   useEffect(() => {
     if (
@@ -722,11 +747,15 @@ export function DashboardView({
       setUploadSector(activeSectors[0])
     }
 
+    // Logistics can be opened through its dedicated navigation button
+    // even if it is not part of the normal sector filters.
     if (
       filterSector !== "all" &&
+      filterSector !== "logistics" &&
       !activeSectors.includes(filterSector)
     ) {
       setFilterSector("all")
+      localStorage.setItem("sentria_sector", "all")
     }
   }, [activeSectors, uploadSector, filterSector])
 
@@ -805,6 +834,28 @@ export function DashboardView({
     refreshRecommendations()
   }, [])
 
+  function openLogisticsOverview() {
+    setFilterSector("logistics")
+    setLogisticsPriority(null)
+
+    // Do not persist "logistics" as the default sector.
+    localStorage.removeItem("sentria_sector")
+  }
+
+  function openLogisticsPriority(priority: LogisticsPriority) {
+    setLogisticsPriority(priority)
+    setFilterSector("logistics")
+
+    // Do not persist "logistics".
+    localStorage.removeItem("sentria_sector")
+  }
+
+  function returnToDashboard() {
+    setLogisticsPriority(null)
+    setFilterSector("all")
+    localStorage.setItem("sentria_sector", "all")
+  }
+
   async function handleUpload(
     e: React.ChangeEvent<HTMLInputElement>
   ) {
@@ -848,6 +899,7 @@ export function DashboardView({
       refreshRecommendations()
 
       setFilterSector(uploadSector)
+      localStorage.setItem("sentria_sector", uploadSector)
     } catch (error) {
       console.error(error)
       setUploadMsg("Erreur lors de l'upload.")
@@ -934,31 +986,186 @@ export function DashboardView({
             | "multi")
         : undefined
 
+    /*
+     * LOGISTICS OVERVIEW
+     *
+     * When the user clicks "Logistique" from the sector selector,
+     * logisticsPriority is null, so we show the overview instead
+     * of automatically opening Blocages.
+     */
+    if (logisticsPriority === null) {
+      return (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={returnToDashboard}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+            >
+              ← Retour au tableau de bord
+            </button>
+          </div>
+
+          <div className="rounded-3xl bg-foreground p-6 text-background md:p-8">
+            <div className="max-w-2xl">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+                <Shield className="h-3.5 w-3.5" />
+                Logistique
+              </span>
+
+              <h2 className="mt-4 font-heading text-2xl font-bold leading-tight md:text-3xl">
+                Vue d'ensemble de votre logistique.
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-background/70">
+                Retrouvez ici les priorités que vous avez
+                sélectionnées pendant la configuration de SentrIA.
+                Choisissez une priorité pour accéder directement
+                à son espace de pilotage.
+              </p>
+
+              {normalizedOpsType &&
+                OPS_TYPE_LABEL[normalizedOpsType] && (
+                  <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-background/20 bg-background/10 px-3 py-1 text-[11px] font-medium text-background/80">
+                    <Shield className="h-3 w-3" />
+                    {OPS_TYPE_LABEL[normalizedOpsType]}
+                  </div>
+                )}
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-4">
+              <h3 className="font-heading text-lg font-bold">
+                Vos priorités
+              </h3>
+
+              <p className="mt-1 text-sm text-muted-foreground">
+                Sélectionnées lors de votre onboarding.
+              </p>
+            </div>
+
+            {selectedLogisticsPriorities.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {selectedLogisticsPriorities.map((priority) => (
+                  <button
+                    key={priority}
+                    type="button"
+                    onClick={() =>
+                      openLogisticsPriority(priority)
+                    }
+                    className="group rounded-3xl border border-border bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <span className="inline-flex rounded-full bg-accent/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-accent-foreground">
+                          Priorité
+                        </span>
+
+                        <h4 className="mt-3 font-heading text-lg font-bold">
+                          {LOGISTICS_PRIORITY_LABELS[priority]}
+                        </h4>
+                      </div>
+
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted transition-colors group-hover:bg-accent group-hover:text-accent-foreground">
+                        <ArrowUpRight className="h-4 w-4" />
+                      </span>
+                    </div>
+
+                    <p className="mt-3 text-sm leading-5 text-muted-foreground">
+                      {LOGISTICS_PRIORITY_DESCRIPTIONS[
+                        priority
+                      ]}
+                    </p>
+
+                    <div className="mt-5 text-xs font-semibold text-foreground">
+                      Ouvrir la priorité →
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-3xl border border-border bg-card p-6 text-sm text-muted-foreground">
+                Aucune priorité logistique n'a été sélectionnée.
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {kpis.map((k) => (
+              <div
+                key={k.label}
+                className="rounded-3xl border border-border bg-card p-5"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {k.label}
+                  </span>
+
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
+                      k.up
+                        ? "bg-accent/25 text-accent-foreground"
+                        : "bg-destructive/10 text-destructive"
+                    )}
+                  >
+                    {k.up ? (
+                      <TrendingUp className="h-3 w-3" />
+                    ) : (
+                      <TrendingDown className="h-3 w-3" />
+                    )}
+
+                    {k.delta}
+                  </span>
+                </div>
+
+                <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
+                  {k.value}
+                </p>
+
+                <Sparkline
+                  data={k.spark}
+                  className={cn(
+                    "mt-2 h-9 w-full",
+                    k.up ? "text-accent" : "text-destructive"
+                  )}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div className="space-y-4">
-        <button
-          type="button"
-          onClick={() => {
-            setFilterSector("all")
-            localStorage.setItem("sentria_sector", "all")
-          }}
-          className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
-        >
-          ← Retour au tableau de bord
-        </button>
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => {
+              setLogisticsPriority(null)
+            }}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+          >
+            ← Retour à la logistique
+          </button>
+        </div>
 
         {selectedLogisticsPriorities.length > 0 && (
           <div className="rounded-2xl border border-border bg-card px-4 py-3">
             <div className="flex flex-wrap items-center gap-2">
               <span className="mr-1 text-xs font-semibold text-muted-foreground">
-                Priorités sélectionnées
+                Priorités
               </span>
 
               {selectedLogisticsPriorities.map((priority) => (
                 <button
                   key={priority}
                   type="button"
-                  onClick={() => setLogisticsPriority(priority)}
+                  onClick={() =>
+                    openLogisticsPriority(priority)
+                  }
                   className={cn(
                     "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold transition-colors",
                     priority === logisticsPriority
@@ -972,6 +1179,14 @@ export function DashboardView({
             </div>
           </div>
         )}
+
+        {normalizedOpsType &&
+          OPS_TYPE_LABEL[normalizedOpsType] && (
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-[11px] font-medium text-muted-foreground">
+              <Shield className="h-3 w-3" />
+              {OPS_TYPE_LABEL[normalizedOpsType]}
+            </div>
+          )}
 
         {logisticsPriority === "recommend" ? (
           <RecommendationsBoard
@@ -990,6 +1205,67 @@ export function DashboardView({
           <LogisticsAnticipateView
             opsType={normalizedOpsType}
           />
+        ) : logisticsPriority === "resources" ? (
+          <div className="rounded-3xl border border-border bg-card p-6">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent-foreground">
+                <Activity className="h-5 w-5" />
+              </div>
+
+              <div>
+                <h2 className="font-heading text-xl font-bold">
+                  Ressources
+                </h2>
+
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Suivez la disponibilité et l'utilisation de
+                  vos ressources logistiques depuis cet espace.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Équipements
+                </p>
+                <p className="mt-2 font-heading text-2xl font-bold">
+                  {new Set(
+                    alerts
+                      .filter(
+                        (a) => a.sector === "logistics"
+                      )
+                      .map((a) => a.equipment)
+                  ).size}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Alertes actives
+                </p>
+                <p className="mt-2 font-heading text-2xl font-bold">
+                  {
+                    alerts.filter(
+                      (a) => a.sector === "logistics"
+                    ).length
+                  }
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Opération
+                </p>
+                <p className="mt-2 font-heading text-lg font-bold">
+                  {normalizedOpsType &&
+                  OPS_TYPE_LABEL[normalizedOpsType]
+                    ? OPS_TYPE_LABEL[normalizedOpsType]
+                    : "Logistique"}
+                </p>
+              </div>
+            </div>
+          </div>
         ) : (
           <LogisticsBlockagesView
             opsType={normalizedOpsType}
@@ -1042,10 +1318,7 @@ export function DashboardView({
 
       <div className="flex flex-wrap items-center gap-2">
         <button
-          onClick={() => {
-            setFilterSector("all")
-            localStorage.setItem("sentria_sector", "all")
-          }}
+          onClick={returnToDashboard}
           className={cn(
             "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
             filterSector === "all"
@@ -1068,6 +1341,12 @@ export function DashboardView({
           <button
             key={s.key}
             onClick={() => {
+              if (s.key === "logistics") {
+                openLogisticsOverview()
+                return
+              }
+
+              setLogisticsPriority(null)
               setFilterSector(s.key)
               localStorage.setItem(
                 "sentria_sector",
@@ -1105,14 +1384,9 @@ export function DashboardView({
                   <button
                     key={priority}
                     type="button"
-                    onClick={() => {
-                      setLogisticsPriority(priority)
-                      setFilterSector("logistics")
-                      localStorage.setItem(
-                        "sentria_sector",
-                        "logistics"
-                      )
-                    }}
+                    onClick={() =>
+                      openLogisticsPriority(priority)
+                    }
                     className="rounded-full bg-accent/15 px-2.5 py-1 text-[11px] font-semibold text-accent-foreground transition-colors hover:bg-accent/25"
                   >
                     {LOGISTICS_PRIORITY_LABELS[priority]}
