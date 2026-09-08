@@ -736,7 +736,6 @@ export function DashboardView({
 
     if (
       filterSector !== "all" &&
-      filterSector !== "logistics" &&
       !activeSectors.includes(filterSector)
     ) {
       setFilterSector("all")
@@ -773,21 +772,32 @@ export function DashboardView({
               },
               index: number
             ) => {
+              /*
+               * Every recommendation gets its own stable ID.
+               *
+               * Do NOT use alert_key alone because several
+               * recommendations can have the same alert_key.
+               */
               const baseId =
                 rec.id ??
-                rec.alert_key ??
-                `${rec.equipment}-${rec.date}-${index}`
+                [
+                  rec.alert_key ?? "",
+                  rec.equipment,
+                  rec.date,
+                  rec.action_category,
+                  rec.recommended_action,
+                ].join("::")
 
               let id = String(baseId)
 
               if (usedIds.has(id)) {
-                id = `${id}-${index}`
+                id = `${id}::${index}`
               }
 
               while (usedIds.has(id)) {
-                id = `${id}-${Math.random()
+                id = `${id}::${Math.random()
                   .toString(36)
-                  .slice(2, 7)}`
+                  .slice(2, 8)}`
               }
 
               usedIds.add(id)
@@ -1007,7 +1017,6 @@ export function DashboardView({
 
   return (
     <div className="space-y-6">
-      {/* HERO */}
       <div className="flex flex-col gap-4 rounded-3xl bg-foreground p-6 text-background md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-xl">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
@@ -1041,14 +1050,12 @@ export function DashboardView({
         </button>
       </div>
 
-      {/* RECOMMENDATIONS */}
       <RecommendationsPanel
         recommendations={filteredRecommendations}
         totalRecommendationsCount={recommendations.length}
         alerts={alerts}
       />
 
-      {/* SECTOR FILTER */}
       <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => {
@@ -1102,7 +1109,6 @@ export function DashboardView({
           </button>
         ))}
 
-        {/* PRIORITIES SELECTED DURING ONBOARDING */}
         {filterSector === "all" &&
           selectedLogisticsPriorities.length > 0 && (
             <div className="ml-1 flex flex-wrap items-center gap-1.5 rounded-full border border-accent/30 bg-accent/5 px-2 py-1">
@@ -1124,7 +1130,6 @@ export function DashboardView({
           )}
       </div>
 
-      {/* LOGISTICS OPERATIONS CONTEXT */}
       {filterSector === "logistics" &&
         opsType &&
         LOGISTICS_OPS_META[opsType] && (
@@ -1134,7 +1139,6 @@ export function DashboardView({
           </div>
         )}
 
-      {/* KPIs */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((k) => (
           <div
@@ -1179,7 +1183,6 @@ export function DashboardView({
         ))}
       </div>
 
-      {/* CHARTS */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
           <div className="flex items-center justify-between">
@@ -1229,7 +1232,6 @@ export function DashboardView({
         </div>
       </div>
 
-      {/* UPLOAD */}
       <div className="rounded-3xl border border-border bg-card p-6">
         <h3 className="font-heading text-lg font-bold">
           Importer des données
@@ -1294,7 +1296,6 @@ export function DashboardView({
         </p>
       </div>
 
-      {/* ALERTS */}
       <div
         id="alerts-table"
         className="rounded-3xl border border-border bg-card"
