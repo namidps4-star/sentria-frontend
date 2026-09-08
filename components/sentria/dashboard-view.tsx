@@ -10,7 +10,6 @@ import {
   MoreHorizontal,
   Zap,
   Upload,
-  Sparkles,
   Shield,
 } from "lucide-react"
 import { AreaChart, BarChart, Sparkline } from "./charts"
@@ -63,12 +62,34 @@ type LogisticsPriority =
   | "recommend"
   | "resources"
 
+const LOGISTICS_PRIORITY_LABELS: Record<
+  LogisticsPriority,
+  string
+> = {
+  blockages: "Blocages",
+  wait: "Temps d'attente",
+  cost: "Coûts",
+  anticipate: "Anticipation",
+  recommend: "Recommandations",
+  resources: "Ressources",
+}
+
+const LOGISTICS_PRIORITY_ICONS: Record<
+  LogisticsPriority,
+  string
+> = {
+  blockages: "Blocages",
+  wait: "Attente",
+  cost: "Coûts",
+  anticipate: "Anticipation",
+  recommend: "Recommandations",
+  resources: "Ressources",
+}
+
 const SECTOR_META: Record<
   string,
   {
-    kpis: (
-      alerts: Alert[]
-    ) => {
+    kpis: (alerts: Alert[]) => {
       label: string
       value: string
       delta: string
@@ -91,17 +112,23 @@ const SECTOR_META: Record<
       },
       {
         label: "Alertes critiques",
-        value: String(a.filter((x) => x.severity === "CRITICAL").length),
+        value: String(
+          a.filter((x) => x.severity === "CRITICAL").length
+        ),
         delta:
           a.filter((x) => x.severity === "CRITICAL").length > 0
             ? "À traiter"
             : "OK",
-        up: a.filter((x) => x.severity === "CRITICAL").length === 0,
+        up:
+          a.filter((x) => x.severity === "CRITICAL").length ===
+          0,
         spark: [9, 8, 7, 8, 6, 5, 4],
       },
       {
         label: "Warnings",
-        value: String(a.filter((x) => x.severity === "WARNING").length),
+        value: String(
+          a.filter((x) => x.severity === "WARNING").length
+        ),
         delta: "Surveillance",
         up: true,
         spark: [8, 7, 9, 6, 8, 10, 12],
@@ -127,14 +154,18 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: "Machines en panne imminente",
-        value: String(a.filter((x) => x.severity === "CRITICAL").length),
+        value: String(
+          a.filter((x) => x.severity === "CRITICAL").length
+        ),
         delta: "Arrêt immédiat",
         up: false,
         spark: [2, 4, 3, 6, 5, 8, 7],
       },
       {
         label: "Usure élevée",
-        value: String(a.filter((x) => x.severity === "WARNING").length),
+        value: String(
+          a.filter((x) => x.severity === "WARNING").length
+        ),
         delta: "Surveiller",
         up: true,
         spark: [4, 5, 6, 5, 7, 8, 9],
@@ -167,7 +198,9 @@ const SECTOR_META: Record<
           x.message.toLowerCase().includes("wear") ||
           x.message.toLowerCase().includes("usure")
       ).length,
-      a.filter((x) => x.message.toLowerCase().includes("torque")).length,
+      a.filter((x) =>
+        x.message.toLowerCase().includes("torque")
+      ).length,
     ],
   },
 
@@ -175,14 +208,18 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: "Ruptures critiques",
-        value: String(a.filter((x) => x.severity === "CRITICAL").length),
+        value: String(
+          a.filter((x) => x.severity === "CRITICAL").length
+        ),
         delta: "Commander maintenant",
         up: false,
         spark: [3, 2, 4, 5, 3, 4, 6],
       },
       {
         label: "Stocks bas",
-        value: String(a.filter((x) => x.severity === "WARNING").length),
+        value: String(
+          a.filter((x) => x.severity === "WARNING").length
+        ),
         delta: "À surveiller",
         up: true,
         spark: [2, 3, 3, 4, 5, 4, 5],
@@ -226,7 +263,9 @@ const SECTOR_META: Record<
           x.message.toLowerCase().includes("froid") ||
           x.message.toLowerCase().includes("cold")
       ).length,
-      a.filter((x) => x.message.toLowerCase().includes("expir")).length,
+      a.filter((x) =>
+        x.message.toLowerCase().includes("expir")
+      ).length,
     ],
   },
 
@@ -234,7 +273,9 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: "Pertes probables",
-        value: String(a.filter((x) => x.severity === "CRITICAL").length),
+        value: String(
+          a.filter((x) => x.severity === "CRITICAL").length
+        ),
         delta: "Livraison urgente",
         up: false,
         spark: [1, 2, 2, 3, 4, 3, 5],
@@ -262,7 +303,9 @@ const SECTOR_META: Record<
       {
         label: "Alertes temp.",
         value: String(
-          a.filter((x) => x.message.toLowerCase().includes("temp")).length
+          a.filter((x) =>
+            x.message.toLowerCase().includes("temp")
+          ).length
         ),
         delta: "Stockage",
         up: false,
@@ -282,8 +325,12 @@ const SECTOR_META: Record<
           x.message.toLowerCase().includes("retard") ||
           x.message.toLowerCase().includes("delay")
       ).length,
-      a.filter((x) => x.message.toLowerCase().includes("temp")).length,
-      a.filter((x) => x.message.toLowerCase().includes("stock")).length,
+      a.filter((x) =>
+        x.message.toLowerCase().includes("temp")
+      ).length,
+      a.filter((x) =>
+        x.message.toLowerCase().includes("stock")
+      ).length,
     ],
   },
 
@@ -291,7 +338,9 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: "Camions critiques",
-        value: String(a.filter((x) => x.severity === "CRITICAL").length),
+        value: String(
+          a.filter((x) => x.severity === "CRITICAL").length
+        ),
         delta: "Immobiliser",
         up: false,
         spark: [1, 2, 1, 3, 2, 4, 3],
@@ -360,7 +409,9 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: "Équipements bloqués",
-        value: String(a.filter((x) => x.severity === "CRITICAL").length),
+        value: String(
+          a.filter((x) => x.severity === "CRITICAL").length
+        ),
         delta: "Arrêt immédiat",
         up: false,
         spark: [1, 2, 2, 3, 3, 4, 5],
@@ -402,7 +453,9 @@ const SECTOR_META: Record<
     chartTitle: "Alertes port · 7 jours",
     barLabels: ["Cycles", "Attente", "Pression", "Carburant"],
     barData: (a) => [
-      a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
+      a.filter((x) =>
+        x.message.toLowerCase().includes("cycle")
+      ).length,
       a.filter(
         (x) =>
           x.message.toLowerCase().includes("attente") ||
@@ -425,7 +478,9 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: "Générateurs critiques",
-        value: String(a.filter((x) => x.severity === "CRITICAL").length),
+        value: String(
+          a.filter((x) => x.severity === "CRITICAL").length
+        ),
         delta: "Intervenir",
         up: false,
         spark: [1, 2, 2, 3, 3, 4, 5],
@@ -504,258 +559,17 @@ const LOGISTICS_OPS_META: Record<
   string,
   (typeof SECTOR_META)["logistics"]
 > = {
-  port: {
-    kpis: (a) => [
-      {
-        label: "Conteneurs bloqués",
-        value: String(a.filter((x) => x.severity === "CRITICAL").length),
-        delta: "Arrêt immédiat",
-        up: false,
-        spark: [1, 2, 2, 3, 3, 4, 5],
-      },
-      {
-        label: "Attente au quai",
-        value: String(
-          a.filter(
-            (x) =>
-              x.message.toLowerCase().includes("attente") ||
-              x.message.toLowerCase().includes("quai") ||
-              x.message.toLowerCase().includes("wait")
-          ).length
-        ),
-        delta: "File conteneurs",
-        up: false,
-        spark: [2, 3, 3, 4, 4, 5, 6],
-      },
-      {
-        label: "Grues & engins actifs",
-        value: String(new Set(a.map((x) => x.equipment)).size),
-        delta: "Terminal",
-        up: true,
-        spark: [4, 5, 5, 6, 6, 7, 8],
-      },
-      {
-        label: "Alertes hydrauliques",
-        value: String(
-          a.filter(
-            (x) =>
-              x.message.toLowerCase().includes("pression") ||
-              x.message.toLowerCase().includes("hydraulique") ||
-              x.message.toLowerCase().includes("pressure")
-          ).length
-        ),
-        delta: "Grues",
-        up: false,
-        spark: [0, 1, 1, 1, 2, 2, 3],
-      },
-    ],
-    chartTitle: "Activité quai et conteneurs · 7 jours",
-    barLabels: ["Cycles grue", "Attente quai", "Pression", "Carburant"],
-    barData: (a) => [
-      a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("attente") ||
-          x.message.toLowerCase().includes("quai") ||
-          x.message.toLowerCase().includes("wait")
-      ).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("pression") ||
-          x.message.toLowerCase().includes("pressure")
-      ).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("carburant") ||
-          x.message.toLowerCase().includes("fuel")
-      ).length,
-    ],
-  },
-
-  entrepot: {
-    kpis: (a) => [
-      {
-        label: "Zones bloquées",
-        value: String(a.filter((x) => x.severity === "CRITICAL").length),
-        delta: "Arrêt immédiat",
-        up: false,
-        spark: [1, 2, 2, 3, 3, 4, 5],
-      },
-      {
-        label: "Commandes en retard",
-        value: String(
-          a.filter(
-            (x) =>
-              x.message.toLowerCase().includes("retard") ||
-              x.message.toLowerCase().includes("delay")
-          ).length
-        ),
-        delta: "Préparation",
-        up: false,
-        spark: [2, 3, 3, 4, 4, 5, 6],
-      },
-      {
-        label: "Chariots actifs",
-        value: String(new Set(a.map((x) => x.equipment)).size),
-        delta: "Entrepôt",
-        up: true,
-        spark: [4, 5, 5, 6, 6, 7, 8],
-      },
-      {
-        label: "Alertes capacité",
-        value: String(
-          a.filter(
-            (x) =>
-              x.message.toLowerCase().includes("capacite") ||
-              x.message.toLowerCase().includes("capacity") ||
-              x.message.toLowerCase().includes("surcharge")
-          ).length
-        ),
-        delta: "Stockage",
-        up: false,
-        spark: [0, 1, 1, 1, 2, 2, 3],
-      },
-    ],
-    chartTitle: "Activité entrepôt · 7 jours",
-    barLabels: ["Cycles", "Retards", "Capacité", "Carburant"],
-    barData: (a) => [
-      a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("retard") ||
-          x.message.toLowerCase().includes("delay")
-      ).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("capacite") ||
-          x.message.toLowerCase().includes("capacity")
-      ).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("carburant") ||
-          x.message.toLowerCase().includes("fuel")
-      ).length,
-    ],
-  },
-
-  transport: {
-    kpis: (a) => [
-      {
-        label: "Véhicules bloqués",
-        value: String(a.filter((x) => x.severity === "CRITICAL").length),
-        delta: "Arrêt immédiat",
-        up: false,
-        spark: [1, 2, 2, 3, 3, 4, 5],
-      },
-      {
-        label: "Entretien en retard",
-        value: String(
-          a.filter(
-            (x) =>
-              x.message.toLowerCase().includes("révision") ||
-              x.message.toLowerCase().includes("service")
-          ).length
-        ),
-        delta: "Maintenance",
-        up: false,
-        spark: [2, 3, 3, 4, 4, 5, 6],
-      },
-      {
-        label: "Véhicules actifs",
-        value: String(new Set(a.map((x) => x.equipment)).size),
-        delta: "Flotte",
-        up: true,
-        spark: [4, 5, 5, 6, 6, 7, 8],
-      },
-      {
-        label: "Alertes carburant",
-        value: String(
-          a.filter(
-            (x) =>
-              x.message.toLowerCase().includes("carburant") ||
-              x.message.toLowerCase().includes("fuel")
-          ).length
-        ),
-        delta: "Flotte",
-        up: false,
-        spark: [0, 1, 1, 1, 2, 2, 3],
-      },
-    ],
-    chartTitle: "Activité flotte · 7 jours",
-    barLabels: ["Surchauffe", "Huile", "Pneus", "Carburant"],
-    barData: (a) => [
-      a.filter((x) => x.message.toLowerCase().includes("surchauffe")).length,
-      a.filter((x) => x.message.toLowerCase().includes("huile")).length,
-      a.filter((x) => x.message.toLowerCase().includes("pneus")).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("carburant") ||
-          x.message.toLowerCase().includes("fuel")
-      ).length,
-    ],
-  },
-
-  froid: {
-    kpis: (a) => [
-      {
-        label: "Ruptures chaîne du froid",
-        value: String(a.filter((x) => x.severity === "CRITICAL").length),
-        delta: "Arrêt immédiat",
-        up: false,
-        spark: [1, 2, 2, 3, 3, 4, 5],
-      },
-      {
-        label: "Alertes température",
-        value: String(
-          a.filter((x) => x.message.toLowerCase().includes("temp")).length
-        ),
-        delta: "Seuil dépassé",
-        up: false,
-        spark: [2, 3, 3, 4, 4, 5, 6],
-      },
-      {
-        label: "Équipements actifs",
-        value: String(new Set(a.map((x) => x.equipment)).size),
-        delta: "Froid",
-        up: true,
-        spark: [4, 5, 5, 6, 6, 7, 8],
-      },
-      {
-        label: "Alertes pression",
-        value: String(
-          a.filter(
-            (x) =>
-              x.message.toLowerCase().includes("pression") ||
-              x.message.toLowerCase().includes("pressure")
-          ).length
-        ),
-        delta: "Groupe froid",
-        up: false,
-        spark: [0, 1, 1, 1, 2, 2, 3],
-      },
-    ],
-    chartTitle: "Activité chaîne du froid · 7 jours",
-    barLabels: ["Cycles", "Temp. hors seuil", "Pression", "Carburant"],
-    barData: (a) => [
-      a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
-      a.filter((x) => x.message.toLowerCase().includes("temp")).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("pression") ||
-          x.message.toLowerCase().includes("pressure")
-      ).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("carburant") ||
-          x.message.toLowerCase().includes("fuel")
-      ).length,
-    ],
-  },
+  port: SECTOR_META.logistics,
+  entrepot: SECTOR_META.logistics,
+  transport: SECTOR_META.logistics,
+  expedition: SECTOR_META.logistics,
+  froid: SECTOR_META.logistics,
+  multi: SECTOR_META.logistics,
 }
 
-function getSavedLogisticsPriority(): LogisticsPriority {
+function getSavedLogisticsPriorities(): LogisticsPriority[] {
   if (typeof window === "undefined") {
-    return "blockages"
+    return ["blockages"]
   }
 
   try {
@@ -764,37 +578,29 @@ function getSavedLogisticsPriority(): LogisticsPriority {
     )
 
     if (!Array.isArray(stored)) {
-      return "blockages"
+      return ["blockages"]
     }
 
-    if (stored.includes("wait")) {
-      return "wait"
-    }
+    const valid = stored.filter(
+      (value): value is LogisticsPriority =>
+        [
+          "blockages",
+          "wait",
+          "cost",
+          "anticipate",
+          "recommend",
+          "resources",
+        ].includes(value)
+    )
 
-    if (stored.includes("blockages")) {
-      return "blockages"
-    }
-
-    if (stored.includes("cost")) {
-      return "cost"
-    }
-
-    if (stored.includes("anticipate")) {
-      return "anticipate"
-    }
-
-    if (stored.includes("recommend")) {
-      return "recommend"
-    }
-
-    if (stored.includes("resources")) {
-      return "resources"
-    }
+    return valid.length > 0 ? valid : ["blockages"]
   } catch {
-    return "blockages"
+    return ["blockages"]
   }
+}
 
-  return "blockages"
+function getSavedLogisticsPriority(): LogisticsPriority {
+  return getSavedLogisticsPriorities()[0] ?? "blockages"
 }
 
 export function DashboardView({
@@ -803,7 +609,10 @@ export function DashboardView({
   search?: string
 }) {
   const [alerts, setAlerts] = useState<Alert[]>([])
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([])
+  const [recommendations, setRecommendations] = useState<
+    Recommendation[]
+  >([])
+
   const [uploadSector, setUploadSector] = useState("industry")
 
   const [filterSector, setFilterSector] = useState(() => {
@@ -811,9 +620,7 @@ export function DashboardView({
       return "all"
     }
 
-    const savedSector = localStorage.getItem("sentria_sector")
-
-    return savedSector || "all"
+    return localStorage.getItem("sentria_sector") || "all"
   })
 
   const [uploading, setUploading] = useState(false)
@@ -826,7 +633,8 @@ export function DashboardView({
 
     try {
       const stored = JSON.parse(
-        localStorage.getItem("sentria_sectors") || '["industry"]'
+        localStorage.getItem("sentria_sectors") ||
+          '["industry"]'
       )
 
       return Array.isArray(stored) && stored.length > 0
@@ -844,13 +652,21 @@ export function DashboardView({
   })
 
   const [logisticsPriority, setLogisticsPriority] =
-    useState<LogisticsPriority>(() => getSavedLogisticsPriority())
+    useState<LogisticsPriority>(() =>
+      getSavedLogisticsPriority()
+    )
+
+  const [selectedLogisticsPriorities, setSelectedLogisticsPriorities] =
+    useState<LogisticsPriority[]>(() =>
+      getSavedLogisticsPriorities()
+    )
 
   useEffect(() => {
     const refreshSectors = () => {
       try {
         const stored = JSON.parse(
-          localStorage.getItem("sentria_sectors") || '["industry"]'
+          localStorage.getItem("sentria_sectors") ||
+            '["industry"]'
         )
 
         setActiveSectors(
@@ -863,7 +679,11 @@ export function DashboardView({
       }
 
       setOpsType(localStorage.getItem("sentria_ops_type"))
-      setLogisticsPriority(getSavedLogisticsPriority())
+
+      const priorities = getSavedLogisticsPriorities()
+
+      setSelectedLogisticsPriorities(priorities)
+      setLogisticsPriority(priorities[0] ?? "blockages")
 
       const savedSector = localStorage.getItem("sentria_sector")
 
@@ -873,7 +693,10 @@ export function DashboardView({
     }
 
     const refreshPriority = () => {
-      setLogisticsPriority(getSavedLogisticsPriority())
+      const priorities = getSavedLogisticsPriorities()
+
+      setSelectedLogisticsPriorities(priorities)
+      setLogisticsPriority(priorities[0] ?? "blockages")
     }
 
     window.addEventListener(
@@ -886,10 +709,7 @@ export function DashboardView({
       refreshSectors
     )
 
-    window.addEventListener(
-      "storage",
-      refreshPriority
-    )
+    window.addEventListener("storage", refreshPriority)
 
     return () => {
       window.removeEventListener(
@@ -902,10 +722,7 @@ export function DashboardView({
         refreshSectors
       )
 
-      window.removeEventListener(
-        "storage",
-        refreshPriority
-      )
+      window.removeEventListener("storage", refreshPriority)
     }
   }, [])
 
@@ -1029,14 +846,13 @@ export function DashboardView({
 
       setUploadMsg(data.message ?? "Fichier traité.")
 
-      await new Promise((r) =>
-        setTimeout(r, 1500)
-      )
+      await new Promise((r) => setTimeout(r, 1500))
 
       const r2 = await fetch(`${API}/alerts`)
       const d2 = await r2.json()
 
       setAlerts(Array.isArray(d2) ? d2 : [])
+
       refreshRecommendations()
 
       setFilterSector(uploadSector)
@@ -1077,11 +893,11 @@ export function DashboardView({
     .slice(0, 5)
 
   const meta =
-    (filterSector === "logistics" && opsType
-      ? LOGISTICS_OPS_META[opsType]
-      : undefined) ??
-    SECTOR_META[filterSector] ??
-    SECTOR_META.all
+    filterSector === "logistics" && opsType
+      ? LOGISTICS_OPS_META[opsType] ??
+        SECTOR_META[filterSector] ??
+        SECTOR_META.all
+      : SECTOR_META[filterSector] ?? SECTOR_META.all
 
   const kpis = meta.kpis(filteredAlerts)
   const barData = meta.barData(filteredAlerts)
@@ -1139,6 +955,30 @@ export function DashboardView({
           ← Retour au tableau de bord
         </button>
 
+        {selectedLogisticsPriorities.length > 0 && (
+          <div className="rounded-2xl border border-border bg-card px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="mr-1 text-xs font-semibold text-muted-foreground">
+                Priorités sélectionnées
+              </span>
+
+              {selectedLogisticsPriorities.map((priority) => (
+                <span
+                  key={priority}
+                  className={cn(
+                    "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold",
+                    priority === logisticsPriority
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-muted text-foreground"
+                  )}
+                >
+                  {LOGISTICS_PRIORITY_LABELS[priority]}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {logisticsPriority === "recommend" ? (
           <RecommendationsBoard
             recommendations={filteredRecommendations}
@@ -1180,8 +1020,9 @@ export function DashboardView({
           </h2>
 
           <p className="mt-2 text-pretty text-sm text-background/70">
-            SentrIA surveille vos alertes en temps réel, machines, stocks,
-            flottes, équipements, partout dans le monde.
+            SentrIA surveille vos alertes en temps réel,
+            machines, stocks, flottes, équipements, partout
+            dans le monde.
           </p>
         </div>
 
@@ -1208,7 +1049,7 @@ export function DashboardView({
       />
 
       {/* SECTOR FILTER */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => {
             setFilterSector("all")
@@ -1260,14 +1101,36 @@ export function DashboardView({
             </span>
           </button>
         ))}
+
+        {/* PRIORITIES SELECTED DURING ONBOARDING */}
+        {filterSector === "all" &&
+          selectedLogisticsPriorities.length > 0 && (
+            <div className="ml-1 flex flex-wrap items-center gap-1.5 rounded-full border border-accent/30 bg-accent/5 px-2 py-1">
+              <span className="px-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Priorités
+              </span>
+
+              {selectedLogisticsPriorities.map(
+                (priority) => (
+                  <span
+                    key={priority}
+                    className="rounded-full bg-accent/15 px-2.5 py-1 text-[11px] font-semibold text-accent-foreground"
+                  >
+                    {LOGISTICS_PRIORITY_LABELS[priority]}
+                  </span>
+                )
+              )}
+            </div>
+          )}
       </div>
 
+      {/* LOGISTICS OPERATIONS CONTEXT */}
       {filterSector === "logistics" &&
         opsType &&
         LOGISTICS_OPS_META[opsType] && (
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[11px] font-medium text-accent-foreground">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-[11px] font-medium text-muted-foreground">
             <Shield className="h-3 w-3" />
-            Vue adaptée : {OPS_TYPE_LABEL[opsType]}
+            {OPS_TYPE_LABEL[opsType]}
           </div>
         )}
 
