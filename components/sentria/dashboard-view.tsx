@@ -1011,7 +1011,7 @@ export function DashboardView({
   /*
    * Le panneau noir n'apparaît QUE si l'utilisateur a cliqué
    * sur une alerte. Aucune alerte n'est sélectionnée par défaut :
-   * la liste occupe toute la largeur, puis se rétracte à gauche
+   * la table occupe toute la largeur, puis se rétracte à gauche
    * quand le panneau s'ouvre à droite.
    */
   const resolvedSelectedKey = expandedAlertKey
@@ -1762,136 +1762,157 @@ export function DashboardView({
         </div>
 
         {/*
-         * LISTE + PANNEAU DÉTAIL :
-         * - Sans sélection : la liste prend toute la largeur.
-         * - Au clic : la liste se rétracte à gauche et la grande
-         *   boîte noire/verte s'ouvre à droite avec tous les détails.
+         * TABLE + PANNEAU DÉTAIL :
+         * - Sans sélection : la table prend toute la largeur.
+         * - Au clic : la table se rétracte à gauche et la boîte
+         *   noire/verte compacte s'ouvre à droite.
          */}
         <div
           className={cn(
             "grid gap-4 p-4 transition-all duration-300 md:p-6",
             expandedAlert
-              ? "grid-cols-1 lg:grid-cols-[360px_1fr]"
+              ? "grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]"
               : "grid-cols-1"
           )}
         >
-          {/* GAUCHE : liste des alertes */}
-          <div className="flex min-w-0 flex-col gap-2">
-            {tableAlerts.slice(0, 20).map((alert, i) => {
-              const key = `${alert.equipment}-${alert.date}`
-              const isSelected = expandedAlertKey === key
+          {/* GAUCHE : table des alertes (style d'origine conservé) */}
+          <div className="min-w-0 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-y border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
+                  <th className="px-4 py-3 font-medium">
+                    Actif
+                  </th>
 
-              return (
-                <button
-                  key={`${key}-${i}`}
-                  type="button"
-                  onClick={() =>
-                    setExpandedAlertKey(isSelected ? null : key)
-                  }
-                  title="Cliquez pour voir les détails"
-                  className={cn(
-                    "group w-full rounded-2xl border p-4 text-left transition-all duration-200",
-                    isSelected
-                      ? "border-transparent bg-black text-white shadow-lg"
-                      : "border-border bg-background hover:-translate-y-px hover:border-[#a3e635]/60 hover:bg-[#a3e635]/10 hover:shadow-sm"
-                  )}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span
-                        className={cn(
-                          "h-2 w-2 shrink-0 rounded-full",
-                          alert.severity === "CRITICAL"
-                            ? "bg-red-400"
-                            : "bg-[#a3e635]"
-                        )}
-                      />
+                  <th className="px-4 py-3 font-medium">
+                    Message
+                  </th>
 
-                      <span className="truncate font-semibold">
-                        {alert.equipment}
-                      </span>
-                    </div>
+                  <th className="px-4 py-3 font-medium">
+                    Secteur
+                  </th>
 
-                    <span
+                  <th className="px-4 py-3 font-medium">
+                    Sévérité
+                  </th>
+
+                  <th className="px-4 py-3 font-medium">
+                    Date
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {tableAlerts.slice(0, 20).map((alert, i) => {
+                  const key = `${alert.equipment}-${alert.date}`
+                  const isSelected = expandedAlertKey === key
+
+                  return (
+                    <tr
+                      key={`${key}-${i}`}
+                      onClick={() =>
+                        setExpandedAlertKey(isSelected ? null : key)
+                      }
+                      title="Cliquez pour voir les détails"
                       className={cn(
-                        "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                        "cursor-pointer border-b border-border transition-colors last:border-0",
                         isSelected
-                          ? alert.severity === "CRITICAL"
-                            ? "bg-red-500/20 text-red-300"
-                            : "bg-[#a3e635]/20 text-[#a3e635]"
-                          : alert.severity === "CRITICAL"
-                          ? "bg-destructive/10 text-destructive"
-                          : "bg-amber-500/15 text-amber-600"
+                          ? "bg-[#a3e635]/10"
+                          : "hover:bg-[#a3e635]/10"
                       )}
                     >
-                      {alert.severity}
-                    </span>
-                  </div>
+                      <td className="px-4 py-4 font-semibold">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={cn(
+                              "h-1.5 w-1.5 shrink-0 rounded-full",
+                              alert.severity === "CRITICAL"
+                                ? "bg-red-400"
+                                : "bg-[#a3e635]"
+                            )}
+                          />
+                          {alert.equipment}
+                        </div>
+                      </td>
 
-                  <div className="mt-2 flex items-center justify-between gap-3">
-                    <p
-                      className={cn(
-                        "truncate text-xs",
-                        isSelected ? "text-white/60" : "text-muted-foreground"
-                      )}
+                      <td className="max-w-[280px] truncate px-4 py-4 text-muted-foreground">
+                        {alert.message}
+                      </td>
+
+                      <td className="px-4 py-4 capitalize text-muted-foreground">
+                        {alert.sector ?? "N/A"}
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <span
+                          className={cn(
+                            "rounded-full px-2.5 py-1 text-xs font-semibold",
+                            alert.severity === "CRITICAL"
+                              ? "bg-destructive/10 text-destructive"
+                              : "bg-amber-500/15 text-amber-600"
+                          )}
+                        >
+                          {alert.severity}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-4 text-muted-foreground">
+                        <div className="flex items-center justify-between gap-2">
+                          {new Date(
+                            alert.date
+                          ).toLocaleString("fr-FR")}
+
+                          <ChevronRight
+                            className={cn(
+                              "h-4 w-4 shrink-0 transition-all",
+                              isSelected
+                                ? "rotate-90 text-[#a3e635]"
+                                : "text-muted-foreground"
+                            )}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+
+                {tableAlerts.length === 0 && (
+                  <tr>
+                    <td
+                      className="px-4 py-8 text-muted-foreground"
+                      colSpan={5}
                     >
-                      {alert.message}
-                    </p>
-
-                    <ChevronRight
-                      className={cn(
-                        "h-4 w-4 shrink-0 transition-all",
-                        isSelected
-                          ? "rotate-90 text-[#a3e635]"
-                          : "text-muted-foreground group-hover:translate-x-0.5 group-hover:text-[#a3e635]"
-                      )}
-                    />
-                  </div>
-
-                  <p
-                    className={cn(
-                      "mt-1 text-[11px]",
-                      isSelected ? "text-white/40" : "text-muted-foreground/70"
-                    )}
-                  >
-                    {new Date(alert.date).toLocaleString("fr-FR")} ·{" "}
-                    <span className="capitalize">{alert.sector ?? "N/A"}</span>
-                  </p>
-                </button>
-              )
-            })}
-
-            {tableAlerts.length === 0 && (
-              <div className="rounded-2xl border border-dashed border-border px-6 py-8 text-center text-sm text-muted-foreground">
-                Aucune alerte pour ces filtres.
-              </div>
-            )}
+                      Aucune alerte pour ces filtres.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
 
-          {/* DROITE : grande boîte noire avec accents verts — uniquement au clic */}
+          {/* DROITE : boîte noire compacte — uniquement au clic */}
           {expandedAlert && (
-            <div className="min-w-0 rounded-3xl bg-black p-6 text-white ring-1 ring-[#a3e635]/30 shadow-[0_0_40px_rgba(163,230,53,0.12)] md:p-8">
-              {/* En-tête du panneau */}
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-[#a3e635]">
+            <div className="min-w-0 self-start rounded-3xl bg-black p-5 text-white ring-1 ring-[#a3e635]/30 shadow-[0_0_30px_rgba(163,230,53,0.10)]">
+              {/* En-tête compact */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#a3e635]">
                     Détails de l'alerte
                   </p>
 
-                  <h4 className="mt-2 font-heading text-2xl font-bold tracking-tight">
+                  <h4 className="mt-1.5 truncate font-heading text-xl font-bold tracking-tight">
                     {expandedAlert.equipment}
                   </h4>
 
-                  <p className="mt-1 text-sm text-white/50">
-                    Détectée le{" "}
+                  <p className="mt-0.5 text-xs text-white/50">
                     {new Date(expandedAlert.date).toLocaleString("fr-FR")}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                   <span
                     className={cn(
-                      "rounded-full px-3 py-1 text-xs font-semibold ring-1",
+                      "rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1",
                       expandedAlert.severity === "CRITICAL"
                         ? "bg-red-500/10 text-red-300 ring-red-400/30"
                         : "bg-[#a3e635]/10 text-[#a3e635] ring-[#a3e635]/30"
@@ -1904,41 +1925,41 @@ export function DashboardView({
                     type="button"
                     onClick={() => setExpandedAlertKey(null)}
                     aria-label="Fermer les détails"
-                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-white/60 ring-1 ring-white/10 transition-colors hover:bg-[#a3e635] hover:text-black hover:ring-transparent"
+                    className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-white/60 ring-1 ring-white/10 transition-colors hover:bg-[#a3e635] hover:text-black hover:ring-transparent"
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
 
-              {/* Message complet */}
-              <div className="mt-6 rounded-2xl bg-white/5 px-5 py-4 ring-1 ring-white/10">
+              {/* Message (2 lignes max) */}
+              <div className="mt-4 rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">
                   Message
                 </p>
-                <p className="mt-1.5 text-sm leading-6 text-white/90">
+                <p className="mt-1 line-clamp-2 text-sm leading-5 text-white/90">
                   {expandedAlert.message}
                 </p>
               </div>
 
-              {/* Grille d'infos */}
-              <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-                <div className="rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10">
+              {/* Infos en une ligne compacte */}
+              <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10">
+                <div>
                   <p className="text-[10px] uppercase tracking-wide text-white/40">
                     Secteur
                   </p>
-                  <p className="mt-1 text-sm font-semibold capitalize">
+                  <p className="text-sm font-semibold capitalize">
                     {expandedAlert.sector ?? "N/A"}
                   </p>
                 </div>
 
-                <div className="rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10">
+                <div>
                   <p className="text-[10px] uppercase tracking-wide text-white/40">
                     Statut
                   </p>
                   <p
                     className={cn(
-                      "mt-1 text-sm font-semibold",
+                      "text-sm font-semibold",
                       expandedAlert.severity === "CRITICAL"
                         ? "text-red-300"
                         : "text-[#a3e635]"
@@ -1950,57 +1971,51 @@ export function DashboardView({
                   </p>
                 </div>
 
-                <div className="rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10">
+                <div>
                   <p className="text-[10px] uppercase tracking-wide text-white/40">
                     Score de risque
                   </p>
-                  <p className="mt-1 text-sm font-semibold text-[#a3e635]">
+                  <p className="text-sm font-semibold text-[#a3e635]">
                     {expandedRecommendation?.risk_score ?? "N/A"}
                   </p>
                 </div>
 
-                <div className="rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10">
+                <div className="min-w-0 flex-1">
                   <p className="text-[10px] uppercase tracking-wide text-white/40">
                     Catégorie
                   </p>
-                  <p className="mt-1 truncate text-sm font-semibold capitalize">
+                  <p className="truncate text-sm font-semibold capitalize">
                     {expandedRecommendation?.action_category ?? "N/A"}
                   </p>
                 </div>
               </div>
 
-              {/* Recommandation */}
-              <div className="mt-4 rounded-2xl border border-[#a3e635]/20 bg-[#a3e635]/5 px-5 py-4">
+              {/* Recommandation compacte */}
+              <div className="mt-3 rounded-2xl border border-[#a3e635]/20 bg-[#a3e635]/5 px-4 py-3">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-[#a3e635]">
-                  Recommandation SentrIA
+                  Recommandation
                 </p>
 
-                <p className="mt-2 text-sm font-medium leading-6 text-white/90">
+                <p className="mt-1.5 line-clamp-2 text-sm font-medium leading-5 text-white/90">
                   {expandedRecommendation?.recommended_action ??
-                    "Analyse en cours — la recommandation sera générée prochainement."}
+                    "Analyse en cours — recommandation bientôt disponible."}
                 </p>
-
-                {expandedRecommendation?.message && (
-                  <p className="mt-2 text-xs leading-5 text-white/50">
-                    {expandedRecommendation.message}
-                  </p>
-                )}
               </div>
 
-              {/* Action */}
-              <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-                <p className="text-xs text-white/40">
-                  Cliquez à nouveau sur l'alerte pour refermer ce panneau.
+              {/* Pied compact */}
+              <div className="mt-4 flex items-center justify-between gap-3">
+                <p className="text-[11px] text-white/40">
+                  Cliquez à nouveau pour refermer.
                 </p>
 
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-[#a3e635] px-5 py-2.5 text-sm font-bold text-[#1a2e05] transition-transform hover:scale-[1.02]"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#a3e635] px-4 py-2 text-xs font-bold text-[#1a2e05] transition-transform hover:scale-[1.02]"
                 >
                   Voir la recommandation
-                  <ArrowUpRight className="h-4 w-4" />
+                  <ArrowUpRight className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
