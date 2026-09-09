@@ -10,15 +10,16 @@ import {
   MoreHorizontal,
   Zap,
   Upload,
-  Sparkles,
   Shield,
   Download,
   Search,
   X,
   ChevronDown,
 } from "lucide-react"
+
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
+
 import { LogisticsBlockagesView } from "./logistics-blockages-view"
 import { LogisticsWaitingView } from "./logistics-waiting-view"
 import { LogisticsCostView } from "./logistics-cost-view"
@@ -771,29 +772,12 @@ function getSavedLogisticsPriority(): LogisticsPriority {
       return "blockages"
     }
 
-    if (stored.includes("wait")) {
-      return "wait"
-    }
-
-    if (stored.includes("blockages")) {
-      return "blockages"
-    }
-
-    if (stored.includes("cost")) {
-      return "cost"
-    }
-
-    if (stored.includes("anticipate")) {
-      return "anticipate"
-    }
-
-    if (stored.includes("recommend")) {
-      return "recommend"
-    }
-
-    if (stored.includes("resources")) {
-      return "resources"
-    }
+    if (stored.includes("wait")) return "wait"
+    if (stored.includes("blockages")) return "blockages"
+    if (stored.includes("cost")) return "cost"
+    if (stored.includes("anticipate")) return "anticipate"
+    if (stored.includes("recommend")) return "recommend"
+    if (stored.includes("resources")) return "resources"
   } catch {
     return "blockages"
   }
@@ -807,17 +791,16 @@ export function DashboardView({
   search?: string
 }) {
   const [alerts, setAlerts] = useState<Alert[]>([])
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([])
+  const [recommendations, setRecommendations] = useState<
+    Recommendation[]
+  >([])
+
   const [uploadSector, setUploadSector] = useState("industry")
 
   const [filterSector, setFilterSector] = useState(() => {
-    if (typeof window === "undefined") {
-      return "all"
-    }
+    if (typeof window === "undefined") return "all"
 
-    const savedSector = localStorage.getItem("sentria_sector")
-
-    return savedSector || "all"
+    return localStorage.getItem("sentria_sector") || "all"
   })
 
   const [uploading, setUploading] = useState(false)
@@ -843,7 +826,6 @@ export function DashboardView({
 
   const [opsType, setOpsType] = useState<string | null>(() => {
     if (typeof window === "undefined") return null
-
     return localStorage.getItem("sentria_ops_type")
   })
 
@@ -908,10 +890,7 @@ export function DashboardView({
       refreshSectors
     )
 
-    window.addEventListener(
-      "storage",
-      refreshPriority
-    )
+    window.addEventListener("storage", refreshPriority)
 
     return () => {
       window.removeEventListener(
@@ -924,10 +903,7 @@ export function DashboardView({
         refreshSectors
       )
 
-      window.removeEventListener(
-        "storage",
-        refreshPriority
-      )
+      window.removeEventListener("storage", refreshPriority)
     }
   }, [])
 
@@ -1051,14 +1027,13 @@ export function DashboardView({
 
       setUploadMsg(data.message ?? "Fichier traité.")
 
-      await new Promise((r) =>
-        setTimeout(r, 1500)
-      )
+      await new Promise((r) => setTimeout(r, 1500))
 
       const r2 = await fetch(`${API}/alerts`)
       const d2 = await r2.json()
 
       setAlerts(Array.isArray(d2) ? d2 : [])
+
       refreshRecommendations()
 
       setFilterSector(uploadSector)
@@ -1214,6 +1189,7 @@ export function DashboardView({
           type="button"
           onClick={() => {
             setFilterSector("all")
+
             localStorage.setItem(
               "sentria_sector",
               "all"
@@ -1252,7 +1228,11 @@ export function DashboardView({
 
   return (
     <div className="space-y-6">
-      {/* HERO */}
+
+      {/* =====================================================
+          HERO
+      ====================================================== */}
+
       <div className="flex flex-col gap-4 rounded-3xl bg-foreground p-6 text-background md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-xl">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
@@ -1265,8 +1245,9 @@ export function DashboardView({
           </h2>
 
           <p className="mt-2 text-pretty text-sm text-background/70">
-            SentrIA surveille vos alertes en temps réel, machines,
-            stocks, flottes, équipements, partout dans le monde.
+            SentrIA surveille vos alertes en temps réel,
+            machines, stocks, flottes, équipements,
+            partout dans le monde.
           </p>
         </div>
 
@@ -1285,18 +1266,25 @@ export function DashboardView({
         </button>
       </div>
 
-      {/* RECOMMENDATIONS */}
+      {/* =====================================================
+          RECOMMENDATIONS
+      ====================================================== */}
+
       <RecommendationsPanel
         recommendations={filteredRecommendations}
         totalRecommendationsCount={recommendations.length}
         alerts={alerts}
       />
 
-      {/* SECTOR FILTER */}
+      {/* =====================================================
+          SECTOR FILTER
+      ====================================================== */}
+
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => {
             setFilterSector("all")
+
             localStorage.setItem(
               "sentria_sector",
               "all"
@@ -1325,6 +1313,7 @@ export function DashboardView({
             key={s.key}
             onClick={() => {
               setFilterSector(s.key)
+
               localStorage.setItem(
                 "sentria_sector",
                 s.key
@@ -1359,7 +1348,10 @@ export function DashboardView({
           </div>
         )}
 
-      {/* KPIs */}
+      {/* =====================================================
+          KPIs
+      ====================================================== */}
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((k) => {
           const maxSpark = Math.max(...k.spark, 1)
@@ -1367,7 +1359,9 @@ export function DashboardView({
           const trackPct = Math.min(
             100,
             Math.round(
-              (k.spark[k.spark.length - 1] / maxSpark) * 100
+              (k.spark[k.spark.length - 1] /
+                maxSpark) *
+                100
             )
           )
 
@@ -1431,7 +1425,10 @@ export function DashboardView({
         })}
       </div>
 
-      {/* CHARTS */}
+      {/* =====================================================
+          CHARTS
+      ====================================================== */}
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
           <div className="flex items-center justify-between">
@@ -1481,7 +1478,10 @@ export function DashboardView({
         </div>
       </div>
 
-      {/* UPLOAD */}
+      {/* =====================================================
+          UPLOAD
+      ====================================================== */}
+
       <div className="rounded-3xl border border-border bg-card p-6">
         <h3 className="font-heading text-lg font-bold">
           Importer des données
@@ -1548,117 +1548,182 @@ export function DashboardView({
         </p>
       </div>
 
-      {/* ALERTS */}
+      {/* =====================================================
+          ALERTS
+      ====================================================== */}
+
       <div
         id="alerts-table"
-        className="rounded-3xl border border-border bg-card"
+        className="overflow-hidden rounded-3xl border border-border bg-card"
       >
-        <div className="flex items-center justify-between p-6 pb-4">
+        {/* HEADER */}
+
+        <div className="flex flex-col gap-4 p-6 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <Cpu className="h-5 w-5" />
 
-            <h3 className="font-heading text-lg font-bold">
-              Alertes ·{" "}
-              {
-                SECTORS.find(
-                  (s) => s.key === filterSector
-                )?.label
-              }
-            </h3>
+            <div>
+              <h3 className="font-heading text-lg font-bold">
+                Alertes ·{" "}
+                {
+                  SECTORS.find(
+                    (s) => s.key === filterSector
+                  )?.label
+                }
+              </h3>
+
+              <p className="text-xs text-muted-foreground">
+                {tableAlerts.length} alerte
+                {tableAlerts.length > 1 ? "s" : ""} affichée
+                {tableAlerts.length > 1 ? "s" : ""}
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <button className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted">
+            <button
+              className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+            >
               <Download className="h-4 w-4" />
               Exporter
             </button>
 
-            <button className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90">
+            <button
+              className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90"
+            >
               Tout voir
               <ArrowUpRight className="h-4 w-4" />
             </button>
           </div>
         </div>
 
-        {/* FILTER BAR */}
-        <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-4">
-          <div className="relative">
-            <select
-              value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter(
-                  e.target.value as
-                    | "all"
-                    | "critical"
-                    | "warning"
-                )
-              }
-              className="appearance-none rounded-full border border-border bg-background py-2 pl-4 pr-9 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-muted"
+        {/* =================================================
+            FILTER BAR
+        ================================================== */}
+
+        <div className="border-y border-border bg-muted/20 px-6 py-4">
+          <div className="flex flex-wrap items-center gap-2">
+
+            {/* STATUS */}
+
+            <div className="relative">
+              <select
+                value={statusFilter}
+                onChange={(e) =>
+                  setStatusFilter(
+                    e.target.value as
+                      | "all"
+                      | "critical"
+                      | "warning"
+                  )
+                }
+                className="appearance-none rounded-full border border-border bg-background py-2 pl-4 pr-9 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-muted"
+              >
+                <option value="all">
+                  Tous les statuts
+                </option>
+
+                <option value="critical">
+                  Critiques
+                </option>
+
+                <option value="warning">
+                  Warnings
+                </option>
+              </select>
+
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            </div>
+
+            {/* PERIOD */}
+
+            <div className="relative">
+              <select
+                value={periodFilter}
+                onChange={(e) =>
+                  setPeriodFilter(
+                    e.target.value as
+                      | "all"
+                      | "7"
+                      | "30"
+                  )
+                }
+                className="appearance-none rounded-full border border-border bg-background py-2 pl-4 pr-9 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-muted"
+              >
+                <option value="all">
+                  Toutes les dates
+                </option>
+
+                <option value="7">
+                  7 derniers jours
+                </option>
+
+                <option value="30">
+                  30 derniers jours
+                </option>
+              </select>
+
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            </div>
+
+            {/* QUICK FILTERS */}
+
+            <button
+              onClick={() => {
+                setStatusFilter("critical")
+                setPeriodFilter("all")
+              }}
+              className={cn(
+                "rounded-full border px-4 py-2 text-xs font-semibold transition-colors",
+                statusFilter === "critical"
+                  ? "border-destructive bg-destructive/10 text-destructive"
+                  : "border-border bg-background hover:bg-muted"
+              )}
             >
-              <option value="all">
-                Tous les statuts
-              </option>
+              Critiques
+            </button>
 
-              <option value="critical">
-                Critiques
-              </option>
-
-              <option value="warning">
-                Warnings
-              </option>
-            </select>
-
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          </div>
-
-          <div className="relative">
-            <select
-              value={periodFilter}
-              onChange={(e) =>
-                setPeriodFilter(
-                  e.target.value as
-                    | "all"
-                    | "7"
-                    | "30"
-                )
-              }
-              className="appearance-none rounded-full border border-border bg-background py-2 pl-4 pr-9 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-muted"
+            <button
+              onClick={() => {
+                setStatusFilter("warning")
+                setPeriodFilter("all")
+              }}
+              className={cn(
+                "rounded-full border px-4 py-2 text-xs font-semibold transition-colors",
+                statusFilter === "warning"
+                  ? "border-amber-500 bg-amber-500/10 text-amber-600"
+                  : "border-border bg-background hover:bg-muted"
+              )}
             >
-              <option value="all">
-                Toutes les dates
-              </option>
+              Warnings
+            </button>
 
-              <option value="7">
-                7 derniers jours
-              </option>
+            {/* SEARCH */}
 
-              <option value="30">
-                30 derniers jours
-              </option>
-            </select>
+            <div className="relative ml-auto w-full sm:w-64">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
 
-            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          </div>
-
-          <div className="relative ml-auto w-full sm:w-64">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-
-            <input
-              type="text"
-              value={tableQuery}
-              onChange={(e) =>
-                setTableQuery(e.target.value)
-              }
-              placeholder="Rechercher un actif..."
-              className="w-full rounded-full border border-border bg-background py-2 pl-9 pr-4 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-accent"
-            />
+              <input
+                type="text"
+                value={tableQuery}
+                onChange={(e) =>
+                  setTableQuery(e.target.value)
+                }
+                placeholder="Rechercher un actif..."
+                className="w-full rounded-full border border-border bg-background py-2 pl-9 pr-4 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-accent"
+              />
+            </div>
           </div>
         </div>
+
+        {/* =================================================
+            TABLE
+        ================================================== */}
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-y border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
+              <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
                 <th className="px-6 py-3 font-medium">
                   Actif
                 </th>
@@ -1724,7 +1789,7 @@ export function DashboardView({
                         </div>
                       </td>
 
-                      <td className="px-6 py-4 text-muted-foreground">
+                      <td className="max-w-md truncate px-6 py-4 text-muted-foreground">
                         {alert.message}
                       </td>
 
@@ -1746,7 +1811,7 @@ export function DashboardView({
                         </span>
                       </td>
 
-                      <td className="px-6 py-4 text-muted-foreground">
+                      <td className="whitespace-nowrap px-6 py-4 text-muted-foreground">
                         {new Date(
                           alert.date
                         ).toLocaleString("fr-FR")}
@@ -1758,10 +1823,11 @@ export function DashboardView({
               {tableAlerts.length === 0 && (
                 <tr>
                   <td
-                    className="px-6 py-8 text-muted-foreground"
+                    className="px-6 py-10 text-center text-muted-foreground"
                     colSpan={5}
                   >
                     Aucune alerte pour ces filtres.
+                    <br />
                     Essayez d&apos;élargir la période ou
                     la recherche.
                   </td>
@@ -1771,109 +1837,127 @@ export function DashboardView({
           </table>
         </div>
 
-        {/* DÉTAIL AU CLIC */}
+        {/* =================================================
+            SELECTED ALERT DETAIL
+            RIGHT SIDE / WIDE / ROUNDED
+        ================================================== */}
+
         {selectedAlert && (
-          <div className="rounded-3xl bg-foreground p-6 text-background sm:p-8">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-xs text-background/50">
-                  Détail de l&apos;alerte
-                </p>
+          <div className="border-t border-border bg-muted/20 p-4 sm:p-6">
+            <div className="ml-auto w-full max-w-4xl rounded-3xl bg-foreground p-5 text-background shadow-sm sm:p-6">
 
-                <h4 className="mt-1 font-heading text-xl font-bold">
-                  {selectedAlert.equipment}
-                </h4>
-              </div>
+              {/* DETAIL HEADER */}
 
-              <div className="flex items-center gap-2">
-                <span
-                  className={cn(
-                    "rounded-full px-3 py-1 text-xs font-bold",
-                    selectedAlert.severity ===
-                      "CRITICAL"
-                      ? "bg-destructive/20 text-destructive"
-                      : "bg-amber-500/20 text-amber-400"
-                  )}
-                >
-                  {selectedAlert.severity}
-                </span>
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-background/45">
+                    Détail de l&apos;alerte
+                  </p>
+
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <h4 className="font-heading text-xl font-bold">
+                      {selectedAlert.equipment}
+                    </h4>
+
+                    <span
+                      className={cn(
+                        "rounded-full px-2.5 py-1 text-[10px] font-bold",
+                        selectedAlert.severity ===
+                          "CRITICAL"
+                          ? "bg-destructive/20 text-destructive"
+                          : "bg-amber-500/20 text-amber-400"
+                      )}
+                    >
+                      {selectedAlert.severity}
+                    </span>
+                  </div>
+                </div>
 
                 <button
                   onClick={() =>
                     setSelectedAlertKey(null)
                   }
                   aria-label="Fermer le détail"
-                  className="rounded-full bg-background/10 p-1.5 text-background/70 transition-colors hover:bg-background/20 hover:text-background"
+                  className="shrink-0 rounded-full bg-background/10 p-2 text-background/60 transition-colors hover:bg-background/20 hover:text-background"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
-            </div>
 
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-xl bg-background/5 p-3">
-                <span className="flex items-center gap-1.5 text-[11px] text-background/50">
-                  <Shield className="h-3 w-3" />
-                  Secteur
-                </span>
+              {/* DETAIL STATS */}
 
-                <p className="mt-1 text-sm font-semibold capitalize">
-                  {selectedAlert.sector ?? "N/A"}
+              <div className="mt-5 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+                <div className="rounded-2xl bg-background/5 p-3.5">
+                  <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-background/45">
+                    <Shield className="h-3 w-3" />
+                    Secteur
+                  </span>
+
+                  <p className="mt-1.5 text-sm font-semibold capitalize">
+                    {selectedAlert.sector ?? "N/A"}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-background/5 p-3.5">
+                  <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-background/45">
+                    <Cpu className="h-3 w-3" />
+                    Score de risque
+                  </span>
+
+                  <p className="mt-1.5 text-sm font-semibold">
+                    {matchedRecommendation?.risk_score ??
+                      "N/A"}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-background/5 p-3.5">
+                  <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-background/45">
+                    <Activity className="h-3 w-3" />
+                    Date
+                  </span>
+
+                  <p className="mt-1.5 text-sm font-semibold">
+                    {new Date(
+                      selectedAlert.date
+                    ).toLocaleString("fr-FR")}
+                  </p>
+                </div>
+              </div>
+
+              {/* MESSAGE */}
+
+              <div className="mt-3 rounded-2xl bg-background/5 p-4">
+                <p className="text-[10px] font-medium uppercase tracking-wide text-background/45">
+                  Message
+                </p>
+
+                <p className="mt-1.5 text-sm leading-relaxed text-background/90">
+                  {selectedAlert.message}
                 </p>
               </div>
 
-              <div className="rounded-xl bg-background/5 p-3">
-                <span className="flex items-center gap-1.5 text-[11px] text-background/50">
-                  <Cpu className="h-3 w-3" />
-                  Score de risque
-                </span>
+              {/* RECOMMENDATION */}
 
-                <p className="mt-1 text-sm font-semibold">
-                  {matchedRecommendation?.risk_score ??
-                    "N/A"}
-                </p>
+              <div className="mt-3 flex flex-col gap-4 rounded-2xl bg-background/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-background/45">
+                    Recommandation
+                  </p>
+
+                  <p className="mt-1.5 text-sm font-medium leading-relaxed">
+                    {matchedRecommendation?.recommended_action ??
+                      "Analyse en cours"}
+                  </p>
+                </div>
+
+                <button
+                  className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-xs font-bold text-accent-foreground transition-transform hover:scale-[1.02]"
+                >
+                  Voir la recommandation
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                </button>
               </div>
 
-              <div className="rounded-xl bg-background/5 p-3">
-                <span className="flex items-center gap-1.5 text-[11px] text-background/50">
-                  <Activity className="h-3 w-3" />
-                  Date
-                </span>
-
-                <p className="mt-1 text-sm font-semibold">
-                  {new Date(
-                    selectedAlert.date
-                  ).toLocaleString("fr-FR")}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-xl bg-background/5 p-4">
-              <p className="text-xs text-background/50">
-                Message
-              </p>
-
-              <p className="mt-1 text-sm text-background/90">
-                {selectedAlert.message}
-              </p>
-            </div>
-
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-background/5 p-4">
-              <div className="min-w-0">
-                <p className="text-xs text-background/50">
-                  Recommandation
-                </p>
-
-                <p className="mt-1 text-sm font-medium">
-                  {matchedRecommendation?.recommended_action ??
-                    "Analyse en cours"}
-                </p>
-              </div>
-
-              <button className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-xs font-bold text-accent-foreground transition-transform hover:scale-[1.02]">
-                Voir la recommandation
-                <ArrowUpRight className="h-3.5 w-3.5" />
-              </button>
             </div>
           </div>
         )}
@@ -1881,5 +1965,3 @@ export function DashboardView({
     </div>
   )
 }
-
-
