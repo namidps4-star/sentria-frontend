@@ -1548,7 +1548,15 @@ export function DashboardView({
         </p>
       </div>
 
-      {/* ALERTS */}
+      {/* ALERTS — deux cards indépendantes, chacune entièrement arrondie,
+          séparées par un espace (comme la référence : liste blanche +
+          panneau noir, jamais une seule card coupée en deux) */}
+      <div
+        className={cn(
+          "grid grid-cols-1 gap-4",
+          selectedAlert && "lg:grid-cols-[minmax(0,1fr)_340px]"
+        )}
+      >
       <div
         id="alerts-table"
         className="overflow-hidden rounded-3xl border border-border bg-card"
@@ -1655,20 +1663,7 @@ export function DashboardView({
           </div>
         </div>
 
-        {/*
-          Corps de la card : table + panneau de détail dans la même grille.
-          Sans sélection -> une seule colonne (table pleine largeur).
-          Avec une alerte sélectionnée -> le panneau s'ouvre dans le coin
-          droit de la card, la table se réduit en conséquence — jamais un
-          bandeau qui pousse tout vers le bas.
-        */}
-        <div
-          className={cn(
-            "grid grid-cols-1 border-t border-border",
-            selectedAlert && "lg:grid-cols-[minmax(0,1fr)_340px]"
-          )}
-        >
-          <div className="overflow-x-auto">
+        <div className="overflow-x-auto border-t border-border">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
@@ -1782,12 +1777,13 @@ export function DashboardView({
                 )}
               </tbody>
             </table>
-          </div>
+        </div>
+      </div>
 
-          {/* PANNEAU LATÉRAL — ouvre dans le coin droit de la card au clic,
-              ne pousse jamais le reste vers le bas */}
+          {/* PANNEAU DE DÉTAIL — card à part entière, entièrement arrondie,
+              posée à côté de la liste (jamais fusionnée/accolée à celle-ci) */}
           {selectedAlert && (
-            <div className="flex flex-col border-t border-border bg-foreground p-5 text-background lg:border-l lg:border-t-0">
+            <div className="flex flex-col rounded-3xl bg-foreground p-5 text-background">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs text-background/50">
@@ -1886,7 +1882,6 @@ export function DashboardView({
               </button>
             </div>
           )}
-        </div>
       </div>
     </div>
   )
