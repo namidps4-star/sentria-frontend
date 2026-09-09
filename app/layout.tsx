@@ -1,8 +1,8 @@
+
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Space_Grotesk, Geist_Mono } from 'next/font/google'
 import './globals.css'
-// import { SentriaStorageGuard } from '@components/sentria/sentria-storage-guard'
 
 const geistSans = Space_Grotesk({
   variable: '--font-geist-sans',
@@ -63,8 +63,6 @@ export default function RootLayout({
       className={`light ${geistSans.variable} ${geistMono.variable} bg-background`}
     >
       <body className="font-sans antialiased">
-        <SentriaStorageGuard />
-
         {children}
 
         {process.env.NODE_ENV === 'production' && <Analytics />}
@@ -72,3 +70,4 @@ export default function RootLayout({
     </html>
   )
 }
+
