@@ -1746,142 +1746,154 @@ export function DashboardView({
               : "grid-cols-1"
           )}
         >
-          <div className="min-w-0 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-y border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
-                  <th className="px-4 py-3 font-medium">
-                    Actif
-                  </th>
+          <div
+            className={cn(
+              "min-w-0 overflow-hidden rounded-3xl border border-border",
+              expandedAlert && "lg:h-[600px]"
+            )}
+          >
+            <div
+              className={cn(
+                "overflow-x-auto",
+                expandedAlert && "h-full overflow-y-auto"
+              )}
+            >
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-y border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
+                    <th className="px-4 py-3 font-medium">
+                      Actif
+                    </th>
 
-                  <th className="px-4 py-3 font-medium">
-                    Message
-                  </th>
+                    <th className="px-4 py-3 font-medium">
+                      Message
+                    </th>
 
-                  <th className="px-4 py-3 font-medium">
-                    Secteur
-                  </th>
+                    <th className="px-4 py-3 font-medium">
+                      Secteur
+                    </th>
 
-                  <th className="px-4 py-3 font-medium">
-                    Sévérité
-                  </th>
+                    <th className="px-4 py-3 font-medium">
+                      Sévérité
+                    </th>
 
-                  <th className="px-4 py-3 font-medium">
-                    Date
-                  </th>
-                </tr>
-              </thead>
+                    <th className="px-4 py-3 font-medium">
+                      Date
+                    </th>
+                  </tr>
+                </thead>
 
-              <tbody>
-                {tableAlerts.slice(0, 20).map((alert, i) => {
-                  const key = `${alert.equipment}-${alert.date}`
-                  const isSelected = expandedAlertKey === key
+                <tbody>
+                  {tableAlerts.slice(0, 20).map((alert, i) => {
+                    const key = `${alert.equipment}-${alert.date}`
+                    const isSelected = expandedAlertKey === key
 
-                  return (
-                    <tr
-                      key={`${key}-${i}`}
-                      onClick={() =>
-                        setExpandedAlertKey(
-                          isSelected ? null : key
-                        )
-                      }
-                      title="Cliquez pour voir les détails"
-                      className={cn(
-                        "cursor-pointer border-b border-border transition-colors last:border-0",
-                        isSelected
-                          ? "bg-foreground text-background"
-                          : "hover:bg-accent/15"
-                      )}
-                    >
-                      <td className="px-4 py-4 font-semibold">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={cn(
-                              "h-1.5 w-1.5 shrink-0 rounded-full",
-                              alert.severity === "CRITICAL"
-                                ? "bg-red-400"
-                                : "bg-[#a3e635]"
-                            )}
-                          />
-
-                          {alert.equipment}
-                        </div>
-                      </td>
-
-                      <td
+                    return (
+                      <tr
+                        key={`${key}-${i}`}
+                        onClick={() =>
+                          setExpandedAlertKey(
+                            isSelected ? null : key
+                          )
+                        }
+                        title="Cliquez pour voir les détails"
                         className={cn(
-                          "max-w-[280px] truncate px-4 py-4",
+                          "cursor-pointer border-b border-border transition-colors last:border-0",
                           isSelected
-                            ? "text-background/70"
-                            : "text-muted-foreground"
+                            ? "bg-foreground text-background"
+                            : "hover:bg-accent/15"
                         )}
                       >
-                        {alert.message}
-                      </td>
+                        <td className="px-4 py-4 font-semibold">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={cn(
+                                "h-1.5 w-1.5 shrink-0 rounded-full",
+                                alert.severity === "CRITICAL"
+                                  ? "bg-red-400"
+                                  : "bg-[#a3e635]"
+                              )}
+                            />
 
-                      <td
-                        className={cn(
-                          "px-4 py-4 capitalize",
-                          isSelected
-                            ? "text-background/70"
-                            : "text-muted-foreground"
-                        )}
-                      >
-                        {alert.sector ?? "N/A"}
-                      </td>
+                            {alert.equipment}
+                          </div>
+                        </td>
 
-                      <td className="px-4 py-4">
-                        <span
+                        <td
                           className={cn(
-                            "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
-                            alert.severity === "CRITICAL"
-                              ? "bg-destructive/10 text-destructive"
-                              : "bg-amber-500/15 text-amber-600"
+                            "max-w-[280px] truncate px-4 py-4",
+                            isSelected
+                              ? "text-background/70"
+                              : "text-muted-foreground"
                           )}
                         >
-                          {alert.severity}
-                        </span>
-                      </td>
+                          {alert.message}
+                        </td>
 
-                      <td
-                        className={cn(
-                          "px-4 py-4",
-                          isSelected
-                            ? "text-background/70"
-                            : "text-muted-foreground"
-                        )}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          {new Date(
-                            alert.date
-                          ).toLocaleString("fr-FR")}
+                        <td
+                          className={cn(
+                            "px-4 py-4 capitalize",
+                            isSelected
+                              ? "text-background/70"
+                              : "text-muted-foreground"
+                          )}
+                        >
+                          {alert.sector ?? "N/A"}
+                        </td>
 
-                          <ChevronRight
+                        <td className="px-4 py-4">
+                          <span
                             className={cn(
-                              "h-4 w-4 shrink-0 transition-all",
-                              isSelected
-                                ? "rotate-90 text-[#a3e635]"
-                                : "text-muted-foreground"
+                              "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
+                              alert.severity === "CRITICAL"
+                                ? "bg-destructive/10 text-destructive"
+                                : "bg-amber-500/15 text-amber-600"
                             )}
-                          />
-                        </div>
+                          >
+                            {alert.severity}
+                          </span>
+                        </td>
+
+                        <td
+                          className={cn(
+                            "px-4 py-4",
+                            isSelected
+                              ? "text-background/70"
+                              : "text-muted-foreground"
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            {new Date(
+                              alert.date
+                            ).toLocaleString("fr-FR")}
+
+                            <ChevronRight
+                              className={cn(
+                                "h-4 w-4 shrink-0 transition-all",
+                                isSelected
+                                  ? "rotate-90 text-[#a3e635]"
+                                  : "text-muted-foreground"
+                              )}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+
+                  {tableAlerts.length === 0 && (
+                    <tr>
+                      <td
+                        className="px-4 py-8 text-muted-foreground"
+                        colSpan={5}
+                      >
+                        Aucune alerte pour ces filtres.
                       </td>
                     </tr>
-                  )
-                })}
-
-                {tableAlerts.length === 0 && (
-                  <tr>
-                    <td
-                      className="px-4 py-8 text-muted-foreground"
-                      colSpan={5}
-                    >
-                      Aucune alerte pour ces filtres.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {expandedAlert && (
@@ -2014,774 +2026,6 @@ export function DashboardView({
             </div>
           )}
         </div>
-      </div>
-    </div>
-  )
-}"use client"
-
-import * as React from "react"
-import {
-  Activity,
-  AlertTriangle,
-  ArrowDown,
-  ArrowUp,
-  BarChart3,
-  Bell,
-  Boxes,
-  Check,
-  ChevronDown,
-  ChevronRight,
-  CircleDollarSign,
-  Clock3,
-  FileText,
-  Gauge,
-  Lightbulb,
-  PackageCheck,
-  RefreshCw,
-  Search,
-  ShieldAlert,
-  Sparkles,
-  Truck,
-  X,
-} from "lucide-react"
-
-import { cn } from "@/lib/utils"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Progress } from "@/components/ui/progress"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-
-type Severity = "CRITICAL" | "WARNING"
-
-type AlertItem = {
-  id: string
-  severity: Severity
-  title: string
-  description: string
-  source: string
-  time: string
-  impact: string
-}
-
-type Recommendation = {
-  id: string
-  title: string
-  description: string
-  impact: string
-  confidence: number
-}
-
-type LogisticsPriority = {
-  id: string
-  title: string
-  value: string
-  change: string
-  trend: "up" | "down"
-}
-
-const alerts: AlertItem[] = [
-  {
-    id: "1",
-    severity: "CRITICAL",
-    title: "Stockout risk detected",
-    description:
-      "SKU-4821 is projected to run out of stock within the next 48 hours.",
-    source: "Inventory",
-    time: "12 min ago",
-    impact: "€24.8K revenue at risk",
-  },
-  {
-    id: "2",
-    severity: "WARNING",
-    title: "Supplier lead time increased",
-    description:
-      "Supplier SUP-104 has reported a 3-day increase in average lead time.",
-    source: "Procurement",
-    time: "34 min ago",
-    impact: "12 orders impacted",
-  },
-  {
-    id: "3",
-    severity: "WARNING",
-    title: "Delivery performance below target",
-    description:
-      "On-time delivery has dropped below the target threshold for Zone 3.",
-    source: "Logistics",
-    time: "1 hr ago",
-    impact: "−8.4% service level",
-  },
-  {
-    id: "4",
-    severity: "CRITICAL",
-    title: "Demand spike detected",
-    description:
-      "Demand for SKU-7714 is 41% above forecast for the current period.",
-    source: "Forecasting",
-    time: "2 hrs ago",
-    impact: "€18.2K opportunity",
-  },
-  {
-    id: "5",
-    severity: "WARNING",
-    title: "Warehouse capacity warning",
-    description:
-      "Warehouse WH-03 is approaching its optimal storage capacity.",
-    source: "Warehouse",
-    time: "3 hrs ago",
-    impact: "92% utilization",
-  },
-]
-
-const recommendations: Recommendation[] = [
-  {
-    id: "1",
-    title: "Increase safety stock for SKU-4821",
-    description:
-      "Raise the safety stock level by 18% to reduce the projected stockout risk.",
-    impact: "+€31.4K protected revenue",
-    confidence: 94,
-  },
-  {
-    id: "2",
-    title: "Reallocate inventory to Zone 3",
-    description:
-      "Move available units from WH-01 to improve delivery coverage in Zone 3.",
-    impact: "+6.2% service level",
-    confidence: 89,
-  },
-  {
-    id: "3",
-    title: "Expedite SUP-104 purchase order",
-    description:
-      "Prioritize the open purchase order to offset the supplier lead-time increase.",
-    impact: "−3 days expected delay",
-    confidence: 86,
-  },
-]
-
-const logisticsPriorities: LogisticsPriority[] = [
-  {
-    id: "1",
-    title: "Orders at risk",
-    value: "124",
-    change: "+12.4%",
-    trend: "up",
-  },
-  {
-    id: "2",
-    title: "On-time delivery",
-    value: "94.2%",
-    change: "+2.8%",
-    trend: "up",
-  },
-  {
-    id: "3",
-    title: "Average lead time",
-    value: "4.8 days",
-    change: "-0.6d",
-    trend: "down",
-  },
-  {
-    id: "4",
-    title: "Warehouse utilization",
-    value: "82%",
-    change: "+4.1%",
-    trend: "up",
-  },
-]
-
-const statusTagClass = (severity: Severity) =>
-  severity === "CRITICAL"
-    ? "bg-destructive/10 text-destructive"
-    : "bg-amber-500/15 text-amber-600"
-
-export default function DashboardView() {
-  const [expandedAlert, setExpandedAlert] = React.useState<AlertItem | null>(
-    null,
-  )
-  const [search, setSearch] = React.useState("")
-  const [selectedLogisticsPriorities, setSelectedLogisticsPriorities] =
-    React.useState("all")
-
-  const filteredAlerts = alerts.filter((alert) => {
-    const value = search.toLowerCase()
-
-    return (
-      alert.title.toLowerCase().includes(value) ||
-      alert.description.toLowerCase().includes(value) ||
-      alert.source.toLowerCase().includes(value) ||
-      alert.severity.toLowerCase().includes(value)
-    )
-  })
-
-  return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
-      <div className="mx-auto max-w-[1600px] space-y-6">
-        {/* Header */}
-        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-          <div>
-            <div className="flex items-center gap-2">
-              <div className="rounded-xl bg-black p-2 text-[#a3e635]">
-                <Gauge className="h-5 w-5" />
-              </div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                Supply Chain Control Tower
-              </h1>
-            </div>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Real-time visibility across inventory, logistics and procurement.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Refresh
-            </Button>
-            <Button size="sm" className="bg-black text-white hover:bg-black/90">
-              <FileText className="mr-2 h-4 w-4" />
-              Export report
-            </Button>
-          </div>
-        </div>
-
-        {/* KPI cards */}
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <Card className="rounded-3xl">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Inventory health</p>
-                  <p className="mt-2 text-3xl font-bold">87.4%</p>
-                </div>
-                <div className="rounded-xl bg-[#a3e635]/15 p-2.5 text-[#65a30d]">
-                  <Boxes className="h-5 w-5" />
-                </div>
-              </div>
-              <div className="mt-4 flex items-center gap-2 text-xs">
-                <span className="flex items-center text-emerald-600">
-                  <ArrowUp className="mr-1 h-3.5 w-3.5" />
-                  4.8%
-                </span>
-                <span className="text-muted-foreground">vs last period</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-3xl">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Orders at risk</p>
-                  <p className="mt-2 text-3xl font-bold">124</p>
-                </div>
-                <div className="rounded-xl bg-amber-500/15 p-2.5 text-amber-600">
-                  <Truck className="h-5 w-5" />
-                </div>
-              </div>
-              <div className="mt-4 flex items-center gap-2 text-xs">
-                <span className="flex items-center text-red-600">
-                  <ArrowUp className="mr-1 h-3.5 w-3.5" />
-                  12.4%
-                </span>
-                <span className="text-muted-foreground">vs last period</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-3xl">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Procurement savings
-                  </p>
-                  <p className="mt-2 text-3xl font-bold">€284K</p>
-                </div>
-                <div className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-600">
-                  <CircleDollarSign className="h-5 w-5" />
-                </div>
-              </div>
-              <div className="mt-4 flex items-center gap-2 text-xs">
-                <span className="flex items-center text-emerald-600">
-                  <ArrowUp className="mr-1 h-3.5 w-3.5" />
-                  8.7%
-                </span>
-                <span className="text-muted-foreground">vs last period</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-3xl">
-            <CardContent className="p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Service level
-                  </p>
-                  <p className="mt-2 text-3xl font-bold">94.2%</p>
-                </div>
-                <div className="rounded-xl bg-blue-500/10 p-2.5 text-blue-600">
-                  <Activity className="h-5 w-5" />
-                </div>
-              </div>
-              <div className="mt-4 flex items-center gap-2 text-xs">
-                <span className="flex items-center text-emerald-600">
-                  <ArrowUp className="mr-1 h-3.5 w-3.5" />
-                  2.8%
-                </span>
-                <span className="text-muted-foreground">vs last period</span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Alerts + alert detail */}
-        <Card className="overflow-hidden rounded-3xl">
-          <CardHeader className="border-b">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Bell className="h-5 w-5" />
-                  Alerts
-                  <Badge variant="secondary" className="rounded-full">
-                    {alerts.length}
-                  </Badge>
-                </CardTitle>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Priority events requiring attention.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Search alerts..."
-                    className="w-full rounded-xl pl-9 sm:w-[240px]"
-                  />
-                </div>
-
-                <Select
-                  value={selectedLogisticsPriorities}
-                  onValueChange={setSelectedLogisticsPriorities}
-                >
-                  <SelectTrigger className="w-full rounded-xl sm:w-[170px]">
-                    <SelectValue placeholder="Filter" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All alerts</SelectItem>
-                    <SelectItem value="critical">Critical</SelectItem>
-                    <SelectItem value="warning">Warning</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardHeader>
-
-          <div
-            className={cn(
-              "grid gap-5 p-4 md:p-6",
-              expandedAlert
-                ? "lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]"
-                : "grid-cols-1",
-            )}
-          >
-            {/* LEFT: rounded scrollable alerts */}
-            <div
-              className={cn(
-                "min-w-0 overflow-hidden rounded-3xl border bg-background",
-                expandedAlert ? "lg:h-[620px]" : "h-auto",
-              )}
-            >
-              <div
-                className={cn(
-                  expandedAlert
-                    ? "h-full overflow-y-auto overscroll-contain"
-                    : "max-h-[620px] overflow-y-auto overscroll-contain",
-                )}
-              >
-                <div className="divide-y">
-                  {filteredAlerts
-                    .filter((alert) => {
-                      if (selectedLogisticsPriorities === "critical") {
-                        return alert.severity === "CRITICAL"
-                      }
-
-                      if (selectedLogisticsPriorities === "warning") {
-                        return alert.severity === "WARNING"
-                      }
-
-                      return true
-                    })
-                    .map((alert) => {
-                      const isSelected = expandedAlert?.id === alert.id
-
-                      return (
-                        <button
-                          key={alert.id}
-                          type="button"
-                          onClick={() =>
-                            setExpandedAlert((current) =>
-                              current?.id === alert.id ? null : alert,
-                            )
-                          }
-                          className={cn(
-                            "group flex w-full items-start gap-4 p-4 text-left transition-colors md:p-5",
-                            isSelected
-                              ? "bg-black text-white hover:bg-black"
-                              : "hover:bg-[#a3e635]",
-                          )}
-                        >
-                          <div
-                            className={cn(
-                              "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
-                              alert.severity === "CRITICAL"
-                                ? "bg-destructive/10 text-destructive"
-                                : "bg-amber-500/15 text-amber-600",
-                              isSelected &&
-                                "bg-white/10 text-white",
-                            )}
-                          >
-                            {alert.severity === "CRITICAL" ? (
-                              <ShieldAlert className="h-4 w-4" />
-                            ) : (
-                              <AlertTriangle className="h-4 w-4" />
-                            )}
-                          </div>
-
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span
-                                className={cn(
-                                  "rounded-full px-2.5 py-1 text-[11px] font-semibold",
-                                  statusTagClass(alert.severity),
-                                  isSelected &&
-                                    "bg-white/10 text-white",
-                                )}
-                              >
-                                {alert.severity}
-                              </span>
-
-                              <span
-                                className={cn(
-                                  "text-xs text-muted-foreground",
-                                  isSelected && "text-white/60",
-                                )}
-                              >
-                                {alert.source}
-                              </span>
-
-                              <span
-                                className={cn(
-                                  "ml-auto text-xs text-muted-foreground",
-                                  isSelected && "text-white/60",
-                                )}
-                              >
-                                {alert.time}
-                              </span>
-                            </div>
-
-                            <h3
-                              className={cn(
-                                "mt-2 font-semibold",
-                                isSelected && "text-white",
-                              )}
-                            >
-                              {alert.title}
-                            </h3>
-
-                            <p
-                              className={cn(
-                                "mt-1 line-clamp-2 text-sm text-muted-foreground",
-                                isSelected && "text-white/70",
-                              )}
-                            >
-                              {alert.description}
-                            </p>
-
-                            <div className="mt-3 flex items-center justify-between gap-3">
-                              <span
-                                className={cn(
-                                  "text-xs font-medium text-muted-foreground",
-                                  isSelected && "text-white/70",
-                                )}
-                              >
-                                {alert.impact}
-                              </span>
-
-                              <ChevronRight
-                                className={cn(
-                                  "h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5",
-                                  isSelected && "text-white",
-                                )}
-                              />
-                            </div>
-                          </div>
-                        </button>
-                      )
-                    })}
-
-                  {filteredAlerts.length === 0 && (
-                    <div className="flex min-h-[220px] items-center justify-center p-8 text-center">
-                      <div>
-                        <Search className="mx-auto h-8 w-8 text-muted-foreground" />
-                        <p className="mt-3 font-medium">No alerts found</p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          Try another search term.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* RIGHT: fixed black alert detail box */}
-            {expandedAlert && (
-              <div className="min-w-0 self-start lg:sticky lg:top-6">
-                <div className="rounded-3xl bg-black p-5 text-white shadow-[0_0_30px_rgba(0,0,0,0.18)] ring-1 ring-[#a3e635]/30 md:p-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span
-                          className={cn(
-                            "rounded-full px-2.5 py-1 text-[11px] font-semibold",
-                            statusTagClass(expandedAlert.severity),
-                          )}
-                        >
-                          {expandedAlert.severity}
-                        </span>
-
-                        <span className="text-xs text-white/50">
-                          {expandedAlert.source}
-                        </span>
-                      </div>
-
-                      <h2 className="mt-3 text-xl font-semibold">
-                        {expandedAlert.title}
-                      </h2>
-                    </div>
-
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setExpandedAlert(null)}
-                      className="shrink-0 rounded-xl text-white/60 transition-colors hover:bg-[#a3e635] hover:text-black"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <p className="mt-4 text-sm leading-6 text-white/70">
-                    {expandedAlert.description}
-                  </p>
-
-                  <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-2xl bg-white/[0.06] p-4">
-                      <p className="text-xs text-white/50">Impact</p>
-                      <p className="mt-2 font-semibold">
-                        {expandedAlert.impact}
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl bg-white/[0.06] p-4">
-                      <p className="text-xs text-white/50">Detected</p>
-                      <p className="mt-2 font-semibold">
-                        {expandedAlert.time}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 rounded-2xl bg-white/[0.06] p-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">
-                        Recommended response
-                      </span>
-                      <Sparkles className="h-4 w-4 text-[#a3e635]" />
-                    </div>
-
-                    <p className="mt-2 text-sm leading-6 text-white/65">
-                      Review the affected inventory and prioritize the required
-                      operational action before the risk window expires.
-                    </p>
-                  </div>
-
-                  <div className="mt-6 flex flex-col gap-2 sm:flex-row">
-                    <Button className="flex-1 rounded-xl bg-[#a3e635] text-black hover:bg-[#bef264]">
-                      <Check className="mr-2 h-4 w-4" />
-                      Resolve alert
-                    </Button>
-                    <Button
-                      variant="outline"
-                      className="flex-1 rounded-xl border-white/15 bg-white/[0.04] text-white hover:bg-white/10 hover:text-white"
-                    >
-                      <Clock3 className="mr-2 h-4 w-4" />
-                      Snooze
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </Card>
-
-        {/* Logistics */}
-        <div className="grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
-          <Card className="rounded-3xl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Truck className="h-5 w-5" />
-                Logistics priorities
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Key logistics indicators requiring monitoring.
-              </p>
-            </CardHeader>
-
-            <CardContent>
-              <div className="grid gap-4 sm:grid-cols-2">
-                {logisticsPriorities.map((item) => (
-                  <div
-                    key={item.id}
-                    className="rounded-2xl border p-4 transition-colors hover:bg-muted/40"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm text-muted-foreground">
-                          {item.title}
-                        </p>
-                        <p className="mt-2 text-2xl font-bold">{item.value}</p>
-                      </div>
-
-                      <div
-                        className={cn(
-                          "rounded-xl p-2",
-                          item.trend === "up"
-                            ? "bg-emerald-500/10 text-emerald-600"
-                            : "bg-blue-500/10 text-blue-600",
-                        )}
-                      >
-                        {item.trend === "up" ? (
-                          <ArrowUp className="h-4 w-4" />
-                        ) : (
-                          <ArrowDown className="h-4 w-4" />
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="mt-4 flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">
-                        vs previous period
-                      </span>
-                      <span
-                        className={cn(
-                          "font-semibold",
-                          item.trend === "up"
-                            ? "text-emerald-600"
-                            : "text-blue-600",
-                        )}
-                      >
-                        {item.change}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Recommendations */}
-          <Card className="rounded-3xl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Lightbulb className="h-5 w-5" />
-                Recommendations
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                AI-generated actions based on current signals.
-              </p>
-            </CardHeader>
-
-            <CardContent className="space-y-3">
-              {recommendations.map((recommendation) => (
-                <div
-                  key={recommendation.id}
-                  className="rounded-2xl border p-4 transition-colors hover:bg-muted/40"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 rounded-xl bg-[#a3e635]/15 p-2 text-[#65a30d]">
-                      <Sparkles className="h-4 w-4" />
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-semibold">
-                        {recommendation.title}
-                      </h3>
-                      <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                        {recommendation.description}
-                      </p>
-
-                      <div className="mt-3 flex items-center justify-between gap-3">
-                        <span className="text-xs font-medium">
-                          {recommendation.impact}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {recommendation.confidence}% confidence
-                        </span>
-                      </div>
-
-                      <Progress
-                        value={recommendation.confidence}
-                        className="mt-2 h-1.5"
-                      />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Bottom summary */}
-        <Card className="rounded-3xl">
-          <CardContent className="p-5 md:p-6">
-            <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-              <div>
-                <div className="flex items-center gap-2">
-                  <PackageCheck className="h-5 w-5" />
-                  <h2 className="font-semibold">Network health</h2>
-                </div>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Overall supply chain performance is stable with a few
-                  priority exceptions.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Badge className="rounded-full bg-[#a3e635] text-black hover:bg-[#a3e635]">
-                  Operational
-                </Badge>
-                <Badge variant="outline" className="rounded-full">
-                  5 active alerts
-                </Badge>
-                <Badge variant="outline" className="rounded-full">
-                  3 recommendations
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
     </div>
   )
