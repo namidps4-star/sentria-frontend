@@ -1108,7 +1108,7 @@ export function DashboardView({
             </button>
           </div>
 
-          <div className="rounded-3xl bg-indigo-950 p-6 text-white md:p-8">
+          <div className="rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:p-8">
             <div className="max-w-2xl">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
                 <Shield className="h-3.5 w-3.5" />
@@ -1119,7 +1119,7 @@ export function DashboardView({
                 Vue d'ensemble de votre logistique.
               </h2>
 
-              <p className="mt-2 text-sm leading-6 text-white/70">
+              <p className="mt-2 text-sm leading-6 text-sidebar-foreground/70">
                 Retrouvez ici les priorités que vous avez
                 sélectionnées pendant la configuration de SentrIA.
                 Choisissez une priorité pour accéder directement
@@ -1128,7 +1128,7 @@ export function DashboardView({
 
               {normalizedOpsType &&
                 OPS_TYPE_LABEL[normalizedOpsType] && (
-                  <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-medium text-white/80">
+                  <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-sidebar-border bg-white/10 px-3 py-1 text-[11px] font-medium text-sidebar-foreground/80">
                     <Shield className="h-3 w-3" />
                     {OPS_TYPE_LABEL[normalizedOpsType]}
                   </div>
@@ -1269,7 +1269,7 @@ export function DashboardView({
                   className={cn(
                     "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold transition-colors",
                     priority === logisticsPriority
-                      ? "bg-indigo-950 text-white"
+                      ? "bg-black text-white"
                       : "bg-muted text-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
@@ -1376,7 +1376,8 @@ export function DashboardView({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-3xl bg-indigo-950 p-6 text-white md:flex-row md:items-center md:justify-between md:p-8">
+      {/* HERO / DASHBOARD */}
+      <div className="flex flex-col gap-4 rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-xl">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
             <Zap className="h-3.5 w-3.5" />
@@ -1387,7 +1388,7 @@ export function DashboardView({
             Vue globale de vos opérations critiques.
           </h2>
 
-          <p className="mt-2 text-pretty text-sm text-white/70">
+          <p className="mt-2 text-pretty text-sm text-sidebar-foreground/70">
             SentrIA surveille vos alertes en temps réel,
             machines, stocks, flottes, équipements, partout
             dans le monde.
@@ -1415,13 +1416,14 @@ export function DashboardView({
         alerts={alerts}
       />
 
+      {/* SECTOR FILTERS */}
       <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={returnToDashboard}
           className={cn(
             "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
             filterSector === "all"
-              ? "border-indigo-950 bg-indigo-950 text-white"
+              ? "border-black bg-black text-white"
               : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
           )}
         >
@@ -1455,7 +1457,7 @@ export function DashboardView({
             className={cn(
               "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
               filterSector === s.key
-                ? "border-indigo-950 bg-indigo-950 text-white"
+                ? "border-black bg-black text-white"
                 : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
             )}
           >
@@ -1505,6 +1507,7 @@ export function DashboardView({
           </div>
         )}
 
+      {/* KPIs */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((k) => (
           <div
@@ -1549,6 +1552,7 @@ export function DashboardView({
         ))}
       </div>
 
+      {/* CHARTS */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
           <div className="flex items-center justify-between">
@@ -1598,6 +1602,7 @@ export function DashboardView({
         </div>
       </div>
 
+      {/* IMPORT */}
       <div className="rounded-3xl border border-border bg-card p-6">
         <h3 className="font-heading text-lg font-bold">
           Importer des données
@@ -1620,7 +1625,7 @@ export function DashboardView({
                 className={cn(
                   "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors",
                   uploadSector === s.key
-                    ? "border-indigo-950 bg-indigo-950 text-white"
+                    ? "border-black bg-black text-white"
                     : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
                 )}
               >
@@ -1662,6 +1667,7 @@ export function DashboardView({
         </p>
       </div>
 
+      {/* ALERTS */}
       <div
         id="alerts-table"
         className="rounded-3xl border border-border bg-card"
@@ -1689,13 +1695,14 @@ export function DashboardView({
               setExpandedAlertKey(null)
               clearAlertFilters()
             }}
-            className="inline-flex items-center gap-1.5 rounded-full bg-indigo-950 px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            className="inline-flex items-center gap-1.5 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
           >
             Tout voir
             <ArrowUpRight className="h-4 w-4" />
           </button>
         </div>
 
+        {/* FILTERS */}
         <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-3">
           <select
             value={statusFilter}
@@ -1710,7 +1717,7 @@ export function DashboardView({
             className={cn(
               "rounded-full border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground",
               statusFilter !== "all"
-                ? "border-indigo-950 ring-1 ring-indigo-950/20"
+                ? "border-black ring-1 ring-black/20"
                 : "border-border"
             )}
           >
@@ -1739,7 +1746,7 @@ export function DashboardView({
             className={cn(
               "rounded-full border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground",
               periodPreset !== "all"
-                ? "border-indigo-950 ring-1 ring-indigo-950/20"
+                ? "border-black ring-1 ring-black/20"
                 : "border-border"
             )}
           >
@@ -1757,10 +1764,10 @@ export function DashboardView({
                 value={customFrom}
                 onChange={(e) => setCustomFrom(e.target.value)}
                 className={cn(
-                  "rounded-full border bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-indigo-950/20",
+                  "rounded-full border bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-black/20",
                   invalidCustomRange
                     ? "border-destructive"
-                    : "border-indigo-950/30"
+                    : "border-border"
                 )}
               />
 
@@ -1774,10 +1781,10 @@ export function DashboardView({
                 min={customFrom || undefined}
                 onChange={(e) => setCustomTo(e.target.value)}
                 className={cn(
-                  "rounded-full border bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-indigo-950/20",
+                  "rounded-full border bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-black/20",
                   invalidCustomRange
                     ? "border-destructive"
-                    : "border-indigo-950/30"
+                    : "border-border"
                 )}
               />
             </div>
@@ -1794,7 +1801,7 @@ export function DashboardView({
               className={cn(
                 "w-52 rounded-full border bg-background py-1.5 pl-9 pr-4 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-colors hover:bg-accent focus:bg-muted",
                 alertSearch.trim()
-                  ? "border-indigo-950 ring-1 ring-indigo-950/20"
+                  ? "border-black ring-1 ring-black/20"
                   : "border-border"
               )}
             />
@@ -1804,10 +1811,11 @@ export function DashboardView({
             <button
               type="button"
               onClick={clearAlertFilters}
-              className="inline-flex items-center gap-1.5 rounded-full bg-indigo-950 px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+              className="inline-flex items-center gap-1.5 rounded-full bg-black px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
             >
               <X className="h-3 w-3" />
               Effacer les filtres
+
               <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[10px]">
                 {activeFilterCount}
               </span>
@@ -1830,7 +1838,7 @@ export function DashboardView({
             </span>
 
             {statusFilter !== "all" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-indigo-950/10 px-2.5 py-1 text-[11px] font-semibold text-indigo-950">
+              <span className="inline-flex items-center gap-1 rounded-full bg-black/10 px-2.5 py-1 text-[11px] font-semibold text-black">
                 {statusFilter === "critical"
                   ? "Critiques"
                   : "Warnings"}
@@ -1838,7 +1846,7 @@ export function DashboardView({
             )}
 
             {periodPreset !== "all" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-indigo-950/10 px-2.5 py-1 text-[11px] font-semibold text-indigo-950">
+              <span className="inline-flex items-center gap-1 rounded-full bg-black/10 px-2.5 py-1 text-[11px] font-semibold text-black">
                 {periodPreset === "7"
                   ? "7 derniers jours"
                   : periodPreset === "30"
@@ -1852,7 +1860,7 @@ export function DashboardView({
             )}
 
             {alertSearch.trim() && (
-              <span className="inline-flex max-w-[220px] items-center gap-1 truncate rounded-full bg-indigo-950/10 px-2.5 py-1 text-[11px] font-semibold text-indigo-950">
+              <span className="inline-flex max-w-[220px] items-center gap-1 truncate rounded-full bg-black/10 px-2.5 py-1 text-[11px] font-semibold text-black">
                 Recherche : {alertSearch}
               </span>
             )}
@@ -1864,55 +1872,48 @@ export function DashboardView({
           </div>
         )}
 
+        {/* ALERT LIST + STICKY DETAILS */}
         <div
           className={cn(
             "grid gap-4 p-4 md:p-6",
             expandedAlert
-              ? "grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+              ? "grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.75fr)]"
               : "grid-cols-1"
           )}
         >
-          <div
-            className={cn(
-              "min-w-0 overflow-hidden rounded-3xl border border-border",
-              expandedAlert && "lg:h-[600px]"
-            )}
-          >
-            <div
-              className={cn(
-                "max-h-[600px] overflow-x-auto overflow-y-auto",
-                expandedAlert && "h-full"
-              )}
-            >
+          {/* LEFT: INDEPENDENT SCROLL */}
+          <div className="min-w-0 overflow-hidden rounded-3xl border border-border">
+            <div className="max-h-[600px] overflow-x-auto overflow-y-auto">
               <table className="w-full border-separate border-spacing-0 text-sm">
                 <thead className="sticky top-0 z-10 bg-card">
-                  <tr className="border-y border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
-                    <th className="px-4 py-3 font-medium">
+                  <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">
+                    <th className="border-b border-border px-4 py-3 font-medium">
                       Actif
                     </th>
 
-                    <th className="px-4 py-3 font-medium">
+                    <th className="border-b border-border px-4 py-3 font-medium">
                       Message
                     </th>
 
-                    <th className="px-4 py-3 font-medium">
+                    <th className="border-b border-border px-4 py-3 font-medium">
                       Secteur
                     </th>
 
-                    <th className="px-4 py-3 font-medium">
+                    <th className="border-b border-border px-4 py-3 font-medium">
                       Sévérité
                     </th>
 
-                    <th className="px-4 py-3 font-medium">
+                    <th className="border-b border-border px-4 py-3 font-medium">
                       Date
                     </th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {tableAlerts.slice(0, 20).map((alert, i) => {
+                  {tableAlerts.map((alert, i) => {
                     const key = `${alert.equipment}-${alert.date}`
-                    const isSelected = expandedAlertKey === key
+                    const isSelected =
+                      expandedAlertKey === key
 
                     return (
                       <tr
@@ -1922,14 +1923,14 @@ export function DashboardView({
                             isSelected ? null : key
                           )
                         }
-                        title="Cliquez pour voir les détails"
                         className={cn(
                           "cursor-pointer transition-colors",
                           isSelected
-                            ? "bg-indigo-950 text-white"
-                            : "border-b border-border hover:bg-accent/15"
+                            ? "bg-black text-white"
+                            : "hover:bg-accent/15"
                         )}
                       >
+                        {/* ACTIF */}
                         <td
                           className={cn(
                             "px-4 py-4 font-semibold",
@@ -1952,6 +1953,7 @@ export function DashboardView({
                           </div>
                         </td>
 
+                        {/* MESSAGE */}
                         <td
                           className={cn(
                             "max-w-[280px] truncate px-4 py-4",
@@ -1963,6 +1965,7 @@ export function DashboardView({
                           {alert.message}
                         </td>
 
+                        {/* SECTEUR */}
                         <td
                           className={cn(
                             "px-4 py-4 capitalize",
@@ -1974,10 +1977,12 @@ export function DashboardView({
                           {alert.sector ?? "N/A"}
                         </td>
 
+                        {/* SEVERITY */}
                         <td
                           className={cn(
                             "px-4 py-4",
-                            !isSelected && "border-b border-border"
+                            !isSelected &&
+                              "border-b border-border"
                           )}
                         >
                           <span
@@ -1992,6 +1997,7 @@ export function DashboardView({
                           </span>
                         </td>
 
+                        {/* DATE */}
                         <td
                           className={cn(
                             "px-4 py-4",
@@ -2034,11 +2040,12 @@ export function DashboardView({
             </div>
           </div>
 
+          {/* RIGHT: STICKY DETAILS */}
           {expandedAlert && (
-            <div className="min-w-0 self-start rounded-3xl bg-indigo-950 p-5 text-white shadow-[0_0_30px_rgba(49,46,129,0.18)] ring-1 ring-indigo-400/30 lg:sticky lg:top-6">
+            <div className="min-w-0 self-start rounded-3xl bg-sidebar p-5 text-sidebar-foreground shadow-lg ring-1 ring-sidebar-border lg:sticky lg:top-6">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-[#a3e635]">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-accent">
                     Détails de l'alerte
                   </p>
 
@@ -2046,7 +2053,7 @@ export function DashboardView({
                     {expandedAlert.equipment}
                   </h4>
 
-                  <p className="mt-0.5 text-xs text-white/50">
+                  <p className="mt-0.5 text-xs text-sidebar-foreground/50">
                     {new Date(
                       expandedAlert.date
                     ).toLocaleString("fr-FR")}
@@ -2054,6 +2061,7 @@ export function DashboardView({
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
+                  {/* SAME STATUS TAG AS TABLE */}
                   <span
                     className={cn(
                       "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
@@ -2069,36 +2077,38 @@ export function DashboardView({
                     type="button"
                     onClick={() => setExpandedAlertKey(null)}
                     aria-label="Fermer les détails"
-                    className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-white/60 ring-1 ring-white/10 transition-colors hover:bg-[#a3e635] hover:text-indigo-950 hover:ring-transparent"
+                    className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-sidebar-foreground/60 ring-1 ring-white/10 transition-colors hover:bg-accent hover:text-accent-foreground hover:ring-transparent"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
 
-              <div className="mt-4 rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">
+              {/* MESSAGE */}
+              <div className="mt-4 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-sidebar-foreground/40">
                   Message
                 </p>
 
-                <p className="mt-1 line-clamp-2 text-sm leading-5 text-white/90">
+                <p className="mt-1 text-sm leading-5 text-sidebar-foreground/90">
                   {expandedAlert.message}
                 </p>
               </div>
 
-              <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10">
+              {/* DETAILS */}
+              <div className="mt-3 grid grid-cols-2 gap-2 rounded-2xl bg-white/[0.06] p-4 ring-1 ring-white/10">
                 <div>
-                  <p className="text-[10px] uppercase tracking-wide text-white/40">
+                  <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
                     Secteur
                   </p>
 
-                  <p className="text-sm font-semibold capitalize">
+                  <p className="mt-1 text-sm font-semibold capitalize">
                     {expandedAlert.sector ?? "N/A"}
                   </p>
                 </div>
 
                 <div>
-                  <p className="text-[10px] uppercase tracking-wide text-white/40">
+                  <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
                     Statut
                   </p>
 
@@ -2115,43 +2125,44 @@ export function DashboardView({
                 </div>
 
                 <div>
-                  <p className="text-[10px] uppercase tracking-wide text-white/40">
+                  <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
                     Score de risque
                   </p>
 
-                  <p className="text-sm font-semibold text-[#a3e635]">
+                  <p className="mt-1 text-sm font-semibold text-accent">
                     {expandedRecommendation?.risk_score ?? "N/A"}
                   </p>
                 </div>
 
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] uppercase tracking-wide text-white/40">
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
                     Catégorie
                   </p>
 
-                  <p className="truncate text-sm font-semibold capitalize">
+                  <p className="mt-1 truncate text-sm font-semibold capitalize">
                     {expandedRecommendation?.action_category ?? "N/A"}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-3 rounded-2xl border border-[#a3e635]/20 bg-[#a3e635]/5 px-4 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-[#a3e635]">
+              {/* RECOMMENDATION */}
+              <div className="mt-3 rounded-2xl border border-accent/20 bg-accent/5 px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-accent">
                   Recommandation
                 </p>
 
-                <p className="mt-1.5 line-clamp-2 text-sm font-medium leading-5 text-white/90">
+                <p className="mt-1.5 text-sm font-medium leading-5 text-sidebar-foreground/90">
                   {expandedRecommendation?.recommended_action ??
                     "Analyse en cours — recommandation bientôt disponible."}
                 </p>
               </div>
 
-              <div className="mt-4 flex items-center justify-end gap-3">
+              <div className="mt-4 flex items-center justify-end">
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
                   }}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#a3e635] px-4 py-2 text-xs font-bold text-[#1a2e05] transition-transform hover:scale-[1.02]"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-xs font-bold text-accent-foreground transition-transform hover:scale-[1.02]"
                 >
                   Voir la recommandation
                   <ArrowUpRight className="h-3.5 w-3.5" />
