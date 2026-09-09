@@ -14,6 +14,7 @@ import {
   ChevronDown,
   ChevronRight,
   Search,
+  X,
 } from "lucide-react"
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
@@ -672,7 +673,7 @@ export function DashboardView({
     )
 
   // --- Filtres de la table d'alertes (statut, période, dates personnalisées) ---
-  // et ligne extensible au clic. Purement présentationnel, aucune donnée
+  // et ligne sélectionnable au clic. Purement présentationnel, aucune donnée
   // existante n'est modifiée par cet état.
   const [statusFilter, setStatusFilter] = useState<
     "all" | "critical" | "warning"
@@ -1008,8 +1009,10 @@ export function DashboardView({
   })
 
   /*
-   * La boîte noire/verte ne s'affiche QUE si l'utilisateur a cliqué
-   * sur une ligne. Aucune alerte n'est dépliée par défaut.
+   * Le panneau noir n'apparaît QUE si l'utilisateur a cliqué
+   * sur une alerte. Aucune alerte n'est sélectionnée par défaut :
+   * la liste occupe toute la largeur, puis se rétracte à gauche
+   * quand le panneau s'ouvre à droite.
    */
   const resolvedSelectedKey = expandedAlertKey
 
@@ -1089,20 +1092,20 @@ export function DashboardView({
      */
     if (logisticsPriority === null) {
       return (
-        <div className="space-y-6 rounded-[28px] border border-white/5 bg-[#060b13] p-4 shadow-2xl md:p-6">
+        <div className="space-y-6">
           <div className="flex items-center justify-between">
             <button
               type="button"
               onClick={returnToDashboard}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 transition-colors hover:text-white"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
             >
               ← Retour au tableau de bord
             </button>
           </div>
 
-          <div className="rounded-3xl border border-[#a3e635]/20 bg-gradient-to-br from-[#101a29] to-[#0b1320] p-6 text-white md:p-8">
+          <div className="rounded-3xl bg-foreground p-6 text-background md:p-8">
             <div className="max-w-2xl">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-[#a3e635] px-3 py-1 text-xs font-semibold text-[#1a2e05]">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
                 <Shield className="h-3.5 w-3.5" />
                 Logistique
               </span>
@@ -1111,7 +1114,7 @@ export function DashboardView({
                 Vue d'ensemble de votre logistique.
               </h2>
 
-              <p className="mt-2 text-sm leading-6 text-slate-400">
+              <p className="mt-2 text-sm leading-6 text-background/70">
                 Retrouvez ici les priorités que vous avez
                 sélectionnées pendant la configuration de SentrIA.
                 Choisissez une priorité pour accéder directement
@@ -1120,7 +1123,7 @@ export function DashboardView({
 
               {normalizedOpsType &&
                 OPS_TYPE_LABEL[normalizedOpsType] && (
-                  <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-medium text-slate-300">
+                  <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-background/20 bg-background/10 px-3 py-1 text-[11px] font-medium text-background/80">
                     <Shield className="h-3 w-3" />
                     {OPS_TYPE_LABEL[normalizedOpsType]}
                   </div>
@@ -1130,11 +1133,11 @@ export function DashboardView({
 
           <div>
             <div className="mb-4">
-              <h3 className="font-heading text-lg font-bold text-white">
+              <h3 className="font-heading text-lg font-bold">
                 Vos priorités
               </h3>
 
-              <p className="mt-1 text-sm text-slate-400">
+              <p className="mt-1 text-sm text-muted-foreground">
                 Sélectionnées lors de votre onboarding.
               </p>
             </div>
@@ -1148,38 +1151,38 @@ export function DashboardView({
                     onClick={() =>
                       openLogisticsPriority(priority)
                     }
-                    className="group rounded-3xl border border-[#1c2635] bg-[#0e1622] p-5 text-left transition-all hover:-translate-y-0.5 hover:border-[#a3e635]/50 hover:shadow-[0_0_30px_rgba(163,230,53,0.08)]"
+                    className="group rounded-3xl border border-border bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-sm"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <span className="inline-flex rounded-full bg-[#a3e635]/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[#a3e635]">
+                        <span className="inline-flex rounded-full bg-accent/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-accent-foreground">
                           Priorité
                         </span>
 
-                        <h4 className="mt-3 font-heading text-lg font-bold text-white">
+                        <h4 className="mt-3 font-heading text-lg font-bold">
                           {LOGISTICS_PRIORITY_LABELS[priority]}
                         </h4>
                       </div>
 
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#101a29] text-slate-300 transition-colors group-hover:bg-[#a3e635] group-hover:text-[#1a2e05]">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted transition-colors group-hover:bg-accent group-hover:text-accent-foreground">
                         <ArrowUpRight className="h-4 w-4" />
                       </span>
                     </div>
 
-                    <p className="mt-3 text-sm leading-5 text-slate-400">
+                    <p className="mt-3 text-sm leading-5 text-muted-foreground">
                       {LOGISTICS_PRIORITY_DESCRIPTIONS[
                         priority
                       ]}
                     </p>
 
-                    <div className="mt-5 text-xs font-semibold text-[#a3e635]">
+                    <div className="mt-5 text-xs font-semibold text-foreground">
                       Ouvrir la priorité →
                     </div>
                   </button>
                 ))}
               </div>
             ) : (
-              <div className="rounded-3xl border border-[#1c2635] bg-[#0e1622] p-6 text-sm text-slate-400">
+              <div className="rounded-3xl border border-border bg-card p-6 text-sm text-muted-foreground">
                 Aucune priorité logistique n'a été sélectionnée.
               </div>
             )}
@@ -1189,10 +1192,10 @@ export function DashboardView({
             {kpis.map((k) => (
               <div
                 key={k.label}
-                className="rounded-3xl border border-[#1c2635] bg-[#0e1622] p-5"
+                className="rounded-3xl border border-border bg-card p-5"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm text-slate-400">
+                  <span className="text-sm text-muted-foreground">
                     {k.label}
                   </span>
 
@@ -1200,8 +1203,8 @@ export function DashboardView({
                     className={cn(
                       "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
                       k.up
-                        ? "bg-[#a3e635]/15 text-[#a3e635]"
-                        : "bg-red-500/15 text-red-400"
+                        ? "bg-accent/25 text-accent-foreground"
+                        : "bg-destructive/10 text-destructive"
                     )}
                   >
                     {k.up ? (
@@ -1214,7 +1217,7 @@ export function DashboardView({
                   </span>
                 </div>
 
-                <p className="mt-3 font-heading text-3xl font-bold tracking-tight text-white">
+                <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
                   {k.value}
                 </p>
 
@@ -1222,7 +1225,7 @@ export function DashboardView({
                   data={k.spark}
                   className={cn(
                     "mt-2 h-9 w-full",
-                    k.up ? "text-[#a3e635]" : "text-red-400"
+                    k.up ? "text-accent" : "text-destructive"
                   )}
                 />
               </div>
@@ -1233,23 +1236,23 @@ export function DashboardView({
     }
 
     return (
-      <div className="space-y-4 rounded-[28px] border border-white/5 bg-[#060b13] p-4 shadow-2xl md:p-6">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <button
             type="button"
             onClick={() => {
               setLogisticsPriority(null)
             }}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 transition-colors hover:text-white"
+            className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
           >
             ← Retour à la logistique
           </button>
         </div>
 
         {selectedLogisticsPriorities.length > 0 && (
-          <div className="rounded-2xl border border-[#1c2635] bg-[#0e1622] px-4 py-3">
+          <div className="rounded-2xl border border-border bg-card px-4 py-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="mr-1 text-xs font-semibold text-slate-400">
+              <span className="mr-1 text-xs font-semibold text-muted-foreground">
                 Priorités
               </span>
 
@@ -1263,8 +1266,8 @@ export function DashboardView({
                   className={cn(
                     "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold transition-colors",
                     priority === logisticsPriority
-                      ? "bg-[#a3e635] text-[#1a2e05]"
-                      : "bg-[#101a29] text-slate-300 hover:bg-[#1a2436]"
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-muted text-foreground hover:bg-muted/80"
                   )}
                 >
                   {LOGISTICS_PRIORITY_LABELS[priority]}
@@ -1276,7 +1279,7 @@ export function DashboardView({
 
         {normalizedOpsType &&
           OPS_TYPE_LABEL[normalizedOpsType] && (
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-[#1c2635] bg-[#0e1622] px-3 py-1 text-[11px] font-medium text-slate-400">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-[11px] font-medium text-muted-foreground">
               <Shield className="h-3 w-3" />
               {OPS_TYPE_LABEL[normalizedOpsType]}
             </div>
@@ -1300,18 +1303,18 @@ export function DashboardView({
             opsType={normalizedOpsType}
           />
         ) : logisticsPriority === "resources" ? (
-          <div className="rounded-3xl border border-[#1c2635] bg-[#0e1622] p-6">
+          <div className="rounded-3xl border border-border bg-card p-6">
             <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#a3e635]/15 text-[#a3e635]">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent-foreground">
                 <Activity className="h-5 w-5" />
               </div>
 
               <div>
-                <h2 className="font-heading text-xl font-bold text-white">
+                <h2 className="font-heading text-xl font-bold">
                   Ressources
                 </h2>
 
-                <p className="mt-1 text-sm text-slate-400">
+                <p className="mt-1 text-sm text-muted-foreground">
                   Suivez la disponibilité et l'utilisation de
                   vos ressources logistiques depuis cet espace.
                 </p>
@@ -1319,11 +1322,11 @@ export function DashboardView({
             </div>
 
             <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="rounded-2xl border border-[#1c2635] bg-[#101a29] p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Équipements
                 </p>
-                <p className="mt-2 font-heading text-2xl font-bold text-white">
+                <p className="mt-2 font-heading text-2xl font-bold">
                   {new Set(
                     alerts
                       .filter(
@@ -1334,11 +1337,11 @@ export function DashboardView({
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-[#1c2635] bg-[#101a29] p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Alertes actives
                 </p>
-                <p className="mt-2 font-heading text-2xl font-bold text-white">
+                <p className="mt-2 font-heading text-2xl font-bold">
                   {
                     alerts.filter(
                       (a) => a.sector === "logistics"
@@ -1347,11 +1350,11 @@ export function DashboardView({
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-[#1c2635] bg-[#101a29] p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Opération
                 </p>
-                <p className="mt-2 font-heading text-lg font-bold text-white">
+                <p className="mt-2 font-heading text-lg font-bold">
                   {normalizedOpsType &&
                   OPS_TYPE_LABEL[normalizedOpsType]
                     ? OPS_TYPE_LABEL[normalizedOpsType]
@@ -1370,10 +1373,10 @@ export function DashboardView({
   }
 
   return (
-    <div className="space-y-6 rounded-[28px] border border-white/5 bg-[#060b13] p-4 shadow-2xl md:p-6">
-      <div className="flex flex-col gap-4 rounded-3xl border border-[#a3e635]/20 bg-gradient-to-br from-[#101a29] to-[#0b1320] p-6 text-white md:flex-row md:items-center md:justify-between md:p-8">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 rounded-3xl bg-foreground p-6 text-background md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-xl">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[#a3e635] px-3 py-1 text-xs font-semibold text-[#1a2e05]">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
             <Zap className="h-3.5 w-3.5" />
             Temps réel
           </span>
@@ -1382,7 +1385,7 @@ export function DashboardView({
             Vue globale de vos opérations critiques.
           </h2>
 
-          <p className="mt-2 text-pretty text-sm text-slate-400">
+          <p className="mt-2 text-pretty text-sm text-background/70">
             SentrIA surveille vos alertes en temps réel,
             machines, stocks, flottes, équipements, partout
             dans le monde.
@@ -1397,7 +1400,7 @@ export function DashboardView({
                 behavior: "smooth",
               })
           }
-          className="inline-flex items-center gap-2 self-start rounded-full bg-[#a3e635] px-5 py-3 text-sm font-semibold text-[#1a2e05] transition-transform hover:scale-[1.02]"
+          className="inline-flex items-center gap-2 self-start rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02]"
         >
           Voir les alertes
           <ArrowUpRight className="h-4 w-4" />
@@ -1416,8 +1419,8 @@ export function DashboardView({
           className={cn(
             "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
             filterSector === "all"
-              ? "border-transparent bg-[#a3e635] text-[#1a2e05]"
-              : "border-[#1c2635] bg-[#0e1622] text-slate-300 hover:border-[#a3e635]/40 hover:text-white"
+              ? "border-foreground bg-foreground text-background"
+              : "border-border bg-background hover:bg-muted"
           )}
         >
           Tous
@@ -1450,8 +1453,8 @@ export function DashboardView({
             className={cn(
               "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
               filterSector === s.key
-                ? "border-transparent bg-[#a3e635] text-[#1a2e05]"
-                : "border-[#1c2635] bg-[#0e1622] text-slate-300 hover:border-[#a3e635]/40 hover:text-white"
+                ? "border-foreground bg-foreground text-background"
+                : "border-border bg-background hover:bg-muted"
             )}
           >
             {s.label}
@@ -1468,8 +1471,8 @@ export function DashboardView({
 
         {filterSector === "all" &&
           selectedLogisticsPriorities.length > 0 && (
-            <div className="ml-1 flex flex-wrap items-center gap-1.5 rounded-full border border-[#a3e635]/30 bg-[#a3e635]/5 px-2 py-1">
-              <span className="px-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+            <div className="ml-1 flex flex-wrap items-center gap-1.5 rounded-full border border-accent/30 bg-accent/5 px-2 py-1">
+              <span className="px-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Priorités
               </span>
 
@@ -1481,7 +1484,7 @@ export function DashboardView({
                     onClick={() =>
                       openLogisticsPriority(priority)
                     }
-                    className="rounded-full bg-[#a3e635]/15 px-2.5 py-1 text-[11px] font-semibold text-[#a3e635] transition-colors hover:bg-[#a3e635]/25"
+                    className="rounded-full bg-accent/15 px-2.5 py-1 text-[11px] font-semibold text-accent-foreground transition-colors hover:bg-accent/25"
                   >
                     {LOGISTICS_PRIORITY_LABELS[priority]}
                   </button>
@@ -1494,7 +1497,7 @@ export function DashboardView({
       {filterSector === "logistics" &&
         opsType &&
         LOGISTICS_OPS_META[opsType] && (
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-[#1c2635] bg-[#0e1622] px-3 py-1 text-[11px] font-medium text-slate-400">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-[11px] font-medium text-muted-foreground">
             <Shield className="h-3 w-3" />
             {OPS_TYPE_LABEL[opsType]}
           </div>
@@ -1504,10 +1507,10 @@ export function DashboardView({
         {kpis.map((k) => (
           <div
             key={k.label}
-            className="rounded-3xl border border-[#1c2635] bg-[#0e1622] p-5 transition-colors hover:border-[#a3e635]/30"
+            className="rounded-3xl border border-border bg-card p-5"
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="text-sm text-slate-400">
+              <span className="text-sm text-muted-foreground">
                 {k.label}
               </span>
 
@@ -1515,8 +1518,8 @@ export function DashboardView({
                 className={cn(
                   "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
                   k.up
-                    ? "bg-[#a3e635]/15 text-[#a3e635]"
-                    : "bg-red-500/15 text-red-400"
+                    ? "bg-accent/25 text-accent-foreground"
+                    : "bg-destructive/10 text-destructive"
                 )}
               >
                 {k.up ? (
@@ -1529,7 +1532,7 @@ export function DashboardView({
               </span>
             </div>
 
-            <p className="mt-3 font-heading text-3xl font-bold tracking-tight text-white">
+            <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
               {k.value}
             </p>
 
@@ -1537,7 +1540,7 @@ export function DashboardView({
               data={k.spark}
               className={cn(
                 "mt-2 h-9 w-full",
-                k.up ? "text-[#a3e635]" : "text-red-400"
+                k.up ? "text-accent" : "text-destructive"
               )}
             />
           </div>
@@ -1545,20 +1548,20 @@ export function DashboardView({
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="rounded-3xl border border-[#1c2635] bg-[#0e1622] p-6 lg:col-span-2">
+        <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-heading text-lg font-bold text-white">
+              <h3 className="font-heading text-lg font-bold">
                 {meta.chartTitle}
               </h3>
 
-              <p className="text-sm text-slate-400">
+              <p className="text-sm text-muted-foreground">
                 7 derniers jours
               </p>
             </div>
 
             <button
-              className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-[#101a29] hover:text-[#a3e635]"
+              className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
               aria-label="Options"
             >
               <MoreHorizontal className="h-5 w-5" />
@@ -1567,38 +1570,38 @@ export function DashboardView({
 
           <AreaChart
             data={chartData}
-            className="mt-6 h-52 w-full text-[#a3e635]"
+            className="mt-6 h-52 w-full"
           />
         </div>
 
-        <div className="rounded-3xl border border-[#1c2635] bg-[#0e1622] p-6">
+        <div className="rounded-3xl border border-border bg-card p-6">
           <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-[#a3e635]" />
+            <Activity className="h-5 w-5 text-accent-foreground" />
 
-            <h3 className="font-heading text-lg font-bold text-white">
+            <h3 className="font-heading text-lg font-bold">
               Répartition
             </h3>
           </div>
 
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-muted-foreground">
             {meta.barLabels.join(" · ")}
           </p>
 
           <BarChart
             data={barData}
             labels={meta.barLabels}
-            className="mt-6 text-[#a3e635]"
+            className="mt-6"
             height={180}
           />
         </div>
       </div>
 
-      <div className="rounded-3xl border border-[#1c2635] bg-[#0e1622] p-6">
-        <h3 className="font-heading text-lg font-bold text-white">
+      <div className="rounded-3xl border border-border bg-card p-6">
+        <h3 className="font-heading text-lg font-bold">
           Importer des données
         </h3>
 
-        <p className="mt-1 text-sm text-slate-400">
+        <p className="mt-1 text-sm text-muted-foreground">
           Choisissez un secteur puis importez votre CSV.
         </p>
 
@@ -1615,8 +1618,8 @@ export function DashboardView({
                 className={cn(
                   "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors",
                   uploadSector === s.key
-                    ? "border-transparent bg-[#a3e635] text-[#1a2e05]"
-                    : "border-[#1c2635] bg-[#101a29] text-slate-300 hover:border-[#a3e635]/40 hover:text-white"
+                    ? "border-foreground bg-foreground text-background"
+                    : "border-border bg-background hover:bg-muted"
                 )}
               >
                 {s.label}
@@ -1624,7 +1627,7 @@ export function DashboardView({
             ))}
           </div>
 
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-[#a3e635] px-5 py-2.5 text-sm font-semibold text-[#1a2e05] transition-opacity hover:opacity-90">
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90">
             <Upload className="h-4 w-4" />
 
             {uploading ? "Traitement..." : "Importer CSV"}
@@ -1640,14 +1643,14 @@ export function DashboardView({
         </div>
 
         {uploadMsg && (
-          <p className="mt-3 text-sm font-medium text-[#a3e635]">
+          <p className="mt-3 text-sm font-medium text-green-600">
             {uploadMsg}
           </p>
         )}
 
-        <p className="mt-2 text-xs text-slate-500">
+        <p className="mt-2 text-xs text-muted-foreground">
           Secteur :{" "}
-          <span className="font-semibold text-slate-300">
+          <span className="font-semibold text-foreground">
             {
               SECTORS.find(
                 (s) => s.key === uploadSector
@@ -1659,13 +1662,13 @@ export function DashboardView({
 
       <div
         id="alerts-table"
-        className="rounded-3xl border border-[#1c2635] bg-[#0e1622]"
+        className="rounded-3xl border border-border bg-card"
       >
         <div className="flex items-center justify-between p-6 pb-4">
           <div className="flex items-center gap-2">
-            <Cpu className="h-5 w-5 text-[#a3e635]" />
+            <Cpu className="h-5 w-5" />
 
-            <h3 className="font-heading text-lg font-bold text-white">
+            <h3 className="font-heading text-lg font-bold">
               Alertes ·{" "}
               {
                 SECTORS.find(
@@ -1675,14 +1678,14 @@ export function DashboardView({
             </h3>
           </div>
 
-          <button className="inline-flex items-center gap-1.5 rounded-full bg-[#a3e635] px-4 py-2 text-sm font-semibold text-[#1a2e05] transition-opacity hover:opacity-90">
+          <button className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90">
             Tout voir
             <ArrowUpRight className="h-4 w-4" />
           </button>
         </div>
 
         {/* FILTRES : statut, préréglages de période, dates personnalisées + recherche */}
-        <div className="flex flex-wrap items-center gap-2 border-t border-[#1c2635] bg-[#0b1220] px-6 py-3">
+        <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-3">
           <select
             value={statusFilter}
             onChange={(e) =>
@@ -1690,7 +1693,7 @@ export function DashboardView({
                 e.target.value as "all" | "critical" | "warning"
               )
             }
-            className="rounded-full border border-[#232f42] bg-[#101a29] px-3 py-1.5 text-xs font-semibold text-slate-200 outline-none transition-colors hover:border-[#a3e635]/40"
+            className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-muted"
           >
             <option value="all">Tous les statuts</option>
             <option value="critical">Critiques</option>
@@ -1709,7 +1712,7 @@ export function DashboardView({
                   | "custom"
               )
             }
-            className="rounded-full border border-[#232f42] bg-[#101a29] px-3 py-1.5 text-xs font-semibold text-slate-200 outline-none transition-colors hover:border-[#a3e635]/40"
+            className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-muted"
           >
             <option value="all">Toutes les dates</option>
             <option value="7">7 derniers jours</option>
@@ -1724,207 +1727,284 @@ export function DashboardView({
                 type="date"
                 value={customFrom}
                 onChange={(e) => setCustomFrom(e.target.value)}
-                className="rounded-full border border-[#232f42] bg-[#101a29] px-3 py-1.5 text-xs text-slate-200 outline-none transition-colors focus:border-[#a3e635]"
+                className="rounded-full border border-border bg-background px-3 py-1.5 text-xs text-foreground outline-none"
               />
-              <span className="text-xs text-slate-500">→</span>
+              <span className="text-xs text-muted-foreground">→</span>
               <input
                 type="date"
                 value={customTo}
                 onChange={(e) => setCustomTo(e.target.value)}
-                className="rounded-full border border-[#232f42] bg-[#101a29] px-3 py-1.5 text-xs text-slate-200 outline-none transition-colors focus:border-[#a3e635]"
+                className="rounded-full border border-border bg-background px-3 py-1.5 text-xs text-foreground outline-none"
               />
             </div>
           )}
 
-          {/* Petite barre de recherche, à droite comme sur l'inspiration */}
+          {/* Petite barre de recherche, collée à droite comme sur l'inspiration */}
           <div className="relative ml-auto">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
 
             <input
               type="text"
               value={alertSearch}
               onChange={(e) => setAlertSearch(e.target.value)}
               placeholder="Rechercher une alerte..."
-              className="w-52 rounded-full border border-[#232f42] bg-[#101a29] py-1.5 pl-9 pr-4 text-xs text-slate-200 placeholder:text-slate-500 outline-none transition-colors focus:border-[#a3e635] focus:ring-1 focus:ring-[#a3e635]/30"
+              className="w-52 rounded-full border border-border bg-background py-1.5 pl-9 pr-4 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-colors hover:bg-muted focus:bg-muted"
             />
           </div>
         </div>
 
         {/* Indice visuel : les lignes sont cliquables */}
-        <div className="flex items-center gap-2 border-t border-[#1c2635] px-6 py-2">
-          <ChevronRight className="h-3.5 w-3.5 text-[#a3e635]" />
-          <p className="text-[11px] font-medium text-slate-500">
-            Cliquez sur une ligne pour voir les détails de l'alerte.
+        <div className="flex items-center gap-2 border-t border-border px-6 py-2">
+          <ChevronRight className="h-3.5 w-3.5 text-accent-foreground" />
+          <p className="text-[11px] font-medium text-muted-foreground">
+            Cliquez sur une alerte pour afficher les détails à droite.
           </p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-y border-[#1c2635] text-left text-xs uppercase tracking-wider text-slate-500">
-                <th className="px-6 py-3 font-medium">
-                  Actif
-                </th>
+        {/*
+         * LISTE + PANNEAU DÉTAIL :
+         * - Sans sélection : la liste prend toute la largeur.
+         * - Au clic : la liste se rétracte à gauche et la grande
+         *   boîte noire/verte s'ouvre à droite avec tous les détails.
+         */}
+        <div
+          className={cn(
+            "grid gap-4 p-4 transition-all duration-300 md:p-6",
+            expandedAlert
+              ? "grid-cols-1 lg:grid-cols-[360px_1fr]"
+              : "grid-cols-1"
+          )}
+        >
+          {/* GAUCHE : liste des alertes */}
+          <div className="flex min-w-0 flex-col gap-2">
+            {tableAlerts.slice(0, 20).map((alert, i) => {
+              const key = `${alert.equipment}-${alert.date}`
+              const isSelected = expandedAlertKey === key
 
-                <th className="px-6 py-3 font-medium">
-                  Message
-                </th>
+              return (
+                <button
+                  key={`${key}-${i}`}
+                  type="button"
+                  onClick={() =>
+                    setExpandedAlertKey(isSelected ? null : key)
+                  }
+                  title="Cliquez pour voir les détails"
+                  className={cn(
+                    "group w-full rounded-2xl border p-4 text-left transition-all duration-200",
+                    isSelected
+                      ? "border-transparent bg-black text-white shadow-lg"
+                      : "border-border bg-background hover:-translate-y-px hover:border-[#a3e635]/60 hover:bg-[#a3e635]/10 hover:shadow-sm"
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span
+                        className={cn(
+                          "h-2 w-2 shrink-0 rounded-full",
+                          alert.severity === "CRITICAL"
+                            ? "bg-red-400"
+                            : "bg-[#a3e635]"
+                        )}
+                      />
 
-                <th className="px-6 py-3 font-medium">
-                  Secteur
-                </th>
+                      <span className="truncate font-semibold">
+                        {alert.equipment}
+                      </span>
+                    </div>
 
-                <th className="px-6 py-3 font-medium">
-                  Sévérité
-                </th>
-
-                <th className="px-6 py-3 font-medium">
-                  Date
-                </th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {tableAlerts.slice(0, 20).map((alert, i) => {
-                const key = `${alert.equipment}-${alert.date}`
-                const isExpanded = expandedAlertKey === key
-
-                return (
-                  <Fragment key={`${key}-${i}`}>
-                    <tr
-                      onClick={() =>
-                        setExpandedAlertKey(
-                          isExpanded ? null : key
-                        )
-                      }
-                      title="Cliquez pour voir les détails"
+                    <span
                       className={cn(
-                        "cursor-pointer border-b border-[#1c2635] transition-colors last:border-0",
-                        isExpanded
-                          ? "border-l-2 border-l-[#a3e635] bg-[#a3e635]/10"
-                          : "border-l-2 border-l-transparent hover:bg-[#a3e635]/10"
+                        "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                        isSelected
+                          ? alert.severity === "CRITICAL"
+                            ? "bg-red-500/20 text-red-300"
+                            : "bg-[#a3e635]/20 text-[#a3e635]"
+                          : alert.severity === "CRITICAL"
+                          ? "bg-destructive/10 text-destructive"
+                          : "bg-amber-500/15 text-amber-600"
                       )}
                     >
-                      <td className="px-6 py-4 font-semibold text-white">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={cn(
-                              "h-1.5 w-1.5 shrink-0 rounded-full",
-                              alert.severity === "CRITICAL"
-                                ? "bg-red-400"
-                                : "bg-[#a3e635]"
-                            )}
-                          />
-                          {alert.equipment}
-                        </div>
-                      </td>
+                      {alert.severity}
+                    </span>
+                  </div>
 
-                      <td className="max-w-[320px] truncate px-6 py-4 text-slate-400">
-                        {alert.message}
-                      </td>
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <p
+                      className={cn(
+                        "truncate text-xs",
+                        isSelected ? "text-white/60" : "text-muted-foreground"
+                      )}
+                    >
+                      {alert.message}
+                    </p>
 
-                      <td className="px-6 py-4 capitalize text-slate-400">
-                        {alert.sector ?? "N/A"}
-                      </td>
+                    <ChevronRight
+                      className={cn(
+                        "h-4 w-4 shrink-0 transition-all",
+                        isSelected
+                          ? "rotate-90 text-[#a3e635]"
+                          : "text-muted-foreground group-hover:translate-x-0.5 group-hover:text-[#a3e635]"
+                      )}
+                    />
+                  </div>
 
-                      <td className="px-6 py-4">
-                        <span
-                          className={cn(
-                            "rounded-full px-2.5 py-1 text-xs font-semibold",
-                            alert.severity === "CRITICAL"
-                              ? "bg-red-500/15 text-red-400"
-                              : "bg-amber-400/15 text-amber-300"
-                          )}
-                        >
-                          {alert.severity}
-                        </span>
-                      </td>
-
-                      <td className="px-6 py-4 text-slate-400">
-                        <div className="flex items-center justify-between gap-2">
-                          {new Date(
-                            alert.date
-                          ).toLocaleString("fr-FR")}
-
-                          <ChevronDown
-                            className={cn(
-                              "h-4 w-4 shrink-0 text-slate-500 transition-all",
-                              isExpanded
-                                ? "rotate-180 text-[#a3e635]"
-                                : "group-hover:text-[#a3e635]"
-                            )}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-
-                    {isExpanded && (
-                      <tr className="border-b border-[#1c2635] last:border-0">
-                        <td colSpan={5} className="px-6 py-4">
-                          {/* Boîte noire avec accents verts — uniquement au clic */}
-                          <div className="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-2xl bg-black px-5 py-4 text-white ring-1 ring-[#a3e635]/30 shadow-[0_0_30px_rgba(163,230,53,0.08)]">
-                            <span className="inline-flex items-center gap-1 rounded-full bg-[#a3e635]/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#a3e635]">
-                              Détails
-                            </span>
-
-                            <div>
-                              <p className="text-[10px] uppercase tracking-wide text-slate-500">
-                                Secteur
-                              </p>
-                              <p className="text-sm font-semibold capitalize">
-                                {alert.sector ?? "N/A"}
-                              </p>
-                            </div>
-
-                            <div>
-                              <p className="text-[10px] uppercase tracking-wide text-slate-500">
-                                Score de risque
-                              </p>
-                              <p className="text-sm font-semibold text-[#a3e635]">
-                                {expandedRecommendation?.risk_score ??
-                                  "N/A"}
-                              </p>
-                            </div>
-
-                            <div className="max-w-sm flex-1">
-                              <p className="text-[10px] uppercase tracking-wide text-slate-500">
-                                Recommandation
-                              </p>
-                              <p className="truncate text-sm font-medium">
-                                {expandedRecommendation?.recommended_action ??
-                                  "Analyse en cours"}
-                              </p>
-                            </div>
-
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                              }}
-                              className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#a3e635] px-4 py-2 text-xs font-bold text-[#1a2e05] transition-transform hover:scale-[1.02]"
-                            >
-                              Voir la recommandation
-                              <ArrowUpRight className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+                  <p
+                    className={cn(
+                      "mt-1 text-[11px]",
+                      isSelected ? "text-white/40" : "text-muted-foreground/70"
                     )}
-                  </Fragment>
-                )
-              })}
-
-              {tableAlerts.length === 0 && (
-                <tr>
-                  <td
-                    className="px-6 py-8 text-slate-500"
-                    colSpan={5}
                   >
-                    Aucune alerte pour ces filtres.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                    {new Date(alert.date).toLocaleString("fr-FR")} ·{" "}
+                    <span className="capitalize">{alert.sector ?? "N/A"}</span>
+                  </p>
+                </button>
+              )
+            })}
+
+            {tableAlerts.length === 0 && (
+              <div className="rounded-2xl border border-dashed border-border px-6 py-8 text-center text-sm text-muted-foreground">
+                Aucune alerte pour ces filtres.
+              </div>
+            )}
+          </div>
+
+          {/* DROITE : grande boîte noire avec accents verts — uniquement au clic */}
+          {expandedAlert && (
+            <div className="min-w-0 rounded-3xl bg-black p-6 text-white ring-1 ring-[#a3e635]/30 shadow-[0_0_40px_rgba(163,230,53,0.12)] md:p-8">
+              {/* En-tête du panneau */}
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-[#a3e635]">
+                    Détails de l'alerte
+                  </p>
+
+                  <h4 className="mt-2 font-heading text-2xl font-bold tracking-tight">
+                    {expandedAlert.equipment}
+                  </h4>
+
+                  <p className="mt-1 text-sm text-white/50">
+                    Détectée le{" "}
+                    {new Date(expandedAlert.date).toLocaleString("fr-FR")}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs font-semibold ring-1",
+                      expandedAlert.severity === "CRITICAL"
+                        ? "bg-red-500/10 text-red-300 ring-red-400/30"
+                        : "bg-[#a3e635]/10 text-[#a3e635] ring-[#a3e635]/30"
+                    )}
+                  >
+                    {expandedAlert.severity}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => setExpandedAlertKey(null)}
+                    aria-label="Fermer les détails"
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-white/5 text-white/60 ring-1 ring-white/10 transition-colors hover:bg-[#a3e635] hover:text-black hover:ring-transparent"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Message complet */}
+              <div className="mt-6 rounded-2xl bg-white/5 px-5 py-4 ring-1 ring-white/10">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">
+                  Message
+                </p>
+                <p className="mt-1.5 text-sm leading-6 text-white/90">
+                  {expandedAlert.message}
+                </p>
+              </div>
+
+              {/* Grille d'infos */}
+              <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+                <div className="rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10">
+                  <p className="text-[10px] uppercase tracking-wide text-white/40">
+                    Secteur
+                  </p>
+                  <p className="mt-1 text-sm font-semibold capitalize">
+                    {expandedAlert.sector ?? "N/A"}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10">
+                  <p className="text-[10px] uppercase tracking-wide text-white/40">
+                    Statut
+                  </p>
+                  <p
+                    className={cn(
+                      "mt-1 text-sm font-semibold",
+                      expandedAlert.severity === "CRITICAL"
+                        ? "text-red-300"
+                        : "text-[#a3e635]"
+                    )}
+                  >
+                    {expandedAlert.severity === "CRITICAL"
+                      ? "Critique"
+                      : "Warning"}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10">
+                  <p className="text-[10px] uppercase tracking-wide text-white/40">
+                    Score de risque
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-[#a3e635]">
+                    {expandedRecommendation?.risk_score ?? "N/A"}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10">
+                  <p className="text-[10px] uppercase tracking-wide text-white/40">
+                    Catégorie
+                  </p>
+                  <p className="mt-1 truncate text-sm font-semibold capitalize">
+                    {expandedRecommendation?.action_category ?? "N/A"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Recommandation */}
+              <div className="mt-4 rounded-2xl border border-[#a3e635]/20 bg-[#a3e635]/5 px-5 py-4">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-[#a3e635]">
+                  Recommandation SentrIA
+                </p>
+
+                <p className="mt-2 text-sm font-medium leading-6 text-white/90">
+                  {expandedRecommendation?.recommended_action ??
+                    "Analyse en cours — la recommandation sera générée prochainement."}
+                </p>
+
+                {expandedRecommendation?.message && (
+                  <p className="mt-2 text-xs leading-5 text-white/50">
+                    {expandedRecommendation.message}
+                  </p>
+                )}
+              </div>
+
+              {/* Action */}
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+                <p className="text-xs text-white/40">
+                  Cliquez à nouveau sur l'alerte pour refermer ce panneau.
+                </p>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-[#a3e635] px-5 py-2.5 text-sm font-bold text-[#1a2e05] transition-transform hover:scale-[1.02]"
+                >
+                  Voir la recommandation
+                  <ArrowUpRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
