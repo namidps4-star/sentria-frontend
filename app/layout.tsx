@@ -2,7 +2,7 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Space_Grotesk, Geist_Mono } from 'next/font/google'
 import './globals.css'
-import { SentriaStorageGuard } from '@/components/sentria/sentria-storage-guard'
+// import { SentriaStorageGuard } from '@components/sentria/sentria-storage-guard'
 
 const geistSans = Space_Grotesk({
   variable: '--font-geist-sans',
