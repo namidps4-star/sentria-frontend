@@ -954,13 +954,11 @@ export function DashboardView({
       : null
 
   const customFromTime = customFrom
-    ? new Date(customFrom).getTime()
+    ? new Date(`${customFrom}T00:00:00`).getTime()
     : null
 
   const customToTime = customTo
-    ? new Date(customTo).getTime() +
-      24 * 60 * 60 * 1000 -
-      1
+    ? new Date(`${customTo}T23:59:59.999`).getTime()
     : null
 
   const tableAlerts = filteredAlerts.filter((a) => {
@@ -997,6 +995,21 @@ export function DashboardView({
 
     return true
   })
+
+  const activeFilterCount =
+    (statusFilter !== "all" ? 1 : 0) +
+    (periodPreset !== "all" ? 1 : 0) +
+    (customFrom ? 1 : 0) +
+    (customTo ? 1 : 0) +
+    (alertSearch.trim() ? 1 : 0)
+
+  function clearAlertFilters() {
+    setStatusFilter("all")
+    setPeriodPreset("all")
+    setCustomFrom("")
+    setCustomTo("")
+    setAlertSearch("")
+  }
 
   const expandedAlert =
     tableAlerts.find(
@@ -1078,7 +1091,7 @@ export function DashboardView({
             </button>
           </div>
 
-          <div className="rounded-3xl bg-foreground p-6 text-background md:p-8">
+          <div className="rounded-3xl bg-indigo-950 p-6 text-white md:p-8">
             <div className="max-w-2xl">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
                 <Shield className="h-3.5 w-3.5" />
@@ -1089,7 +1102,7 @@ export function DashboardView({
                 Vue d'ensemble de votre logistique.
               </h2>
 
-              <p className="mt-2 text-sm leading-6 text-background/70">
+              <p className="mt-2 text-sm leading-6 text-white/70">
                 Retrouvez ici les priorités que vous avez
                 sélectionnées pendant la configuration de SentrIA.
                 Choisissez une priorité pour accéder directement
@@ -1098,7 +1111,7 @@ export function DashboardView({
 
               {normalizedOpsType &&
                 OPS_TYPE_LABEL[normalizedOpsType] && (
-                  <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-background/20 bg-background/10 px-3 py-1 text-[11px] font-medium text-background/80">
+                  <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-[11px] font-medium text-white/80">
                     <Shield className="h-3 w-3" />
                     {OPS_TYPE_LABEL[normalizedOpsType]}
                   </div>
@@ -1239,7 +1252,7 @@ export function DashboardView({
                   className={cn(
                     "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold transition-colors",
                     priority === logisticsPriority
-                      ? "bg-foreground text-background"
+                      ? "bg-indigo-950 text-white"
                       : "bg-muted text-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
@@ -1346,7 +1359,7 @@ export function DashboardView({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-3xl bg-foreground p-6 text-background md:flex-row md:items-center md:justify-between md:p-8">
+      <div className="flex flex-col gap-4 rounded-3xl bg-indigo-950 p-6 text-white md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-xl">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
             <Zap className="h-3.5 w-3.5" />
@@ -1357,7 +1370,7 @@ export function DashboardView({
             Vue globale de vos opérations critiques.
           </h2>
 
-          <p className="mt-2 text-pretty text-sm text-background/70">
+          <p className="mt-2 text-pretty text-sm text-white/70">
             SentrIA surveille vos alertes en temps réel,
             machines, stocks, flottes, équipements, partout
             dans le monde.
@@ -1391,7 +1404,7 @@ export function DashboardView({
           className={cn(
             "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
             filterSector === "all"
-              ? "border-foreground bg-foreground text-background"
+              ? "border-indigo-950 bg-indigo-950 text-white"
               : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
           )}
         >
@@ -1425,7 +1438,7 @@ export function DashboardView({
             className={cn(
               "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
               filterSector === s.key
-                ? "border-foreground bg-foreground text-background"
+                ? "border-indigo-950 bg-indigo-950 text-white"
                 : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
             )}
           >
@@ -1590,7 +1603,7 @@ export function DashboardView({
                 className={cn(
                   "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors",
                   uploadSector === s.key
-                    ? "border-foreground bg-foreground text-background"
+                    ? "border-indigo-950 bg-indigo-950 text-white"
                     : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
                 )}
               >
@@ -1650,7 +1663,13 @@ export function DashboardView({
             </h3>
           </div>
 
-          <button className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90">
+          <button
+            onClick={() => {
+              setExpandedAlertKey(null)
+              clearAlertFilters()
+            }}
+            className="inline-flex items-center gap-1.5 rounded-full bg-indigo-950 px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+          >
             Tout voir
             <ArrowUpRight className="h-4 w-4" />
           </button>
@@ -1667,7 +1686,12 @@ export function DashboardView({
                   | "warning"
               )
             }
-            className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground"
+            className={cn(
+              "rounded-full border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground",
+              statusFilter !== "all"
+                ? "border-indigo-950 ring-1 ring-indigo-950/20"
+                : "border-border"
+            )}
           >
             <option value="all">Tous les statuts</option>
             <option value="critical">Critiques</option>
@@ -1686,7 +1710,12 @@ export function DashboardView({
                   | "custom"
               )
             }
-            className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground"
+            className={cn(
+              "rounded-full border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground",
+              periodPreset !== "all"
+                ? "border-indigo-950 ring-1 ring-indigo-950/20"
+                : "border-border"
+            )}
           >
             <option value="all">Toutes les dates</option>
             <option value="7">7 derniers jours</option>
@@ -1696,12 +1725,12 @@ export function DashboardView({
           </select>
 
           {periodPreset === "custom" && (
-            <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               <input
                 type="date"
                 value={customFrom}
                 onChange={(e) => setCustomFrom(e.target.value)}
-                className="rounded-full border border-border bg-background px-3 py-1.5 text-xs text-foreground outline-none"
+                className="rounded-full border border-indigo-950/30 bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-indigo-950/20"
               />
 
               <span className="text-xs text-muted-foreground">
@@ -1711,8 +1740,9 @@ export function DashboardView({
               <input
                 type="date"
                 value={customTo}
+                min={customFrom || undefined}
                 onChange={(e) => setCustomTo(e.target.value)}
-                className="rounded-full border border-border bg-background px-3 py-1.5 text-xs text-foreground outline-none"
+                className="rounded-full border border-indigo-950/30 bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-indigo-950/20"
               />
             </div>
           )}
@@ -1725,22 +1755,74 @@ export function DashboardView({
               value={alertSearch}
               onChange={(e) => setAlertSearch(e.target.value)}
               placeholder="Rechercher une alerte..."
-              className="w-52 rounded-full border border-border bg-background py-1.5 pl-9 pr-4 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-muted"
+              className={cn(
+                "w-52 rounded-full border bg-background py-1.5 pl-9 pr-4 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-colors hover:bg-accent focus:bg-muted",
+                alertSearch.trim()
+                  ? "border-indigo-950 ring-1 ring-indigo-950/20"
+                  : "border-border"
+              )}
             />
           </div>
+
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={clearAlertFilters}
+              className="inline-flex items-center gap-1.5 rounded-full bg-indigo-950 px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              <X className="h-3 w-3" />
+              Effacer les filtres
+              <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[10px]">
+                {activeFilterCount}
+              </span>
+            </button>
+          )}
         </div>
 
-        <div className="flex items-center gap-2 border-t border-border px-6 py-2">
-          <ChevronRight className="h-3.5 w-3.5 text-accent-foreground" />
+        {activeFilterCount > 0 && (
+          <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-2.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Filtres actifs
+            </span>
 
-          <p className="text-[11px] font-medium text-muted-foreground">
-            Cliquez sur une alerte pour afficher les détails à droite.
-          </p>
-        </div>
+            {statusFilter !== "all" && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-indigo-950/10 px-2.5 py-1 text-[11px] font-semibold text-indigo-950">
+                {statusFilter === "critical"
+                  ? "Critiques"
+                  : "Warnings"}
+              </span>
+            )}
+
+            {periodPreset !== "all" && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-indigo-950/10 px-2.5 py-1 text-[11px] font-semibold text-indigo-950">
+                {periodPreset === "7"
+                  ? "7 derniers jours"
+                  : periodPreset === "30"
+                  ? "30 derniers jours"
+                  : periodPreset === "90"
+                  ? "90 derniers jours"
+                  : `${customFrom || "Début"} → ${
+                      customTo || "Fin"
+                    }`}
+              </span>
+            )}
+
+            {alertSearch.trim() && (
+              <span className="inline-flex max-w-[220px] items-center gap-1 rounded-full bg-indigo-950/10 px-2.5 py-1 text-[11px] font-semibold text-indigo-950">
+                Recherche : {alertSearch}
+              </span>
+            )}
+
+            <span className="ml-auto text-[11px] font-medium text-muted-foreground">
+              {tableAlerts.length} alerte
+              {tableAlerts.length !== 1 ? "s" : ""}
+            </span>
+          </div>
+        )}
 
         <div
           className={cn(
-            "grid gap-4 p-4 transition-all duration-300 md:p-6",
+            "grid gap-4 p-4 md:p-6",
             expandedAlert
               ? "grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
               : "grid-cols-1"
@@ -1754,12 +1836,12 @@ export function DashboardView({
           >
             <div
               className={cn(
-                "overflow-x-auto",
-                expandedAlert && "h-full overflow-y-auto"
+                "max-h-[600px] overflow-x-auto overflow-y-auto",
+                expandedAlert && "h-full"
               )}
             >
               <table className="w-full text-sm">
-                <thead>
+                <thead className="sticky top-0 z-10 bg-card">
                   <tr className="border-y border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
                     <th className="px-4 py-3 font-medium">
                       Actif
@@ -1800,11 +1882,16 @@ export function DashboardView({
                         className={cn(
                           "cursor-pointer border-b border-border transition-colors last:border-0",
                           isSelected
-                            ? "bg-foreground text-background"
+                            ? "bg-indigo-950 text-white"
                             : "hover:bg-accent/15"
                         )}
                       >
-                        <td className="px-4 py-4 font-semibold">
+                        <td
+                          className={cn(
+                            "px-4 py-4 font-semibold",
+                            isSelected && "rounded-l-2xl"
+                          )}
+                        >
                           <div className="flex items-center gap-2">
                             <span
                               className={cn(
@@ -1823,7 +1910,7 @@ export function DashboardView({
                           className={cn(
                             "max-w-[280px] truncate px-4 py-4",
                             isSelected
-                              ? "text-background/70"
+                              ? "text-white/70"
                               : "text-muted-foreground"
                           )}
                         >
@@ -1834,7 +1921,7 @@ export function DashboardView({
                           className={cn(
                             "px-4 py-4 capitalize",
                             isSelected
-                              ? "text-background/70"
+                              ? "text-white/70"
                               : "text-muted-foreground"
                           )}
                         >
@@ -1858,7 +1945,7 @@ export function DashboardView({
                           className={cn(
                             "px-4 py-4",
                             isSelected
-                              ? "text-background/70"
+                              ? "rounded-r-2xl text-white/70"
                               : "text-muted-foreground"
                           )}
                         >
@@ -1897,7 +1984,7 @@ export function DashboardView({
           </div>
 
           {expandedAlert && (
-            <div className="min-w-0 self-start rounded-3xl bg-black p-5 text-white ring-1 ring-[#a3e635]/30 shadow-[0_0_30px_rgba(163,230,53,0.10)]">
+            <div className="min-w-0 self-start rounded-3xl bg-indigo-950 p-5 text-white ring-1 ring-indigo-400/30 shadow-[0_0_30px_rgba(49,46,129,0.18)] lg:sticky lg:top-6">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-[#a3e635]">
@@ -1931,7 +2018,7 @@ export function DashboardView({
                     type="button"
                     onClick={() => setExpandedAlertKey(null)}
                     aria-label="Fermer les détails"
-                    className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-white/60 ring-1 ring-white/10 transition-colors hover:bg-[#a3e635] hover:text-black hover:ring-transparent"
+                    className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-white/60 ring-1 ring-white/10 transition-colors hover:bg-[#a3e635] hover:text-indigo-950 hover:ring-transparent"
                   >
                     <X className="h-3.5 w-3.5" />
                   </button>
@@ -2008,11 +2095,7 @@ export function DashboardView({
                 </p>
               </div>
 
-              <div className="mt-4 flex items-center justify-between gap-3">
-                <p className="text-[11px] text-white/40">
-                  Cliquez à nouveau pour refermer.
-                </p>
-
+              <div className="mt-4 flex items-center justify-end gap-3">
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
