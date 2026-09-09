@@ -1,6 +1,6 @@
 "use client"
 
-import { Fragment, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Activity,
   Cpu,
@@ -11,7 +11,6 @@ import {
   Zap,
   Upload,
   Shield,
-  ChevronDown,
   ChevronRight,
   Search,
   X,
@@ -609,10 +608,6 @@ function getSavedLogisticsPriorities(): LogisticsPriority[] {
   }
 }
 
-function getSavedLogisticsPriority(): LogisticsPriority {
-  return getSavedLogisticsPriorities()[0] ?? "blockages"
-}
-
 export function DashboardView({
   search = "",
 }: {
@@ -632,7 +627,6 @@ export function DashboardView({
 
     const saved = localStorage.getItem("sentria_sector")
 
-    // "logistics" is a navigation state, not a persisted default sector.
     return saved === "logistics" ? "all" : saved || "all"
   })
 
@@ -672,21 +666,21 @@ export function DashboardView({
       getSavedLogisticsPriorities()
     )
 
-  // --- Filtres de la table d'alertes (statut, période, dates personnalisées) ---
-  // et ligne sélectionnable au clic. Purement présentationnel, aucune donnée
-  // existante n'est modifiée par cet état.
   const [statusFilter, setStatusFilter] = useState<
     "all" | "critical" | "warning"
   >("all")
+
   const [periodPreset, setPeriodPreset] = useState<
     "all" | "7" | "30" | "90" | "custom"
   >("all")
+
   const [customFrom, setCustomFrom] = useState("")
   const [customTo, setCustomTo] = useState("")
+
   const [expandedAlertKey, setExpandedAlertKey] = useState<string | null>(
     null
   )
-  // Petite barre de recherche locale dans la table d'alertes.
+
   const [alertSearch, setAlertSearch] = useState("")
 
   useEffect(() => {
@@ -708,9 +702,9 @@ export function DashboardView({
 
       setOpsType(localStorage.getItem("sentria_ops_type"))
 
-      const priorities = getSavedLogisticsPriorities()
-
-      setSelectedLogisticsPriorities(priorities)
+      setSelectedLogisticsPriorities(
+        getSavedLogisticsPriorities()
+      )
 
       const savedSector = localStorage.getItem("sentria_sector")
 
@@ -767,8 +761,6 @@ export function DashboardView({
       setUploadSector(activeSectors[0])
     }
 
-    // Logistics can be opened through its dedicated navigation button
-    // even if it is not part of the normal sector filters.
     if (
       filterSector !== "all" &&
       filterSector !== "logistics" &&
@@ -857,16 +849,12 @@ export function DashboardView({
   function openLogisticsOverview() {
     setFilterSector("logistics")
     setLogisticsPriority(null)
-
-    // Do not persist "logistics" as the default sector.
     localStorage.removeItem("sentria_sector")
   }
 
   function openLogisticsPriority(priority: LogisticsPriority) {
     setLogisticsPriority(priority)
     setFilterSector("logistics")
-
-    // Do not persist "logistics".
     localStorage.removeItem("sentria_sector")
   }
 
@@ -956,7 +944,6 @@ export function DashboardView({
     )
     .slice(0, 5)
 
-  // --- Table d'alertes : statut + période (préréglages ou dates personnalisées) ---
   const presetMs =
     periodPreset === "7"
       ? 7 * 24 * 60 * 60 * 1000
@@ -969,14 +956,18 @@ export function DashboardView({
   const customFromTime = customFrom
     ? new Date(customFrom).getTime()
     : null
+
   const customToTime = customTo
-    ? new Date(customTo).getTime() + 24 * 60 * 60 * 1000 - 1
+    ? new Date(customTo).getTime() +
+      24 * 60 * 60 * 1000 -
+      1
     : null
 
   const tableAlerts = filteredAlerts.filter((a) => {
     if (statusFilter === "critical" && a.severity !== "CRITICAL") {
       return false
     }
+
     if (statusFilter === "warning" && a.severity !== "WARNING") {
       return false
     }
@@ -992,7 +983,6 @@ export function DashboardView({
       if (customToTime && alertTime > customToTime) return false
     }
 
-    // Petite barre de recherche locale (actif, message, secteur, sévérité).
     if (alertSearch.trim()) {
       const q = alertSearch.toLowerCase()
 
@@ -1008,17 +998,9 @@ export function DashboardView({
     return true
   })
 
-  /*
-   * Le panneau noir n'apparaît QUE si l'utilisateur a cliqué
-   * sur une alerte. Aucune alerte n'est sélectionnée par défaut :
-   * la table occupe toute la largeur, puis se rétracte à gauche
-   * quand le panneau s'ouvre à droite.
-   */
-  const resolvedSelectedKey = expandedAlertKey
-
   const expandedAlert =
     tableAlerts.find(
-      (a) => `${a.equipment}-${a.date}` === resolvedSelectedKey
+      (a) => `${a.equipment}-${a.date}` === expandedAlertKey
     ) ?? null
 
   const expandedRecommendation = expandedAlert
@@ -1083,13 +1065,6 @@ export function DashboardView({
             | "multi")
         : undefined
 
-    /*
-     * LOGISTICS OVERVIEW
-     *
-     * When the user clicks "Logistique" from the sector selector,
-     * logisticsPriority is null, so we show the overview instead
-     * of automatically opening Blocages.
-     */
     if (logisticsPriority === null) {
       return (
         <div className="space-y-6">
@@ -1170,9 +1145,7 @@ export function DashboardView({
                     </div>
 
                     <p className="mt-3 text-sm leading-5 text-muted-foreground">
-                      {LOGISTICS_PRIORITY_DESCRIPTIONS[
-                        priority
-                      ]}
+                      {LOGISTICS_PRIORITY_DESCRIPTIONS[priority]}
                     </p>
 
                     <div className="mt-5 text-xs font-semibold text-foreground">
@@ -1266,8 +1239,8 @@ export function DashboardView({
                   className={cn(
                     "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold transition-colors",
                     priority === logisticsPriority
-                      ? "bg-accent text-accent-foreground"
-                      : "bg-muted text-foreground hover:bg-muted/80"
+                      ? "bg-foreground text-background"
+                      : "bg-muted text-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
                   {LOGISTICS_PRIORITY_LABELS[priority]}
@@ -1291,13 +1264,9 @@ export function DashboardView({
             opsType={normalizedOpsType}
           />
         ) : logisticsPriority === "wait" ? (
-          <LogisticsWaitingView
-            opsType={normalizedOpsType}
-          />
+          <LogisticsWaitingView opsType={normalizedOpsType} />
         ) : logisticsPriority === "cost" ? (
-          <LogisticsCostView
-            opsType={normalizedOpsType}
-          />
+          <LogisticsCostView opsType={normalizedOpsType} />
         ) : logisticsPriority === "anticipate" ? (
           <LogisticsAnticipateView
             opsType={normalizedOpsType}
@@ -1326,6 +1295,7 @@ export function DashboardView({
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Équipements
                 </p>
+
                 <p className="mt-2 font-heading text-2xl font-bold">
                   {new Set(
                     alerts
@@ -1341,6 +1311,7 @@ export function DashboardView({
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Alertes actives
                 </p>
+
                 <p className="mt-2 font-heading text-2xl font-bold">
                   {
                     alerts.filter(
@@ -1354,6 +1325,7 @@ export function DashboardView({
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Opération
                 </p>
+
                 <p className="mt-2 font-heading text-lg font-bold">
                   {normalizedOpsType &&
                   OPS_TYPE_LABEL[normalizedOpsType]
@@ -1420,7 +1392,7 @@ export function DashboardView({
             "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
             filterSector === "all"
               ? "border-foreground bg-foreground text-background"
-              : "border-border bg-background hover:bg-muted"
+              : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
           )}
         >
           Tous
@@ -1454,7 +1426,7 @@ export function DashboardView({
               "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
               filterSector === s.key
                 ? "border-foreground bg-foreground text-background"
-                : "border-border bg-background hover:bg-muted"
+                : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
             )}
           >
             {s.label}
@@ -1484,7 +1456,7 @@ export function DashboardView({
                     onClick={() =>
                       openLogisticsPriority(priority)
                     }
-                    className="rounded-full bg-accent/15 px-2.5 py-1 text-[11px] font-semibold text-accent-foreground transition-colors hover:bg-accent/25"
+                    className="rounded-full bg-accent/15 px-2.5 py-1 text-[11px] font-semibold text-accent-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                   >
                     {LOGISTICS_PRIORITY_LABELS[priority]}
                   </button>
@@ -1619,7 +1591,7 @@ export function DashboardView({
                   "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors",
                   uploadSector === s.key
                     ? "border-foreground bg-foreground text-background"
-                    : "border-border bg-background hover:bg-muted"
+                    : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
                 )}
               >
                 {s.label}
@@ -1684,16 +1656,18 @@ export function DashboardView({
           </button>
         </div>
 
-        {/* FILTRES : statut, préréglages de période, dates personnalisées + recherche */}
         <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-3">
           <select
             value={statusFilter}
             onChange={(e) =>
               setStatusFilter(
-                e.target.value as "all" | "critical" | "warning"
+                e.target.value as
+                  | "all"
+                  | "critical"
+                  | "warning"
               )
             }
-            className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-muted"
+            className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             <option value="all">Tous les statuts</option>
             <option value="critical">Critiques</option>
@@ -1712,7 +1686,7 @@ export function DashboardView({
                   | "custom"
               )
             }
-            className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-muted"
+            className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             <option value="all">Toutes les dates</option>
             <option value="7">7 derniers jours</option>
@@ -1729,7 +1703,11 @@ export function DashboardView({
                 onChange={(e) => setCustomFrom(e.target.value)}
                 className="rounded-full border border-border bg-background px-3 py-1.5 text-xs text-foreground outline-none"
               />
-              <span className="text-xs text-muted-foreground">→</span>
+
+              <span className="text-xs text-muted-foreground">
+                →
+              </span>
+
               <input
                 type="date"
                 value={customTo}
@@ -1739,7 +1717,6 @@ export function DashboardView({
             </div>
           )}
 
-          {/* Petite barre de recherche, collée à droite comme sur l'inspiration */}
           <div className="relative ml-auto">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
 
@@ -1748,34 +1725,27 @@ export function DashboardView({
               value={alertSearch}
               onChange={(e) => setAlertSearch(e.target.value)}
               placeholder="Rechercher une alerte..."
-              className="w-52 rounded-full border border-border bg-background py-1.5 pl-9 pr-4 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-colors hover:bg-muted focus:bg-muted"
+              className="w-52 rounded-full border border-border bg-background py-1.5 pl-9 pr-4 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-muted"
             />
           </div>
         </div>
 
-        {/* Indice visuel : les lignes sont cliquables */}
         <div className="flex items-center gap-2 border-t border-border px-6 py-2">
           <ChevronRight className="h-3.5 w-3.5 text-accent-foreground" />
+
           <p className="text-[11px] font-medium text-muted-foreground">
             Cliquez sur une alerte pour afficher les détails à droite.
           </p>
         </div>
 
-        {/*
-         * TABLE + PANNEAU DÉTAIL :
-         * - Sans sélection : la table prend toute la largeur.
-         * - Au clic : la table se rétracte à gauche et la boîte
-         *   noire/verte compacte s'ouvre à droite.
-         */}
         <div
           className={cn(
             "grid gap-4 p-4 transition-all duration-300 md:p-6",
             expandedAlert
-              ? "grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]"
+              ? "grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
               : "grid-cols-1"
           )}
         >
-          {/* GAUCHE : table des alertes (style d'origine conservé) */}
           <div className="min-w-0 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -1811,14 +1781,16 @@ export function DashboardView({
                     <tr
                       key={`${key}-${i}`}
                       onClick={() =>
-                        setExpandedAlertKey(isSelected ? null : key)
+                        setExpandedAlertKey(
+                          isSelected ? null : key
+                        )
                       }
                       title="Cliquez pour voir les détails"
                       className={cn(
                         "cursor-pointer border-b border-border transition-colors last:border-0",
                         isSelected
-                          ? "bg-[#a3e635]/10"
-                          : "hover:bg-[#a3e635]/10"
+                          ? "bg-foreground text-background"
+                          : "hover:bg-accent/15"
                       )}
                     >
                       <td className="px-4 py-4 font-semibold">
@@ -1831,22 +1803,37 @@ export function DashboardView({
                                 : "bg-[#a3e635]"
                             )}
                           />
+
                           {alert.equipment}
                         </div>
                       </td>
 
-                      <td className="max-w-[280px] truncate px-4 py-4 text-muted-foreground">
+                      <td
+                        className={cn(
+                          "max-w-[280px] truncate px-4 py-4",
+                          isSelected
+                            ? "text-background/70"
+                            : "text-muted-foreground"
+                        )}
+                      >
                         {alert.message}
                       </td>
 
-                      <td className="px-4 py-4 capitalize text-muted-foreground">
+                      <td
+                        className={cn(
+                          "px-4 py-4 capitalize",
+                          isSelected
+                            ? "text-background/70"
+                            : "text-muted-foreground"
+                        )}
+                      >
                         {alert.sector ?? "N/A"}
                       </td>
 
                       <td className="px-4 py-4">
                         <span
                           className={cn(
-                            "rounded-full px-2.5 py-1 text-xs font-semibold",
+                            "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
                             alert.severity === "CRITICAL"
                               ? "bg-destructive/10 text-destructive"
                               : "bg-amber-500/15 text-amber-600"
@@ -1856,7 +1843,14 @@ export function DashboardView({
                         </span>
                       </td>
 
-                      <td className="px-4 py-4 text-muted-foreground">
+                      <td
+                        className={cn(
+                          "px-4 py-4",
+                          isSelected
+                            ? "text-background/70"
+                            : "text-muted-foreground"
+                        )}
+                      >
                         <div className="flex items-center justify-between gap-2">
                           {new Date(
                             alert.date
@@ -1890,10 +1884,8 @@ export function DashboardView({
             </table>
           </div>
 
-          {/* DROITE : boîte noire compacte — uniquement au clic */}
           {expandedAlert && (
             <div className="min-w-0 self-start rounded-3xl bg-black p-5 text-white ring-1 ring-[#a3e635]/30 shadow-[0_0_30px_rgba(163,230,53,0.10)]">
-              {/* En-tête compact */}
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-[#a3e635]">
@@ -1905,17 +1897,19 @@ export function DashboardView({
                   </h4>
 
                   <p className="mt-0.5 text-xs text-white/50">
-                    {new Date(expandedAlert.date).toLocaleString("fr-FR")}
+                    {new Date(
+                      expandedAlert.date
+                    ).toLocaleString("fr-FR")}
                   </p>
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
                   <span
                     className={cn(
-                      "rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1",
+                      "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
                       expandedAlert.severity === "CRITICAL"
-                        ? "bg-red-500/10 text-red-300 ring-red-400/30"
-                        : "bg-[#a3e635]/10 text-[#a3e635] ring-[#a3e635]/30"
+                        ? "bg-destructive/10 text-destructive"
+                        : "bg-amber-500/15 text-amber-600"
                     )}
                   >
                     {expandedAlert.severity}
@@ -1932,22 +1926,22 @@ export function DashboardView({
                 </div>
               </div>
 
-              {/* Message (2 lignes max) */}
               <div className="mt-4 rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-white/40">
                   Message
                 </p>
+
                 <p className="mt-1 line-clamp-2 text-sm leading-5 text-white/90">
                   {expandedAlert.message}
                 </p>
               </div>
 
-              {/* Infos en une ligne compacte */}
               <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10">
                 <div>
                   <p className="text-[10px] uppercase tracking-wide text-white/40">
                     Secteur
                   </p>
+
                   <p className="text-sm font-semibold capitalize">
                     {expandedAlert.sector ?? "N/A"}
                   </p>
@@ -1957,24 +1951,24 @@ export function DashboardView({
                   <p className="text-[10px] uppercase tracking-wide text-white/40">
                     Statut
                   </p>
-                  <p
+
+                  <span
                     className={cn(
-                      "text-sm font-semibold",
+                      "mt-1 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
                       expandedAlert.severity === "CRITICAL"
-                        ? "text-red-300"
-                        : "text-[#a3e635]"
+                        ? "bg-destructive/10 text-destructive"
+                        : "bg-amber-500/15 text-amber-600"
                     )}
                   >
-                    {expandedAlert.severity === "CRITICAL"
-                      ? "Critique"
-                      : "Warning"}
-                  </p>
+                    {expandedAlert.severity}
+                  </span>
                 </div>
 
                 <div>
                   <p className="text-[10px] uppercase tracking-wide text-white/40">
                     Score de risque
                   </p>
+
                   <p className="text-sm font-semibold text-[#a3e635]">
                     {expandedRecommendation?.risk_score ?? "N/A"}
                   </p>
@@ -1984,13 +1978,13 @@ export function DashboardView({
                   <p className="text-[10px] uppercase tracking-wide text-white/40">
                     Catégorie
                   </p>
+
                   <p className="truncate text-sm font-semibold capitalize">
                     {expandedRecommendation?.action_category ?? "N/A"}
                   </p>
                 </div>
               </div>
 
-              {/* Recommandation compacte */}
               <div className="mt-3 rounded-2xl border border-[#a3e635]/20 bg-[#a3e635]/5 px-4 py-3">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-[#a3e635]">
                   Recommandation
@@ -2002,7 +1996,6 @@ export function DashboardView({
                 </p>
               </div>
 
-              {/* Pied compact */}
               <div className="mt-4 flex items-center justify-between gap-3">
                 <p className="text-[11px] text-white/40">
                   Cliquez à nouveau pour refermer.
