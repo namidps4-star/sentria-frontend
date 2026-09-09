@@ -961,6 +961,12 @@ export function DashboardView({
     ? new Date(`${customTo}T23:59:59.999`).getTime()
     : null
 
+  const invalidCustomRange =
+    periodPreset === "custom" &&
+    customFromTime !== null &&
+    customToTime !== null &&
+    customFromTime > customToTime
+
   const tableAlerts = filteredAlerts.filter((a) => {
     if (statusFilter === "critical" && a.severity !== "CRITICAL") {
       return false
@@ -977,8 +983,21 @@ export function DashboardView({
     }
 
     if (periodPreset === "custom") {
-      if (customFromTime && alertTime < customFromTime) return false
-      if (customToTime && alertTime > customToTime) return false
+      if (invalidCustomRange) return false
+
+      if (
+        customFromTime !== null &&
+        alertTime < customFromTime
+      ) {
+        return false
+      }
+
+      if (
+        customToTime !== null &&
+        alertTime > customToTime
+      ) {
+        return false
+      }
     }
 
     if (alertSearch.trim()) {
@@ -999,8 +1018,6 @@ export function DashboardView({
   const activeFilterCount =
     (statusFilter !== "all" ? 1 : 0) +
     (periodPreset !== "all" ? 1 : 0) +
-    (customFrom ? 1 : 0) +
-    (customTo ? 1 : 0) +
     (alertSearch.trim() ? 1 : 0)
 
   function clearAlertFilters() {
@@ -1661,6 +1678,10 @@ export function DashboardView({
                 )?.label
               }
             </h3>
+
+            <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-semibold text-muted-foreground">
+              {tableAlerts.length}
+            </span>
           </div>
 
           <button
@@ -1700,16 +1721,21 @@ export function DashboardView({
 
           <select
             value={periodPreset}
-            onChange={(e) =>
-              setPeriodPreset(
-                e.target.value as
-                  | "all"
-                  | "7"
-                  | "30"
-                  | "90"
-                  | "custom"
-              )
-            }
+            onChange={(e) => {
+              const value = e.target.value as
+                | "all"
+                | "7"
+                | "30"
+                | "90"
+                | "custom"
+
+              setPeriodPreset(value)
+
+              if (value !== "custom") {
+                setCustomFrom("")
+                setCustomTo("")
+              }
+            }}
             className={cn(
               "rounded-full border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground",
               periodPreset !== "all"
@@ -1730,7 +1756,12 @@ export function DashboardView({
                 type="date"
                 value={customFrom}
                 onChange={(e) => setCustomFrom(e.target.value)}
-                className="rounded-full border border-indigo-950/30 bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-indigo-950/20"
+                className={cn(
+                  "rounded-full border bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-indigo-950/20",
+                  invalidCustomRange
+                    ? "border-destructive"
+                    : "border-indigo-950/30"
+                )}
               />
 
               <span className="text-xs text-muted-foreground">
@@ -1742,7 +1773,12 @@ export function DashboardView({
                 value={customTo}
                 min={customFrom || undefined}
                 onChange={(e) => setCustomTo(e.target.value)}
-                className="rounded-full border border-indigo-950/30 bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-indigo-950/20"
+                className={cn(
+                  "rounded-full border bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-indigo-950/20",
+                  invalidCustomRange
+                    ? "border-destructive"
+                    : "border-indigo-950/30"
+                )}
               />
             </div>
           )}
@@ -1779,6 +1815,14 @@ export function DashboardView({
           )}
         </div>
 
+        {periodPreset === "custom" && invalidCustomRange && (
+          <div className="border-t border-border px-6 py-2">
+            <p className="text-xs font-medium text-destructive">
+              La date de début doit être antérieure ou égale à la date de fin.
+            </p>
+          </div>
+        )}
+
         {activeFilterCount > 0 && (
           <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-2.5">
             <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -1808,7 +1852,7 @@ export function DashboardView({
             )}
 
             {alertSearch.trim() && (
-              <span className="inline-flex max-w-[220px] items-center gap-1 rounded-full bg-indigo-950/10 px-2.5 py-1 text-[11px] font-semibold text-indigo-950">
+              <span className="inline-flex max-w-[220px] items-center gap-1 truncate rounded-full bg-indigo-950/10 px-2.5 py-1 text-[11px] font-semibold text-indigo-950">
                 Recherche : {alertSearch}
               </span>
             )}
@@ -1840,7 +1884,7 @@ export function DashboardView({
                 expandedAlert && "h-full"
               )}
             >
-              <table className="w-full text-sm">
+              <table className="w-full border-separate border-spacing-0 text-sm">
                 <thead className="sticky top-0 z-10 bg-card">
                   <tr className="border-y border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
                     <th className="px-4 py-3 font-medium">
@@ -1880,16 +1924,18 @@ export function DashboardView({
                         }
                         title="Cliquez pour voir les détails"
                         className={cn(
-                          "cursor-pointer border-b border-border transition-colors last:border-0",
+                          "cursor-pointer transition-colors",
                           isSelected
                             ? "bg-indigo-950 text-white"
-                            : "hover:bg-accent/15"
+                            : "border-b border-border hover:bg-accent/15"
                         )}
                       >
                         <td
                           className={cn(
                             "px-4 py-4 font-semibold",
-                            isSelected && "rounded-l-2xl"
+                            isSelected
+                              ? "rounded-l-2xl"
+                              : "border-b border-border"
                           )}
                         >
                           <div className="flex items-center gap-2">
@@ -1911,7 +1957,7 @@ export function DashboardView({
                             "max-w-[280px] truncate px-4 py-4",
                             isSelected
                               ? "text-white/70"
-                              : "text-muted-foreground"
+                              : "border-b border-border text-muted-foreground"
                           )}
                         >
                           {alert.message}
@@ -1922,13 +1968,18 @@ export function DashboardView({
                             "px-4 py-4 capitalize",
                             isSelected
                               ? "text-white/70"
-                              : "text-muted-foreground"
+                              : "border-b border-border text-muted-foreground"
                           )}
                         >
                           {alert.sector ?? "N/A"}
                         </td>
 
-                        <td className="px-4 py-4">
+                        <td
+                          className={cn(
+                            "px-4 py-4",
+                            !isSelected && "border-b border-border"
+                          )}
+                        >
                           <span
                             className={cn(
                               "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
@@ -1946,7 +1997,7 @@ export function DashboardView({
                             "px-4 py-4",
                             isSelected
                               ? "rounded-r-2xl text-white/70"
-                              : "text-muted-foreground"
+                              : "border-b border-border text-muted-foreground"
                           )}
                         >
                           <div className="flex items-center justify-between gap-2">
@@ -1984,7 +2035,7 @@ export function DashboardView({
           </div>
 
           {expandedAlert && (
-            <div className="min-w-0 self-start rounded-3xl bg-indigo-950 p-5 text-white ring-1 ring-indigo-400/30 shadow-[0_0_30px_rgba(49,46,129,0.18)] lg:sticky lg:top-6">
+            <div className="min-w-0 self-start rounded-3xl bg-indigo-950 p-5 text-white shadow-[0_0_30px_rgba(49,46,129,0.18)] ring-1 ring-indigo-400/30 lg:sticky lg:top-6">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-[#a3e635]">
