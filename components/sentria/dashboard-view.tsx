@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useState } from "react"
@@ -11,7 +10,12 @@ import {
   MoreHorizontal,
   Zap,
   Upload,
+  Sparkles,
   Shield,
+  Download,
+  Search,
+  X,
+  ChevronDown,
 } from "lucide-react"
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
@@ -63,40 +67,12 @@ type LogisticsPriority =
   | "recommend"
   | "resources"
 
-const LOGISTICS_PRIORITY_LABELS: Record<
-  LogisticsPriority,
-  string
-> = {
-  blockages: "Blocages",
-  wait: "Temps d'attente",
-  cost: "Coûts",
-  anticipate: "Anticipation",
-  recommend: "Recommandations",
-  resources: "Ressources",
-}
-
-const LOGISTICS_PRIORITY_DESCRIPTIONS: Record<
-  LogisticsPriority,
-  string
-> = {
-  blockages:
-    "Identifiez les équipements, flux ou opérations actuellement bloqués.",
-  wait:
-    "Surveillez les files d'attente et les temps d'immobilisation.",
-  cost:
-    "Analysez les postes qui génèrent les coûts logistiques les plus importants.",
-  anticipate:
-    "Anticipez les risques et les perturbations à venir.",
-  recommend:
-    "Consultez les recommandations générées par SentrIA.",
-  resources:
-    "Suivez l'utilisation et la disponibilité de vos ressources.",
-}
-
 const SECTOR_META: Record<
   string,
   {
-    kpis: (alerts: Alert[]) => {
+    kpis: (
+      alerts: Alert[]
+    ) => {
       label: string
       value: string
       delta: string
@@ -119,23 +95,17 @@ const SECTOR_META: Record<
       },
       {
         label: "Alertes critiques",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta:
           a.filter((x) => x.severity === "CRITICAL").length > 0
             ? "À traiter"
             : "OK",
-        up:
-          a.filter((x) => x.severity === "CRITICAL").length ===
-          0,
+        up: a.filter((x) => x.severity === "CRITICAL").length === 0,
         spark: [9, 8, 7, 8, 6, 5, 4],
       },
       {
         label: "Warnings",
-        value: String(
-          a.filter((x) => x.severity === "WARNING").length
-        ),
+        value: String(a.filter((x) => x.severity === "WARNING").length),
         delta: "Surveillance",
         up: true,
         spark: [8, 7, 9, 6, 8, 10, 12],
@@ -161,18 +131,14 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: "Machines en panne imminente",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta: "Arrêt immédiat",
         up: false,
         spark: [2, 4, 3, 6, 5, 8, 7],
       },
       {
         label: "Usure élevée",
-        value: String(
-          a.filter((x) => x.severity === "WARNING").length
-        ),
+        value: String(a.filter((x) => x.severity === "WARNING").length),
         delta: "Surveiller",
         up: true,
         spark: [4, 5, 6, 5, 7, 8, 9],
@@ -205,9 +171,7 @@ const SECTOR_META: Record<
           x.message.toLowerCase().includes("wear") ||
           x.message.toLowerCase().includes("usure")
       ).length,
-      a.filter((x) =>
-        x.message.toLowerCase().includes("torque")
-      ).length,
+      a.filter((x) => x.message.toLowerCase().includes("torque")).length,
     ],
   },
 
@@ -215,18 +179,14 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: "Ruptures critiques",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta: "Commander maintenant",
         up: false,
         spark: [3, 2, 4, 5, 3, 4, 6],
       },
       {
         label: "Stocks bas",
-        value: String(
-          a.filter((x) => x.severity === "WARNING").length
-        ),
+        value: String(a.filter((x) => x.severity === "WARNING").length),
         delta: "À surveiller",
         up: true,
         spark: [2, 3, 3, 4, 5, 4, 5],
@@ -270,9 +230,7 @@ const SECTOR_META: Record<
           x.message.toLowerCase().includes("froid") ||
           x.message.toLowerCase().includes("cold")
       ).length,
-      a.filter((x) =>
-        x.message.toLowerCase().includes("expir")
-      ).length,
+      a.filter((x) => x.message.toLowerCase().includes("expir")).length,
     ],
   },
 
@@ -280,9 +238,7 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: "Pertes probables",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta: "Livraison urgente",
         up: false,
         spark: [1, 2, 2, 3, 4, 3, 5],
@@ -310,9 +266,7 @@ const SECTOR_META: Record<
       {
         label: "Alertes temp.",
         value: String(
-          a.filter((x) =>
-            x.message.toLowerCase().includes("temp")
-          ).length
+          a.filter((x) => x.message.toLowerCase().includes("temp")).length
         ),
         delta: "Stockage",
         up: false,
@@ -332,12 +286,8 @@ const SECTOR_META: Record<
           x.message.toLowerCase().includes("retard") ||
           x.message.toLowerCase().includes("delay")
       ).length,
-      a.filter((x) =>
-        x.message.toLowerCase().includes("temp")
-      ).length,
-      a.filter((x) =>
-        x.message.toLowerCase().includes("stock")
-      ).length,
+      a.filter((x) => x.message.toLowerCase().includes("temp")).length,
+      a.filter((x) => x.message.toLowerCase().includes("stock")).length,
     ],
   },
 
@@ -345,9 +295,7 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: "Camions critiques",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta: "Immobiliser",
         up: false,
         spark: [1, 2, 1, 3, 2, 4, 3],
@@ -416,9 +364,7 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: "Équipements bloqués",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta: "Arrêt immédiat",
         up: false,
         spark: [1, 2, 2, 3, 3, 4, 5],
@@ -460,9 +406,7 @@ const SECTOR_META: Record<
     chartTitle: "Alertes port · 7 jours",
     barLabels: ["Cycles", "Attente", "Pression", "Carburant"],
     barData: (a) => [
-      a.filter((x) =>
-        x.message.toLowerCase().includes("cycle")
-      ).length,
+      a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
       a.filter(
         (x) =>
           x.message.toLowerCase().includes("attente") ||
@@ -485,9 +429,7 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: "Générateurs critiques",
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
         delta: "Intervenir",
         up: false,
         spark: [1, 2, 2, 3, 3, 4, 5],
@@ -566,17 +508,258 @@ const LOGISTICS_OPS_META: Record<
   string,
   (typeof SECTOR_META)["logistics"]
 > = {
-  port: SECTOR_META.logistics,
-  entrepot: SECTOR_META.logistics,
-  transport: SECTOR_META.logistics,
-  expedition: SECTOR_META.logistics,
-  froid: SECTOR_META.logistics,
-  multi: SECTOR_META.logistics,
+  port: {
+    kpis: (a) => [
+      {
+        label: "Conteneurs bloqués",
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
+        delta: "Arrêt immédiat",
+        up: false,
+        spark: [1, 2, 2, 3, 3, 4, 5],
+      },
+      {
+        label: "Attente au quai",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("attente") ||
+              x.message.toLowerCase().includes("quai") ||
+              x.message.toLowerCase().includes("wait")
+          ).length
+        ),
+        delta: "File conteneurs",
+        up: false,
+        spark: [2, 3, 3, 4, 4, 5, 6],
+      },
+      {
+        label: "Grues & engins actifs",
+        value: String(new Set(a.map((x) => x.equipment)).size),
+        delta: "Terminal",
+        up: true,
+        spark: [4, 5, 5, 6, 6, 7, 8],
+      },
+      {
+        label: "Alertes hydrauliques",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("pression") ||
+              x.message.toLowerCase().includes("hydraulique") ||
+              x.message.toLowerCase().includes("pressure")
+          ).length
+        ),
+        delta: "Grues",
+        up: false,
+        spark: [0, 1, 1, 1, 2, 2, 3],
+      },
+    ],
+    chartTitle: "Activité quai et conteneurs · 7 jours",
+    barLabels: ["Cycles grue", "Attente quai", "Pression", "Carburant"],
+    barData: (a) => [
+      a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("attente") ||
+          x.message.toLowerCase().includes("quai") ||
+          x.message.toLowerCase().includes("wait")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("pression") ||
+          x.message.toLowerCase().includes("pressure")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("carburant") ||
+          x.message.toLowerCase().includes("fuel")
+      ).length,
+    ],
+  },
+
+  entrepot: {
+    kpis: (a) => [
+      {
+        label: "Zones bloquées",
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
+        delta: "Arrêt immédiat",
+        up: false,
+        spark: [1, 2, 2, 3, 3, 4, 5],
+      },
+      {
+        label: "Commandes en retard",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("retard") ||
+              x.message.toLowerCase().includes("delay")
+          ).length
+        ),
+        delta: "Préparation",
+        up: false,
+        spark: [2, 3, 3, 4, 4, 5, 6],
+      },
+      {
+        label: "Chariots actifs",
+        value: String(new Set(a.map((x) => x.equipment)).size),
+        delta: "Entrepôt",
+        up: true,
+        spark: [4, 5, 5, 6, 6, 7, 8],
+      },
+      {
+        label: "Alertes capacité",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("capacite") ||
+              x.message.toLowerCase().includes("capacity") ||
+              x.message.toLowerCase().includes("surcharge")
+          ).length
+        ),
+        delta: "Stockage",
+        up: false,
+        spark: [0, 1, 1, 1, 2, 2, 3],
+      },
+    ],
+    chartTitle: "Activité entrepôt · 7 jours",
+    barLabels: ["Cycles", "Retards", "Capacité", "Carburant"],
+    barData: (a) => [
+      a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("retard") ||
+          x.message.toLowerCase().includes("delay")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("capacite") ||
+          x.message.toLowerCase().includes("capacity")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("carburant") ||
+          x.message.toLowerCase().includes("fuel")
+      ).length,
+    ],
+  },
+
+  transport: {
+    kpis: (a) => [
+      {
+        label: "Véhicules bloqués",
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
+        delta: "Arrêt immédiat",
+        up: false,
+        spark: [1, 2, 2, 3, 3, 4, 5],
+      },
+      {
+        label: "Entretien en retard",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("révision") ||
+              x.message.toLowerCase().includes("service")
+          ).length
+        ),
+        delta: "Maintenance",
+        up: false,
+        spark: [2, 3, 3, 4, 4, 5, 6],
+      },
+      {
+        label: "Véhicules actifs",
+        value: String(new Set(a.map((x) => x.equipment)).size),
+        delta: "Flotte",
+        up: true,
+        spark: [4, 5, 5, 6, 6, 7, 8],
+      },
+      {
+        label: "Alertes carburant",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("carburant") ||
+              x.message.toLowerCase().includes("fuel")
+          ).length
+        ),
+        delta: "Flotte",
+        up: false,
+        spark: [0, 1, 1, 1, 2, 2, 3],
+      },
+    ],
+    chartTitle: "Activité flotte · 7 jours",
+    barLabels: ["Surchauffe", "Huile", "Pneus", "Carburant"],
+    barData: (a) => [
+      a.filter((x) => x.message.toLowerCase().includes("surchauffe")).length,
+      a.filter((x) => x.message.toLowerCase().includes("huile")).length,
+      a.filter((x) => x.message.toLowerCase().includes("pneus")).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("carburant") ||
+          x.message.toLowerCase().includes("fuel")
+      ).length,
+    ],
+  },
+
+  froid: {
+    kpis: (a) => [
+      {
+        label: "Ruptures chaîne du froid",
+        value: String(a.filter((x) => x.severity === "CRITICAL").length),
+        delta: "Arrêt immédiat",
+        up: false,
+        spark: [1, 2, 2, 3, 3, 4, 5],
+      },
+      {
+        label: "Alertes température",
+        value: String(
+          a.filter((x) => x.message.toLowerCase().includes("temp")).length
+        ),
+        delta: "Seuil dépassé",
+        up: false,
+        spark: [2, 3, 3, 4, 4, 5, 6],
+      },
+      {
+        label: "Équipements actifs",
+        value: String(new Set(a.map((x) => x.equipment)).size),
+        delta: "Froid",
+        up: true,
+        spark: [4, 5, 5, 6, 6, 7, 8],
+      },
+      {
+        label: "Alertes pression",
+        value: String(
+          a.filter(
+            (x) =>
+              x.message.toLowerCase().includes("pression") ||
+              x.message.toLowerCase().includes("pressure")
+          ).length
+        ),
+        delta: "Groupe froid",
+        up: false,
+        spark: [0, 1, 1, 1, 2, 2, 3],
+      },
+    ],
+    chartTitle: "Activité chaîne du froid · 7 jours",
+    barLabels: ["Cycles", "Temp. hors seuil", "Pression", "Carburant"],
+    barData: (a) => [
+      a.filter((x) => x.message.toLowerCase().includes("cycle")).length,
+      a.filter((x) => x.message.toLowerCase().includes("temp")).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("pression") ||
+          x.message.toLowerCase().includes("pressure")
+      ).length,
+      a.filter(
+        (x) =>
+          x.message.toLowerCase().includes("carburant") ||
+          x.message.toLowerCase().includes("fuel")
+      ).length,
+    ],
+  },
 }
 
-function getSavedLogisticsPriorities(): LogisticsPriority[] {
+function getSavedLogisticsPriority(): LogisticsPriority {
   if (typeof window === "undefined") {
-    return ["blockages"]
+    return "blockages"
   }
 
   try {
@@ -585,29 +768,37 @@ function getSavedLogisticsPriorities(): LogisticsPriority[] {
     )
 
     if (!Array.isArray(stored)) {
-      return ["blockages"]
+      return "blockages"
     }
 
-    const valid = stored.filter(
-      (value): value is LogisticsPriority =>
-        [
-          "blockages",
-          "wait",
-          "cost",
-          "anticipate",
-          "recommend",
-          "resources",
-        ].includes(value)
-    )
+    if (stored.includes("wait")) {
+      return "wait"
+    }
 
-    return valid.length > 0 ? valid : ["blockages"]
+    if (stored.includes("blockages")) {
+      return "blockages"
+    }
+
+    if (stored.includes("cost")) {
+      return "cost"
+    }
+
+    if (stored.includes("anticipate")) {
+      return "anticipate"
+    }
+
+    if (stored.includes("recommend")) {
+      return "recommend"
+    }
+
+    if (stored.includes("resources")) {
+      return "resources"
+    }
   } catch {
-    return ["blockages"]
+    return "blockages"
   }
-}
 
-function getSavedLogisticsPriority(): LogisticsPriority {
-  return getSavedLogisticsPriorities()[0] ?? "blockages"
+  return "blockages"
 }
 
 export function DashboardView({
@@ -616,10 +807,7 @@ export function DashboardView({
   search?: string
 }) {
   const [alerts, setAlerts] = useState<Alert[]>([])
-  const [recommendations, setRecommendations] = useState<
-    Recommendation[]
-  >([])
-
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([])
   const [uploadSector, setUploadSector] = useState("industry")
 
   const [filterSector, setFilterSector] = useState(() => {
@@ -627,10 +815,9 @@ export function DashboardView({
       return "all"
     }
 
-    const saved = localStorage.getItem("sentria_sector")
+    const savedSector = localStorage.getItem("sentria_sector")
 
-    // "logistics" is a navigation state, not a persisted default sector.
-    return saved === "logistics" ? "all" : saved || "all"
+    return savedSector || "all"
   })
 
   const [uploading, setUploading] = useState(false)
@@ -643,8 +830,7 @@ export function DashboardView({
 
     try {
       const stored = JSON.parse(
-        localStorage.getItem("sentria_sectors") ||
-          '["industry"]'
+        localStorage.getItem("sentria_sectors") || '["industry"]'
       )
 
       return Array.isArray(stored) && stored.length > 0
@@ -662,19 +848,31 @@ export function DashboardView({
   })
 
   const [logisticsPriority, setLogisticsPriority] =
-    useState<LogisticsPriority | null>(null)
+    useState<LogisticsPriority>(() => getSavedLogisticsPriority())
 
-  const [selectedLogisticsPriorities, setSelectedLogisticsPriorities] =
-    useState<LogisticsPriority[]>(() =>
-      getSavedLogisticsPriorities()
-    )
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "critical" | "warning"
+  >("all")
+
+  const [periodFilter, setPeriodFilter] = useState<
+    "all" | "7" | "30"
+  >("all")
+
+  const [tableQuery, setTableQuery] = useState("")
+
+  const [selectedAlertKey, setSelectedAlertKey] = useState<
+    string | null
+  >(null)
+
+  useEffect(() => {
+    setSelectedAlertKey(null)
+  }, [filterSector, statusFilter, periodFilter, tableQuery])
 
   useEffect(() => {
     const refreshSectors = () => {
       try {
         const stored = JSON.parse(
-          localStorage.getItem("sentria_sectors") ||
-            '["industry"]'
+          localStorage.getItem("sentria_sectors") || '["industry"]'
         )
 
         setActiveSectors(
@@ -687,29 +885,17 @@ export function DashboardView({
       }
 
       setOpsType(localStorage.getItem("sentria_ops_type"))
-
-      const priorities = getSavedLogisticsPriorities()
-
-      setSelectedLogisticsPriorities(priorities)
+      setLogisticsPriority(getSavedLogisticsPriority())
 
       const savedSector = localStorage.getItem("sentria_sector")
 
-      if (savedSector && savedSector !== "logistics") {
+      if (savedSector) {
         setFilterSector(savedSector)
       }
     }
 
     const refreshPriority = () => {
-      const priorities = getSavedLogisticsPriorities()
-
-      setSelectedLogisticsPriorities(priorities)
-
-      if (
-        logisticsPriority &&
-        !priorities.includes(logisticsPriority)
-      ) {
-        setLogisticsPriority(null)
-      }
+      setLogisticsPriority(getSavedLogisticsPriority())
     }
 
     window.addEventListener(
@@ -722,7 +908,10 @@ export function DashboardView({
       refreshSectors
     )
 
-    window.addEventListener("storage", refreshPriority)
+    window.addEventListener(
+      "storage",
+      refreshPriority
+    )
 
     return () => {
       window.removeEventListener(
@@ -735,9 +924,12 @@ export function DashboardView({
         refreshSectors
       )
 
-      window.removeEventListener("storage", refreshPriority)
+      window.removeEventListener(
+        "storage",
+        refreshPriority
+      )
     }
-  }, [logisticsPriority])
+  }, [])
 
   useEffect(() => {
     if (
@@ -747,15 +939,12 @@ export function DashboardView({
       setUploadSector(activeSectors[0])
     }
 
-    // Logistics can be opened through its dedicated navigation button
-    // even if it is not part of the normal sector filters.
     if (
       filterSector !== "all" &&
       filterSector !== "logistics" &&
       !activeSectors.includes(filterSector)
     ) {
       setFilterSector("all")
-      localStorage.setItem("sentria_sector", "all")
     }
   }, [activeSectors, uploadSector, filterSector])
 
@@ -791,24 +980,19 @@ export function DashboardView({
             ) => {
               const baseId =
                 rec.id ??
-                [
-                  rec.alert_key ?? "",
-                  rec.equipment,
-                  rec.date,
-                  rec.action_category,
-                  rec.recommended_action,
-                ].join("::")
+                rec.alert_key ??
+                `${rec.equipment}-${rec.date}-${index}`
 
               let id = String(baseId)
 
               if (usedIds.has(id)) {
-                id = `${id}::${index}`
+                id = `${id}-${index}`
               }
 
               while (usedIds.has(id)) {
-                id = `${id}::${Math.random()
+                id = `${id}-${Math.random()
                   .toString(36)
-                  .slice(2, 8)}`
+                  .slice(2, 7)}`
               }
 
               usedIds.add(id)
@@ -833,28 +1017,6 @@ export function DashboardView({
   useEffect(() => {
     refreshRecommendations()
   }, [])
-
-  function openLogisticsOverview() {
-    setFilterSector("logistics")
-    setLogisticsPriority(null)
-
-    // Do not persist "logistics" as the default sector.
-    localStorage.removeItem("sentria_sector")
-  }
-
-  function openLogisticsPriority(priority: LogisticsPriority) {
-    setLogisticsPriority(priority)
-    setFilterSector("logistics")
-
-    // Do not persist "logistics".
-    localStorage.removeItem("sentria_sector")
-  }
-
-  function returnToDashboard() {
-    setLogisticsPriority(null)
-    setFilterSector("all")
-    localStorage.setItem("sentria_sector", "all")
-  }
 
   async function handleUpload(
     e: React.ChangeEvent<HTMLInputElement>
@@ -889,17 +1051,17 @@ export function DashboardView({
 
       setUploadMsg(data.message ?? "Fichier traité.")
 
-      await new Promise((r) => setTimeout(r, 1500))
+      await new Promise((r) =>
+        setTimeout(r, 1500)
+      )
 
       const r2 = await fetch(`${API}/alerts`)
       const d2 = await r2.json()
 
       setAlerts(Array.isArray(d2) ? d2 : [])
-
       refreshRecommendations()
 
       setFilterSector(uploadSector)
-      localStorage.setItem("sentria_sector", uploadSector)
     } catch (error) {
       console.error(error)
       setUploadMsg("Erreur lors de l'upload.")
@@ -936,12 +1098,72 @@ export function DashboardView({
     )
     .slice(0, 5)
 
+  const periodMs =
+    periodFilter === "7"
+      ? 7 * 24 * 60 * 60 * 1000
+      : periodFilter === "30"
+      ? 30 * 24 * 60 * 60 * 1000
+      : null
+
+  const tableAlerts = filteredAlerts.filter((a) => {
+    if (
+      statusFilter === "critical" &&
+      a.severity !== "CRITICAL"
+    ) {
+      return false
+    }
+
+    if (
+      statusFilter === "warning" &&
+      a.severity !== "WARNING"
+    ) {
+      return false
+    }
+
+    if (
+      periodMs &&
+      Date.now() - new Date(a.date).getTime() > periodMs
+    ) {
+      return false
+    }
+
+    if (tableQuery.trim()) {
+      const q = tableQuery.toLowerCase()
+
+      if (
+        !a.equipment.toLowerCase().includes(q) &&
+        !a.message.toLowerCase().includes(q)
+      ) {
+        return false
+      }
+    }
+
+    return true
+  })
+
+  const selectedAlert =
+    tableAlerts.find(
+      (a) => `${a.equipment}-${a.date}` === selectedAlertKey
+    ) ?? null
+
+  const matchedRecommendation = selectedAlert
+    ? recommendations.find(
+        (r) =>
+          r.equipment === selectedAlert.equipment &&
+          r.date === selectedAlert.date
+      ) ??
+      recommendations.find(
+        (r) => r.equipment === selectedAlert.equipment
+      ) ??
+      null
+    : null
+
   const meta =
-    filterSector === "logistics" && opsType
-      ? LOGISTICS_OPS_META[opsType] ??
-        SECTOR_META[filterSector] ??
-        SECTOR_META.all
-      : SECTOR_META[filterSector] ?? SECTOR_META.all
+    (filterSector === "logistics" && opsType
+      ? LOGISTICS_OPS_META[opsType]
+      : undefined) ??
+    SECTOR_META[filterSector] ??
+    SECTOR_META.all
 
   const kpis = meta.kpis(filteredAlerts)
   const barData = meta.barData(filteredAlerts)
@@ -986,207 +1208,21 @@ export function DashboardView({
             | "multi")
         : undefined
 
-    /*
-     * LOGISTICS OVERVIEW
-     *
-     * When the user clicks "Logistique" from the sector selector,
-     * logisticsPriority is null, so we show the overview instead
-     * of automatically opening Blocages.
-     */
-    if (logisticsPriority === null) {
-      return (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={returnToDashboard}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
-            >
-              ← Retour au tableau de bord
-            </button>
-          </div>
-
-          <div className="rounded-3xl bg-foreground p-6 text-background md:p-8">
-            <div className="max-w-2xl">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
-                <Shield className="h-3.5 w-3.5" />
-                Logistique
-              </span>
-
-              <h2 className="mt-4 font-heading text-2xl font-bold leading-tight md:text-3xl">
-                Vue d'ensemble de votre logistique.
-              </h2>
-
-              <p className="mt-2 text-sm leading-6 text-background/70">
-                Retrouvez ici les priorités que vous avez
-                sélectionnées pendant la configuration de SentrIA.
-                Choisissez une priorité pour accéder directement
-                à son espace de pilotage.
-              </p>
-
-              {normalizedOpsType &&
-                OPS_TYPE_LABEL[normalizedOpsType] && (
-                  <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-background/20 bg-background/10 px-3 py-1 text-[11px] font-medium text-background/80">
-                    <Shield className="h-3 w-3" />
-                    {OPS_TYPE_LABEL[normalizedOpsType]}
-                  </div>
-                )}
-            </div>
-          </div>
-
-          <div>
-            <div className="mb-4">
-              <h3 className="font-heading text-lg font-bold">
-                Vos priorités
-              </h3>
-
-              <p className="mt-1 text-sm text-muted-foreground">
-                Sélectionnées lors de votre onboarding.
-              </p>
-            </div>
-
-            {selectedLogisticsPriorities.length > 0 ? (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {selectedLogisticsPriorities.map((priority) => (
-                  <button
-                    key={priority}
-                    type="button"
-                    onClick={() =>
-                      openLogisticsPriority(priority)
-                    }
-                    className="group rounded-3xl border border-border bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-sm"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <span className="inline-flex rounded-full bg-accent/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-accent-foreground">
-                          Priorité
-                        </span>
-
-                        <h4 className="mt-3 font-heading text-lg font-bold">
-                          {LOGISTICS_PRIORITY_LABELS[priority]}
-                        </h4>
-                      </div>
-
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted transition-colors group-hover:bg-accent group-hover:text-accent-foreground">
-                        <ArrowUpRight className="h-4 w-4" />
-                      </span>
-                    </div>
-
-                    <p className="mt-3 text-sm leading-5 text-muted-foreground">
-                      {LOGISTICS_PRIORITY_DESCRIPTIONS[
-                        priority
-                      ]}
-                    </p>
-
-                    <div className="mt-5 text-xs font-semibold text-foreground">
-                      Ouvrir la priorité →
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-3xl border border-border bg-card p-6 text-sm text-muted-foreground">
-                Aucune priorité logistique n'a été sélectionnée.
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {kpis.map((k) => (
-              <div
-                key={k.label}
-                className="rounded-3xl border border-border bg-card p-5"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    {k.label}
-                  </span>
-
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
-                      k.up
-                        ? "bg-accent/25 text-accent-foreground"
-                        : "bg-destructive/10 text-destructive"
-                    )}
-                  >
-                    {k.up ? (
-                      <TrendingUp className="h-3 w-3" />
-                    ) : (
-                      <TrendingDown className="h-3 w-3" />
-                    )}
-
-                    {k.delta}
-                  </span>
-                </div>
-
-                <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
-                  {k.value}
-                </p>
-
-                <Sparkline
-                  data={k.spark}
-                  className={cn(
-                    "mt-2 h-9 w-full",
-                    k.up ? "text-accent" : "text-destructive"
-                  )}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )
-    }
-
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => {
-              setLogisticsPriority(null)
-            }}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
-          >
-            ← Retour à la logistique
-          </button>
-        </div>
-
-        {selectedLogisticsPriorities.length > 0 && (
-          <div className="rounded-2xl border border-border bg-card px-4 py-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="mr-1 text-xs font-semibold text-muted-foreground">
-                Priorités
-              </span>
-
-              {selectedLogisticsPriorities.map((priority) => (
-                <button
-                  key={priority}
-                  type="button"
-                  onClick={() =>
-                    openLogisticsPriority(priority)
-                  }
-                  className={cn(
-                    "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold transition-colors",
-                    priority === logisticsPriority
-                      ? "bg-accent text-accent-foreground"
-                      : "bg-muted text-foreground hover:bg-muted/80"
-                  )}
-                >
-                  {LOGISTICS_PRIORITY_LABELS[priority]}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {normalizedOpsType &&
-          OPS_TYPE_LABEL[normalizedOpsType] && (
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-[11px] font-medium text-muted-foreground">
-              <Shield className="h-3 w-3" />
-              {OPS_TYPE_LABEL[normalizedOpsType]}
-            </div>
-          )}
+        <button
+          type="button"
+          onClick={() => {
+            setFilterSector("all")
+            localStorage.setItem(
+              "sentria_sector",
+              "all"
+            )
+          }}
+          className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+        >
+          ← Retour au tableau de bord
+        </button>
 
         {logisticsPriority === "recommend" ? (
           <RecommendationsBoard
@@ -1205,67 +1241,6 @@ export function DashboardView({
           <LogisticsAnticipateView
             opsType={normalizedOpsType}
           />
-        ) : logisticsPriority === "resources" ? (
-          <div className="rounded-3xl border border-border bg-card p-6">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent-foreground">
-                <Activity className="h-5 w-5" />
-              </div>
-
-              <div>
-                <h2 className="font-heading text-xl font-bold">
-                  Ressources
-                </h2>
-
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Suivez la disponibilité et l'utilisation de
-                  vos ressources logistiques depuis cet espace.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="rounded-2xl border border-border bg-muted/30 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Équipements
-                </p>
-                <p className="mt-2 font-heading text-2xl font-bold">
-                  {new Set(
-                    alerts
-                      .filter(
-                        (a) => a.sector === "logistics"
-                      )
-                      .map((a) => a.equipment)
-                  ).size}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-muted/30 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Alertes actives
-                </p>
-                <p className="mt-2 font-heading text-2xl font-bold">
-                  {
-                    alerts.filter(
-                      (a) => a.sector === "logistics"
-                    ).length
-                  }
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-muted/30 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Opération
-                </p>
-                <p className="mt-2 font-heading text-lg font-bold">
-                  {normalizedOpsType &&
-                  OPS_TYPE_LABEL[normalizedOpsType]
-                    ? OPS_TYPE_LABEL[normalizedOpsType]
-                    : "Logistique"}
-                </p>
-              </div>
-            </div>
-          </div>
         ) : (
           <LogisticsBlockagesView
             opsType={normalizedOpsType}
@@ -1277,6 +1252,7 @@ export function DashboardView({
 
   return (
     <div className="space-y-6">
+      {/* HERO */}
       <div className="flex flex-col gap-4 rounded-3xl bg-foreground p-6 text-background md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-xl">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
@@ -1289,9 +1265,8 @@ export function DashboardView({
           </h2>
 
           <p className="mt-2 text-pretty text-sm text-background/70">
-            SentrIA surveille vos alertes en temps réel,
-            machines, stocks, flottes, équipements, partout
-            dans le monde.
+            SentrIA surveille vos alertes en temps réel, machines,
+            stocks, flottes, équipements, partout dans le monde.
           </p>
         </div>
 
@@ -1310,15 +1285,23 @@ export function DashboardView({
         </button>
       </div>
 
+      {/* RECOMMENDATIONS */}
       <RecommendationsPanel
         recommendations={filteredRecommendations}
         totalRecommendationsCount={recommendations.length}
         alerts={alerts}
       />
 
-      <div className="flex flex-wrap items-center gap-2">
+      {/* SECTOR FILTER */}
+      <div className="flex flex-wrap gap-2">
         <button
-          onClick={returnToDashboard}
+          onClick={() => {
+            setFilterSector("all")
+            localStorage.setItem(
+              "sentria_sector",
+              "all"
+            )
+          }}
           className={cn(
             "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
             filterSector === "all"
@@ -1341,12 +1324,6 @@ export function DashboardView({
           <button
             key={s.key}
             onClick={() => {
-              if (s.key === "logistics") {
-                openLogisticsOverview()
-                return
-              }
-
-              setLogisticsPriority(null)
               setFilterSector(s.key)
               localStorage.setItem(
                 "sentria_sector",
@@ -1371,85 +1348,90 @@ export function DashboardView({
             </span>
           </button>
         ))}
-
-        {filterSector === "all" &&
-          selectedLogisticsPriorities.length > 0 && (
-            <div className="ml-1 flex flex-wrap items-center gap-1.5 rounded-full border border-accent/30 bg-accent/5 px-2 py-1">
-              <span className="px-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Priorités
-              </span>
-
-              {selectedLogisticsPriorities.map(
-                (priority) => (
-                  <button
-                    key={priority}
-                    type="button"
-                    onClick={() =>
-                      openLogisticsPriority(priority)
-                    }
-                    className="rounded-full bg-accent/15 px-2.5 py-1 text-[11px] font-semibold text-accent-foreground transition-colors hover:bg-accent/25"
-                  >
-                    {LOGISTICS_PRIORITY_LABELS[priority]}
-                  </button>
-                )
-              )}
-            </div>
-          )}
       </div>
 
       {filterSector === "logistics" &&
         opsType &&
         LOGISTICS_OPS_META[opsType] && (
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-[11px] font-medium text-muted-foreground">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[11px] font-medium text-accent-foreground">
             <Shield className="h-3 w-3" />
-            {OPS_TYPE_LABEL[opsType]}
+            Vue adaptée : {OPS_TYPE_LABEL[opsType]}
           </div>
         )}
 
+      {/* KPIs */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {kpis.map((k) => (
-          <div
-            key={k.label}
-            className="rounded-3xl border border-border bg-card p-5"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-sm text-muted-foreground">
-                {k.label}
-              </span>
+        {kpis.map((k) => {
+          const maxSpark = Math.max(...k.spark, 1)
 
-              <span
+          const trackPct = Math.min(
+            100,
+            Math.round(
+              (k.spark[k.spark.length - 1] / maxSpark) * 100
+            )
+          )
+
+          return (
+            <div
+              key={k.label}
+              className="rounded-3xl border border-border bg-card p-5"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm text-muted-foreground">
+                  {k.label}
+                </span>
+
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
+                    k.up
+                      ? "bg-accent/25 text-accent-foreground"
+                      : "bg-destructive/10 text-destructive"
+                  )}
+                >
+                  {k.up ? (
+                    <TrendingUp className="h-3 w-3" />
+                  ) : (
+                    <TrendingDown className="h-3 w-3" />
+                  )}
+
+                  {k.delta}
+                </span>
+              </div>
+
+              <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
+                {k.value}
+              </p>
+
+              <Sparkline
+                data={k.spark}
                 className={cn(
-                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
+                  "mt-2 h-9 w-full",
                   k.up
-                    ? "bg-accent/25 text-accent-foreground"
-                    : "bg-destructive/10 text-destructive"
+                    ? "text-accent"
+                    : "text-destructive"
                 )}
-              >
-                {k.up ? (
-                  <TrendingUp className="h-3 w-3" />
-                ) : (
-                  <TrendingDown className="h-3 w-3" />
-                )}
+              />
 
-                {k.delta}
-              </span>
+              <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-muted">
+                <div
+                  className={cn(
+                    "h-full rounded-full",
+                    k.up
+                      ? "bg-accent"
+                      : "bg-destructive"
+                  )}
+                  style={{
+                    width: `${trackPct}%`,
+                  }}
+                />
+              </div>
             </div>
-
-            <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
-              {k.value}
-            </p>
-
-            <Sparkline
-              data={k.spark}
-              className={cn(
-                "mt-2 h-9 w-full",
-                k.up ? "text-accent" : "text-destructive"
-              )}
-            />
-          </div>
-        ))}
+          )
+        })}
       </div>
 
+      {/* CHARTS */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
           <div className="flex items-center justify-between">
@@ -1499,6 +1481,7 @@ export function DashboardView({
         </div>
       </div>
 
+      {/* UPLOAD */}
       <div className="rounded-3xl border border-border bg-card p-6">
         <h3 className="font-heading text-lg font-bold">
           Importer des données
@@ -1533,7 +1516,9 @@ export function DashboardView({
           <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90">
             <Upload className="h-4 w-4" />
 
-            {uploading ? "Traitement..." : "Importer CSV"}
+            {uploading
+              ? "Traitement..."
+              : "Importer CSV"}
 
             <input
               type="file"
@@ -1563,6 +1548,7 @@ export function DashboardView({
         </p>
       </div>
 
+      {/* ALERTS */}
       <div
         id="alerts-table"
         className="rounded-3xl border border-border bg-card"
@@ -1581,10 +1567,92 @@ export function DashboardView({
             </h3>
           </div>
 
-          <button className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90">
-            Tout voir
-            <ArrowUpRight className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted">
+              <Download className="h-4 w-4" />
+              Exporter
+            </button>
+
+            <button className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90">
+              Tout voir
+              <ArrowUpRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* FILTER BAR */}
+        <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-4">
+          <div className="relative">
+            <select
+              value={statusFilter}
+              onChange={(e) =>
+                setStatusFilter(
+                  e.target.value as
+                    | "all"
+                    | "critical"
+                    | "warning"
+                )
+              }
+              className="appearance-none rounded-full border border-border bg-background py-2 pl-4 pr-9 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-muted"
+            >
+              <option value="all">
+                Tous les statuts
+              </option>
+
+              <option value="critical">
+                Critiques
+              </option>
+
+              <option value="warning">
+                Warnings
+              </option>
+            </select>
+
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          </div>
+
+          <div className="relative">
+            <select
+              value={periodFilter}
+              onChange={(e) =>
+                setPeriodFilter(
+                  e.target.value as
+                    | "all"
+                    | "7"
+                    | "30"
+                )
+              }
+              className="appearance-none rounded-full border border-border bg-background py-2 pl-4 pr-9 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-muted"
+            >
+              <option value="all">
+                Toutes les dates
+              </option>
+
+              <option value="7">
+                7 derniers jours
+              </option>
+
+              <option value="30">
+                30 derniers jours
+              </option>
+            </select>
+
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          </div>
+
+          <div className="relative ml-auto w-full sm:w-64">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+
+            <input
+              type="text"
+              value={tableQuery}
+              onChange={(e) =>
+                setTableQuery(e.target.value)
+              }
+              placeholder="Rechercher un actif..."
+              className="w-full rounded-full border border-border bg-background py-2 pl-9 pr-4 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-accent"
+            />
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -1614,60 +1682,201 @@ export function DashboardView({
             </thead>
 
             <tbody>
-              {filteredAlerts
+              {tableAlerts
                 .slice(0, 20)
-                .map((alert, i) => (
-                  <tr
-                    key={`${alert.equipment}-${alert.date}-${i}`}
-                    className="border-b border-border last:border-0 transition-colors hover:bg-muted/50"
-                  >
-                    <td className="px-6 py-4 font-semibold">
-                      {alert.equipment}
-                    </td>
+                .map((alert, i) => {
+                  const key = `${alert.equipment}-${alert.date}`
 
-                    <td className="px-6 py-4 text-muted-foreground">
-                      {alert.message}
-                    </td>
+                  const isSelected =
+                    selectedAlertKey === key
 
-                    <td className="px-6 py-4 capitalize text-muted-foreground">
-                      {alert.sector ?? "N/A"}
-                    </td>
+                  return (
+                    <tr
+                      key={`${key}-${i}`}
+                      onClick={() =>
+                        setSelectedAlertKey(
+                          isSelected ? null : key
+                        )
+                      }
+                      className={cn(
+                        "cursor-pointer border-b border-border last:border-0 transition-colors hover:bg-muted/50",
+                        isSelected && "bg-muted/60"
+                      )}
+                    >
+                      <td className="px-6 py-4 font-semibold">
+                        <div className="flex items-center gap-2.5">
+                          <span
+                            className={cn(
+                              "flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-bold uppercase",
+                              alert.severity ===
+                                "CRITICAL"
+                                ? "bg-destructive/10 text-destructive"
+                                : "bg-accent/20 text-accent-foreground"
+                            )}
+                          >
+                            {alert.equipment.slice(
+                              0,
+                              2
+                            )}
+                          </span>
 
-                    <td className="px-6 py-4">
-                      <span
-                        className={cn(
-                          "rounded-full px-2.5 py-1 text-xs font-semibold",
-                          alert.severity === "CRITICAL"
-                            ? "bg-destructive/10 text-destructive"
-                            : "bg-amber-500/15 text-amber-600"
-                        )}
-                      >
-                        {alert.severity}
-                      </span>
-                    </td>
+                          {alert.equipment}
+                        </div>
+                      </td>
 
-                    <td className="px-6 py-4 text-muted-foreground">
-                      {new Date(
-                        alert.date
-                      ).toLocaleString("fr-FR")}
-                    </td>
-                  </tr>
-                ))}
+                      <td className="px-6 py-4 text-muted-foreground">
+                        {alert.message}
+                      </td>
 
-              {filteredAlerts.length === 0 && (
+                      <td className="px-6 py-4 capitalize text-muted-foreground">
+                        {alert.sector ?? "N/A"}
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <span
+                          className={cn(
+                            "rounded-full px-2.5 py-1 text-xs font-semibold",
+                            alert.severity ===
+                              "CRITICAL"
+                              ? "bg-destructive/10 text-destructive"
+                              : "bg-amber-500/15 text-amber-600"
+                          )}
+                        >
+                          {alert.severity}
+                        </span>
+                      </td>
+
+                      <td className="px-6 py-4 text-muted-foreground">
+                        {new Date(
+                          alert.date
+                        ).toLocaleString("fr-FR")}
+                      </td>
+                    </tr>
+                  )
+                })}
+
+              {tableAlerts.length === 0 && (
                 <tr>
                   <td
                     className="px-6 py-8 text-muted-foreground"
                     colSpan={5}
                   >
-                    Aucune alerte pour ce secteur.
-                    Importez un CSV.
+                    Aucune alerte pour ces filtres.
+                    Essayez d&apos;élargir la période ou
+                    la recherche.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+
+        {/* DÉTAIL AU CLIC */}
+        {selectedAlert && (
+          <div className="rounded-3xl bg-foreground p-6 text-background sm:p-8">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs text-background/50">
+                  Détail de l&apos;alerte
+                </p>
+
+                <h4 className="mt-1 font-heading text-xl font-bold">
+                  {selectedAlert.equipment}
+                </h4>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    "rounded-full px-3 py-1 text-xs font-bold",
+                    selectedAlert.severity ===
+                      "CRITICAL"
+                      ? "bg-destructive/20 text-destructive"
+                      : "bg-amber-500/20 text-amber-400"
+                  )}
+                >
+                  {selectedAlert.severity}
+                </span>
+
+                <button
+                  onClick={() =>
+                    setSelectedAlertKey(null)
+                  }
+                  aria-label="Fermer le détail"
+                  className="rounded-full bg-background/10 p-1.5 text-background/70 transition-colors hover:bg-background/20 hover:text-background"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="rounded-xl bg-background/5 p-3">
+                <span className="flex items-center gap-1.5 text-[11px] text-background/50">
+                  <Shield className="h-3 w-3" />
+                  Secteur
+                </span>
+
+                <p className="mt-1 text-sm font-semibold capitalize">
+                  {selectedAlert.sector ?? "N/A"}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-background/5 p-3">
+                <span className="flex items-center gap-1.5 text-[11px] text-background/50">
+                  <Cpu className="h-3 w-3" />
+                  Score de risque
+                </span>
+
+                <p className="mt-1 text-sm font-semibold">
+                  {matchedRecommendation?.risk_score ??
+                    "N/A"}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-background/5 p-3">
+                <span className="flex items-center gap-1.5 text-[11px] text-background/50">
+                  <Activity className="h-3 w-3" />
+                  Date
+                </span>
+
+                <p className="mt-1 text-sm font-semibold">
+                  {new Date(
+                    selectedAlert.date
+                  ).toLocaleString("fr-FR")}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-xl bg-background/5 p-4">
+              <p className="text-xs text-background/50">
+                Message
+              </p>
+
+              <p className="mt-1 text-sm text-background/90">
+                {selectedAlert.message}
+              </p>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-background/5 p-4">
+              <div className="min-w-0">
+                <p className="text-xs text-background/50">
+                  Recommandation
+                </p>
+
+                <p className="mt-1 text-sm font-medium">
+                  {matchedRecommendation?.recommended_action ??
+                    "Analyse en cours"}
+                </p>
+              </div>
+
+              <button className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-xs font-bold text-accent-foreground transition-transform hover:scale-[1.02]">
+                Voir la recommandation
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
