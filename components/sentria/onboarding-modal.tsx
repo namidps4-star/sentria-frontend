@@ -69,6 +69,7 @@ type SectorConfig = {
 type SubType = {
   id: string
   label: string
+  description: string
   icon: React.ElementType
 }
 
@@ -133,60 +134,160 @@ const SECTORS: SectorConfig[] = [
 
 const SUBTYPES_BY_SECTOR: Record<Sector, SubType[]> = {
   industry: [
-    { id: "usine-production", label: "Usine de production", icon: Factory },
-    { id: "atelier-soustraitance", label: "Atelier / sous-traitance", icon: Cog },
-    { id: "usine-agroalimentaire", label: "Usine agroalimentaire", icon: Boxes },
+    {
+      id: "usine-production",
+      label: "Usine de production",
+      description: "Lignes de fabrication et machines critiques",
+      icon: Factory,
+    },
+    {
+      id: "atelier-soustraitance",
+      label: "Atelier / sous-traitance",
+      description: "Production pour le compte de tiers",
+      icon: Cog,
+    },
+    {
+      id: "usine-agroalimentaire",
+      label: "Usine agroalimentaire",
+      description: "Production avec contraintes sanitaires",
+      icon: Boxes,
+    },
   ],
   health: [
-    { id: "pharmacie", label: "Pharmacie", icon: HeartPulse },
+    {
+      id: "pharmacie",
+      label: "Pharmacie",
+      description: "Officine et vente au détail de médicaments",
+      icon: HeartPulse,
+    },
     {
       id: "grossiste-pharma",
       label: "Grossiste-répartiteur pharmaceutique",
+      description: "Distribution en gros de produits de santé",
       icon: Warehouse,
     },
-    { id: "clinique-hopital", label: "Clinique / Hôpital", icon: Building2 },
-    { id: "laboratoire", label: "Laboratoire", icon: Activity },
+    {
+      id: "clinique-hopital",
+      label: "Clinique / Hôpital",
+      description: "Établissement de soins et stocks cliniques",
+      icon: Building2,
+    },
+    {
+      id: "laboratoire",
+      label: "Laboratoire",
+      description: "Analyses, réactifs et échantillons",
+      icon: Activity,
+    },
   ],
   agriculture: [
-    { id: "exploitation-agricole", label: "Exploitation agricole", icon: Wheat },
-    { id: "cooperative-agricole", label: "Coopérative agricole", icon: Building2 },
-    { id: "silo-stockage", label: "Silo / stockage de récolte", icon: Warehouse },
+    {
+      id: "exploitation-agricole",
+      label: "Exploitation agricole",
+      description: "Production, culture et élevage",
+      icon: Wheat,
+    },
+    {
+      id: "cooperative-agricole",
+      label: "Coopérative agricole",
+      description: "Mutualisation entre plusieurs producteurs",
+      icon: Building2,
+    },
+    {
+      id: "silo-stockage",
+      label: "Silo / stockage de récolte",
+      description: "Conservation avant transformation ou vente",
+      icon: Warehouse,
+    },
   ],
   transportation: [
-    { id: "transporteur-routier", label: "Transporteur routier", icon: Truck },
-    { id: "flotte-entreprise", label: "Flotte d'entreprise", icon: Truck },
-    { id: "location-vehicules", label: "Location de véhicules", icon: Gauge },
+    {
+      id: "transporteur-routier",
+      label: "Transporteur routier",
+      description: "Transport pour compte d'autrui",
+      icon: Truck,
+    },
+    {
+      id: "flotte-entreprise",
+      label: "Flotte d'entreprise",
+      description: "Véhicules utilisés pour votre propre activité",
+      icon: Truck,
+    },
+    {
+      id: "location-vehicules",
+      label: "Location de véhicules",
+      description: "Parc mis à disposition de clients",
+      icon: Gauge,
+    },
   ],
   logistics: [
-    { id: "port-conteneurs", label: "Port & conteneurs", icon: Anchor },
-    { id: "entrepot-manutention", label: "Entrepôt & manutention", icon: Warehouse },
-    { id: "centre-distribution", label: "Centre de distribution", icon: Boxes },
+    {
+      id: "port-conteneurs",
+      label: "Port & conteneurs",
+      description: "Opérations portuaires et manutention de conteneurs",
+      icon: Anchor,
+    },
+    {
+      id: "entrepot-manutention",
+      label: "Entrepôt & manutention",
+      description: "Stockage et mouvements de marchandises",
+      icon: Warehouse,
+    },
+    {
+      id: "centre-distribution",
+      label: "Centre de distribution",
+      description: "Répartition vers plusieurs points de vente",
+      icon: Boxes,
+    },
     {
       id: "preparation-expedition",
       label: "Préparation & expédition",
+      description: "Traitement et envoi des commandes",
       icon: PackageSearch,
     },
   ],
   energy: [
-    { id: "centrale-production", label: "Centrale de production", icon: Zap },
+    {
+      id: "centrale-production",
+      label: "Centrale de production",
+      description: "Production d'énergie à grande échelle",
+      icon: Zap,
+    },
     {
       id: "generateurs-secours",
       label: "Générateurs de secours",
+      description: "Alimentation de secours et continuité",
       icon: BatteryCharging,
     },
     {
       id: "distribution-energetique",
       label: "Distribution énergétique",
+      description: "Réseau et acheminement de l'énergie",
       icon: Radio,
     },
   ],
   commerce: [
-    { id: "grossiste-distributeur", label: "Grossiste / distributeur", icon: Warehouse },
-    { id: "supermarche-hypermarche", label: "Supermarché / hypermarché", icon: Store },
-    { id: "chaine-magasins", label: "Chaîne de magasins", icon: Store },
+    {
+      id: "grossiste-distributeur",
+      label: "Grossiste / distributeur",
+      description: "Vente en gros à d'autres commerces",
+      icon: Warehouse,
+    },
+    {
+      id: "supermarche-hypermarche",
+      label: "Supermarché / hypermarché",
+      description: "Grande surface avec rayons multiples",
+      icon: Store,
+    },
+    {
+      id: "chaine-magasins",
+      label: "Chaîne de magasins",
+      description: "Plusieurs points de vente à surveiller",
+      icon: Store,
+    },
     {
       id: "epicerie-proximite",
       label: "Épicerie / commerce de proximité",
+      description: "Commerce local à taille humaine",
       icon: ShoppingCart,
     },
   ],
@@ -572,15 +673,23 @@ export function OnboardingView({
   )
 
   const hasOpsStep = sector === "logistics"
-  const totalSteps = hasOpsStep ? 4 : 3
-  const opsStepNumber = 3
-  const sourcesStepNumber = hasOpsStep ? 4 : 3
+  const subTypeStepNumber = 2
+  const equipmentStepNumber = 3
+  const opsStepNumber = 4
+  const totalSteps = hasOpsStep ? 5 : 4
+  const sourcesStepNumber = hasOpsStep ? 5 : 4
 
   const STEP_META = [
     {
       title: "Votre secteur",
-      description: "Choisissez le secteur et précisez votre activité.",
+      description: "Choisissez le secteur que SentrIA doit surveiller.",
       icon: Building2,
+    },
+    {
+      title: "Votre activité",
+      description:
+        "Précisez votre activité pour adapter les seuils d'alerte.",
+      icon: Store,
     },
     {
       title: hasOpsStep
@@ -615,7 +724,6 @@ export function OnboardingView({
     setSubType(null)
     setSelectedEquipment([])
     setOpsType(null)
-    setStep(1)
   }
 
   function chooseSubType(id: string) {
@@ -718,12 +826,14 @@ export function OnboardingView({
 
   const canContinue =
     step === 1
-      ? Boolean(sector) && Boolean(subType)
-      : step === 2
-        ? selectedEquipment.length > 0
-        : step === opsStepNumber && hasOpsStep
-          ? Boolean(opsType)
-          : true
+      ? Boolean(sector)
+      : step === subTypeStepNumber
+        ? Boolean(subType)
+        : step === equipmentStepNumber
+          ? selectedEquipment.length > 0
+          : step === opsStepNumber && hasOpsStep
+            ? Boolean(opsType)
+            : true
 
   return (
     <div className="fixed inset-0 z-[100] animate-in fade-in zoom-in-[0.98] overflow-y-auto bg-background duration-200 ease-out motion-reduce:animate-none">
@@ -775,7 +885,7 @@ export function OnboardingView({
         <div
           className={cn(
             "grid grid-cols-1 gap-3",
-            hasOpsStep ? "md:grid-cols-4" : "md:grid-cols-3"
+            hasOpsStep ? "md:grid-cols-5" : "md:grid-cols-4"
           )}
         >
           {STEP_META.map((meta, index) => {
@@ -853,91 +963,143 @@ export function OnboardingView({
             </div>
 
             {step === 1 && (
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-                  {SECTORS.map((item) => {
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                {SECTORS.map((item) => {
+                  const Icon = item.icon
+                  const active = sector === item.id
+
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => chooseSector(item.id)}
+                      className={cn(
+                        "flex flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all",
+                        active
+                          ? "border-foreground bg-foreground text-background"
+                          : "border-border hover:bg-muted"
+                      )}
+                    >
+                      <div className="flex w-full items-center justify-between">
+                        <Icon className="h-5 w-5" />
+
+                        {active && (
+                          <Check className="h-4 w-4" />
+                        )}
+                      </div>
+
+                      <span className="mt-2 text-sm font-semibold">
+                        {item.label}
+                      </span>
+
+                      <span
+                        className={cn(
+                          "text-xs leading-5",
+                          active
+                            ? "text-background/70"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {item.description}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            {step === subTypeStepNumber && sector && (
+              <div>
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
+                    {selectedSector?.label}
+                  </div>
+
+                  <p className="text-xs leading-5 text-muted-foreground">
+                    Cette précision adapte les seuils d&apos;alerte à
+                    votre métier
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {subTypes.map((item) => {
                     const Icon = item.icon
-                    const active = sector === item.id
+                    const active = subType === item.id
 
                     return (
                       <button
                         key={item.id}
                         type="button"
-                        onClick={() => chooseSector(item.id)}
+                        onClick={() => chooseSubType(item.id)}
                         className={cn(
-                          "flex flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all",
+                          "flex items-start gap-3 rounded-2xl border p-4 text-left transition-all",
                           active
                             ? "border-foreground bg-foreground text-background"
                             : "border-border hover:bg-muted"
                         )}
                       >
-                        <div className="flex w-full items-center justify-between">
-                          <Icon className="h-5 w-5" />
-
-                          {active && (
-                            <Check className="h-4 w-4" />
-                          )}
-                        </div>
-
-                        <span className="mt-2 text-sm font-semibold">
-                          {item.label}
-                        </span>
-
-                        <span
+                        <div
                           className={cn(
-                            "text-xs leading-5",
-                            active
-                              ? "text-background/70"
-                              : "text-muted-foreground"
+                            "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+                            active ? "bg-background/15" : "bg-muted"
                           )}
                         >
-                          {item.description}
-                        </span>
+                          <Icon className="h-4.5 w-4.5" />
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-semibold">
+                              {item.label}
+                            </span>
+
+                            {active && (
+                              <Check className="h-4 w-4 shrink-0" />
+                            )}
+                          </div>
+
+                          <span
+                            className={cn(
+                              "mt-0.5 block text-xs leading-5",
+                              active
+                                ? "text-background/70"
+                                : "text-muted-foreground"
+                            )}
+                          >
+                            {item.description}
+                          </span>
+                        </div>
                       </button>
                     )
                   })}
                 </div>
 
-                {sector && (
-                  <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                    <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Précisez votre activité
-                    </p>
+                <div className="mt-4 flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
+                  <span className="text-xs text-muted-foreground">
+                    {subType ? (
+                      <>
+                        Activité retenue :{" "}
+                        <span className="font-semibold text-foreground">
+                          {
+                            subTypes.find(
+                              (item) => item.id === subType
+                            )?.label
+                          }
+                        </span>
+                      </>
+                    ) : (
+                      "Sélectionnez l'activité la plus proche de la vôtre"
+                    )}
+                  </span>
 
-                    <div className="flex flex-wrap gap-2">
-                      {subTypes.map((item) => {
-                        const Icon = item.icon
-                        const active = subType === item.id
-
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            onClick={() => chooseSubType(item.id)}
-                            className={cn(
-                              "inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium transition-colors",
-                              active
-                                ? "border-foreground bg-foreground text-background"
-                                : "border-border bg-background text-muted-foreground hover:bg-muted"
-                            )}
-                          >
-                            <Icon className="h-4 w-4" />
-
-                            {item.label}
-
-                            {active && (
-                              <Check className="h-3.5 w-3.5" />
-                            )}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
+                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Modifiable plus tard
+                  </span>
+                </div>
               </div>
             )}
 
-            {step === 2 && sector && (
+            {step === equipmentStepNumber && sector && (
               <div>
                 <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
                   {selectedSector?.label}
