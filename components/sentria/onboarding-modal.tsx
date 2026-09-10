@@ -977,7 +977,7 @@ export function OnboardingView({
                         "flex w-[calc(50%-6px)] flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all sm:w-[calc(33.333%-8px)] lg:w-[calc(25%-9px)]",
                         active
                           ? "border-foreground bg-foreground text-background"
-                          : "border-border hover:bg-muted"
+                          : "border-border hover:border-accent/60 hover:bg-accent/10"
                       )}
                     >
                       <div className="flex w-full items-center justify-between">
@@ -1035,7 +1035,7 @@ export function OnboardingView({
                           "flex items-start gap-3 rounded-2xl border p-4 text-left transition-all",
                           active
                             ? "border-foreground bg-foreground text-background"
-                            : "border-border hover:bg-muted"
+                            : "border-border hover:border-accent/60 hover:bg-accent/10"
                         )}
                       >
                         <div
@@ -1128,7 +1128,7 @@ export function OnboardingView({
                             ? "cursor-not-allowed border-border bg-background opacity-60"
                             : active
                               ? "border-foreground bg-foreground text-background"
-                              : "border-border hover:bg-muted"
+                              : "border-border hover:border-accent/60 hover:bg-accent/10"
                         )}
                       >
                         {disabled && (
@@ -1197,7 +1197,7 @@ export function OnboardingView({
                           "inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium transition-colors",
                           active
                             ? "border-foreground bg-foreground text-background"
-                            : "border-border bg-background text-muted-foreground hover:bg-muted"
+                            : "border-border bg-background text-muted-foreground hover:border-accent/60 hover:bg-accent/10"
                         )}
                       >
                         <Icon className="h-4 w-4" />
@@ -1232,7 +1232,7 @@ export function OnboardingView({
                           "flex flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all",
                           active
                             ? "border-foreground bg-foreground text-background"
-                            : "border-border hover:bg-muted"
+                            : "border-border hover:border-accent/60 hover:bg-accent/10"
                         )}
                       >
                         <div className="flex w-full items-center justify-between">
@@ -1280,7 +1280,7 @@ export function OnboardingView({
                     "mt-3 flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold transition-all",
                     configureLater
                       ? "border-foreground bg-foreground text-background"
-                      : "border-border bg-background text-muted-foreground hover:bg-muted"
+                      : "border-border bg-background text-muted-foreground hover:border-accent/60 hover:bg-accent/10"
                   )}
                 >
                   <Clock3 className="h-4 w-4" />
