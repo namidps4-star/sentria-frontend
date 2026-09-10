@@ -37,6 +37,8 @@ import {
   Anchor,
   PackageSearch,
   Recycle,
+  Store,
+  ShoppingCart,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -47,6 +49,7 @@ type Sector =
   | "transportation"
   | "logistics"
   | "energy"
+  | "commerce"
 
 type Equipment = {
   id: string
@@ -60,6 +63,12 @@ type SectorConfig = {
   id: Sector
   label: string
   description: string
+  icon: React.ElementType
+}
+
+type SubType = {
+  id: string
+  label: string
   icon: React.ElementType
 }
 
@@ -114,7 +123,74 @@ const SECTORS: SectorConfig[] = [
     description: "Générateurs, carburant et température",
     icon: Zap,
   },
+  {
+    id: "commerce",
+    label: "Commerce",
+    description: "Stocks, rayons et approvisionnement",
+    icon: Store,
+  },
 ]
+
+const SUBTYPES_BY_SECTOR: Record<Sector, SubType[]> = {
+  industry: [
+    { id: "usine-production", label: "Usine de production", icon: Factory },
+    { id: "atelier-soustraitance", label: "Atelier / sous-traitance", icon: Cog },
+    { id: "usine-agroalimentaire", label: "Usine agroalimentaire", icon: Boxes },
+  ],
+  health: [
+    { id: "pharmacie", label: "Pharmacie", icon: HeartPulse },
+    {
+      id: "grossiste-pharma",
+      label: "Grossiste-répartiteur pharmaceutique",
+      icon: Warehouse,
+    },
+    { id: "clinique-hopital", label: "Clinique / Hôpital", icon: Building2 },
+    { id: "laboratoire", label: "Laboratoire", icon: Activity },
+  ],
+  agriculture: [
+    { id: "exploitation-agricole", label: "Exploitation agricole", icon: Wheat },
+    { id: "cooperative-agricole", label: "Coopérative agricole", icon: Building2 },
+    { id: "silo-stockage", label: "Silo / stockage de récolte", icon: Warehouse },
+  ],
+  transportation: [
+    { id: "transporteur-routier", label: "Transporteur routier", icon: Truck },
+    { id: "flotte-entreprise", label: "Flotte d'entreprise", icon: Truck },
+    { id: "location-vehicules", label: "Location de véhicules", icon: Gauge },
+  ],
+  logistics: [
+    { id: "port-conteneurs", label: "Port & conteneurs", icon: Anchor },
+    { id: "entrepot-manutention", label: "Entrepôt & manutention", icon: Warehouse },
+    { id: "centre-distribution", label: "Centre de distribution", icon: Boxes },
+    {
+      id: "preparation-expedition",
+      label: "Préparation & expédition",
+      icon: PackageSearch,
+    },
+  ],
+  energy: [
+    { id: "centrale-production", label: "Centrale de production", icon: Zap },
+    {
+      id: "generateurs-secours",
+      label: "Générateurs de secours",
+      icon: BatteryCharging,
+    },
+    {
+      id: "distribution-energetique",
+      label: "Distribution énergétique",
+      icon: Radio,
+    },
+  ],
+  commerce: [
+    { id: "grossiste-distributeur", label: "Grossiste / distributeur", icon: Warehouse },
+    { id: "supermarche-hypermarche", label: "Supermarché / hypermarché", icon: Store },
+    { id: "chaine-magasins", label: "Chaîne de magasins", icon: Store },
+    {
+      id: "epicerie-proximite",
+      label: "Épicerie / commerce de proximité",
+      icon: ShoppingCart,
+    },
+  ],
+}
 
 const EQUIPMENT_BY_SECTOR: Record<Sector, Equipment[]> = {
   industry: [
@@ -357,6 +433,45 @@ const EQUIPMENT_BY_SECTOR: Record<Sector, Equipment[]> = {
       icon: Radio,
     },
   ],
+
+  commerce: [
+    {
+      id: "stocks",
+      label: "Stocks",
+      description: "Niveaux bas et risques de rupture",
+      icon: Package,
+    },
+    {
+      id: "shelf-availability",
+      label: "Disponibilité en rayon",
+      description: "Ruptures visibles côté client",
+      icon: PackageX,
+    },
+    {
+      id: "expiry",
+      label: "Péremption",
+      description: "Produits proches de la date limite",
+      icon: CalendarClock,
+    },
+    {
+      id: "cold-chain",
+      label: "Chaîne du froid",
+      description: "Température des produits frais et surgelés",
+      icon: Snowflake,
+    },
+    {
+      id: "replenishment",
+      label: "Réapprovisionnement",
+      description: "Délais et anticipation des commandes",
+      icon: Truck,
+    },
+    {
+      id: "storage",
+      label: "Stockage / entrepôt",
+      description: "Capacité et conditions de conservation",
+      icon: Warehouse,
+    },
+  ],
 }
 
 const OPS_TYPES: OpsType[] = [
@@ -433,6 +548,7 @@ export function OnboardingView({
 
   const [step, setStep] = useState(1)
   const [sector, setSector] = useState<Sector | null>(null)
+  const [subType, setSubType] = useState<string | null>(null)
   const [selectedEquipment, setSelectedEquipment] = useState<string[]>([])
   const [opsType, setOpsType] = useState<OpsType["id"] | null>(null)
   const [selectedSources, setSelectedSources] = useState<
@@ -442,6 +558,11 @@ export function OnboardingView({
 
   const equipment = useMemo(
     () => (sector ? EQUIPMENT_BY_SECTOR[sector] : []),
+    [sector]
+  )
+
+  const subTypes = useMemo(
+    () => (sector ? SUBTYPES_BY_SECTOR[sector] : []),
     [sector]
   )
 
@@ -458,7 +579,7 @@ export function OnboardingView({
   const STEP_META = [
     {
       title: "Votre secteur",
-      description: "Choisissez le secteur que SentrIA doit surveiller.",
+      description: "Choisissez le secteur et précisez votre activité.",
       icon: Building2,
     },
     {
@@ -491,9 +612,14 @@ export function OnboardingView({
 
   function chooseSector(id: Sector) {
     setSector(id)
+    setSubType(null)
     setSelectedEquipment([])
     setOpsType(null)
     setStep(1)
+  }
+
+  function chooseSubType(id: string) {
+    setSubType(id)
   }
 
   function toggleEquipment(id: string) {
@@ -550,6 +676,10 @@ export function OnboardingView({
         )
       }
 
+      if (subType) {
+        localStorage.setItem("sentria_business_type", subType)
+      }
+
       localStorage.setItem(
         "sentria_equipment",
         JSON.stringify(selectedEquipment)
@@ -588,7 +718,7 @@ export function OnboardingView({
 
   const canContinue =
     step === 1
-      ? Boolean(sector)
+      ? Boolean(sector) && Boolean(subType)
       : step === 2
         ? selectedEquipment.length > 0
         : step === opsStepNumber && hasOpsStep
@@ -723,48 +853,87 @@ export function OnboardingView({
             </div>
 
             {step === 1 && (
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-                {SECTORS.map((item) => {
-                  const Icon = item.icon
-                  const active = sector === item.id
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+                  {SECTORS.map((item) => {
+                    const Icon = item.icon
+                    const active = sector === item.id
 
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => chooseSector(item.id)}
-                      className={cn(
-                        "flex flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all",
-                        active
-                          ? "border-foreground bg-foreground text-background"
-                          : "border-border hover:bg-muted"
-                      )}
-                    >
-                      <div className="flex w-full items-center justify-between">
-                        <Icon className="h-5 w-5" />
-
-                        {active && (
-                          <Check className="h-4 w-4" />
-                        )}
-                      </div>
-
-                      <span className="mt-2 text-sm font-semibold">
-                        {item.label}
-                      </span>
-
-                      <span
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => chooseSector(item.id)}
                         className={cn(
-                          "text-xs leading-5",
+                          "flex flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all",
                           active
-                            ? "text-background/70"
-                            : "text-muted-foreground"
+                            ? "border-foreground bg-foreground text-background"
+                            : "border-border hover:bg-muted"
                         )}
                       >
-                        {item.description}
-                      </span>
-                    </button>
-                  )
-                })}
+                        <div className="flex w-full items-center justify-between">
+                          <Icon className="h-5 w-5" />
+
+                          {active && (
+                            <Check className="h-4 w-4" />
+                          )}
+                        </div>
+
+                        <span className="mt-2 text-sm font-semibold">
+                          {item.label}
+                        </span>
+
+                        <span
+                          className={cn(
+                            "text-xs leading-5",
+                            active
+                              ? "text-background/70"
+                              : "text-muted-foreground"
+                          )}
+                        >
+                          {item.description}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {sector && (
+                  <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                    <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Précisez votre activité
+                    </p>
+
+                    <div className="flex flex-wrap gap-2">
+                      {subTypes.map((item) => {
+                        const Icon = item.icon
+                        const active = subType === item.id
+
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => chooseSubType(item.id)}
+                            className={cn(
+                              "inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium transition-colors",
+                              active
+                                ? "border-foreground bg-foreground text-background"
+                                : "border-border bg-background text-muted-foreground hover:bg-muted"
+                            )}
+                          >
+                            <Icon className="h-4 w-4" />
+
+                            {item.label}
+
+                            {active && (
+                              <Check className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
