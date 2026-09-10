@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect, useState } from "react"
@@ -42,6 +43,7 @@ const SECTORS = [
   { key: "transportation", label: "Transport" },
   { key: "logistics", label: "Logistique" },
   { key: "energy", label: "Énergie" },
+  { key: "eac", label: "EAC" },
 ]
 
 type Alert = {
@@ -73,10 +75,7 @@ type LogisticsPriority =
   | "recommend"
   | "resources"
 
-const LOGISTICS_PRIORITY_LABELS: Record<
-  LogisticsPriority,
-  string
-> = {
+const LOGISTICS_PRIORITY_LABELS: Record<LogisticsPriority, string> = {
   blockages: "Blocages",
   wait: "Temps d'attente",
   cost: "Coûts",
@@ -85,10 +84,7 @@ const LOGISTICS_PRIORITY_LABELS: Record<
   resources: "Ressources",
 }
 
-const LOGISTICS_PRIORITY_DESCRIPTIONS: Record<
-  LogisticsPriority,
-  string
-> = {
+const LOGISTICS_PRIORITY_DESCRIPTIONS: Record<LogisticsPriority, string> = {
   blockages:
     "Identifiez les équipements, flux ou opérations actuellement bloqués.",
   wait:
@@ -120,10 +116,7 @@ const INDUSTRY_PRIORITY_LABELS: Record<IndustryPriority, string> = {
   maintenance: "Maintenance",
 }
 
-const INDUSTRY_PRIORITY_DESCRIPTIONS: Record<
-  IndustryPriority,
-  string
-> = {
+const INDUSTRY_PRIORITY_DESCRIPTIONS: Record<IndustryPriority, string> = {
   machines:
     "Estimez l'impact financier d'une panne avant qu'elle n'arrive.",
   motors:
@@ -172,8 +165,7 @@ const SECTOR_META: Record<
             ? "À traiter"
             : "OK",
         up:
-          a.filter((x) => x.severity === "CRITICAL").length ===
-          0,
+          a.filter((x) => x.severity === "CRITICAL").length === 0,
         spark: [9, 8, 7, 8, 6, 5, 4],
       },
       {
@@ -596,6 +588,95 @@ const SECTOR_META: Record<
       ).length,
     ],
   },
+
+  eac: {
+    kpis: (a) => [
+      {
+        label: "Alertes corridor EAC",
+        value: String(a.length),
+        delta: "Régional",
+        up: a.length === 0,
+        spark: [1, 2, 2, 3, 2, 4, 3],
+      },
+      {
+        label: "Risques critiques",
+        value: String(
+          a.filter((x) => x.severity === "CRITICAL").length
+        ),
+        delta:
+          a.filter((x) => x.severity === "CRITICAL").length > 0
+            ? "À traiter"
+            : "OK",
+        up:
+          a.filter((x) => x.severity === "CRITICAL").length === 0,
+        spark: [4, 3, 4, 2, 3, 2, 1],
+      },
+      {
+        label: "Flux surveillés",
+        value: String(new Set(a.map((x) => x.equipment)).size),
+        delta: "Corridors",
+        up: true,
+        spark: [2, 3, 4, 4, 5, 6, 7],
+      },
+      {
+        label: "Alertes conformité",
+        value: String(
+          a.filter((x) => {
+            const message = x.message.toLowerCase()
+            return (
+              message.includes("douane") ||
+              message.includes("custom") ||
+              message.includes("document") ||
+              message.includes("compliance") ||
+              message.includes("certificat")
+            )
+          }).length
+        ),
+        delta: "Documents",
+        up: false,
+        spark: [0, 1, 1, 2, 2, 3, 2],
+      },
+    ],
+    chartTitle: "Alertes corridors EAC · 7 jours",
+    barLabels: ["Douane", "Transit", "Port", "Stock"],
+    barData: (a) => [
+      a.filter((x) => {
+        const message = x.message.toLowerCase()
+        return (
+          message.includes("douane") ||
+          message.includes("custom") ||
+          message.includes("document") ||
+          message.includes("certificat")
+        )
+      }).length,
+      a.filter((x) => {
+        const message = x.message.toLowerCase()
+        return (
+          message.includes("transit") ||
+          message.includes("retard") ||
+          message.includes("delay") ||
+          message.includes("frontière") ||
+          message.includes("border")
+        )
+      }).length,
+      a.filter((x) => {
+        const message = x.message.toLowerCase()
+        return (
+          message.includes("port") ||
+          message.includes("conteneur") ||
+          message.includes("container")
+        )
+      }).length,
+      a.filter((x) => {
+        const message = x.message.toLowerCase()
+        return (
+          message.includes("stock") ||
+          message.includes("rupture") ||
+          message.includes("inventory")
+        )
+      }).length,
+    ],
+  },
 }
 
 const OPS_TYPE_LABEL: Record<string, string> = {
@@ -683,6 +764,42 @@ function getSavedIndustryPriorities(): IndustryPriority[] {
   }
 }
 
+function getSectorLabel(sector?: string | null) {
+  if (!sector) return "Non défini"
+
+  return (
+    SECTORS.find((item) => item.key === sector)?.label ??
+    sector
+  )
+}
+
+function getRecommendationContext(
+  recommendation: Recommendation
+) {
+  const sector = recommendation.sector ?? "all"
+
+  const contexts: Record<string, string> = {
+    industry:
+      "Priorité industrielle : limiter les arrêts de production et intervenir avant la panne.",
+    health:
+      "Priorité santé : sécuriser les stocks, les médicaments et la chaîne du froid.",
+    agriculture:
+      "Priorité agricole : réduire les pertes, les retards et les risques sur les produits.",
+    transportation:
+      "Priorité transport : éviter les immobilisations et sécuriser la disponibilité de la flotte.",
+    logistics:
+      "Priorité logistique : fluidifier les opérations, réduire les blocages et maîtriser les coûts.",
+    energy:
+      "Priorité énergie : maintenir la disponibilité des générateurs et prévenir les arrêts.",
+    eac:
+      "Contexte EAC : sécuriser les flux régionaux, les passages transfrontaliers, la conformité documentaire et la disponibilité des marchandises.",
+    all:
+      "Recommandation opérationnelle générée à partir des alertes actuellement surveillées.",
+  }
+
+  return contexts[sector] ?? contexts.all
+}
+
 export function DashboardView({
   search = "",
 }: {
@@ -765,6 +882,9 @@ export function DashboardView({
   )
 
   const [alertSearch, setAlertSearch] = useState("")
+
+  const [selectedRecommendation, setSelectedRecommendation] =
+    useState<Recommendation | null>(null)
 
   useEffect(() => {
     const refreshSectors = () => {
@@ -1686,7 +1806,6 @@ export function DashboardView({
 
   return (
     <div className="space-y-6">
-      {/* HERO / DASHBOARD */}
       <div className="flex flex-col gap-4 rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-xl">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
@@ -1706,6 +1825,7 @@ export function DashboardView({
         </div>
 
         <button
+          type="button"
           onClick={() =>
             document
               .getElementById("alerts-table")
@@ -1724,11 +1844,12 @@ export function DashboardView({
         recommendations={filteredRecommendations}
         totalRecommendationsCount={recommendations.length}
         alerts={alerts}
+        opsType={opsType}
       />
 
-      {/* SECTOR FILTERS */}
       <div className="flex flex-wrap items-center gap-2">
         <button
+          type="button"
           onClick={returnToDashboard}
           className={cn(
             "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
@@ -1751,6 +1872,7 @@ export function DashboardView({
         ).map((s) => (
           <button
             key={s.key}
+            type="button"
             onClick={() => {
               if (s.key === "logistics") {
                 openLogisticsOverview()
@@ -1823,7 +1945,6 @@ export function DashboardView({
           </div>
         )}
 
-      {/* KPIs */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((k) => (
           <div
@@ -1868,7 +1989,6 @@ export function DashboardView({
         ))}
       </div>
 
-      {/* CHARTS */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
           <div className="flex items-center justify-between">
@@ -1883,6 +2003,7 @@ export function DashboardView({
             </div>
 
             <button
+              type="button"
               className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
               aria-label="Options"
             >
@@ -1918,7 +2039,6 @@ export function DashboardView({
         </div>
       </div>
 
-      {/* IMPORT */}
       <div className="rounded-3xl border border-border bg-card p-6">
         <h3 className="font-heading text-lg font-bold">
           Importer des données
@@ -1937,6 +2057,7 @@ export function DashboardView({
             ).map((s) => (
               <button
                 key={s.key}
+                type="button"
                 onClick={() => setUploadSector(s.key)}
                 className={cn(
                   "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors",
@@ -1983,7 +2104,6 @@ export function DashboardView({
         </p>
       </div>
 
-      {/* ALERTS */}
       <div
         id="alerts-table"
         className="rounded-3xl border border-border bg-card"
@@ -2007,6 +2127,7 @@ export function DashboardView({
           </div>
 
           <button
+            type="button"
             onClick={() => {
               setExpandedAlertKey(null)
               clearAlertFilters()
@@ -2018,7 +2139,6 @@ export function DashboardView({
           </button>
         </div>
 
-        {/* FILTERS */}
         <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-3">
           <select
             value={statusFilter}
@@ -2188,7 +2308,6 @@ export function DashboardView({
           </div>
         )}
 
-        {/* ALERT LIST + STICKY DETAILS */}
         <div
           className={cn(
             "grid gap-4 p-4 md:p-6",
@@ -2197,7 +2316,6 @@ export function DashboardView({
               : "grid-cols-1"
           )}
         >
-          {/* LEFT: INDEPENDENT SCROLL */}
           <div className="min-w-0 overflow-hidden rounded-3xl border border-border">
             <div className="max-h-[600px] overflow-x-auto overflow-y-auto">
               <table className="w-full border-separate border-spacing-0 text-sm">
@@ -2246,7 +2364,6 @@ export function DashboardView({
                             : "hover:bg-accent/15"
                         )}
                       >
-                        {/* ACTIF */}
                         <td
                           className={cn(
                             "px-4 py-4 font-semibold",
@@ -2269,7 +2386,6 @@ export function DashboardView({
                           </div>
                         </td>
 
-                        {/* MESSAGE */}
                         <td
                           className={cn(
                             "max-w-[280px] truncate px-4 py-4",
@@ -2281,7 +2397,6 @@ export function DashboardView({
                           {alert.message}
                         </td>
 
-                        {/* SECTEUR */}
                         <td
                           className={cn(
                             "px-4 py-4 capitalize",
@@ -2290,10 +2405,9 @@ export function DashboardView({
                               : "border-b border-border text-muted-foreground"
                           )}
                         >
-                          {alert.sector ?? "N/A"}
+                          {getSectorLabel(alert.sector)}
                         </td>
 
-                        {/* SEVERITY */}
                         <td
                           className={cn(
                             "px-4 py-4",
@@ -2313,7 +2427,6 @@ export function DashboardView({
                           </span>
                         </td>
 
-                        {/* DATE */}
                         <td
                           className={cn(
                             "px-4 py-4",
@@ -2356,7 +2469,6 @@ export function DashboardView({
             </div>
           </div>
 
-          {/* RIGHT: STICKY DETAILS */}
           {expandedAlert && (
             <div className="min-w-0 self-start rounded-3xl bg-sidebar p-5 text-sidebar-foreground shadow-lg ring-1 ring-sidebar-border lg:sticky lg:top-6">
               <div className="flex items-start justify-between gap-3">
@@ -2377,7 +2489,6 @@ export function DashboardView({
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
-                  {/* SAME STATUS TAG AS TABLE */}
                   <span
                     className={cn(
                       "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
@@ -2400,7 +2511,6 @@ export function DashboardView({
                 </div>
               </div>
 
-              {/* MESSAGE */}
               <div className="mt-4 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-sidebar-foreground/40">
                   Message
@@ -2411,7 +2521,6 @@ export function DashboardView({
                 </p>
               </div>
 
-              {/* DETAILS */}
               <div className="mt-3 grid grid-cols-2 gap-2 rounded-2xl bg-white/[0.06] p-4 ring-1 ring-white/10">
                 <div>
                   <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
@@ -2419,7 +2528,7 @@ export function DashboardView({
                   </p>
 
                   <p className="mt-1 text-sm font-semibold capitalize">
-                    {expandedAlert.sector ?? "N/A"}
+                    {getSectorLabel(expandedAlert.sector)}
                   </p>
                 </div>
 
@@ -2461,7 +2570,6 @@ export function DashboardView({
                 </div>
               </div>
 
-              {/* RECOMMENDATION */}
               <div className="mt-3 rounded-2xl border border-accent/20 bg-accent/5 px-4 py-3">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-accent">
                   Recommandation
@@ -2473,12 +2581,39 @@ export function DashboardView({
                 </p>
               </div>
 
+              <div className="mt-3 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
+                  Contexte sectoriel
+                </p>
+
+                <p className="mt-1.5 text-xs leading-5 text-sidebar-foreground/70">
+                  {expandedRecommendation
+                    ? getRecommendationContext(
+                        expandedRecommendation
+                      )
+                    : "SentrIA analyse cette alerte afin d'identifier l'action opérationnelle la plus pertinente."}
+                </p>
+              </div>
+
               <div className="mt-4 flex items-center justify-end">
                 <button
+                  type="button"
+                  disabled={!expandedRecommendation}
                   onClick={(e) => {
                     e.stopPropagation()
+
+                    if (expandedRecommendation) {
+                      setSelectedRecommendation(
+                        expandedRecommendation
+                      )
+                    }
                   }}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-xs font-bold text-accent-foreground transition-transform hover:scale-[1.02]"
+                  className={cn(
+                    "inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition-transform",
+                    expandedRecommendation
+                      ? "bg-accent text-accent-foreground hover:scale-[1.02]"
+                      : "cursor-not-allowed bg-white/10 text-sidebar-foreground/40"
+                  )}
                 >
                   Voir la recommandation
                   <ArrowUpRight className="h-3.5 w-3.5" />
@@ -2488,6 +2623,187 @@ export function DashboardView({
           )}
         </div>
       </div>
+
+      {selectedRecommendation && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedRecommendation(null)
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="recommendation-dialog-title"
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-card shadow-2xl ring-1 ring-border"
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-border p-6">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
+                  Recommandation SentrIA
+                </p>
+
+                <h2
+                  id="recommendation-dialog-title"
+                  className="mt-2 font-heading text-2xl font-bold tracking-tight"
+                >
+                  {selectedRecommendation.equipment}
+                </h2>
+
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full border border-border bg-muted px-2.5 py-1 text-[10px] font-semibold">
+                    {getSectorLabel(
+                      selectedRecommendation.sector
+                    )}
+                  </span>
+
+                  <span
+                    className={cn(
+                      "rounded-full px-2.5 py-1 text-[10px] font-semibold",
+                      selectedRecommendation.severity ===
+                        "CRITICAL"
+                        ? "bg-destructive/10 text-destructive"
+                        : "bg-amber-500/15 text-amber-600"
+                    )}
+                  >
+                    {selectedRecommendation.severity}
+                  </span>
+
+                  {selectedRecommendation.risk_score !==
+                    null &&
+                    selectedRecommendation.risk_score !==
+                      undefined && (
+                      <span className="rounded-full bg-accent/15 px-2.5 py-1 text-[10px] font-semibold text-accent-foreground">
+                        Risque :{" "}
+                        {selectedRecommendation.risk_score}
+                      </span>
+                    )}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedRecommendation(null)
+                }
+                aria-label="Fermer la recommandation"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4 p-6">
+              <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  Alerte détectée
+                </p>
+
+                <p className="mt-2 text-sm leading-6 text-foreground">
+                  {selectedRecommendation.message}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-accent/30 bg-accent/10 p-5">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-accent-foreground">
+                  Action recommandée
+                </p>
+
+                <p className="mt-2 text-base font-semibold leading-7 text-foreground">
+                  {selectedRecommendation.recommended_action}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-border bg-background p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Catégorie
+                  </p>
+
+                  <p className="mt-1.5 text-sm font-semibold capitalize">
+                    {selectedRecommendation.action_category ||
+                      "Opérationnelle"}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-border bg-background p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    Date de détection
+                  </p>
+
+                  <p className="mt-1.5 text-sm font-semibold">
+                    {new Date(
+                      selectedRecommendation.date
+                    ).toLocaleString("fr-FR")}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-sidebar p-5 text-sidebar-foreground">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground">
+                    <Shield className="h-4 w-4" />
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-accent">
+                      Pourquoi cette action ?
+                    </p>
+
+                    <p className="mt-1.5 text-sm leading-6 text-sidebar-foreground/75">
+                      {getRecommendationContext(
+                        selectedRecommendation
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {selectedRecommendation.sector === "eac" && (
+                <div className="rounded-2xl border border-accent/20 bg-accent/5 p-5">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-accent-foreground">
+                    Contexte EAC
+                  </p>
+
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                    Cette recommandation doit être interprétée
+                    dans le contexte des flux régionaux de
+                    l'Afrique de l'Est : transit transfrontalier,
+                    formalités douanières, disponibilité des
+                    marchandises, coordination portuaire et
+                    continuité des corridors.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-2 border-t border-border p-6">
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedRecommendation(null)
+                }
+                className="rounded-full border border-border px-4 py-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                Fermer
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setSelectedRecommendation(null)
+                }
+                className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-xs font-bold text-accent-foreground transition-transform hover:scale-[1.02]"
+              >
+                Compris
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
