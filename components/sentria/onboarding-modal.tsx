@@ -81,12 +81,6 @@ type DataSource = {
   icon: React.ElementType
 }
 
-type OpsType = {
-  id: "port" | "entrepot" | "transport" | "expedition" | "froid" | "multi"
-  label: string
-  icon: React.ElementType
-}
-
 const SECTORS: SectorConfig[] = [
   {
     id: "industry",
@@ -233,16 +227,28 @@ const SUBTYPES_BY_SECTOR: Record<Sector, SubType[]> = {
       icon: Warehouse,
     },
     {
-      id: "centre-distribution",
-      label: "Centre de distribution",
-      description: "Répartition vers plusieurs points de vente",
-      icon: Boxes,
+      id: "transport-distribution",
+      label: "Transport & distribution",
+      description: "Acheminement vers plusieurs points de livraison",
+      icon: Truck,
     },
     {
       id: "preparation-expedition",
       label: "Préparation & expédition",
       description: "Traitement et envoi des commandes",
       icon: PackageSearch,
+    },
+    {
+      id: "chaine-froid",
+      label: "Chaîne du froid",
+      description: "Logistique sous température dirigée",
+      icon: Snowflake,
+    },
+    {
+      id: "plusieurs-activites",
+      label: "Plusieurs activités",
+      description: "Une combinaison de ces opérations",
+      icon: Recycle,
     },
   ],
   energy: [
@@ -575,39 +581,6 @@ const EQUIPMENT_BY_SECTOR: Record<Sector, Equipment[]> = {
   ],
 }
 
-const OPS_TYPES: OpsType[] = [
-  {
-    id: "port",
-    label: "Port & conteneurs",
-    icon: Anchor,
-  },
-  {
-    id: "entrepot",
-    label: "Entrepôt & manutention",
-    icon: Warehouse,
-  },
-  {
-    id: "transport",
-    label: "Transport & distribution",
-    icon: Truck,
-  },
-  {
-    id: "expedition",
-    label: "Préparation & expédition",
-    icon: PackageSearch,
-  },
-  {
-    id: "froid",
-    label: "Chaîne du froid",
-    icon: Snowflake,
-  },
-  {
-    id: "multi",
-    label: "Plusieurs activités",
-    icon: Recycle,
-  },
-]
-
 const DATA_SOURCES: DataSource[] = [
   {
     id: "erp",
@@ -651,7 +624,6 @@ export function OnboardingView({
   const [sector, setSector] = useState<Sector | null>(null)
   const [subType, setSubType] = useState<string | null>(null)
   const [selectedEquipment, setSelectedEquipment] = useState<string[]>([])
-  const [opsType, setOpsType] = useState<OpsType["id"] | null>(null)
   const [selectedSources, setSelectedSources] = useState<
     DataSource["id"][]
   >([])
@@ -672,12 +644,11 @@ export function OnboardingView({
     [sector]
   )
 
-  const hasOpsStep = sector === "logistics"
+  const isLogistics = sector === "logistics"
   const subTypeStepNumber = 2
   const equipmentStepNumber = 3
-  const opsStepNumber = 4
-  const totalSteps = hasOpsStep ? 5 : 4
-  const sourcesStepNumber = hasOpsStep ? 5 : 4
+  const sourcesStepNumber = 4
+  const totalSteps = 4
 
   const STEP_META = [
     {
@@ -692,22 +663,12 @@ export function OnboardingView({
       icon: Store,
     },
     {
-      title: hasOpsStep
+      title: isLogistics
         ? "Vos priorités"
         : "Que voulez-vous surveiller ?",
       description: "Sélectionnez ce qui compte pour votre activité.",
       icon: Sparkles,
     },
-    ...(hasOpsStep
-      ? [
-          {
-            title: "Vos opérations",
-            description:
-              "Précisez le type d'activité logistique.",
-            icon: Anchor,
-          },
-        ]
-      : []),
     {
       title: "Vos données",
       description:
@@ -723,7 +684,6 @@ export function OnboardingView({
     setSector(id)
     setSubType(null)
     setSelectedEquipment([])
-    setOpsType(null)
   }
 
   function chooseSubType(id: string) {
@@ -798,8 +758,8 @@ export function OnboardingView({
         JSON.stringify(selectedEquipment)
       )
 
-      if (opsType) {
-        localStorage.setItem("sentria_ops_type", opsType)
+      if (isLogistics && subType) {
+        localStorage.setItem("sentria_ops_type", subType)
       }
 
       localStorage.setItem(
@@ -831,9 +791,7 @@ export function OnboardingView({
         ? Boolean(subType)
         : step === equipmentStepNumber
           ? selectedEquipment.length > 0
-          : step === opsStepNumber && hasOpsStep
-            ? Boolean(opsType)
-            : true
+          : true
 
   return (
     <div className="fixed inset-0 z-[100] animate-in fade-in zoom-in-[0.98] overflow-y-auto bg-background duration-200 ease-out motion-reduce:animate-none">
@@ -885,7 +843,7 @@ export function OnboardingView({
         <div
           className={cn(
             "grid grid-cols-1 gap-3",
-            hasOpsStep ? "md:grid-cols-5" : "md:grid-cols-4"
+            "md:grid-cols-4"
           )}
         >
           {STEP_META.map((meta, index) => {
@@ -1177,39 +1135,6 @@ export function OnboardingView({
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
                     Modifiable plus tard
                   </span>
-                </div>
-              </div>
-            )}
-
-            {step === opsStepNumber && hasOpsStep && (
-              <div>
-                <div className="flex flex-wrap gap-2">
-                  {OPS_TYPES.map((item) => {
-                    const Icon = item.icon
-                    const active = opsType === item.id
-
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setOpsType(item.id)}
-                        className={cn(
-                          "inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-medium transition-colors",
-                          active
-                            ? "border-foreground bg-foreground text-background"
-                            : "border-border bg-background text-muted-foreground hover:border-accent/60 hover:bg-accent/10"
-                        )}
-                      >
-                        <Icon className="h-4 w-4" />
-
-                        {item.label}
-
-                        {active && (
-                          <Check className="h-3.5 w-3.5" />
-                        )}
-                      </button>
-                    )
-                  })}
                 </div>
               </div>
             )}
