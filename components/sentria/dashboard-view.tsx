@@ -23,6 +23,14 @@ import { LogisticsCostView } from "./logistics-cost-view"
 import { LogisticsAnticipateView } from "./logistics-anticipate-view"
 import { RecommendationsPanel } from "./recommendations-panel"
 import { RecommendationsBoard } from "./recommendations-board-view"
+import {
+  IndustryMachinesView,
+  IndustryMotorsView,
+  IndustryTemperatureView,
+  IndustryPressureView,
+  IndustryProductionView,
+  IndustryMaintenanceView,
+} from "./industry-view"
 
 const API = "https://sentria-8btn.onrender.com"
 
@@ -93,6 +101,41 @@ const LOGISTICS_PRIORITY_DESCRIPTIONS: Record<
     "Consultez les recommandations générées par SentrIA.",
   resources:
     "Suivez l'utilisation et la disponibilité de vos ressources.",
+}
+
+type IndustryPriority =
+  | "machines"
+  | "motors"
+  | "temperature"
+  | "pressure"
+  | "production"
+  | "maintenance"
+
+const INDUSTRY_PRIORITY_LABELS: Record<IndustryPriority, string> = {
+  machines: "Machines de production",
+  motors: "Moteurs",
+  temperature: "Température",
+  pressure: "Pression",
+  production: "Production",
+  maintenance: "Maintenance",
+}
+
+const INDUSTRY_PRIORITY_DESCRIPTIONS: Record<
+  IndustryPriority,
+  string
+> = {
+  machines:
+    "Estimez l'impact financier d'une panne avant qu'elle n'arrive.",
+  motors:
+    "Détectez une dégradation progressive avant la panne franche.",
+  temperature:
+    "Anticipez le moment où un seuil critique sera atteint.",
+  pressure:
+    "Identifiez la cause probable d'une anomalie de pression.",
+  production:
+    "Convertissez chaque baisse de rendement en perte estimée.",
+  maintenance:
+    "Recevez une fenêtre d'intervention adaptée à l'usure réelle.",
 }
 
 const SECTOR_META: Record<
@@ -608,6 +651,38 @@ function getSavedLogisticsPriorities(): LogisticsPriority[] {
   }
 }
 
+function getSavedIndustryPriorities(): IndustryPriority[] {
+  if (typeof window === "undefined") {
+    return ["machines"]
+  }
+
+  try {
+    const stored = JSON.parse(
+      localStorage.getItem("sentria_equipment") || "[]"
+    )
+
+    if (!Array.isArray(stored)) {
+      return ["machines"]
+    }
+
+    const valid = stored.filter(
+      (value): value is IndustryPriority =>
+        [
+          "machines",
+          "motors",
+          "temperature",
+          "pressure",
+          "production",
+          "maintenance",
+        ].includes(value)
+    )
+
+    return valid.length > 0 ? valid : ["machines"]
+  } catch {
+    return ["machines"]
+  }
+}
+
 export function DashboardView({
   search = "",
 }: {
@@ -666,6 +741,14 @@ export function DashboardView({
       getSavedLogisticsPriorities()
     )
 
+  const [industryPriority, setIndustryPriority] =
+    useState<IndustryPriority | null>(null)
+
+  const [selectedIndustryPriorities, setSelectedIndustryPriorities] =
+    useState<IndustryPriority[]>(() =>
+      getSavedIndustryPriorities()
+    )
+
   const [statusFilter, setStatusFilter] = useState<
     "all" | "critical" | "warning"
   >("all")
@@ -706,6 +789,10 @@ export function DashboardView({
         getSavedLogisticsPriorities()
       )
 
+      setSelectedIndustryPriorities(
+        getSavedIndustryPriorities()
+      )
+
       const savedSector = localStorage.getItem("sentria_sector")
 
       if (savedSector && savedSector !== "logistics") {
@@ -723,6 +810,17 @@ export function DashboardView({
         !priorities.includes(logisticsPriority)
       ) {
         setLogisticsPriority(null)
+      }
+
+      const industryPriorities = getSavedIndustryPriorities()
+
+      setSelectedIndustryPriorities(industryPriorities)
+
+      if (
+        industryPriority &&
+        !industryPriorities.includes(industryPriority)
+      ) {
+        setIndustryPriority(null)
       }
     }
 
@@ -751,7 +849,7 @@ export function DashboardView({
 
       window.removeEventListener("storage", refreshPriority)
     }
-  }, [logisticsPriority])
+  }, [logisticsPriority, industryPriority])
 
   useEffect(() => {
     if (
@@ -858,8 +956,21 @@ export function DashboardView({
     localStorage.removeItem("sentria_sector")
   }
 
+  function openIndustryOverview() {
+    setFilterSector("industry")
+    setIndustryPriority(null)
+    localStorage.setItem("sentria_sector", "industry")
+  }
+
+  function openIndustryPriority(priority: IndustryPriority) {
+    setIndustryPriority(priority)
+    setFilterSector("industry")
+    localStorage.setItem("sentria_sector", "industry")
+  }
+
   function returnToDashboard() {
     setLogisticsPriority(null)
+    setIndustryPriority(null)
     setFilterSector("all")
     localStorage.setItem("sentria_sector", "all")
   }
@@ -1074,6 +1185,205 @@ export function DashboardView({
       }).length
     }
   )
+
+  if (filterSector === "industry") {
+    const industryAlerts = alerts.filter(
+      (a) => a.sector === "industry"
+    )
+
+    if (industryPriority === null) {
+      return (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={returnToDashboard}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+            >
+              ← Retour au tableau de bord
+            </button>
+          </div>
+
+          <div className="rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:p-8">
+            <div className="max-w-2xl">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+                <Shield className="h-3.5 w-3.5" />
+                Industrie
+              </span>
+
+              <h2 className="mt-4 font-heading text-2xl font-bold leading-tight md:text-3xl">
+                Vue d'ensemble de votre production.
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-sidebar-foreground/70">
+                Retrouvez ici les priorités que vous avez
+                sélectionnées pendant la configuration de SentrIA.
+                Choisissez une priorité pour accéder directement
+                à son espace de pilotage.
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <div className="mb-4">
+              <h3 className="font-heading text-lg font-bold">
+                Vos priorités
+              </h3>
+
+              <p className="mt-1 text-sm text-muted-foreground">
+                Sélectionnées lors de votre onboarding.
+              </p>
+            </div>
+
+            {selectedIndustryPriorities.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {selectedIndustryPriorities.map((priority) => (
+                  <button
+                    key={priority}
+                    type="button"
+                    onClick={() =>
+                      openIndustryPriority(priority)
+                    }
+                    className="group rounded-3xl border border-border bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <span className="inline-flex rounded-full bg-accent/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-accent-foreground">
+                          Priorité
+                        </span>
+
+                        <h4 className="mt-3 font-heading text-lg font-bold">
+                          {INDUSTRY_PRIORITY_LABELS[priority]}
+                        </h4>
+                      </div>
+
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted transition-colors group-hover:bg-accent group-hover:text-accent-foreground">
+                        <ArrowUpRight className="h-4 w-4" />
+                      </span>
+                    </div>
+
+                    <p className="mt-3 text-sm leading-5 text-muted-foreground">
+                      {INDUSTRY_PRIORITY_DESCRIPTIONS[priority]}
+                    </p>
+
+                    <div className="mt-5 text-xs font-semibold text-foreground">
+                      Ouvrir la priorité →
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-3xl border border-border bg-card p-6 text-sm text-muted-foreground">
+                Aucune priorité industrielle n'a été sélectionnée.
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {kpis.map((k) => (
+              <div
+                key={k.label}
+                className="rounded-3xl border border-border bg-card p-5"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {k.label}
+                  </span>
+
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
+                      k.up
+                        ? "bg-accent/25 text-accent-foreground"
+                        : "bg-destructive/10 text-destructive"
+                    )}
+                  >
+                    {k.up ? (
+                      <TrendingUp className="h-3 w-3" />
+                    ) : (
+                      <TrendingDown className="h-3 w-3" />
+                    )}
+
+                    {k.delta}
+                  </span>
+                </div>
+
+                <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
+                  {k.value}
+                </p>
+
+                <Sparkline
+                  data={k.spark}
+                  className={cn(
+                    "mt-2 h-9 w-full",
+                    k.up ? "text-accent" : "text-destructive"
+                  )}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => {
+              setIndustryPriority(null)
+            }}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+          >
+            ← Retour à l'industrie
+          </button>
+        </div>
+
+        {selectedIndustryPriorities.length > 0 && (
+          <div className="rounded-2xl border border-border bg-card px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="mr-1 text-xs font-semibold text-muted-foreground">
+                Priorités
+              </span>
+
+              {selectedIndustryPriorities.map((priority) => (
+                <button
+                  key={priority}
+                  type="button"
+                  onClick={() =>
+                    openIndustryPriority(priority)
+                  }
+                  className={cn(
+                    "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+                    priority === industryPriority
+                      ? "bg-black text-white"
+                      : "bg-muted text-foreground hover:bg-accent hover:text-accent-foreground"
+                  )}
+                >
+                  {INDUSTRY_PRIORITY_LABELS[priority]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {industryPriority === "machines" ? (
+          <IndustryMachinesView alerts={industryAlerts} />
+        ) : industryPriority === "motors" ? (
+          <IndustryMotorsView alerts={industryAlerts} />
+        ) : industryPriority === "temperature" ? (
+          <IndustryTemperatureView alerts={industryAlerts} />
+        ) : industryPriority === "pressure" ? (
+          <IndustryPressureView alerts={industryAlerts} />
+        ) : industryPriority === "production" ? (
+          <IndustryProductionView alerts={industryAlerts} />
+        ) : (
+          <IndustryMaintenanceView alerts={industryAlerts} />
+        )}
+      </div>
+    )
+  }
 
   if (filterSector === "logistics") {
     const normalizedOpsType =
@@ -1447,7 +1757,13 @@ export function DashboardView({
                 return
               }
 
+              if (s.key === "industry") {
+                openIndustryOverview()
+                return
+              }
+
               setLogisticsPriority(null)
+              setIndustryPriority(null)
               setFilterSector(s.key)
               localStorage.setItem(
                 "sentria_sector",
