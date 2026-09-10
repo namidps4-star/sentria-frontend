@@ -963,7 +963,7 @@ export function OnboardingView({
             </div>
 
             {step === 1 && (
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+              <div className="flex flex-wrap justify-center gap-3">
                 {SECTORS.map((item) => {
                   const Icon = item.icon
                   const active = sector === item.id
@@ -974,7 +974,7 @@ export function OnboardingView({
                       type="button"
                       onClick={() => chooseSector(item.id)}
                       className={cn(
-                        "flex flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all",
+                        "flex w-[calc(50%-6px)] flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all sm:w-[calc(33.333%-8px)] lg:w-[calc(25%-9px)]",
                         active
                           ? "border-foreground bg-foreground text-background"
                           : "border-border hover:bg-muted"
