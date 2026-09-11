@@ -34,6 +34,8 @@ import {
 
 const API = "https://sentria-8btn.onrender.com"
 
+
+
 const SECTORS = [
   { key: "all", label: "Tous" },
   { key: "industry", label: "Industrie" },
