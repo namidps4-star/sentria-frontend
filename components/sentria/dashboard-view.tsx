@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useState } from "react"
@@ -850,6 +849,12 @@ export function DashboardView({
     return localStorage.getItem("sentria_ops_type")
   })
 
+  const [businessType, setBusinessType] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null
+
+    return localStorage.getItem("sentria_business_type")
+  })
+
   const [logisticsPriority, setLogisticsPriority] =
     useState<LogisticsPriority | null>(null)
 
@@ -904,6 +909,8 @@ export function DashboardView({
       }
 
       setOpsType(localStorage.getItem("sentria_ops_type"))
+
+      setBusinessType(localStorage.getItem("sentria_business_type"))
 
       setSelectedLogisticsPriorities(
         getSavedLogisticsPriorities()
@@ -1113,6 +1120,9 @@ export function DashboardView({
         `${API}/upload?sector=${uploadSector}&lang=fr` +
           (uploadSector === "logistics" && opsType
             ? `&ops_type=${opsType}`
+            : "") +
+          (uploadSector === "industry" && businessType
+            ? `&business_type=${businessType}`
             : ""),
         {
           method: "POST",
