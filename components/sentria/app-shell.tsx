@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+
 import { Sidebar } from "./sidebar"
 import type { ViewKey } from "./types"
 import { Topbar } from "./topbar"
@@ -68,9 +69,6 @@ export function AppShell() {
   }
 
   return (
-    // `h-screen overflow-hidden` on the shell + `overflow-y-auto` only inside
-    // the content card is what locks the sidebar AND the topbar in place:
-    // the page itself never scrolls, only the card's own content does.
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
       {showOnboarding && (
         <OnboardingView onComplete={() => setShowOnboarding(false)} />
@@ -88,10 +86,6 @@ export function AppShell() {
         onToggleCollapse={() => setCollapsed((current) => !current)}
       />
 
-      {/* Padding here (not margin on the card) is what creates the floating
-          gap around the card without the card's own height ever overflowing
-          its parent — the parent already has a fixed height from flex
-          stretch, and padding just eats into that space cleanly. */}
       <div
         className={[
           "flex min-w-0 flex-1 flex-col p-2 transition-all duration-300",
@@ -99,12 +93,7 @@ export function AppShell() {
           collapsed ? "lg:ml-[92px]" : "lg:ml-[274px]",
         ].join(" ")}
       >
-        {/* The floating rounded card, matching the sidebar's rounded-[28px]
-            treatment: topbar + scrollable content live inside this one
-            card, so the whole shell reads as sidebar-card + content-card. */}
         <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[28px] border border-border bg-card shadow-lg">
-          {/* shrink-0 keeps the topbar's own height fixed so it never gets
-              squashed or scrolled by the flex-1 content area below it */}
           <div className="shrink-0">
             <Topbar
               title={META[view].title}
@@ -129,4 +118,3 @@ export function AppShell() {
     </div>
   )
 }
-

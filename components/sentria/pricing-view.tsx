@@ -13,7 +13,11 @@ type Tier = {
   featured?: boolean
   features: string[]
   missing?: string[]
-  highlight?: { icon: typeof TrendingUp; label: string; features: string[] }
+  highlight?: {
+    icon: typeof TrendingUp
+    label: string
+    features: string[]
+  }
 }
 
 const TIERS: Tier[] = [
@@ -93,7 +97,9 @@ export function PricingView() {
   const formatPrice = (t: Tier) => {
     if (t.monthly === null) return t.priceLabel
     if (t.monthly === 0) return "Gratuit"
+
     const price = annual ? Math.round(t.monthly * 0.8) : t.monthly
+
     return `€${price.toFixed(2)}`
   }
 
@@ -103,38 +109,52 @@ export function PricingView() {
         {/* Header */}
         <div className="flex flex-col items-center gap-4 text-center">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-[#d9f36e] px-3 py-1 text-xs font-semibold text-[#1d1d1b]">
-            <Sparkles className="h-3.5 w-3.5" /> Tarification
+            <Sparkles className="h-3.5 w-3.5" />
+            Tarification
           </span>
+
           <h2 className="max-w-2xl text-balance font-heading text-3xl font-bold tracking-tight text-[#1d1d1b] sm:text-4xl">
             Une intelligence opérationnelle pour chaque échelle
           </h2>
+
           <p className="max-w-xl text-pretty text-sm text-[#6b6a5e]">
-            Des petits commerçants aux institutions : choisissez le plan adapté à vos opérations, partout dans le monde.
+            Des petits commerçants aux institutions : choisissez le plan
+            adapté à vos opérations, partout dans le monde.
           </p>
 
           {/* Billing toggle */}
           <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-[#cfccbc] p-1.5">
             <button
+              type="button"
               onClick={() => setAnnual(false)}
               className={cn(
                 "rounded-full px-4 py-1.5 text-sm font-semibold transition-colors",
-                !annual ? "bg-[#1d1d1b] text-[#f5f4ec]" : "text-[#6b6a5e] hover:text-[#1d1d1b]",
+                !annual
+                  ? "bg-[#1d1d1b] text-[#f5f4ec]"
+                  : "text-[#6b6a5e] hover:text-[#1d1d1b]",
               )}
             >
               Mensuel
             </button>
+
             <button
+              type="button"
               onClick={() => setAnnual(true)}
               className={cn(
                 "flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors",
-                annual ? "bg-[#1d1d1b] text-[#f5f4ec]" : "text-[#6b6a5e] hover:text-[#1d1d1b]",
+                annual
+                  ? "bg-[#1d1d1b] text-[#f5f4ec]"
+                  : "text-[#6b6a5e] hover:text-[#1d1d1b]",
               )}
             >
               Annuel
+
               <span
                 className={cn(
                   "rounded-full px-2 py-0.5 text-[10px] font-bold",
-                  annual ? "bg-[#d9f36e] text-[#1d1d1b]" : "bg-[#d9f36e]/50 text-[#1d1d1b]",
+                  annual
+                    ? "bg-[#d9f36e] text-[#1d1d1b]"
+                    : "bg-[#d9f36e]/50 text-[#1d1d1b]",
                 )}
               >
                 −20%
@@ -143,7 +163,7 @@ export function PricingView() {
           </div>
         </div>
 
-        {/* Cards */}
+        {/* Pricing cards */}
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
           {TIERS.map((t) => (
             <div
@@ -155,15 +175,19 @@ export function PricingView() {
                   : "border-transparent bg-[#f7f6f0] shadow-[0_20px_50px_-25px_rgba(29,29,27,0.2)]",
               )}
             >
-              {/* Name + tagline */}
+              {/* Name + badge */}
               <div className="flex items-center justify-between">
-                <h3 className="font-heading text-xl font-bold text-[#1d1d1b]">{t.name}</h3>
+                <h3 className="font-heading text-xl font-bold text-[#1d1d1b]">
+                  {t.name}
+                </h3>
+
                 {t.featured && (
                   <span className="rounded-full bg-[#d9f36e] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#1d1d1b]">
                     Populaire
                   </span>
                 )}
               </div>
+
               <p className="mt-1 text-xs text-[#8a887a]">{t.tagline}</p>
 
               {/* Price */}
@@ -171,17 +195,23 @@ export function PricingView() {
                 <span className="font-heading text-5xl font-bold tracking-tight text-[#1d1d1b]">
                   {formatPrice(t)}
                 </span>
+
                 {t.monthly !== null && t.monthly > 0 && (
-                  <span className="pb-1.5 text-sm text-[#8a887a]">/mois</span>
+                  <span className="pb-1.5 text-sm text-[#8a887a]">
+                    /mois
+                  </span>
                 )}
               </div>
+
               <p className="mt-1 min-h-4 text-[11px] text-[#8a887a]">
                 {t.monthly !== null && t.monthly > 0 && annual
                   ? "facturé annuellement"
-                  : (t.priceLabel && t.monthly !== null ? t.priceLabel : "")}
+                  : t.priceLabel && t.monthly !== null
+                    ? t.priceLabel
+                    : ""}
               </p>
 
-              {/* Feature box */}
+              {/* Features */}
               <div
                 className={cn(
                   "mt-6 rounded-2xl p-4",
@@ -189,41 +219,72 @@ export function PricingView() {
                 )}
               >
                 <ul className="space-y-2.5">
-                  {t.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2.5 text-[13px] text-[#3c3b33]">
+                  {t.features.map((feature) => (
+                    <li
+                      key={feature}
+                      className="flex items-start gap-2.5 text-[13px] text-[#3c3b33]"
+                    >
                       <span
                         className={cn(
                           "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full",
-                          t.featured ? "bg-[#d9f36e]/70" : "bg-[#c9e5b8]",
+                          t.featured
+                            ? "bg-[#d9f36e]/70"
+                            : "bg-[#c9e5b8]",
                         )}
                       >
-                        <Check className="h-2.5 w-2.5 text-[#1d1d1b]" strokeWidth={3} />
+                        <Check
+                          className="h-2.5 w-2.5 text-[#1d1d1b]"
+                          strokeWidth={3}
+                        />
                       </span>
-                      {f}
+
+                      <span>{feature}</span>
                     </li>
                   ))}
-                  {(t.missing ?? []).map((f) => (
-                    <li key={f} className="flex items-start gap-2.5 text-[13px] text-[#b0ae9f]">
+
+                  {/* Missing features */}
+                  {(t.missing ?? []).map((feature) => (
+                    <li
+                      key={feature}
+                      className="flex items-start gap-2.5 text-[13px] text-[#b0ae9f]"
+                    >
                       <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#e2d4d4]">
-                        <X className="h-2.5 w-2.5 text-[#c08a8a]" strokeWidth={3} />
+                        <X
+                          className="h-2.5 w-2.5 text-[#c08a8a]"
+                          strokeWidth={3}
+                        />
                       </span>
-                      <span className="line-through decoration-[#c08a8a]/60">{f}</span>
+
+                      <span className="line-through decoration-[#c08a8a]/60">
+                        {feature}
+                      </span>
                     </li>
                   ))}
                 </ul>
 
-                {/* SentrIA Insights highlight — Pro only */}
+                {/* Intelligence highlight */}
                 {t.highlight && (
                   <div className="mt-3 rounded-xl bg-[#d9f36e]/25 p-3.5">
                     <div className="mb-2.5 flex items-center gap-2">
                       <t.highlight.icon className="h-3.5 w-3.5 text-[#1d1d1b]" />
-                      <span className="text-[11px] font-bold text-[#1d1d1b]">{t.highlight.label}</span>
+
+                      <span className="text-[11px] font-bold text-[#1d1d1b]">
+                        {t.highlight.label}
+                      </span>
                     </div>
+
                     <ul className="space-y-2">
-                      {t.highlight.features.map((f) => (
-                        <li key={f} className="flex items-start gap-2 text-xs text-[#3c3b33]">
-                          <Check className="mt-0.5 h-3 w-3 shrink-0 text-[#1d1d1b]" strokeWidth={3} />
-                          {f}
+                      {t.highlight.features.map((feature) => (
+                        <li
+                          key={feature}
+                          className="flex items-start gap-2 text-xs text-[#3c3b33]"
+                        >
+                          <Check
+                            className="mt-0.5 h-3 w-3 shrink-0 text-[#1d1d1b]"
+                            strokeWidth={3}
+                          />
+
+                          <span>{feature}</span>
                         </li>
                       ))}
                     </ul>
@@ -231,7 +292,7 @@ export function PricingView() {
                 )}
               </div>
 
-              {/* Description */}
+              {/* Plan description */}
               <p className="mt-5 text-xs leading-relaxed text-[#6b6a5e]">
                 {t.featured
                   ? "Full power for operational teams who need scale, intelligence and flexibility."
@@ -242,9 +303,12 @@ export function PricingView() {
 
               {/* CTA */}
               <button
+                type="button"
                 className={cn(
-                  "mt-auto w-full rounded-full py-3 text-sm font-semibold text-[#1d1d1b] transition-all hover:opacity-90",
-                  t.featured ? "mt-5 bg-[#d9f36e]" : "mt-5 bg-[#1d1d1b] text-[#f5f4ec]",
+                  "mt-auto w-full rounded-full py-3 text-sm font-semibold transition-all hover:opacity-90",
+                  t.featured
+                    ? "mt-5 bg-[#d9f36e] text-[#1d1d1b]"
+                    : "mt-5 bg-[#1d1d1b] text-[#f5f4ec]",
                 )}
               >
                 {t.cta}
@@ -253,13 +317,13 @@ export function PricingView() {
           ))}
         </div>
 
-        {/* Footer note */}
+        {/* Footer */}
         <p className="text-center text-xs text-[#6b6a5e]">
-          Tous les plans incluent le chiffrement des données et un essai de 14 jours sans engagement.
-          Paiement par MTN Mobile Money, Orange Money ou carte bancaire.
+          Tous les plans incluent le chiffrement des données et un essai de
+          14 jours sans engagement. Paiement par MTN Mobile Money, Orange Money
+          ou carte bancaire.
         </p>
       </div>
     </div>
   )
 }
-

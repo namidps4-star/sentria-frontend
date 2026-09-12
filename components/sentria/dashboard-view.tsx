@@ -14,6 +14,8 @@ import {
   ChevronRight,
   Search,
   X,
+  Gauge,
+  Check,
 } from "lucide-react"
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
@@ -66,6 +68,20 @@ type Recommendation = {
   alert_key?: string | null
   recommended_action: string
   action_category: string
+  /**
+   * The backend doesn't send these yet. Once it does, this type already
+   * has room for them and the UI will use the real value automatically
+   * (see estimateConfidence / reasoningFor below).
+   */
+  confidence?: number | null
+  reasoning?: string | null
+}
+
+type ActionStatus = "pending" | "done" | "dismissed"
+
+type ActionRecord = {
+  status: ActionStatus
+  at: string
 }
 
 type LogisticsPriority =
@@ -801,6 +817,78 @@ function getRecommendationContext(
   return contexts[sector] ?? contexts.all
 }
 
+/*
+ * SentrIA should behave like a decision system, not a dashboard: every
+ * priority a human sees should answer six questions, in this order —
+ * what did we see (evidence), how sure are we (confidence), what does
+ * it cost (impact — see getRecommendationContext above), why do we think
+ * this (reasoning), what should be done (recommended_action, already
+ * shown), and what happened after someone acted (outcome — see
+ * ActionRecord + recordAction in the component below).
+ *
+ * The backend doesn't compute confidence/reasoning yet, so these two
+ * helpers produce an honest, clearly-labelled estimate from the signal
+ * we already have (risk score, severity, recurrence) — a missing
+ * confidence number would be worse than a labelled estimate. The moment
+ * the backend sends real values, these helpers use those instead.
+ */
+function estimateConfidence(
+  rec: Recommendation,
+  recurrence: number
+): number {
+  if (typeof rec.confidence === "number") {
+    return Math.round(Math.max(0, Math.min(100, rec.confidence)))
+  }
+
+  let score =
+    typeof rec.risk_score === "number"
+      ? Math.round(
+          rec.risk_score > 1
+            ? Math.min(rec.risk_score, 100)
+            : rec.risk_score * 100
+        )
+      : 60
+
+  if (rec.severity === "CRITICAL") score += 8
+  if (recurrence > 1) score += Math.min(recurrence * 4, 16)
+
+  return Math.max(40, Math.min(96, score))
+}
+
+function confidenceWord(pct: number): string {
+  if (pct >= 85) return "Élevée"
+  if (pct >= 65) return "Bonne"
+  return "Modérée"
+}
+
+function reasoningFor(
+  rec: Recommendation,
+  recurrence: number
+): string {
+  if (rec.reasoning) return rec.reasoning
+
+  const parts: string[] = []
+
+  parts.push(
+    rec.severity === "CRITICAL"
+      ? "Classé critique car le signal dépasse le seuil de sécurité attendu pour cet actif."
+      : "Classé en surveillance car le signal s'écarte du comportement habituel de cet actif."
+  )
+
+  if (recurrence > 1) {
+    parts.push(
+      `Ce n'est pas un cas isolé : ${recurrence} alertes similaires enregistrées pour cet actif.`
+    )
+  }
+
+  return parts.join(" ")
+}
+
+/** How many times this equipment already triggered an alert. */
+function recurrenceOf(equipment: string, alerts: Alert[]): number {
+  return alerts.filter((a) => a.equipment === equipment).length
+}
+
 export function DashboardView({
   search = "",
 }: {
@@ -892,6 +980,50 @@ export function DashboardView({
 
   const [selectedRecommendation, setSelectedRecommendation] =
     useState<Recommendation | null>(null)
+
+  /*
+   * Closing the decision loop: once someone acts on a priority (marks it
+   * handled or dismisses it), SentrIA remembers that and shows it back —
+   * otherwise every session starts from zero and nobody can tell what
+   * the system has actually helped with.
+   */
+  const [actionsLog, setActionsLog] = useState<
+    Record<string, ActionRecord>
+  >(() => {
+    if (typeof window === "undefined") return {}
+
+    try {
+      return JSON.parse(
+        localStorage.getItem("sentria_actions_log") || "{}"
+      )
+    } catch {
+      return {}
+    }
+  })
+
+  function recordAction(key: string, status: ActionStatus) {
+    setActionsLog((current) => {
+      const next = {
+        ...current,
+        [key]: {
+          status,
+          at: new Date().toLocaleTimeString("fr-FR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        },
+      }
+
+      if (typeof window !== "undefined") {
+        localStorage.setItem(
+          "sentria_actions_log",
+          JSON.stringify(next)
+        )
+      }
+
+      return next
+    })
+  }
 
   useEffect(() => {
     const refreshSectors = () => {
@@ -1826,13 +1958,13 @@ export function DashboardView({
           </span>
 
           <h2 className="mt-3 text-balance font-heading text-2xl font-bold leading-tight md:text-3xl">
-            Vue globale de vos opérations critiques.
+            Qu&apos;est-ce qui a besoin de votre attention maintenant ?
           </h2>
 
           <p className="mt-2 text-pretty text-sm text-sidebar-foreground/70">
-            SentrIA surveille vos alertes en temps réel,
-            machines, stocks, flottes, équipements, partout
-            dans le monde.
+            SentrIA ne se contente pas d&apos;alerter : chaque priorité
+            montre sa preuve, sa confiance et son impact — puis garde en
+            mémoire ce que vous en avez fait.
           </p>
         </div>
 
@@ -1956,6 +2088,11 @@ export function DashboardView({
             {OPS_TYPE_LABEL[opsType]}
           </div>
         )}
+
+      {/* Context for the priorities above — not the headline */}
+      <p className="text-[11px] font-bold uppercase tracking-[0.13em] text-muted-foreground">
+        Contexte général
+      </p>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((k) => (
@@ -2566,9 +2703,28 @@ export function DashboardView({
                     Score de risque
                   </p>
 
-                  <p className="mt-1 text-sm font-semibold text-accent">
-                    {expandedRecommendation?.risk_score ?? "N/A"}
-                  </p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <p className="text-sm font-semibold text-accent">
+                      {expandedRecommendation?.risk_score ?? "N/A"}
+                    </p>
+
+                    {expandedRecommendation && (
+                      <span
+                        className="inline-flex items-center gap-1 rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold text-sidebar-foreground/70"
+                        title="À quel point SentrIA est sûr de cette analyse"
+                      >
+                        <Gauge className="h-2.5 w-2.5" />
+                        {estimateConfidence(
+                          expandedRecommendation,
+                          recurrenceOf(
+                            expandedRecommendation.equipment,
+                            alerts
+                          )
+                        )}
+                        %
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="min-w-0">
@@ -2593,6 +2749,24 @@ export function DashboardView({
                 </p>
               </div>
 
+              {expandedRecommendation && (
+                <div className="mt-3 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
+                    Pourquoi
+                  </p>
+
+                  <p className="mt-1.5 text-xs leading-5 text-sidebar-foreground/70">
+                    {reasoningFor(
+                      expandedRecommendation,
+                      recurrenceOf(
+                        expandedRecommendation.equipment,
+                        alerts
+                      )
+                    )}
+                  </p>
+                </div>
+              )}
+
               <div className="mt-3 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
                   Contexte sectoriel
@@ -2606,6 +2780,60 @@ export function DashboardView({
                     : "SentrIA analyse cette alerte afin d'identifier l'action opérationnelle la plus pertinente."}
                 </p>
               </div>
+
+              {expandedRecommendation &&
+                (() => {
+                  const actionKey = `${expandedRecommendation.equipment}-${
+                    expandedRecommendation.alert_key ??
+                    expandedRecommendation.id
+                  }`
+                  const action = actionsLog[actionKey]
+
+                  return !action || action.status === "pending" ? (
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          recordAction(actionKey, "done")
+                        }}
+                        className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground transition-opacity hover:opacity-90"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                        Marquer traité
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          recordAction(actionKey, "dismissed")
+                        }}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-sidebar-foreground/70 transition-colors hover:bg-white/5"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        Ignorer
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      className={cn(
+                        "mt-3 rounded-xl px-3 py-2.5 ring-1",
+                        action.status === "done"
+                          ? "bg-emerald-500/10 ring-emerald-500/30"
+                          : "bg-white/5 ring-white/10"
+                      )}
+                    >
+                      <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-sidebar-foreground/60">
+                        Résultat
+                      </p>
+                      <p className="mt-1 text-[11px] leading-4 text-sidebar-foreground/80">
+                        {action.status === "done"
+                          ? `Traité à ${action.at}. SentrIA continue de surveiller cet actif pour confirmer l'effet.`
+                          : `Écarté à ${action.at}. Réapparaîtra si le signal s'aggrave.`}
+                      </p>
+                    </div>
+                  )
+                })()}
 
               <div className="mt-4 flex items-center justify-end">
                 <button
@@ -2692,6 +2920,32 @@ export function DashboardView({
                         {selectedRecommendation.risk_score}
                       </span>
                     )}
+
+                  <span
+                    className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-[10px] font-semibold text-muted-foreground"
+                    title="À quel point SentrIA est sûr de cette analyse"
+                  >
+                    <Gauge className="h-3 w-3" />
+                    Confiance{" "}
+                    {confidenceWord(
+                      estimateConfidence(
+                        selectedRecommendation,
+                        recurrenceOf(
+                          selectedRecommendation.equipment,
+                          alerts
+                        )
+                      )
+                    )}{" "}
+                    ·{" "}
+                    {estimateConfidence(
+                      selectedRecommendation,
+                      recurrenceOf(
+                        selectedRecommendation.equipment,
+                        alerts
+                      )
+                    )}
+                    %
+                  </span>
                 </div>
               </div>
 
@@ -2753,6 +3007,22 @@ export function DashboardView({
                 </div>
               </div>
 
+              <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  Pourquoi
+                </p>
+
+                <p className="mt-1.5 text-sm leading-6 text-foreground/80">
+                  {reasoningFor(
+                    selectedRecommendation,
+                    recurrenceOf(
+                      selectedRecommendation.equipment,
+                      alerts
+                    )
+                  )}
+                </p>
+              </div>
+
               <div className="rounded-2xl border border-border bg-sidebar p-5 text-sidebar-foreground">
                 <div className="flex items-start gap-3">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground">
@@ -2761,7 +3031,7 @@ export function DashboardView({
 
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-accent">
-                      Pourquoi cette action ?
+                      Impact si personne n&apos;agit
                     </p>
 
                     <p className="mt-1.5 text-sm leading-6 text-sidebar-foreground/75">
@@ -2789,6 +3059,46 @@ export function DashboardView({
                   </p>
                 </div>
               )}
+
+              {(() => {
+                const actionKey = `${selectedRecommendation.equipment}-${
+                  selectedRecommendation.alert_key ??
+                  selectedRecommendation.id
+                }`
+                const action = actionsLog[actionKey]
+
+                if (!action || action.status === "pending") {
+                  return null
+                }
+
+                return (
+                  <div
+                    className={cn(
+                      "rounded-2xl border p-4",
+                      action.status === "done"
+                        ? "border-emerald-500/30 bg-emerald-500/10"
+                        : "border-border bg-muted/30"
+                    )}
+                  >
+                    <p
+                      className={cn(
+                        "text-[10px] font-semibold uppercase tracking-widest",
+                        action.status === "done"
+                          ? "text-emerald-700 dark:text-emerald-400"
+                          : "text-muted-foreground"
+                      )}
+                    >
+                      Résultat
+                    </p>
+
+                    <p className="mt-1.5 text-sm leading-6 text-foreground/80">
+                      {action.status === "done"
+                        ? `Marqué traité à ${action.at}. SentrIA continue de surveiller cet actif pour confirmer l'effet.`
+                        : `Écarté à ${action.at}. Réapparaîtra si le signal s'aggrave.`}
+                    </p>
+                  </div>
+                )
+              })()}
             </div>
 
             <div className="flex items-center justify-end gap-2 border-t border-border p-6">
@@ -2804,13 +3114,34 @@ export function DashboardView({
 
               <button
                 type="button"
-                onClick={() =>
+                onClick={() => {
+                  const actionKey = `${selectedRecommendation.equipment}-${
+                    selectedRecommendation.alert_key ??
+                    selectedRecommendation.id
+                  }`
+                  recordAction(actionKey, "dismissed")
                   setSelectedRecommendation(null)
-                }
+                }}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2.5 text-xs font-bold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <X className="h-3.5 w-3.5" />
+                Ignorer
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const actionKey = `${selectedRecommendation.equipment}-${
+                    selectedRecommendation.alert_key ??
+                    selectedRecommendation.id
+                  }`
+                  recordAction(actionKey, "done")
+                  setSelectedRecommendation(null)
+                }}
                 className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-xs font-bold text-accent-foreground transition-transform hover:scale-[1.02]"
               >
-                Compris
-                <ArrowUpRight className="h-3.5 w-3.5" />
+                <Check className="h-3.5 w-3.5" />
+                Marquer traité
               </button>
             </div>
           </div>

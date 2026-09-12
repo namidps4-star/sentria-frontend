@@ -64,6 +64,8 @@ type SectorConfig = {
   label: string
   description: string
   icon: React.ElementType
+  recommended?: boolean
+  maturity?: "Pilote recommandé" | "Accès anticipé"
 }
 
 type SubType = {
@@ -81,50 +83,66 @@ type DataSource = {
   icon: React.ElementType
 }
 
+/* -------------------------------------------------------------------------- */
+/* SECTORS                                                                    */
+/* -------------------------------------------------------------------------- */
+
 const SECTORS: SectorConfig[] = [
+  {
+    id: "logistics",
+    label: "Logistique",
+    description: "Port, entrepôt, transport et flux",
+    icon: Ship,
+    recommended: true,
+    maturity: "Pilote recommandé",
+  },
   {
     id: "industry",
     label: "Industrie",
     description: "Machines, production et maintenance",
     icon: Factory,
+    maturity: "Accès anticipé",
   },
   {
     id: "health",
     label: "Santé",
     description: "Stocks, chaîne du froid et produits",
     icon: HeartPulse,
+    maturity: "Accès anticipé",
   },
   {
     id: "agriculture",
     label: "Agriculture",
     description: "Récoltes, stockage et transport",
     icon: Wheat,
+    maturity: "Accès anticipé",
   },
   {
     id: "transportation",
     label: "Transport",
     description: "Flotte, moteurs et maintenance",
     icon: Truck,
-  },
-  {
-    id: "logistics",
-    label: "Logistique",
-    description: "Port, équipements et flux",
-    icon: Ship,
+    maturity: "Accès anticipé",
   },
   {
     id: "energy",
     label: "Énergie",
     description: "Générateurs, carburant et température",
     icon: Zap,
+    maturity: "Accès anticipé",
   },
   {
     id: "commerce",
     label: "Commerce",
     description: "Stocks, rayons et approvisionnement",
     icon: Store,
+    maturity: "Accès anticipé",
   },
 ]
+
+/* -------------------------------------------------------------------------- */
+/* BUSINESS TYPES                                                             */
+/* -------------------------------------------------------------------------- */
 
 const SUBTYPES_BY_SECTOR: Record<Sector, SubType[]> = {
   industry: [
@@ -147,6 +165,7 @@ const SUBTYPES_BY_SECTOR: Record<Sector, SubType[]> = {
       icon: Boxes,
     },
   ],
+
   health: [
     {
       id: "pharmacie",
@@ -173,6 +192,7 @@ const SUBTYPES_BY_SECTOR: Record<Sector, SubType[]> = {
       icon: Activity,
     },
   ],
+
   agriculture: [
     {
       id: "exploitation-agricole",
@@ -193,6 +213,7 @@ const SUBTYPES_BY_SECTOR: Record<Sector, SubType[]> = {
       icon: Warehouse,
     },
   ],
+
   transportation: [
     {
       id: "transporteur-routier",
@@ -213,6 +234,7 @@ const SUBTYPES_BY_SECTOR: Record<Sector, SubType[]> = {
       icon: Gauge,
     },
   ],
+
   logistics: [
     {
       id: "port-conteneurs",
@@ -251,6 +273,7 @@ const SUBTYPES_BY_SECTOR: Record<Sector, SubType[]> = {
       icon: Recycle,
     },
   ],
+
   energy: [
     {
       id: "centrale-production",
@@ -271,6 +294,7 @@ const SUBTYPES_BY_SECTOR: Record<Sector, SubType[]> = {
       icon: Radio,
     },
   ],
+
   commerce: [
     {
       id: "grossiste-distributeur",
@@ -298,6 +322,10 @@ const SUBTYPES_BY_SECTOR: Record<Sector, SubType[]> = {
     },
   ],
 }
+
+/* -------------------------------------------------------------------------- */
+/* EQUIPMENT / OUTCOMES                                                       */
+/* -------------------------------------------------------------------------- */
 
 const EQUIPMENT_BY_SECTOR: Record<Sector, Equipment[]> = {
   industry: [
@@ -581,6 +609,10 @@ const EQUIPMENT_BY_SECTOR: Record<Sector, Equipment[]> = {
   ],
 }
 
+/* -------------------------------------------------------------------------- */
+/* DATA SOURCES                                                               */
+/* -------------------------------------------------------------------------- */
+
 const DATA_SOURCES: DataSource[] = [
   {
     id: "erp",
@@ -605,6 +637,145 @@ const DATA_SOURCES: DataSource[] = [
   },
 ]
 
+/* -------------------------------------------------------------------------- */
+/* LOGISTICS PREVIEW                                                          */
+/* -------------------------------------------------------------------------- */
+
+function ContainerYardPreview() {
+  const total = 32
+  const amberIndexes = useMemo(() => [5, 18, 26], [])
+  const redIndex = 11
+
+  const [statuses, setStatuses] = useState<
+    ("ok" | "watch" | "blocked")[]
+  >(() => Array(total).fill("ok"))
+
+  const [showRecommendation, setShowRecommendation] =
+    useState(false)
+
+  useEffect(() => {
+    const timers: ReturnType<typeof setTimeout>[] = []
+
+    timers.push(
+      setTimeout(() => {
+        setStatuses((current) => {
+          const next = [...current]
+
+          amberIndexes.forEach((i) => {
+            next[i] = "watch"
+          })
+
+          return next
+        })
+      }, 450)
+    )
+
+    timers.push(
+      setTimeout(() => {
+        setStatuses((current) => {
+          const next = [...current]
+          next[redIndex] = "watch"
+          return next
+        })
+      }, 950)
+    )
+
+    timers.push(
+      setTimeout(() => {
+        setStatuses((current) => {
+          const next = [...current]
+          next[redIndex] = "blocked"
+          return next
+        })
+      }, 1750)
+    )
+
+    timers.push(
+      setTimeout(() => {
+        setShowRecommendation(true)
+      }, 2100)
+    )
+
+    return () => timers.forEach(clearTimeout)
+  }, [amberIndexes])
+
+  return (
+    <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-background">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div>
+          <p className="text-xs font-semibold text-foreground">
+            Aperçu du terminal conteneurs
+          </p>
+
+          <p className="text-[11px] text-muted-foreground">
+            Exemple avec vos futures données
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            Normal
+          </span>
+
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+            À surveiller
+          </span>
+
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+            Bloqué
+          </span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-8 gap-1.5 p-4">
+        {statuses.map((status, i) => (
+          <div
+            key={i}
+            className={cn(
+              "aspect-[7/5] rounded-md border transition-colors duration-300",
+              status === "ok" &&
+                "border-emerald-500/25 bg-emerald-500/[0.06]",
+              status === "watch" &&
+                "border-amber-500/60 bg-amber-500/[0.12]",
+              status === "blocked" &&
+                "border-red-500 bg-red-500/[0.15]"
+            )}
+          />
+        ))}
+      </div>
+
+      <div
+        className={cn(
+          "mx-4 mb-4 flex items-start gap-3 rounded-xl border border-l-2 border-border border-l-red-500 bg-card px-3.5 py-3 transition-all duration-500",
+          showRecommendation
+            ? "translate-y-0 opacity-100"
+            : "translate-y-1 opacity-0"
+        )}
+      >
+        <span className="whitespace-nowrap font-mono text-[11px] text-muted-foreground">
+          CNT-0417
+        </span>
+
+        <p className="text-xs leading-5 text-foreground">
+          Immobile depuis{" "}
+          <span className="font-semibold text-amber-600">
+            18h
+          </span>
+          , contre 4h en moyenne. Vérifier le document douanier
+          avant qu&apos;il ne déclenche des frais de stockage.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------------------- */
+/* ONBOARDING                                                                 */
+/* -------------------------------------------------------------------------- */
+
 export function OnboardingView({
   onComplete,
 }: {
@@ -623,7 +794,8 @@ export function OnboardingView({
   const [step, setStep] = useState(1)
   const [sector, setSector] = useState<Sector | null>(null)
   const [subType, setSubType] = useState<string | null>(null)
-  const [selectedEquipment, setSelectedEquipment] = useState<string[]>([])
+  const [selectedEquipment, setSelectedEquipment] =
+    useState<string[]>([])
   const [selectedSources, setSelectedSources] = useState<
     DataSource["id"][]
   >([])
@@ -645,15 +817,17 @@ export function OnboardingView({
   )
 
   const isLogistics = sector === "logistics"
+
+  const totalSteps = 4
   const subTypeStepNumber = 2
   const equipmentStepNumber = 3
   const sourcesStepNumber = 4
-  const totalSteps = 4
 
   const STEP_META = [
     {
       title: "Votre secteur",
-      description: "Choisissez le secteur que SentrIA doit surveiller.",
+      description:
+        "Choisissez le secteur que SentrIA doit surveiller.",
       icon: Building2,
     },
     {
@@ -666,7 +840,8 @@ export function OnboardingView({
       title: isLogistics
         ? "Vos priorités"
         : "Que voulez-vous surveiller ?",
-      description: "Sélectionnez ce qui compte pour votre activité.",
+      description:
+        "Sélectionnez ce qui compte pour votre activité.",
       icon: Sparkles,
     },
     {
@@ -682,6 +857,9 @@ export function OnboardingView({
 
   function chooseSector(id: Sector) {
     setSector(id)
+
+    // Important: changing sector invalidates both the
+    // previously selected subtype and monitoring priorities.
     setSubType(null)
     setSelectedEquipment([])
   }
@@ -745,7 +923,10 @@ export function OnboardingView({
       }
 
       if (subType) {
-        localStorage.setItem("sentria_business_type", subType)
+        localStorage.setItem(
+          "sentria_business_type",
+          subType
+        )
       }
 
       localStorage.setItem(
@@ -758,6 +939,8 @@ export function OnboardingView({
         JSON.stringify(selectedEquipment)
       )
 
+      // Keep the old logistics storage key so the existing
+      // dashboard logic continues to work.
       if (isLogistics && subType) {
         localStorage.setItem("sentria_ops_type", subType)
       }
@@ -796,6 +979,8 @@ export function OnboardingView({
   return (
     <div className="fixed inset-0 z-[100] animate-in fade-in zoom-in-[0.98] overflow-y-auto bg-background duration-200 ease-out motion-reduce:animate-none">
       <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 md:px-8 md:py-12">
+
+        {/* HERO */}
         <div className="rounded-3xl bg-foreground p-6 text-background md:p-10">
           <div className="max-w-3xl">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
@@ -809,16 +994,19 @@ export function OnboardingView({
 
             <p className="mt-4 max-w-2xl text-sm leading-6 text-background/70 md:text-base">
               Quelques étapes suffisent pour connecter vos données,
-              configurer vos secteurs et commencer à détecter les
+              configurer votre activité et commencer à détecter les
               situations critiques.
             </p>
           </div>
         </div>
 
+        {/* PROGRESS */}
         <div className="rounded-3xl border border-border bg-card p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-semibold">Configuration</p>
+              <p className="font-semibold">
+                Configuration
+              </p>
 
               <p className="mt-1 text-xs text-muted-foreground">
                 Étape {step} sur {totalSteps}
@@ -840,12 +1028,8 @@ export function OnboardingView({
           </div>
         </div>
 
-        <div
-          className={cn(
-            "grid grid-cols-1 gap-3",
-            "md:grid-cols-4"
-          )}
-        >
+        {/* STEP PILLS */}
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           {STEP_META.map((meta, index) => {
             const Icon = meta.icon
             const stepNumber = index + 1
@@ -898,8 +1082,11 @@ export function OnboardingView({
           })}
         </div>
 
+        {/* CURRENT STEP */}
         <div className="rounded-3xl border border-border bg-card p-6 md:p-8">
           <div className="flex flex-col gap-8">
+
+            {/* STEP HEADER */}
             <div className="flex gap-4">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent/20 text-accent-foreground">
                 <CurrentStepIcon className="h-7 w-7" />
@@ -920,6 +1107,10 @@ export function OnboardingView({
               </div>
             </div>
 
+            {/* ---------------------------------------------------------------- */}
+            {/* STEP 1: SECTOR                                                   */}
+            {/* ---------------------------------------------------------------- */}
+
             {step === 1 && (
               <div className="flex flex-wrap justify-center gap-3">
                 {SECTORS.map((item) => {
@@ -932,12 +1123,32 @@ export function OnboardingView({
                       type="button"
                       onClick={() => chooseSector(item.id)}
                       className={cn(
-                        "flex w-[calc(50%-6px)] flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all sm:w-[calc(33.333%-8px)] lg:w-[calc(25%-9px)]",
+                        "relative flex w-[calc(50%-6px)] flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all sm:w-[calc(33.333%-8px)] lg:w-[calc(25%-9px)]",
+                        item.recommended &&
+                          !active &&
+                          "border-accent/50 ring-1 ring-accent/30",
                         active
                           ? "border-foreground bg-foreground text-background"
                           : "border-border hover:border-accent/60 hover:bg-accent/10"
                       )}
                     >
+                      {item.maturity && (
+                        <span
+                          className={cn(
+                            "absolute right-3 top-3 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                            item.recommended
+                              ? active
+                                ? "bg-accent text-accent-foreground"
+                                : "bg-accent/20 text-accent-foreground"
+                              : active
+                                ? "bg-background/20 text-background/70"
+                                : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          {item.maturity}
+                        </span>
+                      )}
+
                       <div className="flex w-full items-center justify-between">
                         <Icon className="h-5 w-5" />
 
@@ -966,16 +1177,20 @@ export function OnboardingView({
               </div>
             )}
 
+            {/* ---------------------------------------------------------------- */}
+            {/* STEP 2: BUSINESS TYPE                                            */}
+            {/* ---------------------------------------------------------------- */}
+
             {step === subTypeStepNumber && sector && (
               <div>
-                <div className="mb-4 flex items-center justify-between">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
                     {selectedSector?.label}
                   </div>
 
                   <p className="text-xs leading-5 text-muted-foreground">
-                    Cette précision adapte les seuils d&apos;alerte à
-                    votre métier
+                    Cette précision adapte les seuils d&apos;alerte
+                    à votre métier
                   </p>
                 </div>
 
@@ -999,7 +1214,9 @@ export function OnboardingView({
                         <div
                           className={cn(
                             "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
-                            active ? "bg-background/15" : "bg-muted"
+                            active
+                              ? "bg-background/15"
+                              : "bg-muted"
                           )}
                         >
                           <Icon className="h-4.5 w-4.5" />
@@ -1054,21 +1271,43 @@ export function OnboardingView({
                     Modifiable plus tard
                   </span>
                 </div>
+
+                {/* Keep the original logistics-specific demonstration. */}
+                {isLogistics &&
+                  subType === "port-conteneurs" && (
+                    <ContainerYardPreview />
+                  )}
               </div>
             )}
+
+            {/* ---------------------------------------------------------------- */}
+            {/* STEP 3: MONITORING PRIORITIES                                    */}
+            {/* ---------------------------------------------------------------- */}
 
             {step === equipmentStepNumber && sector && (
               <div>
                 <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
                   {selectedSector?.label}
+                  {subType && (
+                    <>
+                      <span className="text-muted-foreground/50">
+                        /
+                      </span>
+
+                      {
+                        subTypes.find(
+                          (item) => item.id === subType
+                        )?.label
+                      }
+                    </>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   {equipment.map((item) => {
                     const Icon = item.icon
-                    const active = selectedEquipment.includes(
-                      item.id
-                    )
+                    const active =
+                      selectedEquipment.includes(item.id)
                     const disabled = Boolean(item.comingSoon)
 
                     return (
@@ -1139,14 +1378,17 @@ export function OnboardingView({
               </div>
             )}
 
+            {/* ---------------------------------------------------------------- */}
+            {/* STEP 4: DATA SOURCES                                             */}
+            {/* ---------------------------------------------------------------- */}
+
             {step === sourcesStepNumber && (
               <div>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                   {DATA_SOURCES.map((source) => {
                     const Icon = source.icon
-                    const active = selectedSources.includes(
-                      source.id
-                    )
+                    const active =
+                      selectedSources.includes(source.id)
 
                     return (
                       <button
@@ -1236,6 +1478,7 @@ export function OnboardingView({
               </div>
             )}
 
+            {/* ACTIONS */}
             <div className="flex flex-wrap justify-between gap-3">
               <div>
                 {step > 1 && (
