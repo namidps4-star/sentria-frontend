@@ -1,4 +1,3 @@
-
 "use client"
 
 import type { ViewKey } from "./types"
@@ -13,7 +12,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Bot,
-  Brain,
 } from "lucide-react"
 
 interface SidebarProps {
@@ -134,8 +132,12 @@ export function Sidebar({
           >
             {!collapsed && (
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/15">
-                  <Brain className="h-5 w-5 text-accent" />
+                <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl">
+                  <img
+                    src="/logo.png"
+                    alt="SentrIA"
+                    className="h-9 w-9 object-contain"
+                  />
                 </div>
 
                 <div className="flex flex-col">
@@ -151,8 +153,12 @@ export function Sidebar({
             )}
 
             {collapsed && (
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/15">
-                <Brain className="h-5 w-5 text-accent" />
+              <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl">
+                <img
+                  src="/logo.png"
+                  alt="SentrIA"
+                  className="h-9 w-9 object-contain"
+                />
               </div>
             )}
 
