@@ -132,13 +132,11 @@ export function Sidebar({
           >
             {!collapsed && (
               <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl">
-                  <img
-                    src="/logo.png"
-                    alt="SentrIA"
-                    className="h-9 w-9 object-contain"
-                  />
-                </div>
+                <img
+                  src="/logo-mark.png"
+                  alt="SentrIA"
+                  className="h-8 w-8 object-contain"
+                />
 
                 <div className="flex flex-col">
                   <span className="text-sm font-semibold text-sidebar-foreground">
@@ -153,13 +151,11 @@ export function Sidebar({
             )}
 
             {collapsed && (
-              <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl">
-                <img
-                  src="/logo.png"
-                  alt="SentrIA"
-                  className="h-9 w-9 object-contain"
-                />
-              </div>
+              <img
+                src="/logo-mark.png"
+                alt="SentrIA"
+                className="h-8 w-8 object-contain"
+              />
             )}
 
             {!collapsed && (
