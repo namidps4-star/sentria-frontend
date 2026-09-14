@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
+import { computeConfidence, confidenceWord } from "@/lib/confidence"
 import { LogisticsBlockagesView } from "./logistics-blockages-view"
 import { LogisticsWaitingView } from "./logistics-waiting-view"
 import { LogisticsCostView } from "./logistics-cost-view"
@@ -826,39 +827,54 @@ function getRecommendationContext(
  * shown), and what happened after someone acted (outcome — see
  * ActionRecord + recordAction in the component below).
  *
- * The backend doesn't compute confidence/reasoning yet, so these two
- * helpers produce an honest, clearly-labelled estimate from the signal
- * we already have (risk score, severity, recurrence) — a missing
- * confidence number would be worse than a labelled estimate. The moment
- * the backend sends real values, these helpers use those instead.
+ * Confidence is computed by the shared, documented formula in
+ * lib/confidence.ts — not invented ad hoc per screen. The backend
+ * doesn't send a real confidence value yet, so this stays a labelled
+ * estimate; the moment it does, this wrapper uses that instead.
  */
 function estimateConfidence(
   rec: Recommendation,
-  recurrence: number
+  recurrence: number,
+  trackRecord?: { done: number; dismissed: number }
 ): number {
   if (typeof rec.confidence === "number") {
     return Math.round(Math.max(0, Math.min(100, rec.confidence)))
   }
 
-  let score =
-    typeof rec.risk_score === "number"
-      ? Math.round(
-          rec.risk_score > 1
-            ? Math.min(rec.risk_score, 100)
-            : rec.risk_score * 100
-        )
-      : 60
-
-  if (rec.severity === "CRITICAL") score += 8
-  if (recurrence > 1) score += Math.min(recurrence * 4, 16)
-
-  return Math.max(40, Math.min(96, score))
+  return computeConfidence({
+    riskScore: rec.risk_score,
+    severity: rec.severity,
+    recurrence,
+    trackRecord,
+  })
 }
 
-function confidenceWord(pct: number): string {
-  if (pct >= 85) return "Élevée"
-  if (pct >= 65) return "Bonne"
-  return "Modérée"
+/**
+ * The confidence formula's most SentrIA-specific ingredient: has this
+ * deployment's own team historically acted on this category of alert,
+ * or dismissed it? That's the part a generic dashboard-plus-AI can't
+ * copy — it only exists because SentrIA closes the loop with real
+ * human decisions (see actionsLog / recordAction below).
+ */
+function trackRecordForCategory(
+  category: string,
+  recs: Recommendation[],
+  log: Record<string, ActionRecord>
+): { done: number; dismissed: number } {
+  let done = 0
+  let dismissed = 0
+
+  for (const rec of recs) {
+    if (rec.action_category !== category) continue
+
+    const key = `${rec.equipment}-${rec.alert_key ?? rec.id}`
+    const action = log[key]
+
+    if (action?.status === "done") done += 1
+    else if (action?.status === "dismissed") dismissed += 1
+  }
+
+  return { done, dismissed }
 }
 
 function reasoningFor(
@@ -2703,28 +2719,61 @@ export function DashboardView({
                     Score de risque
                   </p>
 
-                  <div className="mt-1 flex items-center gap-2">
-                    <p className="text-sm font-semibold text-accent">
-                      {expandedRecommendation?.risk_score ?? "N/A"}
-                    </p>
-
-                    {expandedRecommendation && (
-                      <span
-                        className="inline-flex items-center gap-1 rounded-full bg-white/10 px-1.5 py-0.5 text-[9px] font-semibold text-sidebar-foreground/70"
-                        title="À quel point SentrIA est sûr de cette analyse"
-                      >
-                        <Gauge className="h-2.5 w-2.5" />
-                        {estimateConfidence(
-                          expandedRecommendation,
-                          recurrenceOf(
-                            expandedRecommendation.equipment,
-                            alerts
-                          )
-                        )}
-                        %
-                      </span>
+                  <p
+                    className={cn(
+                      "mt-1 text-sm font-semibold",
+                      typeof expandedRecommendation?.risk_score === "number"
+                        ? "text-accent"
+                        : "text-sidebar-foreground/40"
                     )}
-                  </div>
+                    title={
+                      typeof expandedRecommendation?.risk_score === "number"
+                        ? "Gravité du problème lui-même, calculée à partir des mesures brutes"
+                        : "Ce secteur ne calcule pas encore de score de risque pour cette alerte"
+                    }
+                  >
+                    {typeof expandedRecommendation?.risk_score === "number"
+                      ? `${expandedRecommendation.risk_score} / 100`
+                      : "Non calculé"}
+                  </p>
+                </div>
+
+                {/*
+                  Confidence is a SEPARATE measure from risk and gets its own
+                  labelled cell: risk = "how bad is this problem", confidence =
+                  "how sure are we this deserves attention". Sharing one label
+                  made them read as a single number.
+                */}
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
+                    Confiance
+                  </p>
+
+                  {expandedRecommendation ? (
+                    <p
+                      className="mt-1 inline-flex items-center gap-1 text-sm font-semibold"
+                      title="À quel point SentrIA est sûr que cette alerte mérite votre attention"
+                    >
+                      <Gauge className="h-3 w-3 shrink-0 text-sidebar-foreground/50" />
+                      {estimateConfidence(
+                        expandedRecommendation,
+                        recurrenceOf(
+                          expandedRecommendation.equipment,
+                          alerts
+                        ),
+                        trackRecordForCategory(
+                          expandedRecommendation.action_category,
+                          recommendations,
+                          actionsLog
+                        )
+                      )}
+                      %
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-sm font-semibold text-sidebar-foreground/40">
+                      —
+                    </p>
+                  )}
                 </div>
 
                 <div className="min-w-0">
@@ -2915,9 +2964,12 @@ export function DashboardView({
                     null &&
                     selectedRecommendation.risk_score !==
                       undefined && (
-                      <span className="rounded-full bg-accent/15 px-2.5 py-1 text-[10px] font-semibold text-accent-foreground">
+                      <span
+                        className="rounded-full bg-accent/15 px-2.5 py-1 text-[10px] font-semibold text-accent-foreground"
+                        title="Gravité du problème lui-même, calculée à partir des mesures brutes"
+                      >
                         Risque :{" "}
-                        {selectedRecommendation.risk_score}
+                        {selectedRecommendation.risk_score} / 100
                       </span>
                     )}
 
@@ -2926,25 +2978,25 @@ export function DashboardView({
                     title="À quel point SentrIA est sûr de cette analyse"
                   >
                     <Gauge className="h-3 w-3" />
-                    Confiance{" "}
-                    {confidenceWord(
-                      estimateConfidence(
+                    {(() => {
+                      const pct = estimateConfidence(
                         selectedRecommendation,
                         recurrenceOf(
                           selectedRecommendation.equipment,
                           alerts
+                        ),
+                        trackRecordForCategory(
+                          selectedRecommendation.action_category,
+                          recommendations,
+                          actionsLog
                         )
                       )
-                    )}{" "}
-                    ·{" "}
-                    {estimateConfidence(
-                      selectedRecommendation,
-                      recurrenceOf(
-                        selectedRecommendation.equipment,
-                        alerts
+                      return (
+                        <>
+                          Confiance {confidenceWord(pct)} · {pct}%
+                        </>
                       )
-                    )}
-                    %
+                    })()}
                   </span>
                 </div>
               </div>
