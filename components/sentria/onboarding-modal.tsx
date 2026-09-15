@@ -73,6 +73,7 @@ type SubType = {
   label: string
   description: string
   icon: React.ElementType
+  maturity?: "Pilote recommandé" | "Accès anticipé"
 }
 
 type DataSource = {
@@ -172,24 +173,28 @@ const SUBTYPES_BY_SECTOR: Record<Sector, SubType[]> = {
       label: "Pharmacie",
       description: "Officine et vente au détail de médicaments",
       icon: HeartPulse,
+      maturity: "Pilote recommandé",
     },
     {
       id: "grossiste-pharma",
       label: "Grossiste-répartiteur pharmaceutique",
       description: "Distribution en gros de produits de santé",
       icon: Warehouse,
+      maturity: "Accès anticipé",
     },
     {
       id: "clinique-hopital",
       label: "Clinique / Hôpital",
       description: "Établissement de soins et stocks cliniques",
       icon: Building2,
+      maturity: "Accès anticipé",
     },
     {
       id: "laboratoire",
       label: "Laboratoire",
       description: "Analyses, réactifs et échantillons",
       icon: Activity,
+      maturity: "Accès anticipé",
     },
   ],
 
@@ -1224,9 +1229,28 @@ export function OnboardingView({
 
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-sm font-semibold">
-                              {item.label}
-                            </span>
+                            <div className="flex min-w-0 items-center gap-2">
+                              <span className="truncate text-sm font-semibold">
+                                {item.label}
+                              </span>
+
+                              {item.maturity && (
+                                <span
+                                  className={cn(
+                                    "shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                                    item.maturity === "Pilote recommandé"
+                                      ? active
+                                        ? "bg-accent text-accent-foreground"
+                                        : "bg-accent/20 text-accent-foreground"
+                                      : active
+                                        ? "bg-background/20 text-background/70"
+                                        : "bg-muted text-muted-foreground"
+                                  )}
+                                >
+                                  {item.maturity}
+                                </span>
+                              )}
+                            </div>
 
                             {active && (
                               <Check className="h-4 w-4 shrink-0" />
