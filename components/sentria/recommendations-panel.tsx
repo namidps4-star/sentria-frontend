@@ -85,6 +85,9 @@ const OPS_TYPE_LABEL: Record<string, string> = {
   multi: "Opérations logistiques",
 }
 
+const PANEL_FOCUS =
+  " focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+
 const CATEGORY_ICON: Record<string, typeof Wrench> = {
   maintenance: Wrench,
   fuel: Fuel,
@@ -429,7 +432,7 @@ export function RecommendationsPanel({
                 <button
                   type="button"
                   onClick={() => recordAction(topKey, "done")}
-                  className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-foreground px-3 py-2 text-xs font-semibold text-background transition-opacity hover:opacity-90"
+                  className={"inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-foreground px-3 py-2 text-xs font-semibold text-background transition-opacity hover:opacity-90" + PANEL_FOCUS}
                 >
                   <Check className="h-3.5 w-3.5" />
                   Marquer traité
@@ -438,7 +441,7 @@ export function RecommendationsPanel({
                 <button
                   type="button"
                   onClick={() => recordAction(topKey, "dismissed")}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted"
+                  className={"inline-flex items-center justify-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted" + PANEL_FOCUS}
                 >
                   <X className="h-3.5 w-3.5" />
                   Ignorer
@@ -446,6 +449,7 @@ export function RecommendationsPanel({
               </div>
             ) : (
               <div
+                role="status"
                 className={cn(
                   "rounded-xl border px-3 py-2.5",
                   topAction.status === "done"
@@ -558,7 +562,7 @@ export function RecommendationsPanel({
                         <button
                           type="button"
                           onClick={() => recordAction(key, "done")}
-                          className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-foreground px-2 py-1.5 text-[10px] font-semibold text-background transition-opacity hover:opacity-90"
+                          className={"inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-foreground px-2 py-1.5 text-[10px] font-semibold text-background transition-opacity hover:opacity-90" + PANEL_FOCUS}
                         >
                           <Check className="h-3 w-3" />
                           Traité
@@ -567,7 +571,7 @@ export function RecommendationsPanel({
                         <button
                           type="button"
                           onClick={() => recordAction(key, "dismissed")}
-                          className="inline-flex items-center justify-center rounded-lg border border-border px-2 py-1.5 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-muted"
+                          className={"inline-flex items-center justify-center rounded-lg border border-border px-2 py-1.5 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-muted" + PANEL_FOCUS}
                           aria-label="Ignorer"
                         >
                           <X className="h-3 w-3" />
@@ -575,6 +579,7 @@ export function RecommendationsPanel({
                       </>
                     ) : (
                       <span
+                        role="status"
                         className={cn(
                           "inline-flex w-full items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-[10px] font-semibold",
                           action.status === "done"

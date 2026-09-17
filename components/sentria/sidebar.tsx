@@ -87,6 +87,9 @@ const sections: {
   },
 ]
 
+const SIDEBAR_FOCUS =
+  " focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
+
 export function Sidebar({
   active,
   onNavigate,
@@ -100,7 +103,7 @@ export function Sidebar({
       {open && (
         <button
           type="button"
-          aria-label="Close sidebar"
+          aria-label="Fermer la barre latérale"
           onClick={onClose}
           className="fixed inset-0 z-40 bg-black/20 lg:hidden"
         />
@@ -162,10 +165,10 @@ export function Sidebar({
               <button
                 type="button"
                 onClick={onToggleCollapse}
-                aria-label="Collapse sidebar"
-                className="ml-auto flex h-9 w-9 items-center justify-center rounded-xl text-sidebar-foreground/50 transition hover:bg-accent/10 hover:text-accent"
+                aria-label="Réduire la barre latérale"
+                className={"ml-auto flex h-9 w-9 items-center justify-center rounded-xl text-sidebar-foreground/50 transition hover:bg-accent/10 hover:text-accent" + SIDEBAR_FOCUS}
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-4 w-4" aria-hidden="true" />
               </button>
             )}
           </div>
@@ -197,8 +200,10 @@ export function Sidebar({
                           onNavigate(item.id)
                           onClose()
                         }}
+                        aria-current={isActive ? "page" : undefined}
                         className={[
                           "group relative flex h-11 w-full items-center rounded-xl transition-all duration-200",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar",
                           collapsed
                             ? "justify-center px-0"
                             : "gap-3 px-3 text-left",
@@ -292,10 +297,10 @@ export function Sidebar({
               <button
                 type="button"
                 onClick={onToggleCollapse}
-                aria-label="Expand sidebar"
-                className="flex h-10 w-full items-center justify-center rounded-xl text-sidebar-foreground/50 transition hover:bg-accent/10 hover:text-accent"
+                aria-label="Déployer la barre latérale"
+                className={"flex h-10 w-full items-center justify-center rounded-xl text-sidebar-foreground/50 transition hover:bg-accent/10 hover:text-accent" + SIDEBAR_FOCUS}
               >
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
           )}
