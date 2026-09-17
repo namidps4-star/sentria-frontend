@@ -929,6 +929,8 @@ export function DashboardView({
 
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState("")
+  const [uploadFailed, setUploadFailed] = useState(false)
+  const [alertsError, setAlertsError] = useState<string | null>(null)
 
   const [activeSectors, setActiveSectors] = useState<string[]>(() => {
     if (typeof window === "undefined") {
@@ -1148,12 +1150,21 @@ export function DashboardView({
 
   useEffect(() => {
     fetch(`${API}/alerts`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) {
+          throw new Error(`HTTP ${r.status}`)
+        }
+        return r.json()
+      })
       .then((d) => {
         setAlerts(Array.isArray(d) ? d : [])
+        setAlertsError(null)
       })
       .catch((err) => {
         console.error("Failed to load alerts:", err)
+        setAlertsError(
+          err instanceof Error ? err.message : "réseau"
+        )
       })
   }, [])
 
@@ -1261,6 +1272,7 @@ export function DashboardView({
 
     setUploading(true)
     setUploadMsg("")
+    setUploadFailed(false)
 
     const form = new FormData()
     form.append("file", file)
@@ -1307,7 +1319,10 @@ export function DashboardView({
       localStorage.setItem("sentria_sector", uploadSector)
     } catch (error) {
       console.error(error)
-      setUploadMsg("Erreur lors de l'upload.")
+      setUploadFailed(true)
+      setUploadMsg(
+        "Erreur lors de l'upload. Vérifiez la console du navigateur."
+      )
     } finally {
       setUploading(false)
       e.target.value = ""
@@ -1643,7 +1658,7 @@ export function DashboardView({
                   className={cn(
                     "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold transition-colors",
                     priority === industryPriority
-                      ? "bg-black text-white"
+                      ? "bg-foreground text-background"
                       : "bg-muted text-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
@@ -1865,7 +1880,7 @@ export function DashboardView({
                   className={cn(
                     "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold transition-colors",
                     priority === logisticsPriority
-                      ? "bg-black text-white"
+                      ? "bg-foreground text-background"
                       : "bg-muted text-foreground hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
@@ -2020,7 +2035,7 @@ export function DashboardView({
           className={cn(
             "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
             filterSector === "all"
-              ? "border-black bg-black text-white"
+              ? "border-foreground bg-foreground text-background"
               : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
           )}
         >
@@ -2061,7 +2076,7 @@ export function DashboardView({
             className={cn(
               "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
               filterSector === s.key
-                ? "border-black bg-black text-white"
+                ? "border-foreground bg-foreground text-background"
                 : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
             )}
           >
@@ -2230,10 +2245,11 @@ export function DashboardView({
                 key={s.key}
                 type="button"
                 onClick={() => setUploadSector(s.key)}
+                aria-pressed={uploadSector === s.key}
                 className={cn(
-                  "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors",
+                  "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                   uploadSector === s.key
-                    ? "border-black bg-black text-white"
+                    ? "border-foreground bg-foreground text-background"
                     : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
                 )}
               >
@@ -2242,23 +2258,30 @@ export function DashboardView({
             ))}
           </div>
 
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90">
-            <Upload className="h-4 w-4" />
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90 focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+            <Upload className="h-4 w-4" aria-hidden="true" />
 
             {uploading ? "Traitement..." : "Importer CSV"}
 
             <input
               type="file"
               accept=".csv"
-              className="hidden"
+              className="sr-only"
               onChange={handleUpload}
               disabled={uploading}
+              aria-label="Importer un fichier CSV"
             />
           </label>
         </div>
 
         {uploadMsg && (
-          <p className="mt-3 text-sm font-medium text-green-600">
+          <p
+            role={uploadFailed ? "alert" : "status"}
+            className={cn(
+              "mt-3 text-sm font-medium",
+              uploadFailed ? "text-destructive" : "text-green-600"
+            )}
+          >
             {uploadMsg}
           </p>
         )}
@@ -2303,7 +2326,7 @@ export function DashboardView({
               setExpandedAlertKey(null)
               clearAlertFilters()
             }}
-            className="inline-flex items-center gap-1.5 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90"
           >
             Tout voir
             <ArrowUpRight className="h-4 w-4" />
@@ -2324,7 +2347,7 @@ export function DashboardView({
             className={cn(
               "rounded-full border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground",
               statusFilter !== "all"
-                ? "border-black ring-1 ring-black/20"
+                ? "border-foreground ring-1 ring-foreground/20"
                 : "border-border"
             )}
           >
@@ -2353,7 +2376,7 @@ export function DashboardView({
             className={cn(
               "rounded-full border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground",
               periodPreset !== "all"
-                ? "border-black ring-1 ring-black/20"
+                ? "border-foreground ring-1 ring-foreground/20"
                 : "border-border"
             )}
           >
@@ -2371,7 +2394,7 @@ export function DashboardView({
                 value={customFrom}
                 onChange={(e) => setCustomFrom(e.target.value)}
                 className={cn(
-                  "rounded-full border bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-black/20",
+                  "rounded-full border bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring",
                   invalidCustomRange
                     ? "border-destructive"
                     : "border-border"
@@ -2388,7 +2411,7 @@ export function DashboardView({
                 min={customFrom || undefined}
                 onChange={(e) => setCustomTo(e.target.value)}
                 className={cn(
-                  "rounded-full border bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-black/20",
+                  "rounded-full border bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring",
                   invalidCustomRange
                     ? "border-destructive"
                     : "border-border"
@@ -2408,7 +2431,7 @@ export function DashboardView({
               className={cn(
                 "w-52 rounded-full border bg-background py-1.5 pl-9 pr-4 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-colors hover:bg-accent focus:bg-muted",
                 alertSearch.trim()
-                  ? "border-black ring-1 ring-black/20"
+                  ? "border-foreground ring-1 ring-foreground/20"
                   : "border-border"
               )}
             />
@@ -2418,7 +2441,7 @@ export function DashboardView({
             <button
               type="button"
               onClick={clearAlertFilters}
-              className="inline-flex items-center gap-1.5 rounded-full bg-black px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+              className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background transition-opacity hover:opacity-90"
             >
               <X className="h-3 w-3" />
               Effacer les filtres
@@ -2445,7 +2468,7 @@ export function DashboardView({
             </span>
 
             {statusFilter !== "all" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-black/10 px-2.5 py-1 text-[11px] font-semibold text-black">
+              <span className="inline-flex items-center gap-1 rounded-full bg-foreground/10 px-2.5 py-1 text-[11px] font-semibold text-foreground">
                 {statusFilter === "critical"
                   ? "Critiques"
                   : "Warnings"}
@@ -2453,7 +2476,7 @@ export function DashboardView({
             )}
 
             {periodPreset !== "all" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-black/10 px-2.5 py-1 text-[11px] font-semibold text-black">
+              <span className="inline-flex items-center gap-1 rounded-full bg-foreground/10 px-2.5 py-1 text-[11px] font-semibold text-foreground">
                 {periodPreset === "7"
                   ? "7 derniers jours"
                   : periodPreset === "30"
@@ -2467,7 +2490,7 @@ export function DashboardView({
             )}
 
             {alertSearch.trim() && (
-              <span className="inline-flex max-w-[220px] items-center gap-1 truncate rounded-full bg-black/10 px-2.5 py-1 text-[11px] font-semibold text-black">
+              <span className="inline-flex max-w-[220px] items-center gap-1 truncate rounded-full bg-foreground/10 px-2.5 py-1 text-[11px] font-semibold text-foreground">
                 Recherche : {alertSearch}
               </span>
             )}
@@ -2531,7 +2554,7 @@ export function DashboardView({
                         className={cn(
                           "cursor-pointer transition-colors",
                           isSelected
-                            ? "bg-black text-white"
+                            ? "bg-foreground text-background"
                             : "hover:bg-accent/15"
                         )}
                       >
@@ -2561,7 +2584,7 @@ export function DashboardView({
                           className={cn(
                             "max-w-[280px] truncate px-4 py-4",
                             isSelected
-                              ? "text-white/70"
+                              ? "text-background/70"
                               : "border-b border-border text-muted-foreground"
                           )}
                         >
@@ -2572,7 +2595,7 @@ export function DashboardView({
                           className={cn(
                             "px-4 py-4 capitalize",
                             isSelected
-                              ? "text-white/70"
+                              ? "text-background/70"
                               : "border-b border-border text-muted-foreground"
                           )}
                         >
@@ -2602,7 +2625,7 @@ export function DashboardView({
                           className={cn(
                             "px-4 py-4",
                             isSelected
-                              ? "rounded-r-2xl text-white/70"
+                              ? "rounded-r-2xl text-background/70"
                               : "border-b border-border text-muted-foreground"
                           )}
                         >
@@ -2631,7 +2654,19 @@ export function DashboardView({
                         className="px-4 py-8 text-muted-foreground"
                         colSpan={5}
                       >
-                        Aucune alerte pour ces filtres.
+                        {alertsError ? (
+                          <span
+                            role="alert"
+                            className="text-destructive"
+                          >
+                            Impossible de charger les alertes
+                            ({alertsError}). L&apos;API est peut-être
+                            hors service : rechargez la page ou
+                            vérifiez la console du navigateur.
+                          </span>
+                        ) : (
+                          "Aucune alerte pour ces filtres. Importez un CSV ou élargissez la période."
+                        )}
                       </td>
                     </tr>
                   )}
