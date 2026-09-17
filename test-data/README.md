@@ -39,6 +39,12 @@ fichiers d'affilée, l'avance mesurée sera de quelques secondes.
    seuils. Chaque franchissement confirme la prédiction de l'étape 2, et
    l'écart entre les deux imports devient l'avance mesurée.
 
+**`-4-arrivee-douane.csv`** peut être importé à n'importe quel moment,
+il ne dépend pas de la séquence. Il remplit les deux étapes du début de
+chaîne : *Arrivée* (accostage) et *Douane*. Un seul fichier contient les
+deux formes de ligne, une par navire et une par dossier douanier, et
+c'est la ligne elle-même qui décide des contrôles appliqués.
+
 `logistics-transport.csv` est un fichier unique : le schéma camion n'a
 ni temps d'attente ni température, donc il n'y a pas de séquence à
 jouer.
@@ -49,7 +55,8 @@ Vérifié en exécutant le vrai pipeline sur ces fichiers.
 
 | Jeu | Alertes | CRITICAL / WARNING | Équipements | Préventives |
 |---|---|---|---|---|
-| port | 36 | 16 / 20 | 10 | 4, confirmées 24 h après |
+| port (1 à 3) | 36 | 16 / 20 | 10 | 4, confirmées 24 h après |
+| port + arrivée/douane (1 à 4) | 54 | 26 / 28 | 19 | 4, confirmées 24 h après |
 | froid | 37 | 18 / 19 | 6 | 3, confirmées 24 h après |
 | transport | 12 | 6 / 6 | 6 | aucune |
 
@@ -65,11 +72,9 @@ ne contient aucun temps d'attente, aucune température et aucun
 dépassement chiffrable. Les kilomètres depuis l'entretien ne sont pas
 chiffrés en euros, parce que le taux configurable est un taux par jour.
 
-Sur la chaîne **port**, les étapes *Arrivée* et *Douane* affichent
-toujours « Aucun signal ». Aucune alerte du backend ne s'y rattache :
-il n'existe pas encore de signal d'accostage ni de dossier douanier dans
-le pipeline. Ce n'est pas un bug d'affichage, c'est une source de
-données qui n'existe pas.
+Si vous n'importez pas `-4-arrivee-douane.csv`, les étapes *Arrivée* et
+*Douane* resteront à « Aucun signal » : ce sont les seules lignes qui les
+alimentent.
 
 ## Seuils utilisés
 
@@ -99,6 +104,35 @@ données qui n'existe pas.
 | Huile | | `< 0,3` |
 | Carburant | `< 20 %` | |
 | Pneus | `> 24 mois` | |
+
+`check_logistics_port()`, lignes navire, colonnes `vessel_id`,
+`eta_initial`, `eta`, `berth_window_start`, `berth_window_end`,
+`containers_aboard`, `discharge_rate_per_hour` :
+
+| Signal | WARNING | CRITICAL |
+|---|---|---|
+| Créneau de quai | ETA à moins de 2 h de la fermeture | ETA après la fermeture |
+| Décalage d'ETA | `>= 4 h` | `>= 12 h` |
+| Volume à décharger | dépasse le créneau | dépasse de `>= 6 h` |
+
+Lignes douane, colonnes `declaration_id`, `container_id`,
+`hours_in_customs`, `docs_missing`, `inspection_flag`,
+`free_time_hours_left`, `median_clearance_hours` :
+
+| Signal | WARNING | CRITICAL |
+|---|---|---|
+| Franchise | | sortie projetée au-delà de la franchise restante |
+| Documents | `1` ou `2` manquants | `>= 3` |
+| Temps en douane | `> médiane × 1,5` | `> médiane × 2` |
+| Contrôle | | contrôle ouvert et franchise `< 24 h` |
+
+La sortie projetée se calcule comme suit : ce qu'il reste par rapport à
+votre médiane, plus 6 h par document manquant, plus 24 h si un contrôle
+est ouvert. Ces deux pénalités sont des hypothèses, écrites en haut de
+`pipeline/port_flow.py` pour que vous puissiez les ajuster par site.
+`median_clearance_hours` est votre propre médiane sur des dossiers
+comparables : c'est elle qui rend le signal spécifique à votre
+exploitation plutôt qu'à une moyenne de marché.
 
 ## Avant le premier import
 

@@ -132,6 +132,13 @@ export function chainFor(
 export type MetricKind =
   | "wait"
   | "mileage"
+  | "berth"
+  | "eta"
+  | "discharge"
+  | "demurrage"
+  | "documents"
+  | "dwell"
+  | "inspection"
   | "temperature"
   | "cycles"
   | "pressure"
@@ -258,6 +265,84 @@ export const METRICS: Record<string, MetricDef> = {
     defaultStage: "transport",
     riskAt: 70,
     scaleMax: 100,
+  },
+  /* Arrivée and Douane: the two stages that used to read "Aucun signal"
+     permanently, because nothing in the pipeline produced a berthing or
+     a declaration signal. */
+  "port.arrival.berth_miss": {
+    kind: "berth",
+    label: "Créneau de quai dépassé",
+    unit: "h",
+    stage: { port: "arrivee" },
+    defaultStage: "arrivee",
+    riskAt: 0,
+    scaleMax: 24,
+  },
+  "port.arrival.berth_tight": {
+    kind: "berth",
+    label: "Créneau de quai restant",
+    unit: "h",
+    stage: { port: "arrivee" },
+    defaultStage: "arrivee",
+    riskAt: 2,
+    scaleMax: 12,
+  },
+  "port.arrival.eta_drift": {
+    kind: "eta",
+    label: "Décalage d'ETA",
+    unit: "h",
+    stage: { port: "arrivee" },
+    defaultStage: "arrivee",
+    riskAt: 12,
+    scaleMax: 48,
+  },
+  "port.arrival.discharge_overrun": {
+    kind: "discharge",
+    label: "Déchargement hors créneau",
+    unit: "h",
+    stage: { port: "arrivee" },
+    defaultStage: "arrivee",
+    riskAt: 6,
+    scaleMax: 24,
+  },
+  "port.customs.free_time_risk": {
+    /* The one signal in the chain whose overrun has a real tariff behind
+       it, so it is the one the cost view can price honestly. The message
+       leads with the exposed hours for exactly that reason. */
+    kind: "demurrage",
+    label: "Surestarie exposée",
+    unit: "h",
+    stage: { port: "douane" },
+    defaultStage: "douane",
+    riskAt: 0,
+    scaleMax: 72,
+  },
+  "port.customs.docs_missing": {
+    kind: "documents",
+    label: "Documents manquants",
+    unit: "",
+    stage: { port: "douane" },
+    defaultStage: "douane",
+    riskAt: 3,
+    scaleMax: 5,
+  },
+  "port.customs.dwell_exceeded": {
+    kind: "dwell",
+    label: "Temps en douane",
+    unit: "h",
+    stage: { port: "douane" },
+    defaultStage: "douane",
+    riskAt: 36,
+    scaleMax: 96,
+  },
+  "port.customs.inspection_hold": {
+    kind: "inspection",
+    label: "Franchise restante au contrôle",
+    unit: "h",
+    stage: { port: "douane" },
+    defaultStage: "douane",
+    riskAt: 24,
+    scaleMax: 72,
   },
   "transport.service.critical_due": {
     kind: "mileage",
@@ -711,30 +796,39 @@ export function deriveProjection(
    with 6 420 euros of exposure that nothing supported. Being near a
    cycle limit is a maintenance risk, not a billable overrun, so it
    belongs in the blockages view rather than in a euro figure. */
-export type CostRates = Record<"wait" | "temperature" | "service", number>
+export type CostRates = Record<
+  "wait" | "temperature" | "service" | "demurrage",
+  number
+>
 
 export const DEFAULT_COST_RATES: CostRates = {
   wait: 45,
   temperature: 120,
   service: 15,
+  demurrage: 6,
 }
 
 export const RATE_LABELS: Record<keyof CostRates, string> = {
   wait: "Immobilisation",
   temperature: "Écart de température",
   service: "Entretien différé",
+  demurrage: "Surestarie",
 }
 
 export const RATE_UNITS: Record<keyof CostRates, string> = {
   wait: "€ / h au-delà de 8 h",
   temperature: "€ / °C au-delà de 8 °C",
   service: "€ / jour au-delà de 30 j",
+  /* Already the overrun past free time, so the threshold is zero: the
+     backend did the comparison against the deadline. */
+  demurrage: "€ / h de surestarie exposée",
 }
 
 const RATE_THRESHOLDS: Record<keyof CostRates, number> = {
   wait: 8,
   temperature: 8,
   service: 30,
+  demurrage: 0,
 }
 
 export type ExposureLine = {
@@ -799,7 +893,12 @@ export function deriveExposure(
 
     const kind = def.kind
 
-    if (kind !== "wait" && kind !== "temperature" && kind !== "service") {
+    if (
+      kind !== "wait" &&
+      kind !== "temperature" &&
+      kind !== "service" &&
+      kind !== "demurrage"
+    ) {
       continue
     }
 

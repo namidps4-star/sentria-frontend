@@ -1,0 +1,12 @@
+berth_window_end,berth_window_start,container_id,containers_aboard,declaration_id,discharge_rate_per_hour,docs_missing,eta,eta_initial,free_time_hours_left,hours_in_customs,inspection_flag,median_clearance_hours,vessel_id
+2026-09-18T17:00,2026-09-18T05:00,,640,,45,,2026-09-18T21:00,2026-09-18T07:00,,,,,MSC-AURORA-2201
+2026-09-19T05:00,2026-09-18T11:00,,380,,40,,2026-09-18T19:00,2026-09-18T13:00,,,,,CMA-TANGER-118
+2026-09-19T04:00,2026-09-18T15:00,,210,,35,,2026-09-19T03:00,2026-09-18T09:00,,,,,MAERSK-DAKAR-77
+2026-09-19T01:00,2026-09-18T15:00,,900,,40,,2026-09-18T17:00,2026-09-18T17:00,,,,,ONE-ABIDJAN-903
+2026-09-19T21:00,2026-09-19T03:00,,160,,40,,2026-09-19T05:00,2026-09-19T05:00,,,,,HL-LOME-45
+,,MSKU-2201,,DAU-88412,,2,,,13,31,oui,18,
+,,TGHU-4417,,DAU-88455,,0,,,9,22,oui,18,
+,,CMAU-7781,,DAU-88470,,3,,,96,12,non,18,
+,,HLXU-9052,,DAU-88491,,1,,,60,44,non,18,
+,,ONEU-3320,,DAU-88502,,1,,,20,16,non,18,
+,,MSCU-6641,,DAU-88518,,0,,,120,8,non,18,
