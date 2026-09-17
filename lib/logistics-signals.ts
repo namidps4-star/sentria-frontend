@@ -131,6 +131,7 @@ export function chainFor(
 
 export type MetricKind =
   | "wait"
+  | "mileage"
   | "temperature"
   | "cycles"
   | "pressure"
@@ -242,13 +243,24 @@ export const METRICS: Record<string, MetricDef> = {
     kind: "risk",
     label: "Score de risque composite",
     unit: "/100",
-    stage: {},
+    /* A whole-equipment composite rather than one metric, so it is
+       pinned to each chain's own load-bearing stage. With an empty map
+       it fell through to "transport", which is not in the port,
+       warehouse, shipping or cold-chain chains, so every predictive
+       alert on those was dropped from the flow. */
+    stage: {
+      port: "cour",
+      entrepot: "stockage",
+      expedition: "preparation",
+      froid: "stockageFroid",
+      transport: "transport",
+    },
     defaultStage: "transport",
     riskAt: 70,
     scaleMax: 100,
   },
   "transport.service.critical_due": {
-    kind: "service",
+    kind: "mileage",
     label: "Km depuis l'entretien",
     unit: "km",
     stage: {},
@@ -257,7 +269,7 @@ export const METRICS: Record<string, MetricDef> = {
     scaleMax: 40000,
   },
   "transport.service.due": {
-    kind: "service",
+    kind: "mileage",
     label: "Km depuis l'entretien",
     unit: "km",
     stage: {},
@@ -326,10 +338,29 @@ export function stageOf(
   return mapped[0] ?? def.defaultStage
 }
 
-/** The first number in a backend message. Every logistics message puts
- *  its measured value there ("Conteneurs bloqués depuis 14h : ..."), so
- *  this reads the real measurement rather than inventing one. */
+/** The measured value behind an alert.
+ *
+ *  Every logistics message puts its measurement first ("Conteneurs
+ *  bloqués depuis 14h : ..."), so the number is read from there. The
+ *  composite-score alert is the exception: its template is
+ *  "Risque élevé (score {risk_score}/100)" and the backend never
+ *  substitutes the placeholder, because fire() takes risk_score as a
+ *  named parameter so it never reaches translate()'s kwargs, and
+ *  translate() swallows the resulting KeyError and returns the raw
+ *  template. Parsing that message yields 100, from "/100". The
+ *  risk_score column is stored correctly, so read it instead and stay
+ *  right whether or not the backend template is ever fixed. */
 export function measuredValue(alert: LogisticsAlert): number | null {
+  if (metricFor(alert)?.kind === "risk") {
+    const stored = alert.risk_score
+
+    if (typeof stored === "number" && Number.isFinite(stored)) {
+      return Math.round(stored <= 1 ? stored * 100 : Math.min(stored, 100))
+    }
+
+    return null
+  }
+
   const match = alert.message?.match(/-?\d+(?:[.,]\d+)?/)
 
   if (!match) return null
@@ -723,6 +754,37 @@ export type ExposureLine = {
   alertKey: string
 }
 
+/** The latest reading per asset and per metric.
+ *
+ *  Alerts accumulate: the same open condition is recorded again on every
+ *  upload, so CHAMBRE-FROIDE-2 at 79 days without service appears once
+ *  per file. Summing those rows triples an exposure that only exists
+ *  once, and lists the same queue several times. Anything describing the
+ *  situation as it stands now has to collapse to the newest row per
+ *  asset and metric first. Counting how many alerts were recorded over a
+ *  period is a different question and still uses every row. */
+export function currentReadings(alerts: LogisticsAlert[]): LogisticsAlert[] {
+  const latest = new Map<string, LogisticsAlert>()
+
+  for (const alert of alerts) {
+    const def = metricFor(alert)
+
+    if (!def) continue
+
+    const key = `${alert.equipment}:${def.kind}`
+    const existing = latest.get(key)
+
+    if (
+      !existing ||
+      new Date(alert.date).getTime() > new Date(existing.date).getTime()
+    ) {
+      latest.set(key, alert)
+    }
+  }
+
+  return [...latest.values()]
+}
+
 export function deriveExposure(
   alerts: LogisticsAlert[],
   opsType: OpsType | undefined,
@@ -730,7 +792,7 @@ export function deriveExposure(
 ): ExposureLine[] {
   const lines: ExposureLine[] = []
 
-  for (const alert of alerts) {
+  for (const alert of currentReadings(alerts)) {
     const def = metricFor(alert)
 
     if (!def) continue
@@ -793,7 +855,7 @@ export function deriveQueues(
 ): QueueLine[] {
   const lines: QueueLine[] = []
 
-  for (const alert of alerts) {
+  for (const alert of currentReadings(alerts)) {
     const def = metricFor(alert)
 
     if (!def || def.kind !== "wait") continue

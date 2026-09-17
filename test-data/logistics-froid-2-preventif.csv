@@ -1,0 +1,4 @@
+equipment_id,daily_cycles,max_cycles,hydraulic_pressure,min_hydraulic_pressure,fuel_level,avg_wait_hours,last_service_date,temperature,max_temperature
+CAMION-FRIGO-12,180,200,152,150,25,4.0,2026-09-16,6,8
+CHAMBRE-FROIDE-2,180,200,152,150,25,4.0,2026-09-16,6,8
+CAMION-FRIGO-21,180,200,152,150,25,4.0,2026-09-16,6,8

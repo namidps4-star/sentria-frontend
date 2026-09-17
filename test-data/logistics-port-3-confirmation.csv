@@ -1,0 +1,5 @@
+equipment_id,daily_cycles,max_cycles,hydraulic_pressure,min_hydraulic_pressure,fuel_level,avg_wait_hours,last_service_date,temperature,max_temperature
+GRUE-02,222,220,131,150,18,17.0,2026-07-02,6,8
+CHARIOT-7,226,220,148,150,33,9.0,2026-07-05,6,8
+QUAI-B,221,220,149,150,44,11.0,2026-09-05,4,8
+REEFER-08,210,220,160,150,51,8.5,2026-09-01,15,8

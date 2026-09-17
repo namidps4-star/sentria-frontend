@@ -141,7 +141,23 @@ export function LogisticsBlockagesView({
     )
   }
 
-  const openFor = lead ? hoursSince(lead.date) : null
+  /* How long this stage has been in trouble, which is the age of its
+     OLDEST reading. Using the lead alert's own date measured the newest
+     one instead, so a stage that had been alerting for 48 h reported
+     "ouvert depuis 2 h" as soon as a fresher reading arrived. */
+  const firstSeen =
+    blockingStage && blockingStage.alerts.length > 0
+      ? blockingStage.alerts.reduce(
+          (oldest, alert) =>
+            new Date(alert.date).getTime() < new Date(oldest.date).getTime()
+              ? alert
+              : oldest,
+          blockingStage.alerts[0]
+        )
+      : null
+
+  const openFor = firstSeen ? hoursSince(firstSeen.date) : null
+  const lastSeen = lead ? hoursSince(lead.date) : null
   const criticalCount = attributed.filter((a) => a.severity === "CRITICAL").length
   const assets = new Set(attributed.map((a) => a.equipment)).size
   const downstream =
@@ -187,11 +203,15 @@ export function LogisticsBlockagesView({
         figureLabel={openFor !== null ? "Ouvert depuis" : undefined}
         figure={openFor !== null ? formatHours(openFor) : undefined}
         figureNote={
-          lead
-            ? `Premier relevé le ${new Date(lead.date).toLocaleString("fr-FR", {
-                dateStyle: "short",
-                timeStyle: "short",
-              })} sur ${lead.equipment}.`
+          firstSeen
+            ? `Premier relevé le ${new Date(firstSeen.date).toLocaleString(
+                "fr-FR",
+                { dateStyle: "short", timeStyle: "short" }
+              )} sur ${firstSeen.equipment}${
+                lastSeen !== null
+                  ? `, dernier il y a ${formatHours(lastSeen)}`
+                  : ""
+              }.`
             : undefined
         }
         tone={blockingStage?.status === "risk" ? "risk" : "neutral"}
