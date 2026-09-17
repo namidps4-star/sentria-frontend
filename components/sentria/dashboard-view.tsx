@@ -2612,7 +2612,7 @@ export function DashboardView({
               )
             }
             className={cn(
-              "rounded-full border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground",
+              "rounded-full border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
               statusFilter !== "all"
                 ? "border-foreground ring-1 ring-foreground/20"
                 : "border-border"
@@ -2641,7 +2641,7 @@ export function DashboardView({
               }
             }}
             className={cn(
-              "rounded-full border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground",
+              "rounded-full border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
               periodPreset !== "all"
                 ? "border-foreground ring-1 ring-foreground/20"
                 : "border-border"
@@ -2696,7 +2696,7 @@ export function DashboardView({
               onChange={(e) => setAlertSearch(e.target.value)}
               placeholder="Rechercher une alerte..."
               className={cn(
-                "w-52 rounded-full border bg-background py-1.5 pl-9 pr-4 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-colors hover:bg-accent focus:bg-muted",
+                "w-52 rounded-full border bg-background py-1.5 pl-9 pr-4 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-colors hover:bg-accent focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                 alertSearch.trim()
                   ? "border-foreground ring-1 ring-foreground/20"
                   : "border-border"

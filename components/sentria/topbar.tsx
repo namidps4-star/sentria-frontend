@@ -11,13 +11,19 @@ export function Topbar({
   onMenu,
   search,
   onSearch,
+  unreadCount = 0,
 }: {
   title: string
   subtitle: string
   onMenu: () => void
   search: string
   onSearch: (v: string) => void
+  /** Critical alerts awaiting attention. The dot and the button's
+   *  accessible name both come from this, so neither can claim unread
+   *  items that do not exist. */
+  unreadCount?: number
 }) {
+  const hasUnread = unreadCount > 0
   return (
     <header className="sticky top-0 z-20 flex items-center gap-4 border-b border-border bg-background/80 px-4 py-3.5 backdrop-blur-md lg:px-8">
       <button
@@ -63,13 +69,22 @@ export function Topbar({
       <button
         type="button"
         className={"relative flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card transition-colors hover:bg-muted" + FOCUS_RING}
-        aria-label="Notifications, non lues"
+        aria-label={
+          hasUnread
+            ? `Notifications, ${unreadCount} alerte${
+                unreadCount > 1 ? "s" : ""
+              } critique${unreadCount > 1 ? "s" : ""}`
+            : "Notifications, aucune alerte critique"
+        }
       >
         <Bell className="h-[18px] w-[18px]" aria-hidden="true" />
-        <span
-          className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-accent ring-2 ring-card"
-          aria-hidden="true"
-        />
+
+        {hasUnread && (
+          <span
+            className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-accent ring-2 ring-card"
+            aria-hidden="true"
+          />
+        )}
       </button>
 
       <button

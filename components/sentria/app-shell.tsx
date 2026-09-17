@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 
+import { API_BASE } from "@/lib/api"
 import { Sidebar } from "./sidebar"
 import type { ViewKey } from "./types"
 import { Topbar } from "./topbar"
@@ -52,6 +53,35 @@ export function AppShell() {
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
 
+  // The shell owns the chrome, so the bell's count is fetched here rather
+  // than reaching into the dashboard's state. Failure is silent on
+  // purpose: an unreachable API should leave the bell quiet, not show a
+  // dot implying unread alerts nobody can read.
+  const [criticalCount, setCriticalCount] = useState(0)
+
+  useEffect(() => {
+    let cancelled = false
+
+    fetch(`${API_BASE}/alerts`)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((d) => {
+        if (cancelled) return
+
+        setCriticalCount(
+          Array.isArray(d)
+            ? d.filter((a) => a?.severity === "CRITICAL").length
+            : 0
+        )
+      })
+      .catch((err) => {
+        console.error("Failed to load the alert count:", err)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   useEffect(() => {
     const onboarded = localStorage.getItem("sentria_onboarded")
 
@@ -101,6 +131,7 @@ export function AppShell() {
               onMenu={() => setOpen(true)}
               search={search}
               onSearch={handleSearch}
+              unreadCount={criticalCount}
             />
           </div>
 

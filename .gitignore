@@ -14,3 +14,7 @@ __pycache__/
 *.pyc
 .coverage
 .pytest_cache/
+
+# Next.js build output and installed deps
+/.next/
+/node_modules/

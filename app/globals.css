@@ -179,3 +179,56 @@
     @apply font-sans;
   }
 }
+
+@layer base {
+  /* App-wide keyboard focus baseline.
+   *
+   * The audit found 33 buttons across sites, settings, report, profile,
+   * pricing, industry, the logistics views and the recommendations board
+   * with no focus indicator at all, so a keyboard user had no idea what
+   * they were about to activate.
+   *
+   * One rule rather than 33 patched className strings: it covers every
+   * control in the app, including any added later, and cannot drift out
+   * of sync the way per-call-site utilities do.
+   *
+   * Wrapped in :where() so it carries zero specificity. Any component
+   * that already defines its own focus treatment, such as the lime rings
+   * on the composer, the top bar, the sidebar and the recommendations
+   * panel, overrides this without a fight and without doubling up.
+   */
+  :where(
+    a[href],
+    button,
+    summary,
+    input,
+    select,
+    textarea,
+    [tabindex]:not([tabindex="-1"]),
+    [role="button"],
+    [role="switch"],
+    [role="tab"]
+  ):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  /* The sidebar keeps its own ring token because it stays dark in both
+   * themes, so the default --ring would sit too close to its surface. */
+  :where([data-slot="sidebar"], .bg-sidebar) :where(a[href], button):focus-visible {
+    outline-color: var(--sidebar-ring);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
