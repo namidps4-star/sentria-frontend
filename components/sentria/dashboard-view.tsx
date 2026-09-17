@@ -56,6 +56,11 @@ type Alert = {
   severity: "WARNING" | "CRITICAL" | string
   date: string
   sector?: string | null
+  /** Set by the backend once it records which activity produced the row. */
+  business_type?: string | null
+  /** Namespaced key such as "lab.tests_remaining.critical". Used to infer
+   *  the activity for rows written before business_type was recorded. */
+  alert_key?: string | null
 }
 
 type Recommendation = {
@@ -67,6 +72,7 @@ type Recommendation = {
   message: string
   risk_score?: number | null
   alert_key?: string | null
+  business_type?: string | null
   recommended_action: string
   action_category: string
   /**
@@ -233,6 +239,32 @@ const SUBTYPE_CHART_TITLES: Record<string, string> = {
   "grossiste-pharma": "Alertes réseau · 7 jours",
   "usine-agroalimentaire": "Alertes sanitaires · 7 jours",
 }
+
+/** Which activity produced this alert.
+ *
+ *  Prefers the recorded business_type. Falls back to the alert_key
+ *  namespace, since those keys are written per activity and already exist
+ *  on rows saved before business_type was stored. Returns null when
+ *  neither can say, and a null is never filtered out: hiding a real alert
+ *  because we cannot classify it would be worse than showing it. */
+function activityOf(row: {
+  business_type?: string | null
+  alert_key?: string | null
+}): string | null {
+  if (row.business_type) return row.business_type
+
+  const key = row.alert_key ?? ""
+
+  if (key.startsWith("lab.")) return "laboratoire"
+  if (key.startsWith("hospital.")) return "clinique-hopital"
+  if (key.startsWith("wholesaler.")) return "grossiste-pharma"
+
+  return null
+}
+
+/** Activities whose alerts can be told apart today. A sector not listed
+ *  here is never filtered by activity, so nothing is hidden by accident. */
+const ACTIVITY_FILTERABLE_SECTORS = ["health"]
 
 const SECTOR_META: Record<
   string,
@@ -1395,12 +1427,31 @@ export function DashboardView({
     }
   }
 
+  // Separate the activities inside a sector, not just the sectors. A
+  // laboratory and a pharmacy both write sector "health", so this is what
+  // stops one activity's alerts appearing under another.
+  const matchesActivity = (a: {
+    business_type?: string | null
+    alert_key?: string | null
+  }) => {
+    if (!businessType) return true
+    if (!ACTIVITY_FILTERABLE_SECTORS.includes(filterSector)) return true
+
+    const activity = activityOf(a)
+
+    // Unclassifiable rows stay visible on purpose.
+    if (activity === null) return businessType === "pharmacie"
+
+    return activity === businessType
+  }
+
   const filteredAlerts = alerts
     .filter(
       (a) =>
         filterSector === "all" ||
         a.sector === filterSector
     )
+    .filter(matchesActivity)
     .filter((a) => {
       if (!search.trim()) return true
 
@@ -1420,6 +1471,7 @@ export function DashboardView({
         filterSector === "all" ||
         r.sector === filterSector
     )
+    .filter(matchesActivity)
     .slice(0, 5)
 
   const presetMs =
