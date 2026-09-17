@@ -2838,8 +2838,8 @@ export function DashboardView({
                               className={cn(
                                 "h-1.5 w-1.5 shrink-0 rounded-full",
                                 alert.severity === "CRITICAL"
-                                  ? "bg-red-400"
-                                  : "bg-[#a3e635]"
+                                  ? "bg-destructive"
+                                  : "bg-brand"
                               )}
                             />
 
@@ -2905,7 +2905,7 @@ export function DashboardView({
                               className={cn(
                                 "h-4 w-4 shrink-0 transition-all",
                                 isSelected
-                                  ? "rotate-90 text-[#a3e635]"
+                                  ? "rotate-90 text-brand"
                                   : "text-muted-foreground"
                               )}
                             />

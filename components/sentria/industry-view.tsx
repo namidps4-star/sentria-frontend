@@ -125,8 +125,8 @@ function AlertRow({
             className={cn(
               "h-1.5 w-1.5 shrink-0 rounded-full",
               alert.severity === "CRITICAL"
-                ? "bg-red-400"
-                : "bg-[#a3e635]"
+                ? "bg-destructive"
+                : "bg-brand"
             )}
           />
 

@@ -33,6 +33,8 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -79,6 +81,12 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.91 0.003 110);
   --input: oklch(0.91 0.003 110);
+  /* The brand lime, available in both themes. Deliberately separate
+     from --accent, which shadcn uses as a subtle hover surface and which
+     21 hover:bg-accent call sites rely on staying quiet. */
+  --brand: oklch(0.88 0.205 124);
+  --brand-foreground: oklch(0.22 0.04 124);
+
   --ring: oklch(0.88 0.205 124);
   --chart-1: oklch(0.88 0.205 124);
   --chart-2: oklch(0.19 0.004 110);
@@ -115,12 +123,23 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  /* Brand lime, very slightly tempered so it does not glare
+     against a near-black surface. */
+  --brand: oklch(0.85 0.195 124);
+  --brand-foreground: oklch(0.2 0.04 124);
+
+  /* Was oklch(0.556 0 0), a mid grey, which left every focus
+     ring in the app almost invisible on a dark background. */
+  --ring: oklch(0.85 0.195 124);
+
+  /* Was five greys with zero chroma, so charts lost all colour
+     in dark mode. Mirrors the light ramp's intent instead:
+     brand first, neutrals stepping down, dimmed brand to close. */
+  --chart-1: oklch(0.85 0.195 124);
+  --chart-2: oklch(0.87 0 0);
+  --chart-3: oklch(0.68 0 0);
+  --chart-4: oklch(0.52 0 0);
+  --chart-5: oklch(0.7 0.11 124);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -128,7 +147,7 @@
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.85 0.195 124);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -151,12 +170,23 @@
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
+    /* Brand lime, very slightly tempered so it does not glare
+       against a near-black surface. */
+    --brand: oklch(0.85 0.195 124);
+    --brand-foreground: oklch(0.2 0.04 124);
+
+    /* Was oklch(0.556 0 0), a mid grey, which left every focus
+       ring in the app almost invisible on a dark background. */
+    --ring: oklch(0.85 0.195 124);
+
+    /* Was five greys with zero chroma, so charts lost all colour
+       in dark mode. Mirrors the light ramp's intent instead:
+       brand first, neutrals stepping down, dimmed brand to close. */
+    --chart-1: oklch(0.85 0.195 124);
+    --chart-2: oklch(0.87 0 0);
+    --chart-3: oklch(0.68 0 0);
+    --chart-4: oklch(0.52 0 0);
+    --chart-5: oklch(0.7 0.11 124);
     --sidebar: oklch(0.205 0 0);
     --sidebar-foreground: oklch(0.985 0 0);
     --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -164,7 +194,7 @@
     --sidebar-accent: oklch(0.269 0 0);
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --sidebar-ring: oklch(0.85 0.195 124);
   }
 }
 
