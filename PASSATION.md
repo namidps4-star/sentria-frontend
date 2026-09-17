@@ -219,13 +219,24 @@ travail vit sur cette seule branche, sans version stable de repli.
 
 | Sujet | Détail |
 |---|---|
-| Alertes déjà périmées | Les clés `lab.reagent.expiring` et `hospital.critical_supply.expiring` ne couvrent que `0 <= jours < 30`. Un réactif ou une poche de sang **déjà** périmés ne déclenchent rien. Quatrième clé à ajouter |
-| 15 clés `industry.*` sans traduction | Antérieur à cette session. Elles sont déclenchées par `alerts.py` mais absentes de `i18n.py` et `action_map.py`, donc affichées en texte brut |
+| ~~Alertes déjà périmées~~ | **Fait.** `lab.reagent.expired` et `hospital.critical_supply.expired`, en CRITIQUE, indiquant depuis combien de jours la date est passée |
+| ~~15 clés `industry.*` sans traduction~~ | **Fait.** Messages fr + en et action pour les quinze. Vérifié : une ligne agroalimentaire produit sept alertes lisibles, zéro clé brute |
 | Anciennes alertes non étiquetées | Impossible à rétro-remplir : rien dans ces lignes n'indique le métier d'origine. Elles disparaîtront d'elles-mêmes à mesure que des données étiquetées arrivent. Les supprimer est sans risque |
-| Vues non auditées | `logistics-*`, `industry-*`, `sites-view`, `settings-view`, `report-view` n'ont pas été passées au crible accessibilité |
-| Point de notification figé | Dans `topbar.tsx`, la pastille « non lues » est toujours affichée. Je l'ai étiquetée en conséquence, mais le libellé devra devenir conditionnel quand il y aura de vraies notifications |
+| ~~Vues non auditées~~ | **Fait.** 33 boutons sans indicateur de focus, corrigés par une règle globale dans `globals.css` plutôt que 33 correctifs locaux. Vérifié au clavier sur l'app réelle : 21 contrôles sur 21 affichent un indicateur |
+| ~~Point de notification figé~~ | **Fait.** La pastille lit un `unreadCount` réel, ne s'affiche qu'au-dessus de zéro, et le libellé annonce le nombre. Un fetch en échec laisse la cloche muette |
 | `Procfile.txt` | Render ne le lit pas : il attend `Procfile` ou un `render.yaml`, et utilise en pratique la commande du tableau de bord. La commande qu'il contient est correcte, à vérifier côté Render |
 | API sans authentification | CORS ne protège que les navigateurs. N'importe quel appel serveur peut consommer le quota Gemini via `/ask`. À traiter avant une mise en production réelle |
+
+### Faux problème que j'ai inscrit à tort
+
+J'ai proposé de « corriger un avertissement d'hydratation » et mentionné
+une erreur React #418 que je n'avais **jamais observée**. Vérifié depuis :
+les quatre initialiseurs `useState` qui lisent `localStorage` ont tous
+leur garde `typeof window`, et un test navigateur avec `localStorage`
+pré-rempli différemment du rendu serveur ne produit **aucune** erreur
+d'hydratation. Il n'y avait rien à corriger.
+
+À retenir : ne pas mettre à l'ordre du jour un bug qu'on n'a pas mesuré.
 
 ### Sur la landing page
 
@@ -240,6 +251,19 @@ faute de mandat clair :
 - Aucune image de fond nulle part. Plusieurs sections sont du texte sur
   fond uni. L'audit recommande des fonds photographiques discrets pour
   donner de la présence.
+
+Le logo « S » a été remplacé par la balise beacon fournie par l'auteur,
+en SVG inline, et le favicon redessiné pour correspondre.
+
+### Nouveau point relevé, non traité
+
+51 utilitaires de couleur en hexadécimal brut dans `pricing-view.tsx`,
+`industry-view.tsx` et `dashboard-view.tsx` (par exemple
+`bg-[#d9f36e]`, `text-[#1d1d1b]`). L'audit les signale : une couleur
+codée en dur dans un composant ne suit pas le thème. Je ne les ai pas
+converties parce que `pricing-view` semble porter une palette claire
+délibérée, et la convertir change son apparence. C'est une décision
+visuelle, pas une correction d'accessibilité.
 
 ---
 
