@@ -15,6 +15,9 @@ import {
   Check,
   X,
   ShoppingCart,
+  FlaskConical,
+  HeartPulse,
+  Truck,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { computeConfidence, confidenceWord } from "@/lib/confidence"
@@ -96,6 +99,9 @@ const CATEGORY_ICON: Record<string, typeof Wrench> = {
   staffing: Sparkles,
   shrinkage: ShoppingCart,
   operations: Cpu,
+  diagnostics: FlaskConical,
+  critical_supply: HeartPulse,
+  distribution: Truck,
   other: Sparkles,
 }
 
@@ -113,6 +119,9 @@ const CATEGORY_LABEL: Record<string, string> = {
   staffing: "Personnel",
   shrinkage: "Demarque",
   operations: "Operations",
+  diagnostics: "Diagnostic",
+  critical_supply: "Stock critique",
+  distribution: "Repartition",
   other: "Autre",
 }
 
