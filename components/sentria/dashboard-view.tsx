@@ -149,6 +149,91 @@ const INDUSTRY_PRIORITY_DESCRIPTIONS: Record<IndustryPriority, string> = {
     "Recevez une fenêtre d'intervention adaptée à l'usure réelle.",
 }
 
+/** Count alerts per day over the last `days` days, oldest first.
+ *
+ *  Every sparkline and the area chart read from this, so a card's trend
+ *  line and its number always describe the same alerts. Replaces the
+ *  invented arrays that used to be drawn as if they were history. */
+function dailySeries(
+  alerts: Alert[],
+  days = 7,
+  match?: (alert: Alert) => boolean
+): number[] {
+  const scoped = match ? alerts.filter(match) : alerts
+
+  return Array.from({ length: days }, (_, i) => {
+    const day = new Date()
+
+    day.setHours(0, 0, 0, 0)
+    day.setDate(day.getDate() - (days - 1 - i))
+
+    return scoped.filter((a) => {
+      const at = new Date(a.date)
+
+      return (
+        at.getFullYear() === day.getFullYear() &&
+        at.getMonth() === day.getMonth() &&
+        at.getDate() === day.getDate()
+      )
+    }).length
+  })
+}
+
+/** Human label for each onboarded subtype, shown on the dashboard so the
+ *  user can see which business the numbers describe. */
+const BUSINESS_TYPE_LABELS: Record<string, string> = {
+  // Health
+  "pharmacie": "Pharmacie",
+  "grossiste-pharma": "Grossiste-répartiteur",
+  "clinique-hopital": "Clinique / Hôpital",
+  "laboratoire": "Laboratoire",
+  // Industry
+  "usine-production": "Usine de production",
+  "atelier-soustraitance": "Atelier / sous-traitance",
+  "usine-agroalimentaire": "Usine agroalimentaire",
+}
+
+/** Per-subtype label overrides, keyed by business_type.
+ *
+ *  Only the wording changes. A laboratory counts tests and reagents, a
+ *  hospital counts unsubstitutable supplies, a wholesaler counts client
+ *  pharmacies. Showing all three "Medicaments concernes" made the
+ *  dashboard look like it was built for a pharmacy no matter what was
+ *  onboarded. */
+const SUBTYPE_KPI_LABELS: Record<string, string[]> = {
+  "laboratoire": [
+    "Analyses bloquées",
+    "Réactifs à commander",
+    "Réactifs concernés",
+    "Alertes péremption",
+  ],
+  "clinique-hopital": [
+    "Stocks critiques sans alternative",
+    "Stocks à surveiller",
+    "Articles concernés",
+    "Alertes chaîne froid",
+  ],
+  "grossiste-pharma": [
+    "Ruptures réseau",
+    "Rééquilibrages suggérés",
+    "Produits concernés",
+    "Invendus réseau",
+  ],
+  "usine-agroalimentaire": [
+    "Arrêts sanitaires imminents",
+    "Écarts de température",
+    "Lignes surveillées",
+    "Total alertes",
+  ],
+}
+
+const SUBTYPE_CHART_TITLES: Record<string, string> = {
+  "laboratoire": "Alertes réactifs · 7 jours",
+  "clinique-hopital": "Alertes stocks critiques · 7 jours",
+  "grossiste-pharma": "Alertes réseau · 7 jours",
+  "usine-agroalimentaire": "Alertes sanitaires · 7 jours",
+}
+
 const SECTOR_META: Record<
   string,
   {
@@ -157,7 +242,9 @@ const SECTOR_META: Record<
       value: string
       delta: string
       up: boolean
-      spark: number[]
+      /** Optional subset this card counts, so its sparkline tracks the
+       *  same alerts as its number. Omitted means every alert in view. */
+      match?: (alert: Alert) => boolean
     }[]
     chartTitle: string
     barLabels: string[]
@@ -171,36 +258,34 @@ const SECTOR_META: Record<
         value: String(new Set(a.map((x) => x.equipment)).size),
         delta: "Live",
         up: true,
-        spark: [4, 6, 5, 8, 7, 9, 11],
       },
       {
         label: "Alertes critiques",
         value: String(
           a.filter((x) => x.severity === "CRITICAL").length
         ),
+        match: (x) => x.severity === "CRITICAL",
         delta:
           a.filter((x) => x.severity === "CRITICAL").length > 0
             ? "À traiter"
             : "OK",
         up:
           a.filter((x) => x.severity === "CRITICAL").length === 0,
-        spark: [9, 8, 7, 8, 6, 5, 4],
       },
       {
         label: "Warnings",
         value: String(
           a.filter((x) => x.severity === "WARNING").length
         ),
+        match: (x) => x.severity === "WARNING",
         delta: "Surveillance",
         up: true,
-        spark: [8, 7, 9, 6, 8, 10, 12],
       },
       {
         label: "Total alertes",
         value: String(a.length),
         delta: "Toutes sources",
         up: true,
-        spark: [2, 3, 3, 4, 5, 5, 6],
       },
     ],
     chartTitle: "Évolution des alertes",
@@ -219,32 +304,30 @@ const SECTOR_META: Record<
         value: String(
           a.filter((x) => x.severity === "CRITICAL").length
         ),
+        match: (x) => x.severity === "CRITICAL",
         delta: "Arrêt immédiat",
         up: false,
-        spark: [2, 4, 3, 6, 5, 8, 7],
       },
       {
         label: "Usure élevée",
         value: String(
           a.filter((x) => x.severity === "WARNING").length
         ),
+        match: (x) => x.severity === "WARNING",
         delta: "Surveiller",
         up: true,
-        spark: [4, 5, 6, 5, 7, 8, 9],
       },
       {
         label: "Machines surveillées",
         value: String(new Set(a.map((x) => x.equipment)).size),
         delta: "Live",
         up: true,
-        spark: [5, 6, 5, 7, 6, 8, 9],
       },
       {
         label: "Total alertes",
         value: String(a.length),
         delta: "Session",
         up: true,
-        spark: [2, 3, 3, 4, 5, 5, 6],
       },
     ],
     chartTitle: "Alertes machines · 7 jours",
@@ -273,25 +356,24 @@ const SECTOR_META: Record<
         value: String(
           a.filter((x) => x.severity === "CRITICAL").length
         ),
+        match: (x) => x.severity === "CRITICAL",
         delta: "Commander maintenant",
         up: false,
-        spark: [3, 2, 4, 5, 3, 4, 6],
       },
       {
         label: "Stocks bas",
         value: String(
           a.filter((x) => x.severity === "WARNING").length
         ),
+        match: (x) => x.severity === "WARNING",
         delta: "À surveiller",
         up: true,
-        spark: [2, 3, 3, 4, 5, 4, 5],
       },
       {
         label: "Médicaments concernés",
         value: String(new Set(a.map((x) => x.equipment)).size),
         delta: "Produits",
         up: true,
-        spark: [1, 2, 2, 3, 3, 4, 4],
       },
       {
         label: "Alertes chaîne froid",
@@ -304,7 +386,6 @@ const SECTOR_META: Record<
         ),
         delta: "Urgence",
         up: false,
-        spark: [0, 0, 1, 0, 1, 1, 2],
       },
     ],
     chartTitle: "Alertes stocks · 7 jours",
@@ -338,9 +419,9 @@ const SECTOR_META: Record<
         value: String(
           a.filter((x) => x.severity === "CRITICAL").length
         ),
+        match: (x) => x.severity === "CRITICAL",
         delta: "Livraison urgente",
         up: false,
-        spark: [1, 2, 2, 3, 4, 3, 5],
       },
       {
         label: "Retards détectés",
@@ -353,14 +434,12 @@ const SECTOR_META: Record<
         ),
         delta: "Camions",
         up: false,
-        spark: [0, 1, 1, 2, 2, 3, 3],
       },
       {
         label: "Produits en risque",
         value: String(new Set(a.map((x) => x.equipment)).size),
         delta: "Actifs",
         up: true,
-        spark: [2, 2, 3, 3, 4, 4, 5],
       },
       {
         label: "Alertes temp.",
@@ -371,7 +450,6 @@ const SECTOR_META: Record<
         ),
         delta: "Stockage",
         up: false,
-        spark: [0, 0, 1, 1, 1, 2, 2],
       },
     ],
     chartTitle: "Alertes récoltes · 7 jours",
@@ -403,9 +481,9 @@ const SECTOR_META: Record<
         value: String(
           a.filter((x) => x.severity === "CRITICAL").length
         ),
+        match: (x) => x.severity === "CRITICAL",
         delta: "Immobiliser",
         up: false,
-        spark: [1, 2, 1, 3, 2, 4, 3],
       },
       {
         label: "Révisions dues",
@@ -418,14 +496,12 @@ const SECTOR_META: Record<
         ),
         delta: "Planifier",
         up: false,
-        spark: [2, 2, 3, 3, 4, 4, 5],
       },
       {
         label: "Camions surveillés",
         value: String(new Set(a.map((x) => x.equipment)).size),
         delta: "Flotte",
         up: true,
-        spark: [3, 4, 4, 5, 5, 6, 7],
       },
       {
         label: "Alertes moteur",
@@ -438,7 +514,6 @@ const SECTOR_META: Record<
         ),
         delta: "Urgence",
         up: false,
-        spark: [0, 0, 1, 1, 1, 2, 2],
       },
     ],
     chartTitle: "Alertes flotte · 7 jours",
@@ -474,9 +549,9 @@ const SECTOR_META: Record<
         value: String(
           a.filter((x) => x.severity === "CRITICAL").length
         ),
+        match: (x) => x.severity === "CRITICAL",
         delta: "Arrêt immédiat",
         up: false,
-        spark: [1, 2, 2, 3, 3, 4, 5],
       },
       {
         label: "Files d'attente",
@@ -489,14 +564,12 @@ const SECTOR_META: Record<
         ),
         delta: "Conteneurs",
         up: false,
-        spark: [2, 3, 3, 4, 4, 5, 6],
       },
       {
         label: "Équipements actifs",
         value: String(new Set(a.map((x) => x.equipment)).size),
         delta: "Port",
         up: true,
-        spark: [4, 5, 5, 6, 6, 7, 8],
       },
       {
         label: "Alertes pression",
@@ -509,7 +582,6 @@ const SECTOR_META: Record<
         ),
         delta: "Hydraulique",
         up: false,
-        spark: [0, 1, 1, 1, 2, 2, 3],
       },
     ],
     chartTitle: "Alertes port · 7 jours",
@@ -543,9 +615,9 @@ const SECTOR_META: Record<
         value: String(
           a.filter((x) => x.severity === "CRITICAL").length
         ),
+        match: (x) => x.severity === "CRITICAL",
         delta: "Intervenir",
         up: false,
-        spark: [1, 2, 2, 3, 3, 4, 5],
       },
       {
         label: "Carburant bas",
@@ -558,14 +630,12 @@ const SECTOR_META: Record<
         ),
         delta: "Réapprovisionner",
         up: false,
-        spark: [2, 2, 3, 3, 4, 4, 5],
       },
       {
         label: "Générateurs surveillés",
         value: String(new Set(a.map((x) => x.equipment)).size),
         delta: "Actifs",
         up: true,
-        spark: [3, 4, 4, 5, 5, 6, 7],
       },
       {
         label: "Alertes surchauffe",
@@ -578,7 +648,6 @@ const SECTOR_META: Record<
         ),
         delta: "Température",
         up: false,
-        spark: [0, 0, 1, 1, 2, 2, 3],
       },
     ],
     chartTitle: "Alertes énergie · 7 jours",
@@ -614,27 +683,25 @@ const SECTOR_META: Record<
         value: String(a.length),
         delta: "Régional",
         up: a.length === 0,
-        spark: [1, 2, 2, 3, 2, 4, 3],
       },
       {
         label: "Risques critiques",
         value: String(
           a.filter((x) => x.severity === "CRITICAL").length
         ),
+        match: (x) => x.severity === "CRITICAL",
         delta:
           a.filter((x) => x.severity === "CRITICAL").length > 0
             ? "À traiter"
             : "OK",
         up:
           a.filter((x) => x.severity === "CRITICAL").length === 0,
-        spark: [4, 3, 4, 2, 3, 2, 1],
       },
       {
         label: "Flux surveillés",
         value: String(new Set(a.map((x) => x.equipment)).size),
         delta: "Corridors",
         up: true,
-        spark: [2, 3, 4, 4, 5, 6, 7],
       },
       {
         label: "Alertes conformité",
@@ -652,7 +719,6 @@ const SECTOR_META: Record<
         ),
         delta: "Documents",
         up: false,
-        spark: [0, 1, 1, 2, 2, 3, 2],
       },
     ],
     chartTitle: "Alertes corridors EAC · 7 jours",
@@ -1464,28 +1530,40 @@ export function DashboardView({
         SECTOR_META.all
       : SECTOR_META[filterSector] ?? SECTOR_META.all
 
-  const kpis = meta.kpis(filteredAlerts)
+  // The onboarded subtype relabels the cards so the dashboard describes
+  // the business that was actually set up, not whichever one the sector
+  // defaults to.
+  const subtypeLabels =
+    businessType && (filterSector === "health" || filterSector === "industry")
+      ? SUBTYPE_KPI_LABELS[businessType]
+      : undefined
+
+  const subtypeName =
+    businessType && (filterSector === "health" || filterSector === "industry")
+      ? BUSINESS_TYPE_LABELS[businessType]
+      : undefined
+
+  const kpis = meta
+    .kpis(filteredAlerts)
+    .map((k, i) => ({
+      ...k,
+      label: subtypeLabels?.[i] ?? k.label,
+    }))
+
   const barData = meta.barData(filteredAlerts)
 
-  const chartData = Array.from(
-    { length: 7 },
-    (_, i) => {
-      const d = new Date()
+  const chartTitle =
+    (businessType && SUBTYPE_CHART_TITLES[businessType]) ||
+    meta.chartTitle
 
-      d.setHours(0, 0, 0, 0)
-      d.setDate(d.getDate() - (6 - i))
+  // No rows for this sector means nothing has been uploaded for it yet.
+  // Showing four zeroes and a flat line reads as "all clear", which is a
+  // very different claim from "we have no data", so the cards and charts
+  // are replaced by a panel that says which is true.
+  const hasNoDataForSector =
+    filterSector !== "all" && filteredAlerts.length === 0 && !alertsError
 
-      return filteredAlerts.filter((a) => {
-        const alertDate = new Date(a.date)
-
-        return (
-          alertDate.getFullYear() === d.getFullYear() &&
-          alertDate.getMonth() === d.getMonth() &&
-          alertDate.getDate() === d.getDate()
-        )
-      }).length
-    }
-  )
+  const chartData = dailySeries(filteredAlerts, 7)
 
   if (filterSector === "industry") {
     const industryAlerts = alerts.filter(
@@ -1580,6 +1658,27 @@ export function DashboardView({
             )}
           </div>
 
+          {industryAlerts.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
+                <Upload
+                  className="h-5 w-5 text-muted-foreground"
+                  aria-hidden="true"
+                />
+              </div>
+
+              <h3 className="mt-4 font-heading text-lg font-bold">
+                Aucune donnée industrielle
+                {subtypeName ? ` · ${subtypeName}` : ""}
+              </h3>
+
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+                Les priorités ci-dessus sont bien enregistrées, mais
+                aucun fichier n&apos;a encore été importé pour cette
+                activité. Les indicateurs restent vides jusque-là.
+              </p>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {kpis.map((k) => (
               <div
@@ -1614,7 +1713,7 @@ export function DashboardView({
                 </p>
 
                 <Sparkline
-                  data={k.spark}
+                  data={dailySeries(filteredAlerts, 7, k.match)}
                   className={cn(
                     "mt-2 h-9 w-full",
                     k.up ? "text-accent" : "text-destructive"
@@ -1623,6 +1722,7 @@ export function DashboardView({
               </div>
             ))}
           </div>
+          )}
         </div>
       )
     }
@@ -1836,7 +1936,7 @@ export function DashboardView({
                 </p>
 
                 <Sparkline
-                  data={k.spark}
+                  data={dailySeries(filteredAlerts, 7, k.match)}
                   className={cn(
                     "mt-2 h-9 w-full",
                     k.up ? "text-accent" : "text-destructive"
@@ -2093,6 +2193,7 @@ export function DashboardView({
         ))}
 
         {filterSector === "all" &&
+          activeSectors.includes("logistics") &&
           selectedLogisticsPriorities.length > 0 && (
             <div className="ml-1 flex flex-wrap items-center gap-1.5 rounded-full border border-accent/30 bg-accent/5 px-2 py-1">
               <span className="px-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -2121,11 +2222,52 @@ export function DashboardView({
         opsType &&
         LOGISTICS_OPS_META[opsType] && (
           <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-[11px] font-medium text-muted-foreground">
-            <Shield className="h-3 w-3" />
+            <Shield className="h-3 w-3" aria-hidden="true" />
             {OPS_TYPE_LABEL[opsType]}
           </div>
         )}
 
+      {subtypeName && (
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-[11px] font-medium text-muted-foreground">
+          <Shield className="h-3 w-3" aria-hidden="true" />
+          {SECTORS.find((x) => x.key === filterSector)?.label} ·{" "}
+          <span className="font-semibold text-foreground">
+            {subtypeName}
+          </span>
+        </div>
+      )}
+
+      {hasNoDataForSector ? (
+        <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
+            <Upload className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+          </div>
+
+          <h3 className="mt-4 font-heading text-lg font-bold">
+            Aucune donnée pour{" "}
+            {SECTORS.find((x) => x.key === filterSector)?.label}
+            {subtypeName ? ` · ${subtypeName}` : ""}
+          </h3>
+
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+            Rien n&apos;a encore été importé pour cette activité. Les
+            indicateurs restent vides jusqu&apos;au premier fichier :
+            afficher des zéros donnerait l&apos;impression que tout va
+            bien, ce qui n&apos;est pas la même chose.
+          </p>
+
+          <p className="mt-3 text-xs text-muted-foreground">
+            Chaque activité attend ses propres colonnes. Importez le CSV
+            correspondant à{" "}
+            <span className="font-semibold text-foreground">
+              {subtypeName ??
+                SECTORS.find((x) => x.key === filterSector)?.label}
+            </span>{" "}
+            via le bouton Importer CSV ci-dessus.
+          </p>
+        </div>
+      ) : (
+        <>
       {/* Context for the priorities above — not the headline */}
       <p className="text-[11px] font-bold uppercase tracking-[0.13em] text-muted-foreground">
         Contexte général
@@ -2165,7 +2307,7 @@ export function DashboardView({
             </p>
 
             <Sparkline
-              data={k.spark}
+              data={dailySeries(filteredAlerts, 7, k.match)}
               className={cn(
                 "mt-2 h-9 w-full",
                 k.up ? "text-accent" : "text-destructive"
@@ -2180,7 +2322,7 @@ export function DashboardView({
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-heading text-lg font-bold">
-                {meta.chartTitle}
+                {chartTitle}
               </h3>
 
               <p className="text-sm text-muted-foreground">
@@ -2224,6 +2366,8 @@ export function DashboardView({
           />
         </div>
       </div>
+        </>
+      )}
 
       <div className="rounded-3xl border border-border bg-card p-6">
         <h3 className="font-heading text-lg font-bold">

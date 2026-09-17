@@ -41,6 +41,7 @@ import {
   ShoppingCart,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { API_BASE } from "@/lib/api"
 
 type Sector =
   | "industry"
@@ -642,6 +643,45 @@ const DATA_SOURCES: DataSource[] = [
   },
 ]
 
+/** Columns each activity's CSV must carry.
+ *
+ *  A laboratory uploads reagents, a wholesaler uploads one row per
+ *  (pharmacy, product), a hospital uploads categorised supplies. Telling
+ *  the user which columns are expected is the difference between an
+ *  upload that works and one that silently produces no alerts.
+ *
+ *  Keyed by business_type first, then sector as the fallback. */
+const CSV_COLUMNS: Record<string, string[]> = {
+  // Health
+  "pharmacie": [
+    "medicine_name", "stock_qty", "min_stock",
+    "sales_last_30_days", "unit_cost", "expiry_date",
+  ],
+  "laboratoire": [
+    "reagent_name", "stock_qty", "unit_cost", "expiry_date",
+  ],
+  "clinique-hopital": [
+    "item_name", "category", "stock_qty", "min_stock",
+    "unit_cost", "fridge_temp", "expiry_date",
+  ],
+  "grossiste-pharma": [
+    "pharmacy_id", "pharmacy_name", "product_name",
+    "qty_shipped_last_period", "qty_reordered_this_period",
+    "days_since_last_shipment", "unit_cost",
+  ],
+  // Sector fallbacks
+  "health": ["medicine_name", "stock_qty", "min_stock"],
+  "industry": [
+    "Product ID", "Torque [Nm]", "Tool wear [min]",
+    "Rotational speed [rpm]",
+  ],
+  "logistics": ["equipment", "cycles", "hydraulic_pressure", "fuel_level"],
+  "agriculture": ["batch_id", "days_stored", "storage_temp"],
+  "transportation": ["vehicle_id", "km_since_service", "engine_temp"],
+  "energy": ["generator_id", "fuel_level", "coolant_temp"],
+  "commerce": ["product_name", "stock_qty", "min_stock", "shrinkage_rate"],
+}
+
 /* -------------------------------------------------------------------------- */
 /* LOGISTICS PREVIEW                                                          */
 /* -------------------------------------------------------------------------- */
@@ -801,6 +841,11 @@ export function OnboardingView({
   const [subType, setSubType] = useState<string | null>(null)
   const [selectedEquipment, setSelectedEquipment] =
     useState<string[]>([])
+  const [csvUploading, setCsvUploading] = useState(false)
+  const [csvMsg, setCsvMsg] = useState("")
+  const [csvFailed, setCsvFailed] = useState(false)
+  const [csvDone, setCsvDone] = useState(false)
+
   const [selectedSources, setSelectedSources] = useState<
     DataSource["id"][]
   >([])
@@ -819,6 +864,11 @@ export function OnboardingView({
   const selectedSector = useMemo(
     () => SECTORS.find((item) => item.id === sector),
     [sector]
+  )
+
+  const selectedSubType = useMemo(
+    () => subTypes.find((item) => item.id === subType),
+    [subTypes, subType]
   )
 
   const isLogistics = sector === "logistics"
@@ -879,6 +929,68 @@ export function OnboardingView({
         ? current.filter((item) => item !== id)
         : [...current, id]
     )
+  }
+
+  /** Columns expected for whatever was chosen in steps 1 and 2. */
+  const csvColumns =
+    (subType && CSV_COLUMNS[subType]) ||
+    (sector && CSV_COLUMNS[sector]) ||
+    []
+
+  /** Upload straight from onboarding, using the sector and activity the
+   *  user just chose, so the backend routes the file to the right checks
+   *  instead of defaulting to the sector's primary activity. */
+  async function handleOnboardingUpload(
+    e: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const file = e.target.files?.[0]
+    if (!file || !sector) return
+
+    setCsvUploading(true)
+    setCsvFailed(false)
+    setCsvDone(false)
+    setCsvMsg("")
+
+    const form = new FormData()
+    form.append("file", file)
+
+    const query =
+      `?sector=${encodeURIComponent(sector)}&lang=fr` +
+      (subType ? `&business_type=${encodeURIComponent(subType)}` : "")
+
+    try {
+      const res = await fetch(`${API_BASE}/upload${query}`, {
+        method: "POST",
+        body: form,
+      })
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => "")
+        console.error(
+          `[SentrIA] onboarding upload -> HTTP ${res.status}`,
+          body
+        )
+        throw new Error(`HTTP ${res.status}`)
+      }
+
+      const data = await res.json()
+
+      setCsvDone(true)
+      setCsvMsg(
+        data.message === "Processed successfully"
+          ? `${file.name} importé. Les alertes apparaîtront sur le tableau de bord.`
+          : data.message ?? `${file.name} importé.`
+      )
+    } catch (error) {
+      console.error("[SentrIA] onboarding upload failed:", error)
+      setCsvFailed(true)
+      setCsvMsg(
+        "Import impossible. Vérifiez la console du navigateur, puis réessayez."
+      )
+    } finally {
+      setCsvUploading(false)
+      e.target.value = ""
+    }
   }
 
   function toggleSource(id: DataSource["id"]) {
@@ -1463,6 +1575,92 @@ export function OnboardingView({
                     )
                   })}
                 </div>
+
+                {selectedSources.includes("csv") && (
+                  <div className="mt-4 rounded-2xl border border-accent/40 bg-accent/5 p-4">
+                    <div className="flex items-start gap-3">
+                      <Upload
+                        className="mt-0.5 h-4 w-4 shrink-0 text-accent-foreground"
+                        aria-hidden="true"
+                      />
+
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold">
+                          Importez votre fichier maintenant
+                        </p>
+
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          Chaque activité attend ses propres colonnes.
+                          Pour{" "}
+                          <span className="font-semibold text-foreground">
+                            {selectedSubType?.label ??
+                              selectedSector?.label}
+                          </span>
+                          , SentrIA lit :
+                        </p>
+
+                        {csvColumns.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {csvColumns.map((col) => (
+                              <code
+                                key={col}
+                                className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-foreground"
+                              >
+                                {col}
+                              </code>
+                            ))}
+                          </div>
+                        )}
+
+                        <p className="mt-2 text-[11px] leading-5 text-muted-foreground">
+                          Les colonnes manquantes sont simplement
+                          ignorées, jamais une erreur.
+                        </p>
+
+                        <label
+                          className={cn(
+                            "mt-3 inline-flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-opacity",
+                            "focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+                            csvUploading
+                              ? "bg-muted text-muted-foreground"
+                              : "bg-foreground text-background hover:opacity-90"
+                          )}
+                        >
+                          <Upload className="h-4 w-4" aria-hidden="true" />
+
+                          {csvUploading
+                            ? "Import en cours..."
+                            : csvDone
+                              ? "Importer un autre fichier"
+                              : "Choisir un fichier CSV"}
+
+                          <input
+                            type="file"
+                            accept=".csv"
+                            className="sr-only"
+                            onChange={handleOnboardingUpload}
+                            disabled={csvUploading || !sector}
+                            aria-label="Importer un fichier CSV"
+                          />
+                        </label>
+
+                        {csvMsg && (
+                          <p
+                            role={csvFailed ? "alert" : "status"}
+                            className={cn(
+                              "mt-2 text-xs font-medium",
+                              csvFailed
+                                ? "text-destructive"
+                                : "text-green-600"
+                            )}
+                          >
+                            {csvMsg}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <button
                   type="button"
