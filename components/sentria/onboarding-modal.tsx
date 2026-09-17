@@ -1140,7 +1140,7 @@ export function OnboardingView({
                       {item.maturity && (
                         <span
                           className={cn(
-                            "absolute right-3 top-3 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                            "absolute right-3 top-3 whitespace-nowrap rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider",
                             item.recommended
                               ? active
                                 ? "bg-accent text-accent-foreground"
@@ -1237,7 +1237,7 @@ export function OnboardingView({
                               {item.maturity && (
                                 <span
                                   className={cn(
-                                    "shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                                    "shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider",
                                     item.maturity === "Pilote recommandé"
                                       ? active
                                         ? "bg-accent text-accent-foreground"

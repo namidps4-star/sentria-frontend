@@ -132,7 +132,14 @@ export function AskView() {
   return (
     <div className="mx-auto flex h-[calc(100vh-9rem)] max-w-3xl flex-col">
       {/* Messages */}
-      <div className="flex-1 space-y-5 overflow-y-auto pb-4">
+      <div
+        className="flex-1 space-y-5 overflow-y-auto pb-4"
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions"
+        aria-busy={loading}
+        aria-label="Conversation avec SentrIA"
+      >
         {messages.length === 1 && (
           <div className="rounded-3xl border border-border bg-card p-6">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
@@ -156,7 +163,7 @@ export function AskView() {
                     key={s.text}
                     type="button"
                     onClick={() => send(s.text)}
-                    className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3.5 text-left text-sm transition-colors hover:border-ring hover:bg-muted/50"
+                    className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3.5 text-left text-sm transition-colors hover:border-ring hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted">
                       <Icon className="h-4 w-4" />
@@ -213,6 +220,24 @@ export function AskView() {
             </div>
           </div>
         ))}
+
+        {loading && (
+          <div className="flex gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+              <Sparkles className="h-4 w-4" />
+            </div>
+
+            <div className="rounded-3xl rounded-tl-md border border-border bg-card px-4 py-3">
+              <span className="sr-only">SentrIA rédige une réponse</span>
+
+              <span className="flex items-center gap-1" aria-hidden="true">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-muted-foreground [animation-delay:0ms]" />
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-muted-foreground [animation-delay:150ms]" />
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-muted-foreground [animation-delay:300ms]" />
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Composer */}
@@ -221,7 +246,7 @@ export function AskView() {
           e.preventDefault()
           send(input)
         }}
-        className="rounded-3xl border border-border bg-card p-2.5 shadow-sm"
+        className="rounded-3xl border border-border bg-card p-2.5 shadow-sm focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/40"
       >
         <div className="flex items-end gap-2">
           <textarea
@@ -235,13 +260,15 @@ export function AskView() {
             }}
             rows={1}
             placeholder="Posez votre question à SentrIA…"
-            className="max-h-32 flex-1 resize-none bg-transparent px-3 py-2.5 text-sm outline-none placeholder:text-muted-foreground"
+            aria-label="Votre question"
+            disabled={loading}
+            className="max-h-32 flex-1 resize-none bg-transparent px-3 py-2.5 text-sm outline-none placeholder:text-muted-foreground disabled:opacity-60"
           />
 
           <button
             type="submit"
             disabled={!input.trim() || loading}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground transition-opacity disabled:opacity-40"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-40"
             aria-label="Envoyer"
           >
             <ArrowUp className="h-5 w-5" />
