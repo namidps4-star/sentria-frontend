@@ -35,7 +35,7 @@ import {
   IndustryMaintenanceView,
 } from "./industry-view"
 
-const API = "https://sentria-8btn.onrender.com"
+import { API_BASE as API } from "@/lib/api"
 
 
 

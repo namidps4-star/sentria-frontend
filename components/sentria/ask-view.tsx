@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState } from "react"
@@ -8,12 +7,7 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 
 import { cn } from "@/lib/utils"
-
-// Overridable so the UI can be pointed at a local backend while
-// debugging; falls back to the deployed API.
-const API =
-  process.env.NEXT_PUBLIC_API_URL ??
-  "https://sentria-production.up.railway.app"
+import { API_BASE as API } from "@/lib/api"
 
 const SUGGESTIONS = [
   {
