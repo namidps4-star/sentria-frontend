@@ -1,7 +1,8 @@
 # Passation SentrIA
 
-> Note de passation rédigée le 2026-09-17. Trois dépôts concernés, deux
-> déjà en production, un en attente de merge.
+> Note de passation rédigée le 2026-09-17. Trois dépôts concernés.
+> Backend et landing page mergés sur `main`. Le frontend reste sur sa
+> branche de travail, en attente d'une décision de merge.
 
 ---
 
@@ -96,7 +97,7 @@ comme une réussite.
 | `components/sentria/recommendations-panel.tsx` | Catégories `diagnostics` / `critical_supply` / `distribution` |
 | `.claude/skills/` | 41 compétences installées (~13 Mo) |
 
-### Landing page : `namidps4-star/sentria-landing-page`, branche `feature/premium-redesign`
+### Landing page : `namidps4-star/sentria-landing-page`, branche `main` (mergée)
 
 | Fichier | Rôle |
 |---|---|
@@ -228,9 +229,10 @@ travail vit sur cette seule branche, sans version stable de repli.
 
 ### Sur la landing page
 
-La branche `feature/premium-redesign` est poussée et vérifiée dans un vrai
-navigateur. Restent deux pistes que je n'ai pas prises, faute de mandat
-clair :
+Mergée sur `main` et vérifiée dans un vrai navigateur (50 éléments reveal,
+3 visibles en haut puis 31 au milieu puis 50 en bas, spotlight suivant le
+curseur, aucune erreur JS). Restent deux pistes que je n'ai pas prises,
+faute de mandat clair :
 
 - Les sections alternent `section-light` / `section-dark`. C'est un rythme
   éditorial défendable, mais l'audit signale les ruptures de fond comme un
