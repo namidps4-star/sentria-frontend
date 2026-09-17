@@ -188,15 +188,39 @@ function dailySeries(
 /** Human label for each onboarded subtype, shown on the dashboard so the
  *  user can see which business the numbers describe. */
 const BUSINESS_TYPE_LABELS: Record<string, string> = {
-  // Health
-  "pharmacie": "Pharmacie",
-  "grossiste-pharma": "Grossiste-répartiteur",
-  "clinique-hopital": "Clinique / Hôpital",
-  "laboratoire": "Laboratoire",
   // Industry
   "usine-production": "Usine de production",
   "atelier-soustraitance": "Atelier / sous-traitance",
   "usine-agroalimentaire": "Usine agroalimentaire",
+  // Health
+  "pharmacie": "Pharmacie",
+  "grossiste-pharma": "Grossiste-répartiteur pharmaceutique",
+  "clinique-hopital": "Clinique / Hôpital",
+  "laboratoire": "Laboratoire",
+  // Agriculture
+  "exploitation-agricole": "Exploitation agricole",
+  "cooperative-agricole": "Coopérative agricole",
+  "silo-stockage": "Silo / stockage de récolte",
+  // Transportation
+  "transporteur-routier": "Transporteur routier",
+  "flotte-entreprise": "Flotte d'entreprise",
+  "location-vehicules": "Location de véhicules",
+  // Logistics
+  "port-conteneurs": "Port & conteneurs",
+  "entrepot-manutention": "Entrepôt & manutention",
+  "transport-distribution": "Transport & distribution",
+  "preparation-expedition": "Préparation & expédition",
+  "chaine-froid": "Chaîne du froid",
+  "plusieurs-activites": "Plusieurs activités",
+  // Energy
+  "centrale-production": "Centrale de production",
+  "generateurs-secours": "Générateurs de secours",
+  "distribution-energetique": "Distribution énergétique",
+  // Commerce
+  "grossiste-distributeur": "Grossiste / distributeur",
+  "supermarche-hypermarche": "Supermarché / hypermarché",
+  "chaine-magasins": "Chaîne de magasins",
+  "epicerie-proximite": "Épicerie / commerce de proximité",
 }
 
 /** Per-subtype label overrides, keyed by business_type.
@@ -262,9 +286,16 @@ function activityOf(row: {
   return null
 }
 
-/** Activities whose alerts can be told apart today. A sector not listed
- *  here is never filtered by activity, so nothing is hidden by accident. */
-const ACTIVITY_FILTERABLE_SECTORS = ["health"]
+/** Does any alert in this set carry a recorded activity?
+ *
+ *  If yes, the backend is labelling rows and an unlabelled one is stale,
+ *  so it is safe to exclude it. If no, nothing is labelled yet and
+ *  excluding unlabelled rows would empty the dashboard, so unclassified
+ *  rows stay visible. The behaviour tightens by itself once the
+ *  business_type column exists and one file has been uploaded. */
+function hasRecordedActivity(rows: { business_type?: string | null }[]) {
+  return rows.some((r) => Boolean(r.business_type))
+}
 
 const SECTOR_META: Record<
   string,
@@ -1381,14 +1412,12 @@ export function DashboardView({
           (uploadSector === "logistics" && opsType
             ? `&ops_type=${opsType}`
             : "") +
-          // business_type has to be sent for every sector the backend
-          // routes on, not just industry. check_health() dispatches
-          // pharmacie / grossiste-pharma / clinique-hopital / laboratoire
-          // off this value, so omitting it for health silently fell back
-          // to the pharmacy checks no matter which subtype was onboarded.
-          ((uploadSector === "industry" || uploadSector === "health") &&
-          businessType
-            ? `&business_type=${businessType}`
+          // Sent for every sector. check_industry and check_health branch
+          // on it, and every sector needs it recorded on the alert so the
+          // dashboard can separate activities. A value that does not
+          // belong to the chosen sector is ignored safely by the backend.
+          (businessType
+            ? `&business_type=${encodeURIComponent(businessType)}`
             : ""),
         {
           method: "POST",
@@ -1430,19 +1459,26 @@ export function DashboardView({
   // Separate the activities inside a sector, not just the sectors. A
   // laboratory and a pharmacy both write sector "health", so this is what
   // stops one activity's alerts appearing under another.
+  // True once any alert in the current sector carries an activity.
+  const sectorRows = alerts.filter(
+    (a) => filterSector === "all" || a.sector === filterSector
+  )
+  const activityRecorded = hasRecordedActivity(sectorRows)
+
   const matchesActivity = (a: {
     business_type?: string | null
     alert_key?: string | null
   }) => {
     if (!businessType) return true
-    if (!ACTIVITY_FILTERABLE_SECTORS.includes(filterSector)) return true
+    if (filterSector === "all") return true
 
     const activity = activityOf(a)
 
-    // Unclassifiable rows stay visible on purpose.
-    if (activity === null) return businessType === "pharmacie"
+    if (activity !== null) return activity === businessType
 
-    return activity === businessType
+    // Unclassifiable. Exclude it only when this sector has labelled rows
+    // to compare against, otherwise show it rather than blank the view.
+    return !activityRecorded
   }
 
   const filteredAlerts = alerts
@@ -1586,12 +1622,12 @@ export function DashboardView({
   // the business that was actually set up, not whichever one the sector
   // defaults to.
   const subtypeLabels =
-    businessType && (filterSector === "health" || filterSector === "industry")
+    businessType && filterSector !== "all"
       ? SUBTYPE_KPI_LABELS[businessType]
       : undefined
 
   const subtypeName =
-    businessType && (filterSector === "health" || filterSector === "industry")
+    businessType && filterSector !== "all"
       ? BUSINESS_TYPE_LABELS[businessType]
       : undefined
 
