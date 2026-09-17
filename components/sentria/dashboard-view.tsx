@@ -297,6 +297,99 @@ function hasRecordedActivity(rows: { business_type?: string | null }[]) {
   return rows.some((r) => Boolean(r.business_type))
 }
 
+/** Label for each alert_key family, the middle segment of a key such as
+ *  the "cold_chain" in "health.cold_chain.broken". Extracted from every
+ *  key the backend fires, so the breakdown covers all of them.
+ *
+ *  An unlisted family still charts, under its own raw name, which is how
+ *  a family added to the backend later shows up without a frontend
+ *  release. That was the flaw in the old approach: the three new health
+ *  activities were invisible because nobody updated a hardcoded list. */
+const KEY_FAMILY_LABELS: Record<string, string> = {
+  // health
+  stock: "Stock", reorder: "Réappro", cold_chain: "Chaîne du froid",
+  expiry: "Péremption", slow_mover: "Rotation faible",
+  deadstock: "Invendus",
+  // lab
+  tests_remaining: "Analyses", reagent: "Réactifs",
+  // hospital
+  critical_supply: "Sans alternative",
+  // wholesaler
+  rebalance: "Transferts",
+  // industry
+  torque: "Couple", wear: "Usure", failure: "Panne", motor: "Moteurs",
+  temperature: "Température", pressure: "Pression",
+  production: "Production", maintenance: "Maintenance",
+  food_temp: "Température alim.", hygiene: "Hygiène",
+  // logistics
+  cycles: "Cycles", wait: "Attente", service: "Entretien", risk: "Risque",
+  // transport
+  engine: "Moteur", oil: "Huile", fuel: "Carburant",
+  fuel_low: "Carburant bas", tires: "Pneus",
+  // energy
+  coolant: "Refroidissement", load: "Charge", output: "Production",
+  // agri
+  storage: "Stockage", temp: "Température",
+  // retail
+  pos: "Caisse", sales: "Ventes", shrinkage: "Démarque",
+  staffing: "Personnel",
+  // supplier
+  delivery: "Livraisons", lead_time: "Délais",
+  fill_rate: "Taux de service", reliability: "Fiabilité",
+}
+
+/** Breakdown of alerts by what they are about, grouped on the alert_key
+ *  family rather than by searching the message text.
+ *
+ *  The previous version matched French words such as "rupture" and
+ *  "froid" inside the message. That failed three ways at once: a
+ *  laboratory and a wholesaler use none of those words, so their chart
+ *  was always empty; a hospital matched only some; and in English almost
+ *  nothing matched for anybody, because the words being searched for only
+ *  exist in the French translations. The key is language-independent.
+ *
+ *  Rows with no alert_key fall back to a severity split, so legacy data
+ *  still charts as something rather than nothing. */
+function alertBreakdown(
+  alerts: Alert[]
+): { labels: string[]; values: number[] } {
+  const counts = new Map<string, number>()
+
+  for (const a of alerts) {
+    const parts = (a.alert_key ?? "").split(".")
+
+    if (parts.length < 2 || !parts[1]) continue
+
+    const family = parts[1]
+    counts.set(family, (counts.get(family) ?? 0) + 1)
+  }
+
+  if (counts.size === 0) {
+    const critical = alerts.filter((a) => a.severity === "CRITICAL").length
+    const warning = alerts.filter((a) => a.severity === "WARNING").length
+
+    if (critical === 0 && warning === 0) {
+      return { labels: [], values: [] }
+    }
+
+    return {
+      labels: ["Critiques", "Warnings"],
+      values: [critical, warning],
+    }
+  }
+
+  const top = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+
+  return {
+    labels: top.map(
+      ([family]) => KEY_FAMILY_LABELS[family] ?? family.replace(/_/g, " ")
+    ),
+    values: top.map(([, count]) => count),
+  }
+}
+
 const SECTOR_META: Record<
   string,
   {
@@ -310,8 +403,6 @@ const SECTOR_META: Record<
       match?: (alert: Alert) => boolean
     }[]
     chartTitle: string
-    barLabels: string[]
-    barData: (alerts: Alert[]) => number[]
   }
 > = {
   all: {
@@ -352,12 +443,6 @@ const SECTOR_META: Record<
       },
     ],
     chartTitle: "Évolution des alertes",
-    barLabels: ["CRIT", "WARN", "INFO"],
-    barData: (a) => [
-      a.filter((x) => x.severity === "CRITICAL").length,
-      a.filter((x) => x.severity === "WARNING").length,
-      0,
-    ],
   },
 
   industry: {
@@ -394,22 +479,6 @@ const SECTOR_META: Record<
       },
     ],
     chartTitle: "Alertes machines · 7 jours",
-    barLabels: ["Panne", "Usure", "Torque"],
-    barData: (a) => [
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("failure") ||
-          x.message.toLowerCase().includes("panne")
-      ).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("wear") ||
-          x.message.toLowerCase().includes("usure")
-      ).length,
-      a.filter((x) =>
-        x.message.toLowerCase().includes("torque")
-      ).length,
-    ],
   },
 
   health: {
@@ -452,27 +521,6 @@ const SECTOR_META: Record<
       },
     ],
     chartTitle: "Alertes stocks · 7 jours",
-    barLabels: ["Rupture", "Stock bas", "Froid", "Expiry"],
-    barData: (a) => [
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("rupture") ||
-          x.message.toLowerCase().includes("reorder")
-      ).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("bas") ||
-          x.message.toLowerCase().includes("low")
-      ).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("froid") ||
-          x.message.toLowerCase().includes("cold")
-      ).length,
-      a.filter((x) =>
-        x.message.toLowerCase().includes("expir")
-      ).length,
-    ],
   },
 
   agriculture: {
@@ -516,25 +564,6 @@ const SECTOR_META: Record<
       },
     ],
     chartTitle: "Alertes récoltes · 7 jours",
-    barLabels: ["Perte", "Retard", "Temp.", "Stock"],
-    barData: (a) => [
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("perte") ||
-          x.message.toLowerCase().includes("loss")
-      ).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("retard") ||
-          x.message.toLowerCase().includes("delay")
-      ).length,
-      a.filter((x) =>
-        x.message.toLowerCase().includes("temp")
-      ).length,
-      a.filter((x) =>
-        x.message.toLowerCase().includes("stock")
-      ).length,
-    ],
   },
 
   transportation: {
@@ -580,29 +609,6 @@ const SECTOR_META: Record<
       },
     ],
     chartTitle: "Alertes flotte · 7 jours",
-    barLabels: ["Moteur", "Huile", "Carburant", "Pneus"],
-    barData: (a) => [
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("moteur") ||
-          x.message.toLowerCase().includes("engine")
-      ).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("huile") ||
-          x.message.toLowerCase().includes("oil")
-      ).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("carburant") ||
-          x.message.toLowerCase().includes("fuel")
-      ).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("pneu") ||
-          x.message.toLowerCase().includes("tire")
-      ).length,
-    ],
   },
 
   logistics: {
@@ -648,27 +654,6 @@ const SECTOR_META: Record<
       },
     ],
     chartTitle: "Alertes port · 7 jours",
-    barLabels: ["Cycles", "Attente", "Pression", "Carburant"],
-    barData: (a) => [
-      a.filter((x) =>
-        x.message.toLowerCase().includes("cycle")
-      ).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("attente") ||
-          x.message.toLowerCase().includes("wait")
-      ).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("pression") ||
-          x.message.toLowerCase().includes("pressure")
-      ).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("carburant") ||
-          x.message.toLowerCase().includes("fuel")
-      ).length,
-    ],
   },
 
   energy: {
@@ -714,29 +699,6 @@ const SECTOR_META: Record<
       },
     ],
     chartTitle: "Alertes énergie · 7 jours",
-    barLabels: ["Carburant", "Surchauffe", "Huile", "Surcharge"],
-    barData: (a) => [
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("carburant") ||
-          x.message.toLowerCase().includes("fuel")
-      ).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("surchauffe") ||
-          x.message.toLowerCase().includes("overheat")
-      ).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("huile") ||
-          x.message.toLowerCase().includes("oil")
-      ).length,
-      a.filter(
-        (x) =>
-          x.message.toLowerCase().includes("surcharge") ||
-          x.message.toLowerCase().includes("overload")
-      ).length,
-    ],
   },
 
   eac: {
@@ -785,44 +747,6 @@ const SECTOR_META: Record<
       },
     ],
     chartTitle: "Alertes corridors EAC · 7 jours",
-    barLabels: ["Douane", "Transit", "Port", "Stock"],
-    barData: (a) => [
-      a.filter((x) => {
-        const message = x.message.toLowerCase()
-        return (
-          message.includes("douane") ||
-          message.includes("custom") ||
-          message.includes("document") ||
-          message.includes("certificat")
-        )
-      }).length,
-      a.filter((x) => {
-        const message = x.message.toLowerCase()
-        return (
-          message.includes("transit") ||
-          message.includes("retard") ||
-          message.includes("delay") ||
-          message.includes("frontière") ||
-          message.includes("border")
-        )
-      }).length,
-      a.filter((x) => {
-        const message = x.message.toLowerCase()
-        return (
-          message.includes("port") ||
-          message.includes("conteneur") ||
-          message.includes("container")
-        )
-      }).length,
-      a.filter((x) => {
-        const message = x.message.toLowerCase()
-        return (
-          message.includes("stock") ||
-          message.includes("rupture") ||
-          message.includes("inventory")
-        )
-      }).length,
-    ],
   },
 }
 
@@ -1638,7 +1562,7 @@ export function DashboardView({
       label: subtypeLabels?.[i] ?? k.label,
     }))
 
-  const barData = meta.barData(filteredAlerts)
+  const breakdown = alertBreakdown(filteredAlerts)
 
   const chartTitle =
     (businessType && SUBTYPE_CHART_TITLES[businessType]) ||
@@ -2442,16 +2366,25 @@ export function DashboardView({
             </h3>
           </div>
 
-          <p className="text-sm text-muted-foreground">
-            {meta.barLabels.join(" · ")}
-          </p>
+          {breakdown.labels.length > 0 ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                {breakdown.labels.join(" · ")}
+              </p>
 
-          <BarChart
-            data={barData}
-            labels={meta.barLabels}
-            className="mt-6"
-            height={180}
-          />
+              <BarChart
+                data={breakdown.values}
+                labels={breakdown.labels}
+                className="mt-6"
+                height={180}
+              />
+            </>
+          ) : (
+            <p className="mt-6 text-sm text-muted-foreground">
+              Rien à répartir pour cette activité sur la période
+              sélectionnée.
+            </p>
+          )}
         </div>
       </div>
         </>
