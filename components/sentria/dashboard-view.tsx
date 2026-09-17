@@ -36,6 +36,13 @@ import {
 } from "./industry-view"
 
 import { API_BASE as API } from "@/lib/api"
+import {
+  PriorityCards,
+  PriorityHeading,
+  PriorityPills,
+  priorityCount,
+} from "./priority-nav"
+import { orderPriorities, prioritiesFor } from "@/lib/priorities"
 
 
 
@@ -100,30 +107,6 @@ type LogisticsPriority =
   | "recommend"
   | "resources"
 
-const LOGISTICS_PRIORITY_LABELS: Record<LogisticsPriority, string> = {
-  blockages: "Blocages",
-  wait: "Temps d'attente",
-  cost: "Coûts",
-  anticipate: "Anticipation",
-  recommend: "Recommandations",
-  resources: "Ressources",
-}
-
-const LOGISTICS_PRIORITY_DESCRIPTIONS: Record<LogisticsPriority, string> = {
-  blockages:
-    "Identifiez les équipements, flux ou opérations actuellement bloqués.",
-  wait:
-    "Surveillez les files d'attente et les temps d'immobilisation.",
-  cost:
-    "Analysez les postes qui génèrent les coûts logistiques les plus importants.",
-  anticipate:
-    "Anticipez les risques et les perturbations à venir.",
-  recommend:
-    "Consultez les recommandations générées par SentrIA.",
-  resources:
-    "Suivez l'utilisation et la disponibilité de vos ressources.",
-}
-
 type IndustryPriority =
   | "machines"
   | "motors"
@@ -131,30 +114,6 @@ type IndustryPriority =
   | "pressure"
   | "production"
   | "maintenance"
-
-const INDUSTRY_PRIORITY_LABELS: Record<IndustryPriority, string> = {
-  machines: "Machines de production",
-  motors: "Moteurs",
-  temperature: "Température",
-  pressure: "Pression",
-  production: "Production",
-  maintenance: "Maintenance",
-}
-
-const INDUSTRY_PRIORITY_DESCRIPTIONS: Record<IndustryPriority, string> = {
-  machines:
-    "Estimez l'impact financier d'une panne avant qu'elle n'arrive.",
-  motors:
-    "Détectez une dégradation progressive avant la panne franche.",
-  temperature:
-    "Anticipez le moment où un seuil critique sera atteint.",
-  pressure:
-    "Identifiez la cause probable d'une anomalie de pression.",
-  production:
-    "Convertissez chaque baisse de rendement en perte estimée.",
-  maintenance:
-    "Recevez une fenêtre d'intervention adaptée à l'usure réelle.",
-}
 
 /** Count alerts per day over the last `days` days, oldest first.
  *
@@ -797,68 +756,45 @@ const LOGISTICS_OPS_META: Record<
   multi: SECTOR_META.logistics,
 }
 
-function getSavedLogisticsPriorities(): LogisticsPriority[] {
-  if (typeof window === "undefined") {
-    return ["blockages"]
-  }
+/** Read the priorities picked during onboarding, for any sector.
+ *
+ *  All sectors write to the same `sentria_equipment` key, so one reader
+ *  serves all of them. Ids are returned in catalog order rather than
+ *  click order, and anything the catalog no longer knows about is
+ *  dropped, so a stale id from an older build cannot render as a chip
+ *  with no label. */
+function getSavedPriorities(sector: string): string[] {
+  if (typeof window === "undefined") return []
+
+  if (prioritiesFor(sector).length === 0) return []
 
   try {
     const stored = JSON.parse(
       localStorage.getItem("sentria_equipment") || "[]"
     )
 
-    if (!Array.isArray(stored)) {
-      return ["blockages"]
-    }
+    if (!Array.isArray(stored)) return []
 
-    const valid = stored.filter(
-      (value): value is LogisticsPriority =>
-        [
-          "blockages",
-          "wait",
-          "cost",
-          "anticipate",
-          "recommend",
-          "resources",
-        ].includes(value)
+    /* No default priority. The readers used to fall back to the first
+       entry in the sector's catalog, which meant a pharmacist who never
+       configured industry still saw "Priorités industrie : Machines de
+       production" on their dashboard. An empty list renders the real
+       empty state instead. */
+    return orderPriorities(
+      sector,
+      stored.filter((value): value is string => typeof value === "string")
     )
-
-    return valid.length > 0 ? valid : ["blockages"]
   } catch {
-    return ["blockages"]
+    return []
   }
 }
 
+function getSavedLogisticsPriorities(): LogisticsPriority[] {
+  return getSavedPriorities("logistics") as LogisticsPriority[]
+}
+
 function getSavedIndustryPriorities(): IndustryPriority[] {
-  if (typeof window === "undefined") {
-    return ["machines"]
-  }
-
-  try {
-    const stored = JSON.parse(
-      localStorage.getItem("sentria_equipment") || "[]"
-    )
-
-    if (!Array.isArray(stored)) {
-      return ["machines"]
-    }
-
-    const valid = stored.filter(
-      (value): value is IndustryPriority =>
-        [
-          "machines",
-          "motors",
-          "temperature",
-          "pressure",
-          "production",
-          "maintenance",
-        ].includes(value)
-    )
-
-    return valid.length > 0 ? valid : ["machines"]
-  } catch {
-    return ["machines"]
-  }
+  return getSavedPriorities("industry") as IndustryPriority[]
 }
 
 function getSectorLabel(sector?: string | null) {
@@ -1057,6 +993,17 @@ export function DashboardView({
     useState<IndustryPriority[]>(() =>
       getSavedIndustryPriorities()
     )
+
+  /* Health, commerce, agriculture and the rest pick priorities during
+     onboarding too, but have no per-priority screens yet. They still get
+     to see what they configured, as static chips. */
+  const [selectedSectorPriorities, setSelectedSectorPriorities] = useState<
+    string[]
+  >([])
+
+  useEffect(() => {
+    setSelectedSectorPriorities(getSavedPriorities(filterSector))
+  }, [filterSector])
 
   const [statusFilter, setStatusFilter] = useState<
     "all" | "critical" | "warning"
@@ -1690,58 +1637,19 @@ export function DashboardView({
           </div>
 
           <div>
-            <div className="mb-4">
-              <h3 className="font-heading text-lg font-bold">
-                Vos priorités
-              </h3>
+            <PriorityHeading
+              count={selectedIndustryPriorities.length}
+              total={priorityCount("industry")}
+            />
 
-              <p className="mt-1 text-sm text-muted-foreground">
-                Sélectionnées lors de votre onboarding.
-              </p>
-            </div>
-
-            {selectedIndustryPriorities.length > 0 ? (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {selectedIndustryPriorities.map((priority) => (
-                  <button
-                    key={priority}
-                    type="button"
-                    onClick={() =>
-                      openIndustryPriority(priority)
-                    }
-                    className="group rounded-3xl border border-border bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-sm"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <span className="inline-flex rounded-full bg-accent/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-accent-foreground">
-                          Priorité
-                        </span>
-
-                        <h4 className="mt-3 font-heading text-lg font-bold">
-                          {INDUSTRY_PRIORITY_LABELS[priority]}
-                        </h4>
-                      </div>
-
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted transition-colors group-hover:bg-accent group-hover:text-accent-foreground">
-                        <ArrowUpRight className="h-4 w-4" />
-                      </span>
-                    </div>
-
-                    <p className="mt-3 text-sm leading-5 text-muted-foreground">
-                      {INDUSTRY_PRIORITY_DESCRIPTIONS[priority]}
-                    </p>
-
-                    <div className="mt-5 text-xs font-semibold text-foreground">
-                      Ouvrir la priorité →
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-3xl border border-border bg-card p-6 text-sm text-muted-foreground">
-                Aucune priorité industrielle n'a été sélectionnée.
-              </div>
-            )}
+            <PriorityCards
+              sector="industry"
+              ids={selectedIndustryPriorities}
+              onOpen={(id) =>
+                openIndustryPriority(id as IndustryPriority)
+              }
+              emptyLabel="Aucune priorité industrielle n'a été sélectionnée."
+            />
           </div>
 
           {industryAlerts.length === 0 ? (
@@ -1827,33 +1735,12 @@ export function DashboardView({
           </button>
         </div>
 
-        {selectedIndustryPriorities.length > 0 && (
-          <div className="rounded-2xl border border-border bg-card px-4 py-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="mr-1 text-xs font-semibold text-muted-foreground">
-                Priorités
-              </span>
-
-              {selectedIndustryPriorities.map((priority) => (
-                <button
-                  key={priority}
-                  type="button"
-                  onClick={() =>
-                    openIndustryPriority(priority)
-                  }
-                  className={cn(
-                    "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold transition-colors",
-                    priority === industryPriority
-                      ? "bg-foreground text-background"
-                      : "bg-muted text-foreground hover:bg-accent hover:text-accent-foreground"
-                  )}
-                >
-                  {INDUSTRY_PRIORITY_LABELS[priority]}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        <PriorityPills
+          sector="industry"
+          ids={selectedIndustryPriorities}
+          activeId={industryPriority}
+          onOpen={(id) => openIndustryPriority(id as IndustryPriority)}
+        />
 
         {industryPriority === "machines" ? (
           <IndustryMachinesView alerts={industryAlerts} />
@@ -1934,58 +1821,19 @@ export function DashboardView({
           </div>
 
           <div>
-            <div className="mb-4">
-              <h3 className="font-heading text-lg font-bold">
-                Vos priorités
-              </h3>
+            <PriorityHeading
+              count={selectedLogisticsPriorities.length}
+              total={priorityCount("logistics")}
+            />
 
-              <p className="mt-1 text-sm text-muted-foreground">
-                Sélectionnées lors de votre onboarding.
-              </p>
-            </div>
-
-            {selectedLogisticsPriorities.length > 0 ? (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {selectedLogisticsPriorities.map((priority) => (
-                  <button
-                    key={priority}
-                    type="button"
-                    onClick={() =>
-                      openLogisticsPriority(priority)
-                    }
-                    className="group rounded-3xl border border-border bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-sm"
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <span className="inline-flex rounded-full bg-accent/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-accent-foreground">
-                          Priorité
-                        </span>
-
-                        <h4 className="mt-3 font-heading text-lg font-bold">
-                          {LOGISTICS_PRIORITY_LABELS[priority]}
-                        </h4>
-                      </div>
-
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted transition-colors group-hover:bg-accent group-hover:text-accent-foreground">
-                        <ArrowUpRight className="h-4 w-4" />
-                      </span>
-                    </div>
-
-                    <p className="mt-3 text-sm leading-5 text-muted-foreground">
-                      {LOGISTICS_PRIORITY_DESCRIPTIONS[priority]}
-                    </p>
-
-                    <div className="mt-5 text-xs font-semibold text-foreground">
-                      Ouvrir la priorité →
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="rounded-3xl border border-border bg-card p-6 text-sm text-muted-foreground">
-                Aucune priorité logistique n'a été sélectionnée.
-              </div>
-            )}
+            <PriorityCards
+              sector="logistics"
+              ids={selectedLogisticsPriorities}
+              onOpen={(id) =>
+                openLogisticsPriority(id as LogisticsPriority)
+              }
+              emptyLabel="Aucune priorité logistique n'a été sélectionnée."
+            />
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -2049,33 +1897,12 @@ export function DashboardView({
           </button>
         </div>
 
-        {selectedLogisticsPriorities.length > 0 && (
-          <div className="rounded-2xl border border-border bg-card px-4 py-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="mr-1 text-xs font-semibold text-muted-foreground">
-                Priorités
-              </span>
-
-              {selectedLogisticsPriorities.map((priority) => (
-                <button
-                  key={priority}
-                  type="button"
-                  onClick={() =>
-                    openLogisticsPriority(priority)
-                  }
-                  className={cn(
-                    "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold transition-colors",
-                    priority === logisticsPriority
-                      ? "bg-foreground text-background"
-                      : "bg-muted text-foreground hover:bg-accent hover:text-accent-foreground"
-                  )}
-                >
-                  {LOGISTICS_PRIORITY_LABELS[priority]}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        <PriorityPills
+          sector="logistics"
+          ids={selectedLogisticsPriorities}
+          activeId={logisticsPriority}
+          onOpen={(id) => openLogisticsPriority(id as LogisticsPriority)}
+        />
 
         {normalizedOpsType &&
           OPS_TYPE_LABEL[normalizedOpsType] && (
@@ -2314,31 +2141,44 @@ export function DashboardView({
           </button>
         ))}
 
-        {filterSector === "all" &&
-          activeSectors.includes("logistics") &&
-          selectedLogisticsPriorities.length > 0 && (
-            <div className="ml-1 flex flex-wrap items-center gap-1.5 rounded-full border border-accent/30 bg-accent/5 px-2 py-1">
-              <span className="px-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Priorités
-              </span>
-
-              {selectedLogisticsPriorities.map(
-                (priority) => (
-                  <button
-                    key={priority}
-                    type="button"
-                    onClick={() =>
-                      openLogisticsPriority(priority)
-                    }
-                    className="rounded-full bg-accent/15 px-2.5 py-1 text-[11px] font-semibold text-accent-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                  >
-                    {LOGISTICS_PRIORITY_LABELS[priority]}
-                  </button>
-                )
-              )}
-            </div>
-          )}
       </div>
+
+      {/* The same chip row as inside a priority, rather than the bespoke
+          capsule that used to hang off the filter row and only ever showed
+          logistics. On a single sector with no per-priority screens the
+          chips are static: the user sees their configuration without
+          anything pretending to be a link. */}
+      {filterSector === "all" ? (
+        <>
+          {activeSectors.includes("logistics") && (
+            <PriorityPills
+              sector="logistics"
+              ids={selectedLogisticsPriorities}
+              label="Priorités logistique"
+              onOpen={(id) =>
+                openLogisticsPriority(id as LogisticsPriority)
+              }
+            />
+          )}
+
+          {activeSectors.includes("industry") && (
+            <PriorityPills
+              sector="industry"
+              ids={selectedIndustryPriorities}
+              label="Priorités industrie"
+              onOpen={(id) =>
+                openIndustryPriority(id as IndustryPriority)
+              }
+            />
+          )}
+        </>
+      ) : (
+        <PriorityPills
+          sector={filterSector}
+          ids={selectedSectorPriorities}
+          label="Vos priorités"
+        />
+      )}
 
       {filterSector === "logistics" &&
         opsType &&
