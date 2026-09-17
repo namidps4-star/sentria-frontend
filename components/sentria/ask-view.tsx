@@ -9,7 +9,11 @@ import remarkGfm from "remark-gfm"
 
 import { cn } from "@/lib/utils"
 
-const API = "https://sentria-production.up.railway.app"
+// Overridable so the UI can be pointed at a local backend while
+// debugging; falls back to the deployed API.
+const API =
+  process.env.NEXT_PUBLIC_API_URL ??
+  "https://sentria-production.up.railway.app"
 
 const SUGGESTIONS = [
   {
@@ -65,10 +69,35 @@ export function AskView() {
       })
 
       if (!res.ok) {
-        throw new Error("API request failed")
+        const body = await res.text().catch(() => "")
+
+        console.error(
+          `[SentrIA] POST ${API}/ask -> HTTP ${res.status} ${res.statusText}`,
+          body
+        )
+
+        setMessages((m) => [
+          ...m,
+          {
+            role: "ai",
+            text: `L'API SentrIA a répondu ${res.status}. Détail dans la console du navigateur.`,
+          },
+        ])
+
+        return
       }
 
       const data = await res.json()
+
+      // The backend answers 200 even when it failed internally, and says
+      // which failure it was in error_code. Surface it instead of
+      // silently rendering the fallback text as if it were an answer.
+      if (data.error_code) {
+        console.error(
+          `[SentrIA] /ask returned error_code=${data.error_code}`,
+          data.error_detail ?? ""
+        )
+      }
 
       const answer =
         data.answer ?? data.message ?? data.response ?? data.text
@@ -80,12 +109,25 @@ export function AskView() {
           text: answer || "Réponse reçue.",
         },
       ])
-    } catch {
+    } catch (err) {
+      // A thrown fetch means the request never completed: CORS rejection,
+      // the server being down, or DNS. It is NOT an AI error — those come
+      // back as HTTP 200 with an error_code.
+      console.error(
+        `[SentrIA] fetch to ${API}/ask failed before any response. ` +
+          `Usual causes: the origin is not in the backend CORS allowlist, ` +
+          `or the API is not running. Check ${API}/health.`,
+        err
+      )
+
       setMessages((m) => [
         ...m,
         {
           role: "ai",
-          text: "Impossible de joindre l'API SentrIA pour le moment. Vérifiez la route côté backend, puis réessayez.",
+          text:
+            "Impossible de joindre l'API SentrIA : la requête n'a reçu aucune réponse. " +
+            "Causes probables : origine bloquée par CORS, ou API hors service. " +
+            "Ouvrez la console du navigateur pour le détail.",
         },
       ])
     } finally {
