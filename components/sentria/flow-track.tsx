@@ -95,113 +95,143 @@ export function FlowTrack({
   return (
     <div className={cn("w-full", className)}>
       <div className="overflow-x-auto pb-1">
-        <ol
-          className="flex w-full min-w-max items-stretch justify-between gap-0 rounded-[2.5rem] bg-sidebar px-4 py-5 sm:px-6 sm:py-6"
-          aria-label="Chaîne logistique, étape par étape"
-        >
-          {nodes.map((node, index) => {
-            const Icon = STAGE_ICONS[node.id]
-            const reached = index <= fillUpTo
-            const blocking = index === blockingIndex
-            const selected = selectedId === node.id
-            const nextReached = index + 1 <= fillUpTo
+        <div className="w-full min-w-max">
+          {/* The capsule holds nothing but the circles and the bars that
+              join them, so it reads as one continuous shape. The bars
+              carry a negative margin so they run under the circles with
+              no seam, and the labels live outside the capsule rather
+              than crowding it. */}
+          <ol
+            className="flex w-full items-center rounded-full bg-track px-3 py-3 sm:px-4 sm:py-4"
+            aria-label="Chaîne logistique, étape par étape"
+          >
+            {nodes.map((node, index) => {
+              const Icon = STAGE_ICONS[node.id]
+              const reached = index <= fillUpTo
+              const blocking = index === blockingIndex
+              const selected = selectedId === node.id
+              const nextReached = index + 1 <= fillUpTo
 
-            const content = (
-              <>
+              const circle = (
                 <span
                   className={cn(
-                    "relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full transition-colors sm:h-16 sm:w-16",
+                    "relative z-10 flex h-14 w-14 items-center justify-center rounded-full transition-colors sm:h-16 sm:w-16",
                     reached
-                      ? "bg-brand text-brand-foreground"
-                      : "bg-sidebar-accent text-sidebar-foreground/45",
-                    blocking &&
-                      "ring-4 ring-sidebar ring-offset-2 ring-offset-brand",
-                    selected && !blocking &&
-                      "ring-2 ring-sidebar-foreground/60 ring-offset-2 ring-offset-sidebar"
+                      ? "bg-brand text-track"
+                      : "bg-track-muted text-track-muted-foreground",
+                    blocking && "ring-[3px] ring-track ring-offset-[3px] ring-offset-brand",
+                    selected &&
+                      !blocking &&
+                      "ring-2 ring-white/70 ring-offset-2 ring-offset-track"
                   )}
                 >
                   <Icon className="h-6 w-6 sm:h-7 sm:w-7" aria-hidden="true" />
-
-                  {node.alertCount > 0 && (
-                    <span
-                      className={cn(
-                        "absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold tabular-nums",
-                        node.status === "risk"
-                          ? "bg-destructive text-white"
-                          : "bg-sidebar text-sidebar-foreground"
-                      )}
-                    >
-                      {node.alertCount}
-                    </span>
-                  )}
                 </span>
+              )
 
-                <span className="mt-2 block max-w-[5.5rem] text-center text-[11px] font-semibold leading-tight text-sidebar-foreground">
-                  {node.name}
-                </span>
+              const label = `${node.name}, ${
+                blocking ? "étape bloquante" : STATUS_WORDS[node.status]
+              }${
+                node.alertCount > 0
+                  ? `, ${node.alertCount} alerte${
+                      node.alertCount > 1 ? "s" : ""
+                    }`
+                  : ""
+              }`
 
-                <span
+              return (
+                <li
+                  key={node.id}
                   className={cn(
-                    "mt-0.5 block text-center text-[10px] leading-tight",
-                    node.status === "risk"
-                      ? "text-destructive"
-                      : node.status === "watch"
-                        ? "text-brand"
-                        : "text-sidebar-foreground/45"
+                    "flex items-center",
+                    index < nodes.length - 1 && "flex-1"
                   )}
                 >
-                  {blocking ? "Étape bloquante" : STATUS_WORDS[node.status]}
-                </span>
-              </>
-            )
-
-            return (
-              <li
-                key={node.id}
-                className={cn(
-                  "flex items-start",
-                  index < nodes.length - 1 && "flex-1"
-                )}
-              >
-                <div className="flex w-[5.75rem] shrink-0 flex-col items-center sm:w-24">
                   {onSelect ? (
                     <button
                       type="button"
                       onClick={() => onSelect(node.id)}
                       aria-current={selected ? "true" : undefined}
-                      className="flex flex-col items-center rounded-2xl px-1 py-1 transition-transform hover:-translate-y-0.5"
-                      aria-label={`${node.name}, ${
-                        blocking ? "étape bloquante" : STATUS_WORDS[node.status]
-                      }${
-                        node.alertCount > 0
-                          ? `, ${node.alertCount} alerte${
-                              node.alertCount > 1 ? "s" : ""
-                            }`
-                          : ""
-                      }`}
+                      aria-label={label}
+                      className="flex w-[3.5rem] shrink-0 justify-center rounded-full sm:w-16"
                     >
-                      {content}
+                      {circle}
                     </button>
                   ) : (
-                    <div className="flex flex-col items-center px-1 py-1">
-                      {content}
+                    <div
+                      className="flex w-[3.5rem] shrink-0 justify-center sm:w-16"
+                      title={label}
+                    >
+                      {circle}
                     </div>
                   )}
-                </div>
 
-                {index < nodes.length - 1 && (
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      "mt-[1.4rem] h-4 min-w-4 flex-1 sm:mt-[1.65rem] sm:h-5",
-                      nextReached ? "bg-brand" : "bg-sidebar-accent"
+                  {index < nodes.length - 1 && (
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "-mx-2 h-8 min-w-12 flex-1 sm:h-9",
+                        nextReached ? "bg-brand" : "bg-track-muted"
+                      )}
+                    />
+                  )}
+                </li>
+              )
+            })}
+          </ol>
+
+          {/* Same flex structure as the capsule above, so each label sits
+              under its own circle. Status is stated in words here, which
+              is why the capsule can stay purely visual. */}
+          <ul
+            className="mt-2 flex w-full items-start px-3 sm:px-4"
+            aria-hidden="true"
+          >
+            {nodes.map((node, index) => {
+              const blocking = index === blockingIndex
+
+              return (
+                <li
+                  key={node.id}
+                  className={cn(
+                    "flex items-start",
+                    index < nodes.length - 1 && "flex-1"
+                  )}
+                >
+                  <div className="w-[3.5rem] shrink-0 px-0.5 text-center sm:w-16">
+                    <p className="text-[11px] font-semibold leading-tight">
+                      {node.name}
+                    </p>
+
+                    <p
+                      className={cn(
+                        "mt-0.5 text-[10px] leading-tight",
+                        node.status === "risk"
+                          ? "text-destructive"
+                          : node.status === "watch"
+                            ? "text-foreground"
+                            : "text-muted-foreground"
+                      )}
+                    >
+                      {blocking ? "Bloquante" : STATUS_WORDS[node.status]}
+                    </p>
+
+                    {node.alertCount > 0 && (
+                      <p className="mt-0.5 text-[10px] tabular-nums text-muted-foreground">
+                        {node.alertCount} alerte
+                        {node.alertCount > 1 ? "s" : ""}
+                      </p>
                     )}
-                  />
-                )}
-              </li>
-            )
-          })}
-        </ol>
+                  </div>
+
+                  {index < nodes.length - 1 && (
+                    <span className="-mx-2 min-w-12 flex-1" />
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        </div>
       </div>
     </div>
   )

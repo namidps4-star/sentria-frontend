@@ -3,6 +3,7 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Space_Grotesk, Geist_Mono } from 'next/font/google'
 import './globals.css'
+import { THEME_INIT_SCRIPT } from "@/lib/theme"
 
 const geistSans = Space_Grotesk({
   variable: '--font-geist-sans',
@@ -60,8 +61,19 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`light ${geistSans.variable} ${geistMono.variable} bg-background`}
+      className={`${geistSans.variable} ${geistMono.variable} bg-background`}
+      suppressHydrationWarning
     >
+      <head>
+        {/* Sets the theme class before the first paint, so there is no
+            flash of the wrong theme and nothing for React to reconcile.
+            The class this writes is why <html> carries
+            suppressHydrationWarning. */}
+        <script
+          dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }}
+        />
+      </head>
+
       <body className="font-sans antialiased">
         {children}
 

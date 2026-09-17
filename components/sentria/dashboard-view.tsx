@@ -935,67 +935,38 @@ export function DashboardView({
 
   const [uploadSector, setUploadSector] = useState("industry")
 
-  const [filterSector, setFilterSector] = useState(() => {
-    if (typeof window === "undefined") {
-      return "all"
-    }
-
-    const saved = localStorage.getItem("sentria_sector")
-
-    return saved === "logistics" ? "all" : saved || "all"
-  })
+  /* These five start at their server value and are filled in from
+     localStorage by the mount effect below. Reading storage in the
+     initializer made the client's first render differ from the server's
+     HTML ("Logistique" against "Industrie" in the header), which React
+     reports as a hydration mismatch and then re-renders the whole tree
+     to recover from. */
+  const [filterSector, setFilterSector] = useState("all")
 
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState("")
   const [uploadFailed, setUploadFailed] = useState(false)
   const [alertsError, setAlertsError] = useState<string | null>(null)
 
-  const [activeSectors, setActiveSectors] = useState<string[]>(() => {
-    if (typeof window === "undefined") {
-      return ["industry"]
-    }
+  const [activeSectors, setActiveSectors] = useState<string[]>([
+    "industry",
+  ])
 
-    try {
-      const stored = JSON.parse(
-        localStorage.getItem("sentria_sectors") ||
-          '["industry"]'
-      )
+  const [opsType, setOpsType] = useState<string | null>(null)
 
-      return Array.isArray(stored) && stored.length > 0
-        ? stored
-        : ["industry"]
-    } catch {
-      return ["industry"]
-    }
-  })
-
-  const [opsType, setOpsType] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null
-
-    return localStorage.getItem("sentria_ops_type")
-  })
-
-  const [businessType, setBusinessType] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null
-
-    return localStorage.getItem("sentria_business_type")
-  })
+  const [businessType, setBusinessType] = useState<string | null>(null)
 
   const [logisticsPriority, setLogisticsPriority] =
     useState<LogisticsPriority | null>(null)
 
   const [selectedLogisticsPriorities, setSelectedLogisticsPriorities] =
-    useState<LogisticsPriority[]>(() =>
-      getSavedLogisticsPriorities()
-    )
+    useState<LogisticsPriority[]>([])
 
   const [industryPriority, setIndustryPriority] =
     useState<IndustryPriority | null>(null)
 
   const [selectedIndustryPriorities, setSelectedIndustryPriorities] =
-    useState<IndustryPriority[]>(() =>
-      getSavedIndustryPriorities()
-    )
+    useState<IndustryPriority[]>([])
 
   /* Health, commerce, agriculture and the rest pick priorities during
      onboarding too, but have no per-priority screens yet. They still get
@@ -1007,6 +978,39 @@ export function DashboardView({
   useEffect(() => {
     setSelectedSectorPriorities(getSavedPriorities(filterSector))
   }, [filterSector])
+
+  /* Mount-only: pull the stored configuration in once, now that the
+     initializers above no longer do it. Runs before the browser paints
+     the committed frame, so the stored sector and priorities are what
+     the user sees rather than a visible flip from the defaults. */
+  useEffect(() => {
+    try {
+      const storedSectors = JSON.parse(
+        localStorage.getItem("sentria_sectors") || '["industry"]'
+      )
+
+      setActiveSectors(
+        Array.isArray(storedSectors) && storedSectors.length > 0
+          ? storedSectors
+          : ["industry"]
+      )
+    } catch {
+      setActiveSectors(["industry"])
+    }
+
+    setOpsType(localStorage.getItem("sentria_ops_type"))
+    setBusinessType(localStorage.getItem("sentria_business_type"))
+    setSelectedLogisticsPriorities(getSavedLogisticsPriorities())
+    setSelectedIndustryPriorities(getSavedIndustryPriorities())
+
+    const savedSector = localStorage.getItem("sentria_sector")
+
+    /* "logistics" is reached through the sector chip rather than
+       restored, which is why it maps back to "all" here. */
+    if (savedSector && savedSector !== "logistics") {
+      setFilterSector(savedSector)
+    }
+  }, [])
 
   const [statusFilter, setStatusFilter] = useState<
     "all" | "critical" | "warning"
@@ -2045,7 +2049,7 @@ export function DashboardView({
 
           <p className="mt-2 text-pretty text-sm text-sidebar-foreground/70">
             SentrIA ne se contente pas d&apos;alerter : chaque priorité
-            montre sa preuve, sa confiance et son impact — puis garde en
+            montre sa preuve, sa confiance et son impact, puis garde en
             mémoire ce que vous en avez fait.
           </p>
 
@@ -2242,7 +2246,7 @@ export function DashboardView({
         </div>
       ) : (
         <>
-      {/* Context for the priorities above — not the headline */}
+      {/* Context for the priorities above, not the headline */}
       <p className="text-[11px] font-bold uppercase tracking-[0.13em] text-muted-foreground">
         Contexte général
       </p>
@@ -2939,7 +2943,7 @@ export function DashboardView({
                     </p>
                   ) : (
                     <p className="mt-1 text-sm font-semibold text-sidebar-foreground/40">
-                      —
+                      Non mesuré
                     </p>
                   )}
                 </div>
@@ -2962,7 +2966,7 @@ export function DashboardView({
 
                 <p className="mt-1.5 text-sm font-medium leading-5 text-sidebar-foreground/90">
                   {expandedRecommendation?.recommended_action ??
-                    "Analyse en cours — recommandation bientôt disponible."}
+                    "Analyse en cours, recommandation bientôt disponible."}
                 </p>
               </div>
 

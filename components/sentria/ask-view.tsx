@@ -33,7 +33,7 @@ export function AskView() {
   const [messages, setMessages] = useState<Msg[]>([
     {
       role: "ai",
-      text: "Bonjour Aïcha. Je suis SentrIA. Posez-moi une question sur vos systèmes ou opérations — je m'appuie sur vos signaux en temps réel.",
+      text: "Bonjour Aïcha. Je suis SentrIA. Posez-moi une question sur vos systèmes ou opérations. Je m'appuie sur vos signaux en temps réel.",
     },
   ])
 

@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Globe, Bell, Moon, Check, Building2, Mail } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { readTheme, resolvedTheme, writeTheme } from "@/lib/theme"
 
 const LANGUAGES = [
   { code: "fr", label: "Français", region: "France · Afrique" },
@@ -152,7 +153,6 @@ export function SettingsView() {
   const [toggles, setToggles] = useState({
     alerts: true,
     weekly: false,
-    dark: false,
   })
 
   const toggle = (key: keyof typeof toggles) => {
@@ -160,6 +160,32 @@ export function SettingsView() {
       ...state,
       [key]: !state[key],
     }))
+  }
+
+  /* The dark switch used to flip a boolean nothing read. It now drives
+     the real theme class, read after mount so the server and the client
+     agree on the first render. */
+  const [dark, setDark] = useState(false)
+
+  useEffect(() => {
+    const sync = () => setDark(resolvedTheme(readTheme()) === "dark")
+
+    sync()
+
+    const media = window.matchMedia("(prefers-color-scheme: dark)")
+
+    media.addEventListener("change", sync)
+    window.addEventListener("sentria_theme_updated", sync)
+
+    return () => {
+      media.removeEventListener("change", sync)
+      window.removeEventListener("sentria_theme_updated", sync)
+    }
+  }, [])
+
+  const toggleDark = () => {
+    writeTheme(dark ? "light" : "dark")
+    setDark(!dark)
   }
 
   const saveSettings = () => {
@@ -260,12 +286,6 @@ export function SettingsView() {
               title: t.weekly,
               desc: t.weeklyDesc,
             },
-            {
-              icon: Moon,
-              key: "dark" as const,
-              title: t.dark,
-              desc: t.darkDesc,
-            },
           ].map((row) => {
             const Icon = row.icon
 
@@ -295,6 +315,20 @@ export function SettingsView() {
               </div>
             )
           })}
+
+          <div className="flex items-center gap-3 py-4">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
+              <Moon className="h-4 w-4" aria-hidden="true" />
+            </span>
+
+            <div className="flex-1">
+              <p className="text-sm font-semibold">{t.dark}</p>
+
+              <p className="text-xs text-muted-foreground">{t.darkDesc}</p>
+            </div>
+
+            <Toggle on={dark} onChange={toggleDark} />
+          </div>
         </div>
       </section>
 

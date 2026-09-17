@@ -266,7 +266,7 @@ export function IndustryMotorsView({ alerts }: { alerts: Alert[] }) {
       <HeaderCard
         icon={Activity}
         title="Moteurs"
-        differentiator="SentrIA repère les dégradations progressives — plusieurs signaux faibles sur le même moteur — avant que la panne franche ne survienne."
+        differentiator="SentrIA repère les dégradations progressives, plusieurs signaux faibles sur le même moteur, avant que la panne franche ne survienne."
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -481,7 +481,7 @@ export function IndustryPressureView({ alerts }: { alerts: Alert[] }) {
         <div className="border-b border-border px-5 py-3">
           <p className="text-sm font-semibold">Cause probable suggérée</p>
           <p className="text-xs text-muted-foreground">
-            Hypothèse à confirmer sur le terrain — n'engage pas de diagnostic
+            Hypothèse à confirmer sur le terrain, n'engage pas de diagnostic
             définitif.
           </p>
         </div>
