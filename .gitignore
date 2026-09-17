@@ -8,3 +8,9 @@ node_modules
 .next/
 .env*.local
 .DS_Store
+
+# Python artifacts from the bundled .claude/skills tooling
+__pycache__/
+*.pyc
+.coverage
+.pytest_cache/
