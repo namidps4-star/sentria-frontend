@@ -73,7 +73,7 @@ comme une réussite.
 
 ## 3. Les fichiers importants sur lesquels il bosse
 
-### Backend — `namidps4-star/Sentria`, branche `main` (déployée sur Render)
+### Backend : `namidps4-star/Sentria`, branche `main` (déployée sur Render)
 
 | Fichier | Rôle |
 |---|---|
@@ -85,7 +85,7 @@ comme une réussite.
 | `api/main.py` | FastAPI. CORS, `/health`, `/ask`, `/upload`, `/alerts` |
 | `pipeline/demo_laboratory.py`<br>`pipeline/demo_hospital.py`<br>`pipeline/demo_wholesaler.py` | **Nouveaux.** Démos avec assertions. À relancer après toute modification |
 
-### Frontend — `namidps4-star/sentria-frontend`, branche `feature/onboarding-view`
+### Frontend : `namidps4-star/sentria-frontend`, branche `feature/onboarding-view`
 
 | Fichier | Rôle |
 |---|---|
@@ -96,7 +96,7 @@ comme une réussite.
 | `components/sentria/recommendations-panel.tsx` | Catégories `diagnostics` / `critical_supply` / `distribution` |
 | `.claude/skills/` | 41 compétences installées (~13 Mo) |
 
-### Landing page — `namidps4-star/sentria-landing-page`, branche `feature/premium-redesign`
+### Landing page : `namidps4-star/sentria-landing-page`, branche `feature/premium-redesign`
 
 | Fichier | Rôle |
 |---|---|
