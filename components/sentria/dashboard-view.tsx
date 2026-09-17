@@ -47,6 +47,7 @@ const SECTORS = [
   { key: "transportation", label: "Transport" },
   { key: "logistics", label: "Logistique" },
   { key: "energy", label: "Énergie" },
+  { key: "commerce", label: "Commerce" },
   { key: "eac", label: "EAC" },
 ]
 
@@ -284,17 +285,6 @@ function activityOf(row: {
   if (key.startsWith("wholesaler.")) return "grossiste-pharma"
 
   return null
-}
-
-/** Does any alert in this set carry a recorded activity?
- *
- *  If yes, the backend is labelling rows and an unlabelled one is stale,
- *  so it is safe to exclude it. If no, nothing is labelled yet and
- *  excluding unlabelled rows would empty the dashboard, so unclassified
- *  rows stay visible. The behaviour tightens by itself once the
- *  business_type column exists and one file has been uploaded. */
-function hasRecordedActivity(rows: { business_type?: string | null }[]) {
-  return rows.some((r) => Boolean(r.business_type))
 }
 
 /** Label for each alert_key family, the middle segment of a key such as
@@ -699,6 +689,42 @@ const SECTOR_META: Record<
       },
     ],
     chartTitle: "Alertes énergie · 7 jours",
+  },
+
+  commerce: {
+    kpis: (a) => [
+      {
+        label: "Ruptures en rayon",
+        value: String(
+          a.filter((x) => x.severity === "CRITICAL").length
+        ),
+        match: (x) => x.severity === "CRITICAL",
+        delta: "Réassort urgent",
+        up: false,
+      },
+      {
+        label: "Stocks bas",
+        value: String(
+          a.filter((x) => x.severity === "WARNING").length
+        ),
+        match: (x) => x.severity === "WARNING",
+        delta: "À surveiller",
+        up: true,
+      },
+      {
+        label: "Références concernées",
+        value: String(new Set(a.map((x) => x.equipment)).size),
+        delta: "Produits",
+        up: true,
+      },
+      {
+        label: "Total alertes",
+        value: String(a.length),
+        delta: "Sur la période",
+        up: a.length === 0,
+      },
+    ],
+    chartTitle: "Alertes stocks · 7 jours",
   },
 
   eac: {
@@ -1383,26 +1409,36 @@ export function DashboardView({
   // Separate the activities inside a sector, not just the sectors. A
   // laboratory and a pharmacy both write sector "health", so this is what
   // stops one activity's alerts appearing under another.
-  // True once any alert in the current sector carries an activity.
-  const sectorRows = alerts.filter(
-    (a) => filterSector === "all" || a.sector === filterSector
+  //
+  // This has to hold in the "Tous" view too. An account is onboarded for
+  // one activity, so another activity's rows are never its own, and
+  // exempting "Tous" was what made the separation look like it had never
+  // happened: the view the dashboard opens on mixed every activity back
+  // together.
+  //
+  // Which sectors have labelled rows, so an unlabelled row is judged
+  // against its own sector rather than against the whole table.
+  const sectorsWithRecordedActivity = new Set(
+    alerts
+      .filter((a) => Boolean(a.business_type))
+      .map((a) => a.sector ?? "")
   )
-  const activityRecorded = hasRecordedActivity(sectorRows)
 
   const matchesActivity = (a: {
+    sector?: string | null
     business_type?: string | null
     alert_key?: string | null
   }) => {
     if (!businessType) return true
-    if (filterSector === "all") return true
 
     const activity = activityOf(a)
 
     if (activity !== null) return activity === businessType
 
-    // Unclassifiable. Exclude it only when this sector has labelled rows
-    // to compare against, otherwise show it rather than blank the view.
-    return !activityRecorded
+    // Unclassifiable. Exclude it only when its own sector has labelled
+    // rows to compare against, otherwise show it rather than blank the
+    // view.
+    return !sectorsWithRecordedActivity.has(a.sector ?? "")
   }
 
   const filteredAlerts = alerts
@@ -1544,16 +1580,54 @@ export function DashboardView({
 
   // The onboarded subtype relabels the cards so the dashboard describes
   // the business that was actually set up, not whichever one the sector
-  // defaults to.
+  // defaults to. Sector views only: the "Tous" cards count across
+  // sectors, and a laboratory wording on a cross-sector count would be a
+  // claim the number does not support.
   const subtypeLabels =
     businessType && filterSector !== "all"
       ? SUBTYPE_KPI_LABELS[businessType]
       : undefined
 
-  const subtypeName =
-    businessType && filterSector !== "all"
-      ? BUSINESS_TYPE_LABELS[businessType]
-      : undefined
+  // The activity this account was onboarded for. Taken from the saved
+  // onboarding choice rather than from the current filter, so it is
+  // stated in every view including "Tous". Tying it to the filter meant
+  // the view the dashboard opens on named no activity at all.
+  const subtypeName = businessType
+    ? BUSINESS_TYPE_LABELS[businessType]
+    : undefined
+
+  // The sector that goes with it. In a sector view that is the filter;
+  // in "Tous" it is the onboarded sector, which is a single one because
+  // onboarding saves exactly one.
+  const onboardedSectorKey =
+    filterSector !== "all"
+      ? filterSector
+      : activeSectors.length === 1
+        ? activeSectors[0]
+        : null
+
+  const onboardedSectorLabel =
+    SECTORS.find((x) => x.key === onboardedSectorKey)?.label ?? null
+
+  // "Santé · Laboratoire". Null only when nothing was onboarded, in
+  // which case there is no activity to name.
+  const departmentLabel =
+    [onboardedSectorLabel, subtypeName].filter(Boolean).join(" · ") ||
+    null
+
+  // Can the activity filter actually separate anything yet? Only once a
+  // row in this sector carries an activity, by recorded business_type or
+  // by alert_key namespace. Until then every unclassified row stays
+  // visible, so saying the view is limited to one activity would be a
+  // claim the data does not support.
+  const activitySeparationActive =
+    Boolean(businessType) &&
+    alerts.some(
+      (a) =>
+        (onboardedSectorKey === null ||
+          a.sector === onboardedSectorKey) &&
+        activityOf(a) !== null
+    )
 
   const kpis = meta
     .kpis(filteredAlerts)
@@ -1573,7 +1647,7 @@ export function DashboardView({
   // very different claim from "we have no data", so the cards and charts
   // are replaced by a panel that says which is true.
   const hasNoDataForSector =
-    filterSector !== "all" && filteredAlerts.length === 0 && !alertsError
+    filteredAlerts.length === 0 && !alertsError
 
   const chartData = dailySeries(filteredAlerts, 7)
 
@@ -2101,10 +2175,22 @@ export function DashboardView({
     <div className="space-y-6">
       <div className="flex flex-col gap-4 rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-xl">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
-            <Zap className="h-3.5 w-3.5" />
-            Temps réel
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+              <Zap className="h-3.5 w-3.5" />
+              Temps réel
+            </span>
+
+            {/* Which business this dashboard is for. Stated here, in
+                every view, because the department was the one thing the
+                dashboard never said out loud. */}
+            {departmentLabel && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-sidebar-foreground/25 bg-sidebar-foreground/10 px-3 py-1 text-xs font-semibold text-sidebar-foreground">
+                <Shield className="h-3.5 w-3.5" aria-hidden="true" />
+                {departmentLabel}
+              </span>
+            )}
+          </div>
 
           <h2 className="mt-3 text-balance font-heading text-2xl font-bold leading-tight md:text-3xl">
             Qu&apos;est-ce qui a besoin de votre attention maintenant ?
@@ -2115,6 +2201,30 @@ export function DashboardView({
             montre sa preuve, sa confiance et son impact — puis garde en
             mémoire ce que vous en avez fait.
           </p>
+
+          {subtypeName && (
+            <p className="mt-3 text-xs leading-5 text-sidebar-foreground/60">
+              {activitySeparationActive ? (
+                <>
+                  Vue limitée à votre activité :{" "}
+                  <span className="font-bold text-sidebar-foreground">
+                    {subtypeName}
+                  </span>
+                  . Les alertes des autres activités ne sont pas
+                  affichées.
+                </>
+              ) : (
+                <>
+                  Activité configurée :{" "}
+                  <span className="font-bold text-sidebar-foreground">
+                    {subtypeName}
+                  </span>
+                  . Aucune alerte importée ne porte encore d&apos;activité,
+                  elles sont donc toutes affichées.
+                </>
+              )}
+            </p>
+          )}
         </div>
 
         <button
@@ -2154,7 +2264,7 @@ export function DashboardView({
           Tous
 
           <span className="ml-1.5 text-[10px] opacity-60">
-            {alerts.length}
+            {alerts.filter(matchesActivity).length}
           </span>
         </button>
 
@@ -2196,9 +2306,9 @@ export function DashboardView({
 
             <span className="ml-1.5 text-[10px] opacity-60">
               {
-                alerts.filter(
-                  (a) => a.sector === s.key
-                ).length
+                alerts
+                  .filter((a) => a.sector === s.key)
+                  .filter(matchesActivity).length
               }
             </span>
           </button>
@@ -2239,16 +2349,6 @@ export function DashboardView({
           </div>
         )}
 
-      {subtypeName && (
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-[11px] font-medium text-muted-foreground">
-          <Shield className="h-3 w-3" aria-hidden="true" />
-          {SECTORS.find((x) => x.key === filterSector)?.label} ·{" "}
-          <span className="font-semibold text-foreground">
-            {subtypeName}
-          </span>
-        </div>
-      )}
-
       {hasNoDataForSector ? (
         <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
@@ -2257,8 +2357,9 @@ export function DashboardView({
 
           <h3 className="mt-4 font-heading text-lg font-bold">
             Aucune donnée pour{" "}
-            {SECTORS.find((x) => x.key === filterSector)?.label}
-            {subtypeName ? ` · ${subtypeName}` : ""}
+            {departmentLabel ??
+              SECTORS.find((x) => x.key === filterSector)?.label ??
+              "cette activité"}
           </h3>
 
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
@@ -2273,7 +2374,8 @@ export function DashboardView({
             correspondant à{" "}
             <span className="font-semibold text-foreground">
               {subtypeName ??
-                SECTORS.find((x) => x.key === filterSector)?.label}
+                SECTORS.find((x) => x.key === filterSector)?.label ??
+                "votre activité"}
             </span>{" "}
             via le bouton Importer CSV ci-dessus.
           </p>
