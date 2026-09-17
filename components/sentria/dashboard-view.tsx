@@ -69,6 +69,9 @@ type Alert = {
   /** Namespaced key such as "lab.tests_remaining.critical". Used to infer
    *  the activity for rows written before business_type was recorded. */
   alert_key?: string | null
+  /** 0-100 composite score the backend computed for this row. The
+   *  logistics views read it instead of asserting a risk of their own. */
+  risk_score?: number | null
 }
 
 type Recommendation = {
@@ -1408,6 +1411,15 @@ export function DashboardView({
       )
     })
 
+  /* What the logistics priority views read. Scoped to the logistics
+     sector and to the user's own activity, so a port operator never
+     sees a cold-chain reading, but deliberately not narrowed by the
+     alert table's own search box: those controls belong to the table
+     below, not to a view the user opened from a priority card. */
+  const logisticsViewAlerts = alerts
+    .filter((a) => a.sector === "logistics")
+    .filter(matchesActivity)
+
   const filteredRecommendations = recommendations
     .filter(
       (r) =>
@@ -1918,11 +1930,18 @@ export function DashboardView({
             opsType={normalizedOpsType}
           />
         ) : logisticsPriority === "wait" ? (
-          <LogisticsWaitingView opsType={normalizedOpsType} />
+          <LogisticsWaitingView
+            alerts={logisticsViewAlerts}
+            opsType={normalizedOpsType}
+          />
         ) : logisticsPriority === "cost" ? (
-          <LogisticsCostView opsType={normalizedOpsType} />
+          <LogisticsCostView
+            alerts={logisticsViewAlerts}
+            opsType={normalizedOpsType}
+          />
         ) : logisticsPriority === "anticipate" ? (
           <LogisticsAnticipateView
+            alerts={logisticsViewAlerts}
             opsType={normalizedOpsType}
           />
         ) : logisticsPriority === "resources" ? (
@@ -1991,6 +2010,7 @@ export function DashboardView({
           </div>
         ) : (
           <LogisticsBlockagesView
+            alerts={logisticsViewAlerts}
             opsType={normalizedOpsType}
           />
         )}

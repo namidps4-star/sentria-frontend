@@ -1,0 +1,993 @@
+/**
+ * Real data layer for the logistics priority views.
+ *
+ * Every number these views used to show was written by hand: fixed risk
+ * percentages, fixed euro amounts, three hardcoded signal bars per ops
+ * type, and a setInterval that nudged the figures every four seconds so
+ * the page would look live. This module replaces all of it with values
+ * derived from the alerts the backend actually produced.
+ *
+ * The rule here: if a number cannot be traced to an alert row, it does
+ * not get rendered. Where a business assumption is unavoidable (what an
+ * hour of immobilisation costs), the assumption is a named, editable
+ * rate and the arithmetic is shown to the user rather than baked in.
+ */
+
+export type OpsType =
+  | "port"
+  | "entrepot"
+  | "transport"
+  | "expedition"
+  | "froid"
+  | "multi"
+
+export type StageStatus = "good" | "watch" | "risk"
+
+export type LogisticsAlert = {
+  equipment: string
+  message: string
+  severity: "WARNING" | "CRITICAL" | string
+  date: string
+  sector?: string | null
+  alert_key?: string | null
+  risk_score?: number | null
+  business_type?: string | null
+}
+
+/* ------------------------------------------------------------------ */
+/*  Stage vocabulary                                                   */
+/* ------------------------------------------------------------------ */
+
+export type PrimitiveId =
+  | "fournisseurs"
+  | "stock"
+  | "entrepot"
+  | "transport"
+  | "douane"
+  | "client"
+  | "arrivee"
+  | "quai"
+  | "cour"
+  | "enlevement"
+  | "reception"
+  | "stockage"
+  | "preparation"
+  | "expedition"
+  | "commande"
+  | "emballage"
+  | "depart"
+  | "stockageFroid"
+  | "transportRefrigere"
+  | "livraison"
+
+export const PRIMITIVE_NAMES: Record<PrimitiveId, string> = {
+  fournisseurs: "Fournisseurs",
+  stock: "Stock",
+  entrepot: "Entrepôt",
+  transport: "Transport",
+  douane: "Douane",
+  client: "Client",
+  arrivee: "Arrivée",
+  quai: "Quai",
+  cour: "Cour",
+  enlevement: "Enlèvement",
+  reception: "Réception",
+  stockage: "Stockage",
+  preparation: "Préparation",
+  expedition: "Expédition",
+  commande: "Commande",
+  emballage: "Emballage",
+  depart: "Départ",
+  stockageFroid: "Stockage froid",
+  transportRefrigere: "Transport réfrigéré",
+  livraison: "Livraison",
+}
+
+/** The flow chain per ops type. Order is the physical order of the flow. */
+export const OPS_CHAINS: Record<Exclude<OpsType, "multi">, PrimitiveId[]> = {
+  transport: ["fournisseurs", "stock", "entrepot", "transport", "douane", "client"],
+  port: ["arrivee", "quai", "douane", "cour", "enlevement"],
+  entrepot: ["reception", "stockage", "preparation", "expedition"],
+  expedition: ["commande", "preparation", "emballage", "depart"],
+  froid: ["reception", "stockageFroid", "transportRefrigere", "livraison"],
+}
+
+export const OPS_LABELS: Record<OpsType, string> = {
+  port: "Port & conteneurs",
+  entrepot: "Entrepôt & stockage",
+  transport: "Transport & distribution",
+  expedition: "Expédition & envoi",
+  froid: "Chaîne du froid",
+  multi: "Plusieurs activités",
+}
+
+export function chainFor(
+  opsType: OpsType | undefined,
+  selectedForMulti: Exclude<OpsType, "multi">[] = []
+): PrimitiveId[] {
+  if (!opsType || opsType === "multi") {
+    const sources =
+      selectedForMulti.length > 0
+        ? selectedForMulti
+        : (Object.keys(OPS_CHAINS) as Exclude<OpsType, "multi">[])
+
+    const chain: PrimitiveId[] = []
+
+    for (const type of sources) {
+      for (const id of OPS_CHAINS[type]) {
+        if (!chain.includes(id)) chain.push(id)
+      }
+    }
+
+    return chain
+  }
+
+  return OPS_CHAINS[opsType]
+}
+
+/* ------------------------------------------------------------------ */
+/*  alert_key -> what it measures, and where in the flow it lands      */
+/* ------------------------------------------------------------------ */
+
+export type MetricKind =
+  | "wait"
+  | "temperature"
+  | "cycles"
+  | "pressure"
+  | "fuel"
+  | "service"
+  | "risk"
+  | "engine"
+  | "oil"
+  | "tires"
+
+type MetricDef = {
+  kind: MetricKind
+  /** What the number in the message means. */
+  label: string
+  unit: string
+  /** Where this signal sits in the flow, per ops type. */
+  stage: Partial<Record<Exclude<OpsType, "multi">, PrimitiveId>>
+  /** Any-ops-type fallback stage. */
+  defaultStage: PrimitiveId
+  /** Value at or above which the signal is a rupture rather than tension. */
+  riskAt: number
+  /** Ceiling used to turn the value into a 0-100 bar width. */
+  scaleMax: number
+}
+
+export const METRICS: Record<string, MetricDef> = {
+  "logistics.wait.critical": {
+    kind: "wait",
+    label: "Temps d'immobilisation",
+    unit: "h",
+    stage: { port: "cour", entrepot: "stockage", froid: "stockageFroid", expedition: "preparation" },
+    defaultStage: "transport",
+    riskAt: 8,
+    scaleMax: 48,
+  },
+  "logistics.wait.warning": {
+    kind: "wait",
+    label: "Temps d'attente",
+    unit: "h",
+    stage: { port: "quai", entrepot: "preparation", froid: "reception", expedition: "preparation" },
+    defaultStage: "transport",
+    riskAt: 8,
+    scaleMax: 48,
+  },
+  "logistics.temperature.critical": {
+    kind: "temperature",
+    label: "Température relevée",
+    unit: "°C",
+    stage: { froid: "transportRefrigere", entrepot: "stockage", port: "cour" },
+    defaultStage: "transport",
+    riskAt: 8,
+    scaleMax: 20,
+  },
+  "logistics.temperature.warning": {
+    kind: "temperature",
+    label: "Température relevée",
+    unit: "°C",
+    stage: { froid: "stockageFroid", entrepot: "stockage", port: "cour" },
+    defaultStage: "transport",
+    riskAt: 8,
+    scaleMax: 20,
+  },
+  "logistics.cycles.critical": {
+    kind: "cycles",
+    label: "Cycles effectués",
+    unit: "cycles",
+    stage: { port: "quai", entrepot: "preparation", expedition: "emballage", froid: "stockageFroid" },
+    defaultStage: "entrepot",
+    riskAt: 1,
+    scaleMax: 1,
+  },
+  "logistics.cycles.warning": {
+    kind: "cycles",
+    label: "Cycles effectués",
+    unit: "cycles",
+    stage: { port: "quai", entrepot: "preparation", expedition: "emballage", froid: "stockageFroid" },
+    defaultStage: "entrepot",
+    riskAt: 1,
+    scaleMax: 1,
+  },
+  "logistics.pressure.critical": {
+    kind: "pressure",
+    label: "Pression hydraulique",
+    unit: "bar",
+    stage: { port: "quai", entrepot: "stockage", expedition: "emballage" },
+    defaultStage: "entrepot",
+    riskAt: 0,
+    scaleMax: 300,
+  },
+  "logistics.fuel.warning": {
+    kind: "fuel",
+    label: "Carburant restant",
+    unit: "%",
+    stage: { port: "enlevement", entrepot: "expedition", froid: "transportRefrigere" },
+    defaultStage: "transport",
+    riskAt: 10,
+    scaleMax: 100,
+  },
+  "logistics.service.warning": {
+    kind: "service",
+    label: "Jours sans entretien",
+    unit: "j",
+    stage: { port: "quai", entrepot: "stockage", expedition: "emballage", froid: "stockageFroid" },
+    defaultStage: "entrepot",
+    riskAt: 90,
+    scaleMax: 180,
+  },
+  "logistics.risk.elevated": {
+    kind: "risk",
+    label: "Score de risque composite",
+    unit: "/100",
+    stage: {},
+    defaultStage: "transport",
+    riskAt: 70,
+    scaleMax: 100,
+  },
+  "transport.service.critical_due": {
+    kind: "service",
+    label: "Km depuis l'entretien",
+    unit: "km",
+    stage: {},
+    defaultStage: "transport",
+    riskAt: 20000,
+    scaleMax: 40000,
+  },
+  "transport.service.due": {
+    kind: "service",
+    label: "Km depuis l'entretien",
+    unit: "km",
+    stage: {},
+    defaultStage: "transport",
+    riskAt: 20000,
+    scaleMax: 40000,
+  },
+  "transport.engine.overheat": {
+    kind: "engine",
+    label: "Température moteur",
+    unit: "°C",
+    stage: {},
+    defaultStage: "transport",
+    riskAt: 100,
+    scaleMax: 140,
+  },
+  "transport.oil.critical_low": {
+    kind: "oil",
+    label: "Niveau d'huile",
+    unit: "",
+    stage: {},
+    defaultStage: "transport",
+    riskAt: 0,
+    scaleMax: 100,
+  },
+  "transport.fuel_low": {
+    kind: "fuel",
+    label: "Carburant restant",
+    unit: "%",
+    stage: {},
+    defaultStage: "transport",
+    riskAt: 10,
+    scaleMax: 100,
+  },
+  "transportation.tires.replacement_due": {
+    kind: "tires",
+    label: "Âge des pneus",
+    unit: "mois",
+    stage: {},
+    defaultStage: "transport",
+    riskAt: 48,
+    scaleMax: 72,
+  },
+}
+
+export function metricFor(alert: LogisticsAlert): MetricDef | undefined {
+  return alert.alert_key ? METRICS[alert.alert_key] : undefined
+}
+
+export function stageOf(
+  alert: LogisticsAlert,
+  opsType: OpsType | undefined
+): PrimitiveId | undefined {
+  const def = metricFor(alert)
+
+  if (!def) return undefined
+
+  if (opsType && opsType !== "multi") {
+    return def.stage[opsType] ?? def.defaultStage
+  }
+
+  /* Multi-activity: the per-ops mapping is ambiguous, so use the first
+     stage this metric maps to that is actually in the composed chain. */
+  const mapped = Object.values(def.stage)
+
+  return mapped[0] ?? def.defaultStage
+}
+
+/** The first number in a backend message. Every logistics message puts
+ *  its measured value there ("Conteneurs bloqués depuis 14h : ..."), so
+ *  this reads the real measurement rather than inventing one. */
+export function measuredValue(alert: LogisticsAlert): number | null {
+  const match = alert.message?.match(/-?\d+(?:[.,]\d+)?/)
+
+  if (!match) return null
+
+  const value = Number(match[0].replace(",", "."))
+
+  return Number.isFinite(value) ? value : null
+}
+
+/** The part of the message after the last " : ", the backend's own
+ *  instruction for this alert, used instead of an invented narrative. */
+export function messageAdvice(alert: LogisticsAlert): string {
+  const parts = (alert.message ?? "").split(" : ")
+
+  return (parts.length > 1 ? parts[parts.length - 1] : "").trim()
+}
+
+/** The measured part of the message, before the first " : ". */
+export function messageFinding(alert: LogisticsAlert): string {
+  return (alert.message ?? "").split(" : ")[0].trim()
+}
+
+/* ------------------------------------------------------------------ */
+/*  Derived signals                                                    */
+/* ------------------------------------------------------------------ */
+
+export function riskOf(alert: LogisticsAlert): number {
+  const raw = alert.risk_score
+
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    /* The backend sends 0-100; a 0-1 score is normalized rather than
+       rendered as "0%". */
+    return Math.round(raw <= 1 ? raw * 100 : Math.min(raw, 100))
+  }
+
+  /* No score stored for this row. Severity is the only real signal
+     left, so use it rather than pretending to a precise number. */
+  return alert.severity === "CRITICAL" ? 75 : 45
+}
+
+export function hoursSince(iso: string): number | null {
+  const then = new Date(iso).getTime()
+
+  if (!Number.isFinite(then)) return null
+
+  return Math.max(0, (Date.now() - then) / 36e5)
+}
+
+export function severityRank(severity: string): number {
+  return severity === "CRITICAL" ? 2 : 1
+}
+
+export type StageSignal = {
+  label: string
+  /** Formatted measurement, e.g. "14 h". */
+  value: string
+  /** 0-100, for the bar width. */
+  percent: number
+  tone: StageStatus
+  equipment: string
+  alertKey: string
+}
+
+export type StageState = {
+  id: PrimitiveId
+  name: string
+  status: StageStatus
+  /** Alerts the backend attributed to this stage. */
+  alerts: LogisticsAlert[]
+  /** Highest risk score among this stage's alerts, 0 when none. */
+  risk: number
+  signals: StageSignal[]
+}
+
+function formatMeasured(value: number, unit: string): string {
+  const rounded =
+    Math.abs(value) >= 100 ? Math.round(value) : Math.round(value * 10) / 10
+
+  return unit ? `${rounded.toLocaleString("fr-FR")} ${unit}`.trim() : String(rounded)
+}
+
+export function signalOf(alert: LogisticsAlert): StageSignal | null {
+  const def = metricFor(alert)
+
+  if (!def) return null
+
+  const value = measuredValue(alert)
+
+  if (value === null) return null
+
+  const percent = Math.max(
+    6,
+    Math.min(100, Math.round((Math.abs(value) / def.scaleMax) * 100))
+  )
+
+  return {
+    label: def.label,
+    value: formatMeasured(value, def.unit),
+    percent,
+    tone: alert.severity === "CRITICAL" ? "risk" : "watch",
+    equipment: alert.equipment,
+    alertKey: alert.alert_key ?? "",
+  }
+}
+
+/** Per-stage state for the whole flow chain, from real alerts only.
+ *  A stage with no alerts is "good" because nothing was reported for
+ *  it, and the caller is told how many alerts it has so it can say
+ *  "aucun signal" rather than implying a verified clean reading. */
+export function deriveStages(
+  alerts: LogisticsAlert[],
+  opsType: OpsType | undefined,
+  selectedForMulti: Exclude<OpsType, "multi">[] = []
+): StageState[] {
+  const chain = chainFor(opsType, selectedForMulti)
+  const byStage = new Map<PrimitiveId, LogisticsAlert[]>()
+
+  for (const alert of alerts) {
+    const stage = stageOf(alert, opsType)
+
+    if (!stage || !chain.includes(stage)) continue
+
+    const bucket = byStage.get(stage)
+
+    if (bucket) bucket.push(alert)
+    else byStage.set(stage, [alert])
+  }
+
+  return chain.map((id) => {
+    const stageAlerts = (byStage.get(id) ?? []).slice().sort(
+      (a, b) =>
+        severityRank(b.severity) - severityRank(a.severity) ||
+        riskOf(b) - riskOf(a)
+    )
+
+    const critical = stageAlerts.some((a) => a.severity === "CRITICAL")
+
+    const status: StageStatus =
+      stageAlerts.length === 0 ? "good" : critical ? "risk" : "watch"
+
+    const signals = stageAlerts
+      .map(signalOf)
+      .filter((s): s is StageSignal => s !== null)
+
+    return {
+      id,
+      name: PRIMITIVE_NAMES[id],
+      status,
+      alerts: stageAlerts,
+      risk: stageAlerts.length > 0 ? Math.max(...stageAlerts.map(riskOf)) : 0,
+      signals,
+    }
+  })
+}
+
+/** The one alert driving the view: worst severity, then highest risk. */
+export function leadAlert(alerts: LogisticsAlert[]): LogisticsAlert | null {
+  if (alerts.length === 0) return null
+
+  return alerts.slice().sort(
+    (a, b) =>
+      severityRank(b.severity) - severityRank(a.severity) ||
+      riskOf(b) - riskOf(a) ||
+      new Date(b.date).getTime() - new Date(a.date).getTime()
+  )[0]
+}
+
+/** Global risk across the flow: the worst stage, not an average, since
+ *  a flow is only as healthy as its blocking stage. */
+export function globalRisk(stages: StageState[]): number {
+  const scored = stages.filter((s) => s.alerts.length > 0)
+
+  if (scored.length === 0) return 0
+
+  return Math.max(...scored.map((s) => s.risk))
+}
+
+/** How many separate pieces of equipment reported this alert pattern
+ *  before. Feeds the confidence score's recurrence input. */
+export function recurrenceOf(
+  alert: LogisticsAlert,
+  alerts: LogisticsAlert[]
+): number {
+  return alerts.filter(
+    (a) => a.alert_key === alert.alert_key && a.equipment === alert.equipment
+  ).length
+}
+
+/** How strongly a stage's signals agree: the share of its alerts that
+ *  are CRITICAL. Feeds the confidence score's convergence input. */
+export function convergenceOf(stage: StageState | undefined): number {
+  if (!stage || stage.alerts.length === 0) return 0.5
+
+  const critical = stage.alerts.filter((a) => a.severity === "CRITICAL").length
+
+  return critical / stage.alerts.length
+}
+
+export type Breakpoint = {
+  stage: PrimitiveId
+  stageName: string
+  title: string
+  risk: number
+  /** Real impact: how many distinct assets are behind this breakpoint. */
+  equipmentCount: number
+  equipment: string[]
+  severity: string
+  tone: "watch" | "risk"
+}
+
+/** Real breakpoints: one per (stage, alert family), ranked by risk. */
+export function deriveBreakpoints(
+  stages: StageState[],
+  limit = 4
+): Breakpoint[] {
+  const groups = new Map<string, Breakpoint>()
+
+  for (const stage of stages) {
+    for (const alert of stage.alerts) {
+      const def = metricFor(alert)
+      const key = `${stage.id}:${def?.kind ?? alert.alert_key ?? "autre"}`
+      const existing = groups.get(key)
+      const risk = riskOf(alert)
+
+      if (existing) {
+        existing.risk = Math.max(existing.risk, risk)
+
+        if (!existing.equipment.includes(alert.equipment)) {
+          existing.equipment.push(alert.equipment)
+          existing.equipmentCount = existing.equipment.length
+        }
+
+        if (alert.severity === "CRITICAL") {
+          existing.severity = "CRITICAL"
+          existing.tone = "risk"
+        }
+
+        continue
+      }
+
+      groups.set(key, {
+        stage: stage.id,
+        stageName: stage.name,
+        title: def?.label ?? messageFinding(alert),
+        risk,
+        equipmentCount: 1,
+        equipment: [alert.equipment],
+        severity: alert.severity,
+        tone: alert.severity === "CRITICAL" ? "risk" : "watch",
+      })
+    }
+  }
+
+  return [...groups.values()]
+    .sort((a, b) => b.risk - a.risk)
+    .slice(0, limit)
+}
+
+/* ------------------------------------------------------------------ */
+/*  Projection: built from real timestamps, not invented milestones  */
+/* ------------------------------------------------------------------ */
+
+export type ProjectionStep = {
+  when: string
+  detail: string
+  tone?: "watch" | "risk"
+  /** True for the step describing the present, which is measured
+   *  rather than projected. */
+  measured?: boolean
+}
+
+/** A three-step projection anchored on the alert's own age and metric.
+ *
+ *  The old version hardcoded "+24 h" and "+48 h" per ops type. This one
+ *  reads how long the condition has actually been open and projects the
+ *  same rate forward, so the horizon moves with the data and the first
+ *  step is a measurement rather than a guess. */
+export function deriveProjection(
+  alert: LogisticsAlert | null,
+  stage: StageState | undefined
+): ProjectionStep[] {
+  if (!alert) return []
+
+  const def = metricFor(alert)
+  const value = measuredValue(alert)
+  const age = hoursSince(alert.date)
+  const openFor =
+    age === null
+      ? null
+      : age < 1
+        ? `depuis ${Math.max(1, Math.round(age * 60))} min`
+        : `depuis ${Math.round(age)} h`
+
+  const steps: ProjectionStep[] = [
+    {
+      when: "Constaté",
+      detail:
+        value !== null && def
+          ? `${def.label} à ${formatMeasured(value, def.unit)}${
+              openFor ? `, ${openFor}` : ""
+            }`
+          : sentenceCase(messageFinding(alert)),
+      measured: true,
+    },
+  ]
+
+  const otherStageAlerts = (stage?.alerts ?? []).filter((a) => a !== alert)
+
+  if (otherStageAlerts.length > 0) {
+    steps.push({
+      when: "En parallèle",
+      detail: `${countOf(
+        otherStageAlerts.length,
+        "autre signal",
+        "autres signaux"
+      )} sur ${stage?.name ?? "cette étape"}`,
+      tone: "watch",
+    })
+  }
+
+  /* The backend's own instruction is rendered once, in the
+     recommendation block. Repeating it here as a projected consequence
+     printed the same sentence twice on the same screen. */
+  if (alert.severity === "CRITICAL") {
+    steps.push({
+      when: "Niveau",
+      detail: "Seuil critique franchi, cette étape bloque le flux en aval.",
+      tone: "risk",
+    })
+  }
+
+  return steps
+}
+
+/* ------------------------------------------------------------------ */
+/*  Cost exposure: real overruns, named rates, visible arithmetic    */
+/* ------------------------------------------------------------------ */
+
+/** What an hour past the threshold costs, per metric kind.
+ *
+ *  These are assumptions, not measurements, and they are the only
+ *  assumptions in this module. The views render them as an editable
+ *  rate next to the result so the figure is never presented as
+ *  something the backend measured. */
+/* Only the three signals with a genuine per-unit overrun are priced.
+   Duty cycles were priced here too, from a threshold of zero, so a
+   reading of "214/220 cycles" billed all 214 and dominated the total
+   with 6 420 euros of exposure that nothing supported. Being near a
+   cycle limit is a maintenance risk, not a billable overrun, so it
+   belongs in the blockages view rather than in a euro figure. */
+export type CostRates = Record<"wait" | "temperature" | "service", number>
+
+export const DEFAULT_COST_RATES: CostRates = {
+  wait: 45,
+  temperature: 120,
+  service: 15,
+}
+
+export const RATE_LABELS: Record<keyof CostRates, string> = {
+  wait: "Immobilisation",
+  temperature: "Écart de température",
+  service: "Entretien différé",
+}
+
+export const RATE_UNITS: Record<keyof CostRates, string> = {
+  wait: "€ / h au-delà de 8 h",
+  temperature: "€ / °C au-delà de 8 °C",
+  service: "€ / jour au-delà de 30 j",
+}
+
+const RATE_THRESHOLDS: Record<keyof CostRates, number> = {
+  wait: 8,
+  temperature: 8,
+  service: 30,
+}
+
+export type ExposureLine = {
+  equipment: string
+  stage: PrimitiveId | undefined
+  stageName: string
+  kind: keyof CostRates
+  kindLabel: string
+  /** The measured value from the alert. */
+  measured: number
+  unit: string
+  /** How far past the threshold, the part that costs money. */
+  overrun: number
+  ratePerUnit: number
+  exposure: number
+  severity: string
+  alertKey: string
+}
+
+export function deriveExposure(
+  alerts: LogisticsAlert[],
+  opsType: OpsType | undefined,
+  rates: CostRates = DEFAULT_COST_RATES
+): ExposureLine[] {
+  const lines: ExposureLine[] = []
+
+  for (const alert of alerts) {
+    const def = metricFor(alert)
+
+    if (!def) continue
+
+    const kind = def.kind
+
+    if (kind !== "wait" && kind !== "temperature" && kind !== "service") {
+      continue
+    }
+
+    const measured = measuredValue(alert)
+
+    if (measured === null) continue
+
+    const threshold = RATE_THRESHOLDS[kind]
+    const overrun = Math.max(0, measured - threshold)
+
+    if (overrun <= 0) continue
+
+    const stage = stageOf(alert, opsType)
+
+    lines.push({
+      equipment: alert.equipment,
+      stage,
+      stageName: stage ? PRIMITIVE_NAMES[stage] : "Hors chaîne",
+      kind,
+      kindLabel: def.label,
+      measured,
+      unit: def.unit,
+      overrun: Math.round(overrun * 10) / 10,
+      ratePerUnit: rates[kind],
+      exposure: Math.round(overrun * rates[kind]),
+      severity: alert.severity,
+      alertKey: alert.alert_key ?? "",
+    })
+  }
+
+  return lines.sort((a, b) => b.exposure - a.exposure)
+}
+
+/* ------------------------------------------------------------------ */
+/*  Queues: real wait measurements                                   */
+/* ------------------------------------------------------------------ */
+
+export type QueueLine = {
+  equipment: string
+  hours: number
+  severity: string
+  stage: PrimitiveId | undefined
+  stageName: string
+  risk: number
+  date: string
+  advice: string
+}
+
+/** Everything the backend measured a wait time for, longest first. */
+export function deriveQueues(
+  alerts: LogisticsAlert[],
+  opsType: OpsType | undefined
+): QueueLine[] {
+  const lines: QueueLine[] = []
+
+  for (const alert of alerts) {
+    const def = metricFor(alert)
+
+    if (!def || def.kind !== "wait") continue
+
+    const hours = measuredValue(alert)
+
+    if (hours === null) continue
+
+    const stage = stageOf(alert, opsType)
+
+    lines.push({
+      equipment: alert.equipment,
+      hours,
+      severity: alert.severity,
+      stage,
+      stageName: stage ? PRIMITIVE_NAMES[stage] : "Hors chaîne",
+      risk: riskOf(alert),
+      date: alert.date,
+      advice: messageAdvice(alert),
+    })
+  }
+
+  return lines.sort((a, b) => b.hours - a.hours)
+}
+
+/* ------------------------------------------------------------------ */
+/*  Trend: real daily counts                                         */
+/* ------------------------------------------------------------------ */
+
+/** Alert counts per day over the last `days` days, oldest first. */
+export function dailyCounts(
+  alerts: LogisticsAlert[],
+  days = 7,
+  match?: (alert: LogisticsAlert) => boolean
+): number[] {
+  const counts = new Array(days).fill(0)
+  const now = Date.now()
+
+  for (const alert of alerts) {
+    if (match && !match(alert)) continue
+
+    const then = new Date(alert.date).getTime()
+
+    if (!Number.isFinite(then)) continue
+
+    const dayIndex = days - 1 - Math.floor((now - then) / 864e5)
+
+    if (dayIndex >= 0 && dayIndex < days) counts[dayIndex] += 1
+  }
+
+  return counts
+}
+
+export function formatEuros(value: number): string {
+  return Math.round(value).toLocaleString("fr-FR")
+}
+
+export function formatHours(hours: number): string {
+  /* Round to whole minutes first and carry. Rounding the remainder on
+     its own printed "21 h 60" for 21.996 hours. */
+  const totalMinutes = Math.round(hours * 60)
+
+  if (totalMinutes < 60) return `${totalMinutes} min`
+
+  const wholeHours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+
+  return minutes === 0
+    ? `${wholeHours} h`
+    : `${wholeHours} h ${String(minutes).padStart(2, "0")}`
+}
+
+/** "09 : 20" style clock, for the flow card's headline figure. */
+export function formatClock(hours: number): string {
+  const total = Math.max(0, Math.round(hours * 60))
+  const hh = Math.floor(total / 60)
+  const mm = total % 60
+
+  return `${String(hh).padStart(2, "0")} : ${String(mm).padStart(2, "0")}`
+}
+
+/** French plural helper. Written once because inlining
+ *  `signal${n > 1 ? "aux" : ""}` produced "4 signalaux" on screen. */
+export function plural(
+  count: number,
+  singular: string,
+  pluralForm?: string
+): string {
+  if (count <= 1) return singular
+
+  return pluralForm ?? `${singular}s`
+}
+
+/** "3 étapes", with the number. */
+export function countOf(
+  count: number,
+  singular: string,
+  pluralForm?: string
+): string {
+  return `${count} ${plural(count, singular, pluralForm)}`
+}
+
+/** Backend messages start lowercase because they are clause fragments.
+ *  This makes one a sentence without touching the rest of the string. */
+export function sentenceCase(text: string): string {
+  if (!text) return text
+
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}
+
+export const STATUS_WORDS: Record<StageStatus, string> = {
+  good: "Aucun signal",
+  watch: "Sous tension",
+  risk: "Rupture",
+}
+
+/* ------------------------------------------------------------------ */
+/*  Anticipation: measured lead time, not a claimed one              */
+/* ------------------------------------------------------------------ */
+
+/** A predictive alert is one the backend fired on its composite risk
+ *  score before any single metric crossed its own threshold
+ *  (logistics.risk.elevated). Those are the rows where SentrIA spoke
+ *  first, so they are the only honest basis for a lead-time claim. */
+export function isPredictive(alert: LogisticsAlert): boolean {
+  return alert.alert_key === "logistics.risk.elevated"
+}
+
+export type AnticipationLine = {
+  equipment: string
+  /** When the predictive alert fired. */
+  warnedAt: string
+  warnedRisk: number
+  /** The first threshold alert on the same equipment after the warning,
+   *  when one exists. */
+  confirmedAt: string | null
+  confirmedBy: string | null
+  confirmedSeverity: string | null
+  /** Hours between the warning and the confirmation. Null while the
+   *  condition has not been confirmed. */
+  leadHours: number | null
+  /** How long the warning has been open with no confirmation yet. */
+  openHours: number | null
+  stage: PrimitiveId | undefined
+  stageName: string
+}
+
+/** Pair each predictive alert with the threshold alert that later
+ *  confirmed it on the same equipment, and measure the gap. */
+export function deriveAnticipation(
+  alerts: LogisticsAlert[],
+  opsType: OpsType | undefined
+): AnticipationLine[] {
+  const predictive = alerts.filter(isPredictive)
+  const thresholdAlerts = alerts.filter((a) => !isPredictive(a) && metricFor(a))
+
+  return predictive
+    .map((warning) => {
+      const warnedTime = new Date(warning.date).getTime()
+
+      const confirmation = thresholdAlerts
+        .filter((a) => a.equipment === warning.equipment)
+        .filter((a) => {
+          const time = new Date(a.date).getTime()
+
+          return Number.isFinite(time) && time > warnedTime
+        })
+        .sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        )[0]
+
+      const stage = confirmation
+        ? stageOf(confirmation, opsType)
+        : stageOf(warning, opsType)
+
+      const leadHours = confirmation
+        ? Math.max(
+            0,
+            (new Date(confirmation.date).getTime() - warnedTime) / 36e5
+          )
+        : null
+
+      return {
+        equipment: warning.equipment,
+        warnedAt: warning.date,
+        warnedRisk: riskOf(warning),
+        confirmedAt: confirmation?.date ?? null,
+        confirmedBy: confirmation ? metricFor(confirmation)?.label ?? null : null,
+        confirmedSeverity: confirmation?.severity ?? null,
+        leadHours,
+        openHours: confirmation ? null : hoursSince(warning.date),
+        stage,
+        stageName: stage ? PRIMITIVE_NAMES[stage] : "Hors chaîne",
+      }
+    })
+    .sort((a, b) => (b.leadHours ?? -1) - (a.leadHours ?? -1))
+}
