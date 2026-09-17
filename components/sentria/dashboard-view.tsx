@@ -1271,7 +1271,13 @@ export function DashboardView({
           (uploadSector === "logistics" && opsType
             ? `&ops_type=${opsType}`
             : "") +
-          (uploadSector === "industry" && businessType
+          // business_type has to be sent for every sector the backend
+          // routes on, not just industry. check_health() dispatches
+          // pharmacie / grossiste-pharma / clinique-hopital / laboratoire
+          // off this value, so omitting it for health silently fell back
+          // to the pharmacy checks no matter which subtype was onboarded.
+          ((uploadSector === "industry" || uploadSector === "health") &&
+          businessType
             ? `&business_type=${businessType}`
             : ""),
         {
