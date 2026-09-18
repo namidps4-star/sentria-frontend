@@ -43,6 +43,11 @@ import {
   priorityCount,
 } from "./priority-nav"
 import { orderPriorities, prioritiesFor } from "@/lib/priorities"
+import {
+  activitiesFor,
+  activityLabel,
+  normalizeOpsType,
+} from "@/lib/activities"
 
 
 
@@ -275,6 +280,10 @@ const KEY_FAMILY_LABELS: Record<string, string> = {
   food_temp: "Température alim.", hygiene: "Hygiène",
   // logistics
   cycles: "Cycles", wait: "Attente", service: "Entretien", risk: "Risque",
+  // port: the gate stages. Without these the chart fell back to the raw
+  // key family and printed "arrival" and "customs" in English next to
+  // French labels.
+  arrival: "Arrivée", customs: "Douane",
   // transport
   engine: "Moteur", oil: "Huile", fuel: "Carburant",
   fuel_low: "Carburant bas", tires: "Pneus",
@@ -943,6 +952,12 @@ export function DashboardView({
      to recover from. */
   const [filterSector, setFilterSector] = useState("all")
 
+  /* Which activity the next import is tagged with. It used to be
+     invisible: the panel only offered a sector, the activity came from
+     whatever onboarding had stored, and nothing on screen said which one
+     would be sent. Changing it meant editing localStorage by hand. */
+  const [uploadActivity, setUploadActivity] = useState<string | null>(null)
+
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState("")
   const [uploadFailed, setUploadFailed] = useState(false)
@@ -978,6 +993,32 @@ export function DashboardView({
   useEffect(() => {
     setSelectedSectorPriorities(getSavedPriorities(filterSector))
   }, [filterSector])
+
+  /* Default the import activity to whatever this sector is configured
+     for, and fall back to the sector's first activity so the panel is
+     never sending an activity it is not showing. */
+  useEffect(() => {
+    const options = activitiesFor(uploadSector)
+
+    if (options.length === 0) {
+      setUploadActivity(null)
+      return
+    }
+
+    const configured =
+      uploadSector === "logistics"
+        ? normalizeOpsType(opsType)
+        : businessType
+
+    const match = options.find(
+      (a) =>
+        a.id === configured ||
+        (uploadSector === "logistics" &&
+          normalizeOpsType(a.id) === configured)
+    )
+
+    setUploadActivity(match?.id ?? options[0].id)
+  }, [uploadSector, opsType, businessType])
 
   /* Mount-only: pull the stored configuration in once, now that the
      initializers above no longer do it. Runs before the browser paints
@@ -1296,6 +1337,48 @@ export function DashboardView({
     localStorage.setItem("sentria_sector", "all")
   }
 
+  /** Is the chosen import activity the one the dashboard is configured
+   *  for? When it is not, the panel says so rather than letting the user
+   *  wonder why their import does not show up. */
+  function isConfiguredActivity(sector: string, activityId: string) {
+    if (sector === "logistics") {
+      return normalizeOpsType(activityId) === normalizeOpsType(opsType)
+    }
+
+    return activityId === businessType
+  }
+
+  function configuredActivityLabel(sector: string) {
+    const configured = sector === "logistics" ? opsType : businessType
+
+    if (!configured) return undefined
+
+    return (
+      activityLabel(sector, configured) ??
+      activitiesFor(sector).find(
+        (a) => normalizeOpsType(a.id) === normalizeOpsType(configured)
+      )?.label
+    )
+  }
+
+  /** Point the dashboard at the activity being imported, which is what
+   *  the user almost always wants right after importing it. Writes the
+   *  same keys onboarding does, so the views pick it up. */
+  function applyActivityToDashboard(sector: string, activityId: string) {
+    if (sector === "logistics") {
+      const normalized = normalizeOpsType(activityId) ?? activityId
+
+      localStorage.setItem("sentria_ops_type", normalized)
+      setOpsType(normalized)
+    } else {
+      localStorage.setItem("sentria_business_type", activityId)
+      setBusinessType(activityId)
+    }
+
+    setLogisticsPriority(null)
+    setIndustryPriority(null)
+  }
+
   async function handleUpload(
     e: React.ChangeEvent<HTMLInputElement>
   ) {
@@ -1311,17 +1394,25 @@ export function DashboardView({
     form.append("file", file)
 
     try {
+      /* The activity chosen in the panel, normalized: the backend
+         branches on "port", never on onboarding's "port-conteneurs". */
+      const chosenOpsType =
+        uploadSector === "logistics"
+          ? normalizeOpsType(uploadActivity) ?? normalizeOpsType(opsType)
+          : undefined
+
+      const chosenBusinessType =
+        uploadSector === "logistics" ? businessType : uploadActivity ?? businessType
+
       const res = await fetch(
         `${API}/upload?sector=${uploadSector}&lang=fr` +
-          (uploadSector === "logistics" && opsType
-            ? `&ops_type=${opsType}`
-            : "") +
+          (chosenOpsType ? `&ops_type=${chosenOpsType}` : "") +
           // Sent for every sector. check_industry and check_health branch
           // on it, and every sector needs it recorded on the alert so the
           // dashboard can separate activities. A value that does not
           // belong to the chosen sector is ignored safely by the backend.
-          (businessType
-            ? `&business_type=${encodeURIComponent(businessType)}`
+          (chosenBusinessType
+            ? `&business_type=${encodeURIComponent(chosenBusinessType)}`
             : ""),
         {
           method: "POST",
@@ -1776,24 +1867,7 @@ export function DashboardView({
   }
 
   if (filterSector === "logistics") {
-    const normalizedOpsType =
-      opsType &&
-      [
-        "port",
-        "entrepot",
-        "transport",
-        "expedition",
-        "froid",
-        "multi",
-      ].includes(opsType)
-        ? (opsType as
-            | "port"
-            | "entrepot"
-            | "transport"
-            | "expedition"
-            | "froid"
-            | "multi")
-        : undefined
+    const normalizedOpsType = normalizeOpsType(opsType)
 
     if (logisticsPriority === null) {
       return (
@@ -2417,15 +2491,84 @@ export function DashboardView({
           </p>
         )}
 
-        <p className="mt-2 text-xs text-muted-foreground">
-          Secteur :{" "}
+        {/* The activity the file will be tagged with. The panel used to
+            offer a sector only and send whatever onboarding had stored,
+            so a port CSV could be read with the warehouse rules and
+            nothing on screen explained why. */}
+        {activitiesFor(uploadSector).length > 0 && (
+          <div className="mt-4 border-t border-border pt-4">
+            <p className="text-xs font-semibold">
+              Activité de ce fichier
+            </p>
+
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Elle décide des contrôles appliqués et de la chaîne
+              affichée. Changez-la ici pour importer un fichier d&apos;une
+              autre activité.
+            </p>
+
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {activitiesFor(uploadSector).map((activity) => (
+                <button
+                  key={activity.id}
+                  type="button"
+                  onClick={() => setUploadActivity(activity.id)}
+                  aria-pressed={uploadActivity === activity.id}
+                  title={activity.description}
+                  className={cn(
+                    "rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
+                    uploadActivity === activity.id
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
+                  )}
+                >
+                  {activity.label}
+                </button>
+              ))}
+            </div>
+
+            {uploadActivity &&
+              !isConfiguredActivity(uploadSector, uploadActivity) && (
+                <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-brand/40 bg-brand/10 px-3 py-2">
+                  <p className="text-xs">
+                    Vous importez une activité différente de celle
+                    configurée
+                    {configuredActivityLabel(uploadSector)
+                      ? ` (${configuredActivityLabel(uploadSector)})`
+                      : ""}
+                    . Le tableau de bord continue d&apos;afficher
+                    l&apos;activité configurée.
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      applyActivityToDashboard(uploadSector, uploadActivity)
+                    }
+                    className="rounded-full border border-foreground bg-foreground px-3 py-1 text-[11px] font-semibold text-background transition-opacity hover:opacity-90"
+                  >
+                    Basculer le tableau de bord dessus
+                  </button>
+                </div>
+              )}
+          </div>
+        )}
+
+        <p className="mt-3 text-xs text-muted-foreground">
+          Envoyé :{" "}
           <span className="font-semibold text-foreground">
-            {
-              SECTORS.find(
-                (s) => s.key === uploadSector
-              )?.label
-            }
+            {SECTORS.find((s) => s.key === uploadSector)?.label}
           </span>
+
+          {uploadActivity && (
+            <>
+              {" · "}
+              <span className="font-semibold text-foreground">
+                {activityLabel(uploadSector, uploadActivity) ??
+                  uploadActivity}
+              </span>
+            </>
+          )}
         </p>
       </div>
 

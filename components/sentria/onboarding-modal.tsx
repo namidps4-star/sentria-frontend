@@ -34,6 +34,7 @@ import {
 import { cn } from "@/lib/utils"
 import { API_BASE } from "@/lib/api"
 import { PRIORITIES_BY_SECTOR } from "@/lib/priorities"
+import { ACTIVITIES_BY_SECTOR, normalizeOpsType } from "@/lib/activities"
 
 type Sector =
   | "industry"
@@ -50,14 +51,6 @@ type SectorConfig = {
   description: string
   icon: React.ElementType
   recommended?: boolean
-  maturity?: "Pilote recommandé" | "Accès anticipé"
-}
-
-type SubType = {
-  id: string
-  label: string
-  description: string
-  icon: React.ElementType
   maturity?: "Pilote recommandé" | "Accès anticipé"
 }
 
@@ -129,189 +122,6 @@ const SECTORS: SectorConfig[] = [
 /* -------------------------------------------------------------------------- */
 /* BUSINESS TYPES                                                             */
 /* -------------------------------------------------------------------------- */
-
-const SUBTYPES_BY_SECTOR: Record<Sector, SubType[]> = {
-  industry: [
-    {
-      id: "usine-production",
-      label: "Usine de production",
-      description: "Lignes de fabrication et machines critiques",
-      icon: Factory,
-    },
-    {
-      id: "atelier-soustraitance",
-      label: "Atelier / sous-traitance",
-      description: "Production pour le compte de tiers",
-      icon: Cog,
-    },
-    {
-      id: "usine-agroalimentaire",
-      label: "Usine agroalimentaire",
-      description: "Production avec contraintes sanitaires",
-      icon: Boxes,
-    },
-  ],
-
-  health: [
-    {
-      id: "pharmacie",
-      label: "Pharmacie",
-      description: "Officine et vente au détail de médicaments",
-      icon: HeartPulse,
-      maturity: "Pilote recommandé",
-    },
-    {
-      id: "grossiste-pharma",
-      label: "Grossiste-répartiteur pharmaceutique",
-      description: "Distribution en gros de produits de santé",
-      icon: Warehouse,
-      maturity: "Accès anticipé",
-    },
-    {
-      id: "clinique-hopital",
-      label: "Clinique / Hôpital",
-      description: "Établissement de soins et stocks cliniques",
-      icon: Building2,
-      maturity: "Accès anticipé",
-    },
-    {
-      id: "laboratoire",
-      label: "Laboratoire",
-      description: "Analyses, réactifs et échantillons",
-      icon: Activity,
-      maturity: "Accès anticipé",
-    },
-  ],
-
-  agriculture: [
-    {
-      id: "exploitation-agricole",
-      label: "Exploitation agricole",
-      description: "Production, culture et élevage",
-      icon: Wheat,
-    },
-    {
-      id: "cooperative-agricole",
-      label: "Coopérative agricole",
-      description: "Mutualisation entre plusieurs producteurs",
-      icon: Building2,
-    },
-    {
-      id: "silo-stockage",
-      label: "Silo / stockage de récolte",
-      description: "Conservation avant transformation ou vente",
-      icon: Warehouse,
-    },
-  ],
-
-  transportation: [
-    {
-      id: "transporteur-routier",
-      label: "Transporteur routier",
-      description: "Transport pour compte d'autrui",
-      icon: Truck,
-    },
-    {
-      id: "flotte-entreprise",
-      label: "Flotte d'entreprise",
-      description: "Véhicules utilisés pour votre propre activité",
-      icon: Truck,
-    },
-    {
-      id: "location-vehicules",
-      label: "Location de véhicules",
-      description: "Parc mis à disposition de clients",
-      icon: Gauge,
-    },
-  ],
-
-  logistics: [
-    {
-      id: "port-conteneurs",
-      label: "Port & conteneurs",
-      description: "Opérations portuaires et manutention de conteneurs",
-      icon: Anchor,
-    },
-    {
-      id: "entrepot-manutention",
-      label: "Entrepôt & manutention",
-      description: "Stockage et mouvements de marchandises",
-      icon: Warehouse,
-    },
-    {
-      id: "transport-distribution",
-      label: "Transport & distribution",
-      description: "Acheminement vers plusieurs points de livraison",
-      icon: Truck,
-    },
-    {
-      id: "preparation-expedition",
-      label: "Préparation & expédition",
-      description: "Traitement et envoi des commandes",
-      icon: PackageSearch,
-    },
-    {
-      id: "chaine-froid",
-      label: "Chaîne du froid",
-      description: "Logistique sous température dirigée",
-      icon: Snowflake,
-    },
-    {
-      id: "plusieurs-activites",
-      label: "Plusieurs activités",
-      description: "Une combinaison de ces opérations",
-      icon: Recycle,
-    },
-  ],
-
-  energy: [
-    {
-      id: "centrale-production",
-      label: "Centrale de production",
-      description: "Production d'énergie à grande échelle",
-      icon: Zap,
-    },
-    {
-      id: "generateurs-secours",
-      label: "Générateurs de secours",
-      description: "Alimentation de secours et continuité",
-      icon: BatteryCharging,
-    },
-    {
-      id: "distribution-energetique",
-      label: "Distribution énergétique",
-      description: "Réseau et acheminement de l'énergie",
-      icon: Radio,
-    },
-  ],
-
-  commerce: [
-    {
-      id: "grossiste-distributeur",
-      label: "Grossiste / distributeur",
-      description: "Vente en gros à d'autres commerces",
-      icon: Warehouse,
-    },
-    {
-      id: "supermarche-hypermarche",
-      label: "Supermarché / hypermarché",
-      description: "Grande surface avec rayons multiples",
-      icon: Store,
-    },
-    {
-      id: "chaine-magasins",
-      label: "Chaîne de magasins",
-      description: "Plusieurs points de vente à surveiller",
-      icon: Store,
-    },
-    {
-      id: "epicerie-proximite",
-      label: "Épicerie / commerce de proximité",
-      description: "Commerce local à taille humaine",
-      icon: ShoppingCart,
-    },
-  ],
-}
 
 /* -------------------------------------------------------------------------- */
 /* DATA SOURCES                                                               */
@@ -555,7 +365,7 @@ export function OnboardingView({
   )
 
   const subTypes = useMemo(
-    () => (sector ? SUBTYPES_BY_SECTOR[sector] : []),
+    () => (sector ? ACTIVITIES_BY_SECTOR[sector] : []),
     [sector]
   )
 
@@ -754,10 +564,16 @@ export function OnboardingView({
         JSON.stringify(selectedEquipment)
       )
 
-      // Keep the old logistics storage key so the existing
-      // dashboard logic continues to work.
+      // The dashboard and the backend both branch on the short ops
+      // type ("port"), not on this step's subtype id
+      // ("port-conteneurs"), so normalize before storing. Writing the
+      // raw id meant a real onboarded port operator got neither the
+      // port chain nor the port checks.
       if (isLogistics && subType) {
-        localStorage.setItem("sentria_ops_type", subType)
+        localStorage.setItem(
+          "sentria_ops_type",
+          normalizeOpsType(subType) ?? subType
+        )
       }
 
       localStorage.setItem(
