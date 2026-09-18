@@ -43,6 +43,7 @@ import {
   priorityCount,
 } from "./priority-nav"
 import { orderPriorities, prioritiesFor } from "@/lib/priorities"
+import { deriveRecommendations } from "@/lib/logistics-signals"
 import {
   activitiesFor,
   activityLabel,
@@ -2031,7 +2032,11 @@ export function DashboardView({
 
         {logisticsPriority === "recommend" ? (
           <RecommendationsBoard
-            recommendations={filteredRecommendations}
+            recommendations={deriveRecommendations(
+              logisticsViewAlerts,
+              normalizedOpsType,
+              opsTypesForChain
+            )}
             opsType={normalizedOpsType}
           />
         ) : logisticsPriority === "wait" ? (

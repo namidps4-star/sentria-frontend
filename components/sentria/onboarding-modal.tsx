@@ -22,6 +22,12 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { API_BASE } from "@/lib/api"
+import {
+  detectTimezoneId,
+  TIMEZONES,
+  writeCompanyName,
+  writeTimezoneId,
+} from "@/lib/company"
 import { PRIORITIES_BY_SECTOR } from "@/lib/priorities"
 import {
   ACTIVITIES_BY_SECTOR,
@@ -401,6 +407,19 @@ export function OnboardingView({
      opt-in, because one sector is the normal case and putting six
      checkboxes in front of everyone to serve the exception is how an
      onboarding gets abandoned. */
+  /* Asked here because the product consumes both: the name goes in
+     reports and in what Ask SentrIA calls the customer, and the zone is
+     what every hour-based threshold is read against. A free-text
+     description is deliberately not asked: the sector, the activities
+     and the priorities already say that in a form the pipeline reads. */
+  const [companyName, setCompanyName] = useState("")
+
+  const [timezoneId, setTimezoneId] = useState(TIMEZONES[0].id)
+
+  useEffect(() => {
+    setTimezoneId(detectTimezoneId())
+  }, [])
+
   const [multiSector, setMultiSector] = useState(false)
 
   const [extraSectors, setExtraSectors] = useState<Sector[]>([])
@@ -670,6 +689,9 @@ export function OnboardingView({
     if (typeof window !== "undefined") {
       localStorage.setItem("sentria_onboarded", "true")
 
+      writeCompanyName(companyName)
+      writeTimezoneId(timezoneId)
+
       if (sector) {
         localStorage.setItem("sentria_sector", sector)
 
@@ -871,6 +893,49 @@ export function OnboardingView({
             {/* ---------------------------------------------------------------- */}
             {/* STEP 1: SECTOR                                                   */}
             {/* ---------------------------------------------------------------- */}
+
+            {step === 1 && (
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <label className="block">
+                  <span className="text-sm font-medium">
+                    Nom de votre entreprise
+                  </span>
+
+                  <input
+                    value={companyName}
+                    onChange={(event) => setCompanyName(event.target.value)}
+                    placeholder="Ex. Terminal Atlantique SA"
+                    autoComplete="organization"
+                    className="mt-1.5 w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring"
+                  />
+
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    Utilisé dans vos rapports et par Ask SentrIA.
+                  </span>
+                </label>
+
+                <label className="block">
+                  <span className="text-sm font-medium">Fuseau horaire</span>
+
+                  <select
+                    value={timezoneId}
+                    onChange={(event) => setTimezoneId(event.target.value)}
+                    className="mt-1.5 w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring"
+                  >
+                    {TIMEZONES.map((zone) => (
+                      <option key={zone.id} value={zone.id}>
+                        {zone.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    Vos seuils sont en heures : « bloqué depuis 14 h » n&apos;a
+                    pas le même sens partout.
+                  </span>
+                </label>
+              </div>
+            )}
 
             {step === 1 && (
               <div className="flex flex-wrap justify-center gap-3">

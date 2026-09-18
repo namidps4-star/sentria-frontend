@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { formatEuros } from "@/lib/logistics-signals"
 
 type Recommendation = {
   id: string
@@ -31,6 +32,15 @@ type Recommendation = {
   alert_key?: string | null
   recommended_action: string
   action_category: string
+  /* Set only by deriveRecommendations, which knows the chain. The
+     backend endpoint cannot produce these, so every one is optional and
+     the card renders what it has. */
+  stageName?: string
+  downstream?: number
+  alertCount?: number
+  exposureEUR?: number
+  score?: number
+  reasoning?: string | null
 }
 
 type Status = "todo" | "in_progress" | "done"
@@ -567,11 +577,38 @@ export function RecommendationsBoard({
 
                         <p className="mt-3 text-sm font-semibold leading-snug">
                           {rec.equipment}
+
+                          {rec.stageName && (
+                            <span className="font-normal text-muted-foreground">
+                              {" · "}
+                              {rec.stageName}
+                            </span>
+                          )}
                         </p>
 
                         <p className="mt-1 line-clamp-2 text-xs leading-4 text-muted-foreground">
                           {rec.recommended_action}
                         </p>
+
+                        {(rec.exposureEUR ?? 0) > 0 && (
+                          <p className="mt-2 text-xs font-bold tabular-nums">
+                            {formatEuros(rec.exposureEUR!)} € exposés
+                          </p>
+                        )}
+
+                        {rec.reasoning && (
+                          <p className="mt-1.5 text-[10px] leading-4 text-muted-foreground">
+                            {rec.reasoning}
+                            {rec.score !== undefined && (
+                              <>
+                                {" · "}
+                                <span className="font-semibold text-foreground">
+                                  score {rec.score}
+                                </span>
+                              </>
+                            )}
+                          </p>
+                        )}
 
                         <div className="mt-3 flex flex-wrap items-center gap-1.5">
                           <span className="rounded-md border border-border bg-background px-2 py-1 text-[9px] font-medium text-muted-foreground">
@@ -579,6 +616,18 @@ export function RecommendationsBoard({
                               rec.action_category
                             ] ?? "Autre"}
                           </span>
+
+                          {(rec.downstream ?? 0) > 0 && (
+                            <span className="rounded-md border border-brand/40 bg-brand/10 px-2 py-1 text-[9px] font-semibold">
+                              {rec.downstream} en aval
+                            </span>
+                          )}
+
+                          {(rec.alertCount ?? 0) > 1 && (
+                            <span className="rounded-md border border-border bg-background px-2 py-1 text-[9px] font-medium text-muted-foreground">
+                              {rec.alertCount} signaux
+                            </span>
+                          )}
 
                           <span
                             className={cn(

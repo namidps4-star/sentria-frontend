@@ -1196,3 +1196,205 @@ export function deriveAnticipation(
     })
     .sort((a, b) => (b.leadHours ?? -1) - (a.leadHours ?? -1))
 }
+
+/* ------------------------------------------------------------------ */
+/*  Recommendations: grouped by cause, ordered by leverage            */
+/* ------------------------------------------------------------------ */
+
+/** What the board renders. Shaped like the backend's /recommendations
+ *  row so the existing board keeps working, plus the four fields the
+ *  backend cannot produce because it does not know the chain. */
+export type LogisticsRecommendation = {
+  id: string
+  equipment: string
+  sector: string
+  severity: string
+  date: string
+  message: string
+  risk_score: number
+  alert_key: string | null
+  recommended_action: string
+  action_category: string
+  /** Where in the chain this sits. */
+  stage: PrimitiveId
+  stageName: string
+  /** How many stages downstream wait on this one. This is the leverage:
+   *  clearing Quai clears Cour and Enlèvement, clearing Enlèvement
+   *  clears nothing. */
+  downstream: number
+  /** Signals folded into this one recommendation. */
+  alertCount: number
+  /** Euro exposure this asset carries, from deriveExposure, so the card
+   *  can say what acting is worth rather than only how bad it is. */
+  exposureEUR: number
+  /** Measured risk plus the leverage bonus, which is what the list is
+   *  ordered on. Printed on the card so the order is checkable. */
+  score: number
+  /** Why it is ranked where it is, in one sentence. */
+  reasoning: string
+}
+
+/** What one unblocked downstream stage is worth, in risk points.
+ *
+ *  Leverage has to tilt close calls without overriding a real gap. The
+ *  first version sorted on leverage before risk, which put a vessel at
+ *  81 ahead of a crane at 95 about to stop the quay, because the vessel
+ *  happened to sit one stage further upstream. Five points a stage means
+ *  a three-stage advantage beats a fifteen-point risk gap and no more. */
+export const LEVERAGE_POINTS_PER_STAGE = 5
+
+const KIND_CATEGORY: Partial<Record<MetricKind, string>> = {
+  wait: "delay",
+  temperature: "cold_chain",
+  cycles: "capacity",
+  pressure: "maintenance",
+  fuel: "fuel",
+  service: "maintenance",
+  mileage: "maintenance",
+  risk: "predictive",
+  engine: "maintenance",
+  oil: "maintenance",
+  tires: "maintenance",
+  berth: "delay",
+  eta: "delay",
+  discharge: "capacity",
+  demurrage: "delay",
+  documents: "delay",
+  dwell: "delay",
+  inspection: "delay",
+}
+
+/** One recommendation per asset per stage, ranked by leverage.
+ *
+ *  The backend's /recommendations returns the worst N alerts
+ *  independently of each other, because it has no idea the chain exists.
+ *  On a port that meant GRUE-02 appearing three times, once for its
+ *  pressure, once for its immobilisation and once for its cycles, as if
+ *  they were three problems needing three decisions. And it ranked a
+ *  blocked Enlèvement, which holds up nothing, level with a blocked
+ *  Quai, which holds up everything after it.
+ *
+ *  So: fold an asset's signals at one stage into a single decision, and
+ *  rank by what acting actually unblocks. Severity first, because a
+ *  rupture outranks tension whatever its position; then leverage, the
+ *  number of stages waiting downstream; then the measured risk. Every
+ *  step of that is printed on the card, so the order is checkable. */
+export function deriveRecommendations(
+  alerts: LogisticsAlert[],
+  opsType: OpsType | undefined,
+  selectedForMulti: Exclude<OpsType, "multi">[] = [],
+  rates: CostRates = DEFAULT_COST_RATES,
+  limit = 12
+): LogisticsRecommendation[] {
+  const chain = chainFor(opsType, selectedForMulti)
+  const stages = deriveStages(alerts, opsType, selectedForMulti)
+
+  /* Euro exposure per asset AND stage. Keying it on the asset alone
+     double-counted: GRUE-02 carries readings at both Quai and Cour, so
+     its full 1 110 euros appeared on both cards as if acting on either
+     saved the whole amount. deriveExposure already knows which stage
+     each overrun sits on, so use it. */
+  const exposureByAssetStage = new Map<string, number>()
+
+  for (const line of deriveExposure(alerts, opsType, rates, selectedForMulti)) {
+    if (!line.stage) continue
+
+    const key = `${line.stage}:${line.equipment}`
+
+    exposureByAssetStage.set(
+      key,
+      (exposureByAssetStage.get(key) ?? 0) + line.exposure
+    )
+  }
+
+  const out: LogisticsRecommendation[] = []
+
+  stages.forEach((stage, stageIndex) => {
+    if (stage.alerts.length === 0) return
+
+    const byAsset = new Map<string, LogisticsAlert[]>()
+
+    for (const alert of stage.alerts) {
+      const bucket = byAsset.get(alert.equipment)
+
+      if (bucket) bucket.push(alert)
+      else byAsset.set(alert.equipment, [alert])
+    }
+
+    const downstream = Math.max(0, chain.length - stageIndex - 1)
+
+    for (const [equipment, assetAlerts] of byAsset) {
+      const lead = leadAlert(assetAlerts)
+
+      if (!lead) continue
+
+      const advice = messageAdvice(lead)
+      const def = metricFor(lead)
+      const risk = Math.max(...assetAlerts.map(riskOf))
+      const critical = assetAlerts.filter(
+        (a) => a.severity === "CRITICAL"
+      ).length
+      const exposure =
+        exposureByAssetStage.get(`${stage.id}:${equipment}`) ?? 0
+
+      const findings =
+        assetAlerts.length === 1
+          ? messageFinding(lead)
+          : `${countOf(assetAlerts.length, "signal", "signaux")} sur ${
+              stage.name
+            }, dont ${countOf(critical, "critique")}`
+
+      const reasons: string[] = []
+
+      if (critical > 0) reasons.push("seuil critique franchi")
+
+      if (downstream > 0) {
+        reasons.push(
+          `débloque ${countOf(downstream, "étape")} en aval, +${
+            downstream * LEVERAGE_POINTS_PER_STAGE
+          } pts`
+        )
+      }
+
+      reasons.push(`risque ${risk}/100`)
+
+      if (exposure > 0) {
+        reasons.push(`${formatEuros(exposure)} € exposés`)
+      }
+
+      const score =
+        risk + downstream * LEVERAGE_POINTS_PER_STAGE
+
+      out.push({
+        id: `${stage.id}:${equipment}`,
+        equipment,
+        sector: "logistics",
+        severity: critical > 0 ? "CRITICAL" : lead.severity,
+        date: lead.date,
+        message: findings,
+        risk_score: risk,
+        alert_key: lead.alert_key ?? null,
+        recommended_action:
+          sentenceCase(advice) ||
+          `Traiter ${equipment} sur ${stage.name.toLowerCase()}.`,
+        action_category: (def && KIND_CATEGORY[def.kind]) || "other",
+        stage: stage.id,
+        stageName: stage.name,
+        downstream,
+        alertCount: assetAlerts.length,
+        exposureEUR: exposure,
+        score,
+        reasoning: reasons.join(" · "),
+      })
+    }
+  })
+
+  return out
+    .sort(
+      (a, b) =>
+        severityRank(b.severity) - severityRank(a.severity) ||
+        b.score - a.score ||
+        b.exposureEUR - a.exposureEUR
+    )
+    .slice(0, limit)
+}

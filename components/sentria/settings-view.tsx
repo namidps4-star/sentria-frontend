@@ -4,6 +4,13 @@ import { useEffect, useState } from "react"
 import { Globe, Bell, Moon, Check, Building2, Mail } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { readTheme, resolvedTheme, writeTheme } from "@/lib/theme"
+import {
+  readCompanyName,
+  readTimezoneId,
+  TIMEZONES,
+  writeCompanyName,
+  writeTimezoneId,
+} from "@/lib/company"
 
 const LANGUAGES = [
   { code: "fr", label: "Français", region: "France · Afrique" },
@@ -183,14 +190,32 @@ export function SettingsView() {
     }
   }, [])
 
+  /* The name was a hardcoded defaultValue and the zone a select with no
+     state, so neither was ever saved or read back. Both are stored now,
+     and onboarding asks for them up front. */
+  const [companyName, setCompanyName] = useState("")
+
+  const [timezoneId, setTimezoneId] = useState(TIMEZONES[0].id)
+
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    setCompanyName(readCompanyName())
+    setTimezoneId(readTimezoneId())
+  }, [])
+
   const toggleDark = () => {
     writeTheme(dark ? "light" : "dark")
     setDark(!dark)
   }
 
   const saveSettings = () => {
-    // Keep settings unrelated to sector configuration here.
-    // Sector selection is handled by onboarding.
+    writeCompanyName(companyName)
+    writeTimezoneId(timezoneId)
+
+    setSaved(true)
+
+    window.setTimeout(() => setSaved(false), 2500)
   }
 
   const t = UI[lang] ?? UI.fr
@@ -357,7 +382,10 @@ export function SettingsView() {
             </span>
 
             <input
-              defaultValue="Sentria Africa"
+              value={companyName}
+              onChange={(event) => setCompanyName(event.target.value)}
+              placeholder="Ex. Terminal Atlantique SA"
+              autoComplete="organization"
               className="mt-1.5 w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring"
             />
           </label>
@@ -367,12 +395,16 @@ export function SettingsView() {
               {t.timezone}
             </span>
 
-            <select className="mt-1.5 w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring">
-              <option>GMT (Cotonou, Dakar, Abidjan)</option>
-              <option>WAT (Lagos, Kinshasa)</option>
-              <option>CET (Paris, Lyon)</option>
-              <option>BRT (São Paulo)</option>
-              <option>EAT (Nairobi)</option>
+            <select
+              value={timezoneId}
+              onChange={(event) => setTimezoneId(event.target.value)}
+              className="mt-1.5 w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring"
+            >
+              {TIMEZONES.map((zone) => (
+                <option key={zone.id} value={zone.id}>
+                  {zone.label}
+                </option>
+              ))}
             </select>
           </label>
         </div>
@@ -393,6 +425,12 @@ export function SettingsView() {
             {t.save}
           </button>
         </div>
+
+        {saved && (
+          <p role="status" className="mt-3 text-right text-sm font-medium text-green-600">
+            Enregistré.
+          </p>
+        )}
       </section>
     </div>
   )
