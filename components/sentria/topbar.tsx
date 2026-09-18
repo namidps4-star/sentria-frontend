@@ -3,6 +3,7 @@
 import { Search, Bell, Menu, ChevronDown, X, User } from "lucide-react"
 
 import { initialsOf, useCompanyIdentity } from "@/lib/company"
+import { useT } from "@/lib/i18n"
 
 const FOCUS_RING =
   " focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -25,6 +26,8 @@ export function Topbar({
    *  items that do not exist. */
   unreadCount?: number
 }) {
+  const t = useT()
+
   const hasUnread = unreadCount > 0
 
   /* This button used to read "Jean K.", a person nobody had entered, on
@@ -39,7 +42,7 @@ export function Topbar({
         onClick={onMenu}
         type="button"
         className={"flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card lg:hidden" + FOCUS_RING}
-        aria-label="Ouvrir le menu"
+        aria-label={t("topbar.menu.open")}
       >
         <Menu className="h-5 w-5" aria-hidden="true" />
       </button>
@@ -59,15 +62,15 @@ export function Topbar({
           type="search"
           value={search}
           onChange={(e) => onSearch(e.target.value)}
-          placeholder="Rechercher un actif, une alerte…"
-          aria-label="Rechercher un actif ou une alerte"
+          placeholder={t("topbar.search.placeholder")}
+          aria-label={t("topbar.search.label")}
           className="h-10 w-64 rounded-xl border border-border bg-card pl-9 pr-8 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 lg:w-72"
         />
         {search && (
           <button
             type="button"
             onClick={() => onSearch("")}
-            aria-label="Effacer la recherche"
+            aria-label={t("topbar.search.clear")}
             className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <X className="h-4 w-4" aria-hidden="true" />
@@ -79,11 +82,15 @@ export function Topbar({
         type="button"
         className={"relative flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card transition-colors hover:bg-muted" + FOCUS_RING}
         aria-label={
-          hasUnread
-            ? `Notifications, ${unreadCount} alerte${
-                unreadCount > 1 ? "s" : ""
-              } critique${unreadCount > 1 ? "s" : ""}`
-            : "Notifications, aucune alerte critique"
+          /* Three keys rather than one string with the agreement built
+             in by concatenation. "1 alertes critiques" was the French
+             bug this shape prevents, and English needs its own rule
+             anyway. */
+          !hasUnread
+            ? t("topbar.notifications.none")
+            : unreadCount === 1
+              ? t("topbar.notifications.one")
+              : t("topbar.notifications.many", { count: unreadCount })
         }
       >
         <Bell className="h-[18px] w-[18px]" aria-hidden="true" />
@@ -98,7 +105,11 @@ export function Topbar({
 
       <button
         type="button"
-        aria-label={companyName ? `Compte de ${companyName}` : "Compte"}
+        aria-label={
+          companyName
+            ? t("topbar.account.of", { name: companyName })
+            : t("topbar.account")
+        }
         aria-haspopup="menu"
         className={"flex items-center gap-2 rounded-xl border border-border bg-card py-1.5 pl-1.5 pr-2.5 transition-colors hover:bg-muted" + FOCUS_RING}
       >

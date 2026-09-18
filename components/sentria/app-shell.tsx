@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 
 import { API_BASE } from "@/lib/api"
+import { useT, type MessageKey } from "@/lib/i18n"
 import { Sidebar } from "./sidebar"
 import type { ViewKey } from "./types"
 import { Topbar } from "./topbar"
@@ -16,42 +17,46 @@ import { OnboardingView } from "./onboarding-modal"
 import { ReportView } from "./report-view"
 import { ContractorsView } from "./contractors-view"
 
-const META: Record<ViewKey, { title: string; subtitle: string }> = {
+/* Message keys, not labels. app-shell was holding a second copy of
+   every view name next to the sidebar's. */
+const META: Record<ViewKey, { title: MessageKey; subtitle: MessageKey }> = {
   dashboard: {
-    title: "Dashboard",
-    subtitle: "Vue globale des opérations",
+    title: "view.dashboard.title",
+    subtitle: "view.dashboard.subtitle",
   },
   sites: {
-    title: "Sites",
-    subtitle: "Gérez vos usines, ateliers et clients",
+    title: "view.sites.title",
+    subtitle: "view.sites.subtitle",
   },
   ask: {
-    title: "Ask SentrIA",
-    subtitle: "Votre analyste augmenté par l'IA",
+    title: "view.ask.title",
+    subtitle: "view.ask.subtitle",
   },
   pricing: {
-    title: "Abonnement",
-    subtitle: "Choisissez le plan adapté à vos opérations",
+    title: "view.pricing.title",
+    subtitle: "view.pricing.subtitle",
   },
   profile: {
-    title: "Profil",
-    subtitle: "Votre compte et votre activité",
+    title: "view.profile.title",
+    subtitle: "view.profile.subtitle",
   },
   settings: {
-    title: "Paramètres",
-    subtitle: "Langue, notifications et organisation",
+    title: "view.settings.title",
+    subtitle: "view.settings.subtitle",
   },
   report: {
-    title: "Rapport",
-    subtitle: "Analyse détaillée de vos opérations",
+    title: "view.report.title",
+    subtitle: "view.report.subtitle",
   },
   contractors: {
-    title: "Intervenants",
-    subtitle: "Qui est disponible, et qui fait quoi",
+    title: "view.contractors.title",
+    subtitle: "view.contractors.subtitle",
   },
 }
 
 export function AppShell() {
+  const t = useT()
+
   const [view, setView] = useState<ViewKey>("dashboard")
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
@@ -131,8 +136,8 @@ export function AppShell() {
         <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[28px] border border-border bg-card shadow-lg">
           <div className="shrink-0">
             <Topbar
-              title={META[view].title}
-              subtitle={META[view].subtitle}
+              title={t(META[view].title)}
+              subtitle={t(META[view].subtitle)}
               onMenu={() => setOpen(true)}
               search={search}
               onSearch={handleSearch}

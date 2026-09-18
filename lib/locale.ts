@@ -14,8 +14,16 @@
  * Six languages are offered and they do NOT all mean the same thing,
  * which is why every entry carries `uiReady`.
  *
- *   uiReady: true    the interface itself exists in this language
- *   uiReady: false   Ask SentrIA answers in it, the interface does not
+ *   "full"     the interface exists in this language, end to end
+ *   "partial"  the chrome does, the view bodies do not yet
+ *   "none"     Ask SentrIA answers in it, the interface does not
+ *
+ * "partial" exists because English is genuinely halfway: navigation,
+ * view titles, search and account labels come from lib/i18n (53 keys),
+ * while about 1079 strings inside the views are still French. Calling
+ * that "full" would be the decorative-picker bug again, and calling it
+ * "none" would hide working English navigation from the market that
+ * needs it. The picker states which of the three it is.
  *
  * Ask SentrIA works in all six because the model generates the answer:
  * there is nothing to translate and nothing to mistranslate. The
@@ -68,34 +76,37 @@ function announce() {
 
 export type LanguageCode = "fr" | "en" | "es" | "pt" | "ar" | "sw"
 
+/** How much of the interface exists in a language. See the file header:
+ *  "partial" is a real state, not a placeholder. */
+export type UiCoverage = "full" | "partial" | "none"
+
 export type Language = {
   code: LanguageCode
   label: string
   region: string
-  /** Whether the interface itself exists in this language. */
-  uiReady: boolean
+  uiReady: UiCoverage
   /** Right to left. Arabic needs a layout pass, not a string pass, so
    *  this is recorded rather than acted on globally. */
   rtl?: boolean
 }
 
 export const LANGUAGES: Language[] = [
-  { code: "fr", label: "Français", region: "France · Afrique", uiReady: true },
-  { code: "en", label: "English", region: "Global", uiReady: true },
-  { code: "es", label: "Español", region: "Amériques", uiReady: false },
-  { code: "pt", label: "Português", region: "Brésil · Angola", uiReady: false },
+  { code: "fr", label: "Français", region: "France · Afrique", uiReady: "full" },
+  { code: "en", label: "English", region: "Global", uiReady: "partial" },
+  { code: "es", label: "Español", region: "Amériques", uiReady: "none" },
+  { code: "pt", label: "Português", region: "Brésil · Angola", uiReady: "none" },
   {
     code: "ar",
     label: "العربية",
     region: "Maghreb",
-    uiReady: false,
+    uiReady: "none",
     rtl: true,
   },
   {
     code: "sw",
     label: "Kiswahili",
     region: "Afrique de l'Est",
-    uiReady: false,
+    uiReady: "none",
   },
 ]
 
@@ -117,13 +128,20 @@ export function languageFor(code: string | null | undefined): Language {
 export function uiLanguage(code: string | null | undefined): LanguageCode {
   const language = languageFor(code)
 
-  return language.uiReady ? language.code : DEFAULT_LANGUAGE
+  /* "partial" still renders: English navigation beats French
+     navigation for an English speaker, and the picker says the view
+     bodies are not translated yet. Only "none" falls back. */
+  return language.uiReady === "none" ? DEFAULT_LANGUAGE : language.code
 }
 
 /** What the picker should say each option actually gives you. */
 export function languagePromise(language: Language): string {
-  if (language.uiReady) {
+  if (language.uiReady === "full") {
     return "Interface et réponses SentrIA"
+  }
+
+  if (language.uiReady === "partial") {
+    return `Navigation en ${language.label} · contenu encore en français`
   }
 
   return `SentrIA répond en ${language.label} · interface en français`

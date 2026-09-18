@@ -1,6 +1,7 @@
 "use client"
 
 import type { ViewKey } from "./types"
+import { useT, type MessageKey } from "@/lib/i18n"
 import {
   LayoutDashboard,
   Factory,
@@ -26,67 +27,69 @@ interface SidebarProps {
 
 type SidebarItem = {
   id: ViewKey
-  label: string
+  /* A message key, not a label. The sidebar was the last place holding
+     its own copy of every view name. */
+  label: MessageKey
   icon: React.ElementType
   green?: boolean
 }
 
 const sections: {
-  title: string
+  title: MessageKey
   items: SidebarItem[]
 }[] = [
   {
-    title: "OPERATIONS",
+    title: "sidebar.section.operations",
     items: [
       {
         id: "dashboard",
-        label: "Dashboard",
+        label: "nav.dashboard",
         icon: LayoutDashboard,
       },
       {
         id: "sites",
-        label: "Sites",
+        label: "nav.sites",
         icon: Factory,
       },
       {
         id: "contractors",
-        label: "Intervenants",
+        label: "nav.contractors",
         icon: UsersRound,
       },
     ],
   },
   {
-    title: "INTELLIGENCE",
+    title: "sidebar.section.intelligence",
     items: [
       {
         id: "ask",
-        label: "Ask SentrIA",
+        label: "nav.ask",
         icon: Bot,
         green: true,
       },
       {
         id: "report",
-        label: "Rapport",
+        label: "nav.report",
         icon: FileBarChart,
       },
     ],
   },
   {
-    title: "STUDIO",
+    title: "sidebar.section.studio",
     items: [
       {
         id: "pricing",
-        label: "Abonnement",
+        label: "nav.pricing",
         icon: CreditCard,
       },
       {
         id: "profile",
-        label: "Profil",
+        label: "nav.profile",
         icon: User,
       },
       {
         id: "settings",
-        label: "Paramètres",
+        label: "nav.settings",
         icon: Settings,
       },
     ],
@@ -104,12 +107,14 @@ export function Sidebar({
   collapsed,
   onToggleCollapse,
 }: SidebarProps) {
+  const t = useT()
+
   return (
     <>
       {open && (
         <button
           type="button"
-          aria-label="Fermer la barre latérale"
+          aria-label={t("sidebar.close")}
           onClick={onClose}
           className="fixed inset-0 z-40 bg-black/20 lg:hidden"
         />
@@ -153,7 +158,7 @@ export function Sidebar({
                   </span>
 
                   <span className="text-[10px] text-sidebar-foreground/40">
-                    Industrial Intelligence
+                    {t("brand.tagline")}
                   </span>
                 </div>
               </div>
@@ -171,7 +176,7 @@ export function Sidebar({
               <button
                 type="button"
                 onClick={onToggleCollapse}
-                aria-label="Réduire la barre latérale"
+                aria-label={t("sidebar.collapse")}
                 className={"ml-auto flex h-9 w-9 items-center justify-center rounded-xl text-sidebar-foreground/50 transition hover:bg-accent/10 hover:text-accent" + SIDEBAR_FOCUS}
               >
                 <ChevronLeft className="h-4 w-4" aria-hidden="true" />
@@ -189,7 +194,7 @@ export function Sidebar({
 
                 {!collapsed && (
                   <div className="mb-2 px-3 text-[10px] font-semibold tracking-[0.16em] text-sidebar-foreground/40">
-                    {section.title}
+                    {t(section.title)}
                   </div>
                 )}
 
@@ -236,7 +241,7 @@ export function Sidebar({
                         {/* NORMAL LABEL */}
                         {!collapsed && (
                           <span className="truncate text-sm font-medium">
-                            {item.label}
+                            {t(item.label)}
                           </span>
                         )}
 
@@ -257,7 +262,7 @@ export function Sidebar({
                               "group-hover:opacity-100",
                             ].join(" ")}
                           >
-                            {item.label}
+                            {t(item.label)}
                           </span>
                         )}
 
@@ -283,12 +288,12 @@ export function Sidebar({
 
                     <div className="min-w-0">
                       <div className="text-xs font-medium text-sidebar-foreground">
-                        SentrIA active
+                        {t("brand.status.title")}
                       </div>
 
                       <div className="flex items-center gap-1.5 text-[10px] text-sidebar-foreground/40">
                         <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                        Intelligence online
+                        {t("brand.status.subtitle")}
                       </div>
                     </div>
                   </div>
@@ -303,7 +308,7 @@ export function Sidebar({
               <button
                 type="button"
                 onClick={onToggleCollapse}
-                aria-label="Déployer la barre latérale"
+                aria-label={t("sidebar.expand")}
                 className={"flex h-10 w-full items-center justify-center rounded-xl text-sidebar-foreground/50 transition hover:bg-accent/10 hover:text-accent" + SIDEBAR_FOCUS}
               >
                 <ChevronRight className="h-4 w-4" aria-hidden="true" />
