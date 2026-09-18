@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
-import { Sparkles, ArrowUp, Globe2, Lightbulb, MapPin } from "lucide-react"
+import { Sparkles, ArrowUp, Globe2, Lightbulb, MapPin, User } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 
@@ -34,16 +34,43 @@ type Msg = {
   text: string
 }
 
-export function AskView() {
-  const [messages, setMessages] = useState<Msg[]>([
-    {
-      role: "ai",
-      text: "Bonjour Aïcha. Je suis SentrIA. Posez-moi une question sur vos systèmes ou opérations. Je m'appuie sur vos signaux en temps réel.",
-    },
-  ])
+/** The company's initials, so a bubble is not stamped with the initials
+ *  of a person who does not exist. Two words at most: "Groupe Sahel
+ *  Logistique" reads better as GS than GSL. */
+function initialsOf(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0].toUpperCase())
+    .join("")
+}
 
+export function AskView() {
+  const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
+
+  /* The greeting used to say "Bonjour Aïcha", a person nobody had ever
+     entered: she was a mock persona, like the old MOCK_DATA in the
+     report. The only identity the product actually holds is the company
+     name captured at onboarding. Reading localStorage during the first
+     render would desynchronise the server and client markup, so it is
+     read after mount and the greeting is derived at render time rather
+     than stored in the thread. */
+  const [companyName, setCompanyName] = useState("")
+
+  useEffect(() => {
+    setCompanyName(readCompanyName())
+  }, [])
+
+  const greeting =
+    (companyName ? `Bonjour ${companyName}.` : "Bonjour.") +
+    " Je suis SentrIA. Posez-moi une question sur vos systèmes ou" +
+    " opérations. Je m'appuie sur vos signaux en temps réel."
+
+  const thread: Msg[] = [{ role: "ai", text: greeting }, ...messages]
 
   async function send(text: string) {
     const t = text.trim()
@@ -151,7 +178,7 @@ export function AskView() {
         aria-busy={loading}
         aria-label="Conversation avec SentrIA"
       >
-        {messages.length === 1 && (
+        {messages.length === 0 && (
           <div className="rounded-3xl border border-border bg-card p-6">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
               <Sparkles className="h-5 w-5" />
@@ -188,7 +215,7 @@ export function AskView() {
           </div>
         )}
 
-        {messages.map((m, i) => (
+        {thread.map((m, i) => (
           <div
             key={i}
             className={cn(
@@ -206,8 +233,10 @@ export function AskView() {
             >
               {m.role === "ai" ? (
                 <Sparkles className="h-4 w-4" />
+              ) : companyName ? (
+                initialsOf(companyName)
               ) : (
-                "AM"
+                <User className="h-4 w-4" />
               )}
             </div>
 
