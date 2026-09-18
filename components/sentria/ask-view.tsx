@@ -8,6 +8,11 @@ import remarkGfm from "remark-gfm"
 
 import { cn } from "@/lib/utils"
 import { API_BASE as API } from "@/lib/api"
+import {
+  readCompanyName,
+  readTimezoneId,
+  timezoneFor,
+} from "@/lib/company"
 
 const SUGGESTIONS = [
   {
@@ -59,6 +64,12 @@ export function AskView() {
           text: t,
           lang: "fr",
           session_id: "user-123",
+          /* Who is asking and on which clock. Without these the model
+             had nothing to call the customer but "votre entreprise",
+             and read every hour in the alerts against UTC. */
+          company_name: readCompanyName(),
+          timezone: timezoneFor(readTimezoneId()).zone,
+          timezone_label: timezoneFor(readTimezoneId()).label,
         }),
       })
 

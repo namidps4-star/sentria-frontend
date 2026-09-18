@@ -1,6 +1,5 @@
 "use client"
 
-import { useMemo, useState } from "react"
 import {
   FileDown,
   Calendar,
@@ -16,6 +15,11 @@ import {
   Truck,
   AlertTriangle,
 } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { API_BASE } from "@/lib/api"
+import { readCompanyName, readTimezoneId } from "@/lib/company"
+import { buildReport } from "@/lib/report"
+import type { LogisticsAlert } from "@/lib/logistics-signals"
 import { cn } from "@/lib/utils"
 
 // ---------------------------------------------------------------------------
@@ -39,6 +43,10 @@ interface KpiPoint {
   value: string
   delta: number
   icon: React.ElementType
+  /** Suffix for the delta, e.g. "%" for a rate. Empty for a count. */
+  deltaUnit?: string
+  /** Whether a rise is good news. False for anything counting alerts. */
+  higherIsBetter?: boolean
 }
 
 interface TrendPoint {
@@ -96,81 +104,6 @@ const SEVERITY_DOT: Record<Severity, string> = {
 }
 
 // ---------------------------------------------------------------------------
-// Mock data, replace with your API response shaped as ReportData
-// ---------------------------------------------------------------------------
-
-const MOCK_DATA: ReportData = {
-  siteName: "Clinique Nord, Site principal",
-  dateRange: "1 au 26 août 2026",
-  sectors: ["health"],
-  monitoring: ["inventory", "conditions", "maintenance", "risks"],
-  kpis: {
-    inventory: { label: "Stock médicaments", value: "82%", delta: -4, icon: Boxes },
-    conditions: { label: "Chaîne du froid", value: "98.6%", delta: 1.2, icon: Thermometer },
-    maintenance: { label: "Interventions en attente", value: "3", delta: -2, icon: Wrench },
-    risks: { label: "Alertes ouvertes", value: "5", delta: 2, icon: ShieldAlert },
-  },
-  trends: {
-    conditions: [
-      { date: "19 août", value: 4.1 },
-      { date: "20 août", value: 4.3 },
-      { date: "21 août", value: 3.9 },
-      { date: "22 août", value: 5.2 },
-      { date: "23 août", value: 4.0 },
-      { date: "24 août", value: 3.8 },
-      { date: "25 août", value: 4.2 },
-    ],
-    inventory: [
-      { date: "19 août", value: 91 },
-      { date: "20 août", value: 89 },
-      { date: "21 août", value: 87 },
-      { date: "22 août", value: 85 },
-      { date: "23 août", value: 84 },
-      { date: "24 août", value: 83 },
-      { date: "25 août", value: 82 },
-    ],
-  },
-  alerts: [
-    {
-      id: "a1",
-      timestamp: "25 août, 14:32",
-      site: "Réfrigérateur R2",
-      category: "conditions",
-      severity: "critical",
-      status: "open",
-      message: "Dépassement de seuil de température (5.2°C)",
-    },
-    {
-      id: "a2",
-      timestamp: "25 août, 09:10",
-      site: "Pharmacie centrale",
-      category: "inventory",
-      severity: "warning",
-      status: "open",
-      message: "Stock de Paracétamol sous le seuil critique",
-    },
-    {
-      id: "a3",
-      timestamp: "24 août, 18:45",
-      site: "Réfrigérateur R1",
-      category: "maintenance",
-      severity: "info",
-      status: "resolved",
-      message: "Maintenance préventive effectuée",
-    },
-    {
-      id: "a4",
-      timestamp: "23 août, 11:02",
-      site: "Pharmacie centrale",
-      category: "risks",
-      severity: "warning",
-      status: "resolved",
-      message: "Anomalie de consommation détectée puis résolue",
-    },
-  ],
-}
-
-// ---------------------------------------------------------------------------
 // Small building blocks
 // ---------------------------------------------------------------------------
 
@@ -182,28 +115,52 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
-function DeltaBadge({ delta }: { delta: number }) {
+/** The change since the previous day.
+ *
+ *  Two things were wrong while the data was mocked and nobody could
+ *  tell. It appended a percent sign to a number that is a count of
+ *  alerts, and it painted a rise green: for stock levels more is better,
+ *  but every KPI in this report counts alerts, where more is worse. The
+ *  unit and the direction are stated by the caller now. */
+function DeltaBadge({
+  delta,
+  unit = "",
+  higherIsBetter = false,
+}: {
+  delta: number
+  unit?: string
+  higherIsBetter?: boolean
+}) {
   if (delta === 0) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-        <Minus className="h-3 w-3" />
+        <Minus className="h-3 w-3" aria-hidden="true" />
         stable
       </span>
     )
   }
 
   const isUp = delta > 0
+  const isGood = isUp === higherIsBetter
+
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
-        isUp
+        isGood
           ? "bg-emerald-500/10 text-emerald-600"
           : "bg-destructive/10 text-destructive"
       )}
     >
-      {isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-      {Math.abs(delta)}%
+      {isUp ? (
+        <TrendingUp className="h-3 w-3" aria-hidden="true" />
+      ) : (
+        <TrendingDown className="h-3 w-3" aria-hidden="true" />
+      )}
+
+      {isUp ? "+" : "-"}
+      {Math.abs(delta)}
+      {unit}
     </span>
   )
 }
@@ -217,7 +174,11 @@ function KpiCard({ point }: { point: KpiPoint }) {
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
           <Icon className="h-5 w-5" />
         </div>
-        <DeltaBadge delta={point.delta} />
+        <DeltaBadge
+          delta={point.delta}
+          unit={point.deltaUnit}
+          higherIsBetter={point.higherIsBetter}
+        />
       </div>
 
       <p className="mt-4 font-heading text-3xl font-bold tracking-tight">
@@ -304,9 +265,14 @@ function TrendCard({
 }) {
   const meta = MONITORING_META[monitoringKey]
   const Icon = meta.icon
-  const first = data[0]?.value
-  const last = data[data.length - 1]?.value
-  const delta = first ? ((last - first) / first) * 100 : 0
+  const last = data[data.length - 1]?.value ?? 0
+  const previous = data[data.length - 2]?.value ?? 0
+
+  /* Day against previous day, the same comparison the KPI card makes.
+     It used to be first against last as a percentage, so a card could
+     read "stable" while its own KPI said "+15", and a series starting
+     at zero divided by zero and always came out flat. */
+  const delta = last - previous
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
@@ -317,16 +283,21 @@ function TrendCard({
           </div>
           <p className="text-sm font-semibold">{meta.label}</p>
         </div>
-        <DeltaBadge delta={Number(delta.toFixed(1))} />
+        <DeltaBadge delta={delta} higherIsBetter={false} />
       </div>
 
       <div className="mt-3 flex items-baseline gap-1.5">
-        <span className="font-heading text-2xl font-bold tracking-tight">
-          {last?.toFixed(1)}
+        <span className="font-heading text-2xl font-bold tracking-tight tabular-nums">
+          {last}
         </span>
-        {meta.unit && (
-          <span className="text-sm text-muted-foreground">{meta.unit}</span>
-        )}
+
+        {/* The unit used to come from MONITORING_META, so the conditions
+            card printed "1.0 °C" for what is a count of one alert, as if
+            the temperature were one degree. These series count alerts
+            per day, and that is what the label says. */}
+        <span className="text-sm text-muted-foreground">
+          {last > 1 ? "alertes" : "alerte"} le dernier jour
+        </span>
       </div>
 
       <div className="mt-3 text-accent">
@@ -470,7 +441,105 @@ function AlertsTable({ alerts }: { alerts: AlertRow[] }) {
 // Report view
 // ---------------------------------------------------------------------------
 
-export function ReportView({ data = MOCK_DATA }: { data?: ReportData }) {
+export function ReportView({ data }: { data?: ReportData }) {
+  /* This defaulted to a MOCK_DATA constant and app-shell rendered the
+     view with no props, so every customer saw "Clinique Nord, Site
+     principal" with a stock level of 82 percent and a cold chain at 98.6
+     percent, none of which came from anywhere. Putting the real company
+     name on that would only have made the invented figures look like
+     the customer's own, so the report reads the alerts instead and says
+     so when there are none. */
+  const [alerts, setAlerts] = useState<LogisticsAlert[]>([])
+  const [loaded, setLoaded] = useState(false)
+  const [companyName, setCompanyName] = useState("")
+  const [timezoneId, setTimezoneId] = useState("")
+
+  useEffect(() => {
+    setCompanyName(readCompanyName())
+    setTimezoneId(readTimezoneId())
+
+    fetch(`${API_BASE}/alerts`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => setAlerts(Array.isArray(d) ? d : []))
+      .catch((error) => {
+        console.error("Failed to load alerts for the report:", error)
+      })
+      .finally(() => setLoaded(true))
+  }, [])
+
+  const built = useMemo(
+    () => buildReport(alerts, companyName, timezoneId),
+    [alerts, companyName, timezoneId]
+  )
+
+  const resolved: ReportData = useMemo(
+    () =>
+      data ?? {
+        siteName: built.siteName,
+        dateRange: built.dateRange,
+        sectors: [],
+        monitoring: built.monitoring,
+        kpis: Object.fromEntries(
+          Object.entries(built.kpis).map(([key, kpi]) => [
+            key,
+            {
+              label: kpi!.label,
+              value: kpi!.value,
+              delta: kpi!.delta,
+              deltaUnit: "",
+              higherIsBetter: false,
+              icon:
+                MONITORING_META[key as MonitoringKey]?.icon ?? ShieldAlert,
+            },
+          ])
+        ),
+        trends: built.trends as ReportData["trends"],
+        alerts: built.alerts as ReportData["alerts"],
+      },
+    [data, built]
+  )
+
+  if (!data && loaded && built.empty) {
+    return (
+      <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
+          <FileDown
+            className="h-5 w-5 text-muted-foreground"
+            aria-hidden="true"
+          />
+        </div>
+
+        <h2 className="mt-4 font-heading text-lg font-bold">
+          Aucun rapport à produire
+        </h2>
+
+        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+          Le rapport est construit à partir de vos alertes. Tant
+          qu&apos;aucun fichier n&apos;a été importé, il n&apos;y a rien à
+          rapporter, et remplir la page de chiffres inventés ne vous
+          aiderait pas.
+        </p>
+
+        <p className="mt-3 text-xs text-muted-foreground">
+          Importez un CSV depuis le tableau de bord pour générer votre
+          premier rapport.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <ReportBody data={resolved} timezoneLabel={built.timezoneLabel} />
+  )
+}
+
+function ReportBody({
+  data,
+  timezoneLabel,
+}: {
+  data: ReportData
+  timezoneLabel?: string
+}) {
   const openAlerts = data.alerts.filter((a) => a.status === "open").length
   const resolvedAlerts = data.alerts.filter((a) => a.status === "resolved").length
 
@@ -523,9 +592,15 @@ export function ReportView({ data = MOCK_DATA }: { data?: ReportData }) {
               <h1 className="mt-1.5 font-heading text-2xl font-bold tracking-tight">
                 {data.siteName}
               </h1>
-              <p className="mt-1.5 flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Calendar className="h-3.5 w-3.5" />
+              <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+                <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
                 {data.dateRange}
+
+                {timezoneLabel && (
+                  <span className="text-xs">
+                    {" · "}heures en {timezoneLabel}
+                  </span>
+                )}
               </p>
             </div>
 
