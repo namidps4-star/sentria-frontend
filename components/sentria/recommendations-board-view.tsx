@@ -27,7 +27,7 @@ import {
   type Assignment,
   type Contractor,
 } from "@/lib/crm"
-import { formatEuros } from "@/lib/logistics-signals"
+import { formatMoney, useLocale } from "@/lib/locale"
 
 type Recommendation = {
   id: string
@@ -333,6 +333,10 @@ export function RecommendationsBoard({
      after mount, like every other stored value in the app, so the first
      client render cannot disagree with the server markup. */
   const { name: companyName } = useCompanyIdentity()
+
+  /* Exposure is the operator's own rate times a real overrun, so the
+     symbol is theirs too. It read euros for everyone before. */
+  const { currency } = useLocale()
 
   const [taskMap, setTaskMap] = useState<Record<string, TaskMeta>>({})
   const [contractors, setContractors] = useState<Contractor[]>([])
@@ -673,8 +677,7 @@ export function RecommendationsBoard({
                 Exposition
               </dt>
               <dd className="mt-1 font-heading text-3xl font-bold tabular-nums">
-                {formatEuros(totalExposure)}
-                <span className="ml-1 text-sm font-semibold">€</span>
+                {formatMoney(totalExposure, currency)}
               </dd>
             </div>
           )}
@@ -851,7 +854,7 @@ export function RecommendationsBoard({
 
                       {(rec.exposureEUR ?? 0) > 0 && (
                         <p className="mt-2 text-xs font-bold tabular-nums">
-                          {formatEuros(rec.exposureEUR!)} € exposés
+                          {formatMoney(rec.exposureEUR!, currency)} exposés
                         </p>
                       )}
 

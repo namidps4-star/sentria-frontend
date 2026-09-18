@@ -853,13 +853,22 @@ export const RATE_LABELS: Record<keyof CostRates, string> = {
   demurrage: "Surestarie",
 }
 
-export const RATE_UNITS: Record<keyof CostRates, string> = {
-  wait: "€ / h au-delà de 8 h",
-  temperature: "€ / °C au-delà de 8 °C",
-  service: "€ / jour au-delà de 30 j",
-  /* Already the overrun past free time, so the threshold is zero: the
-     backend did the comparison against the deadline. */
-  demurrage: "€ / h de surestarie exposée",
+/** The unit beside each rate, in the operator's own currency.
+ *
+ *  These were hardcoded with a euro sign while the rates themselves are
+ *  numbers the operator types in the cost view. A Lagos terminal
+ *  entering 45000 for immobilisation means naira, and stamping "€ / h"
+ *  on it was simply false. No conversion happens here: the symbol
+ *  labels their own figure. */
+export function rateUnits(symbol: string): Record<keyof CostRates, string> {
+  return {
+    wait: `${symbol} / h au-delà de 8 h`,
+    temperature: `${symbol} / °C au-delà de 8 °C`,
+    service: `${symbol} / jour au-delà de 30 j`,
+    /* Already the overrun past free time, so the threshold is zero: the
+       backend did the comparison against the deadline. */
+    demurrage: `${symbol} / h de surestarie exposée`,
+  }
 }
 
 const RATE_THRESHOLDS: Record<keyof CostRates, number> = {
@@ -1359,7 +1368,10 @@ export function deriveRecommendations(
       reasons.push(`risque ${risk}/100`)
 
       if (exposure > 0) {
-        reasons.push(`${formatEuros(exposure)} € exposés`)
+        /* No symbol here: the caller knows the operator's currency and
+           appends it. Embedding one made every recommendation claim
+           euros. */
+        reasons.push(`${formatEuros(exposure)} exposés`)
       }
 
       const score =

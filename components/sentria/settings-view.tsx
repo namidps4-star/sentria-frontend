@@ -11,15 +11,15 @@ import {
   writeCompanyName,
   writeTimezoneId,
 } from "@/lib/company"
-
-const LANGUAGES = [
-  { code: "fr", label: "Français", region: "France · Afrique" },
-  { code: "en", label: "English", region: "Global" },
-  { code: "es", label: "Español", region: "Amériques" },
-  { code: "pt", label: "Português", region: "Brésil" },
-  { code: "ar", label: "العربية", region: "Maghreb" },
-  { code: "sw", label: "Kiswahili", region: "Afrique de l'Est" },
-]
+import {
+  COUNTRIES,
+  LANGUAGES,
+  languagePromise,
+  readCountryCode,
+  readLanguage,
+  writeCountryCode,
+  writeLanguage,
+} from "@/lib/locale"
 
 const UI: Record<string, Record<string, string>> = {
   fr: {
@@ -155,7 +155,12 @@ function Toggle({
 }
 
 export function SettingsView() {
+  /* This was useState("fr") and nothing ever wrote it down: the picker
+     offered six languages, stored none of them, and no other screen
+     read it. It is persisted now, and Ask SentrIA sends it. */
   const [lang, setLang] = useState("fr")
+
+  const [countryCode, setCountryCode] = useState("")
 
   const [toggles, setToggles] = useState({
     alerts: true,
@@ -202,7 +207,22 @@ export function SettingsView() {
   useEffect(() => {
     setCompanyName(readCompanyName())
     setTimezoneId(readTimezoneId())
+    setLang(readLanguage())
+    setCountryCode(readCountryCode())
   }, [])
+
+  /* Applied immediately rather than on Save: the operator sees the
+     picker change the interface, which is the only way to tell that it
+     did anything. */
+  function chooseLanguage(code: string) {
+    setLang(code)
+    writeLanguage(code)
+  }
+
+  function chooseCountry(code: string) {
+    setCountryCode(code)
+    writeCountryCode(code)
+  }
 
   const toggleDark = () => {
     writeTheme(dark ? "light" : "dark")
@@ -255,7 +275,7 @@ export function SettingsView() {
               <button
                 key={language.code}
                 type="button"
-                onClick={() => setLang(language.code)}
+                onClick={() => chooseLanguage(language.code)}
                 className={cn(
                   "flex items-center justify-between rounded-2xl border p-3.5 text-left transition-colors",
                   active
@@ -277,6 +297,20 @@ export function SettingsView() {
                     )}
                   >
                     {language.region}
+                  </p>
+
+                  {/* The honest part. Six languages are offered and they
+                      do not mean the same thing: SentrIA answers in all
+                      of them because the model writes the reply, while
+                      the interface exists in two. Saying so is the
+                      difference between a feature and a promise. */}
+                  <p
+                    className={cn(
+                      "mt-1 text-[10px] leading-4",
+                      active ? "text-background/60" : "text-muted-foreground"
+                    )}
+                  >
+                    {languagePromise(language)}
                   </p>
                 </div>
 
@@ -388,6 +422,43 @@ export function SettingsView() {
               autoComplete="organization"
               className="mt-1.5 w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring"
             />
+          </label>
+
+          {/* Country, and therefore currency. The cost views labelled
+              every figure in euros while the rates are numbers the
+              operator types themselves, so a Lagos terminal's own naira
+              were shown as euros. Choosing a country also fills the
+              timezone in, since that is the usual answer. */}
+          <label className="block">
+            <span className="text-sm font-medium">Pays</span>
+
+            <select
+              value={countryCode}
+              onChange={(event) => {
+                const code = event.target.value
+
+                chooseCountry(code)
+
+                const country = COUNTRIES.find((item) => item.code === code)
+
+                if (country) setTimezoneId(country.timezoneId)
+              }}
+              className="mt-1.5 w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring"
+            >
+              <option value="">Non renseigné</option>
+
+              {COUNTRIES.map((country) => (
+                <option key={country.code} value={country.code}>
+                  {country.name} · {country.currency.symbol}
+                </option>
+              ))}
+            </select>
+
+            <span className="mt-1.5 block text-[10px] leading-4 text-muted-foreground">
+              {countryCode
+                ? "Vos montants sont affichés dans cette devise. Aucune conversion n'est faite : ce sont vos propres chiffres."
+                : "Sans pays, les montants sont affichés en euros par défaut."}
+            </span>
           </label>
 
           <label className="block">

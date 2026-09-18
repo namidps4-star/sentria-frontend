@@ -28,6 +28,14 @@ import {
   writeCompanyName,
   writeTimezoneId,
 } from "@/lib/company"
+import {
+  COUNTRIES,
+  LANGUAGES,
+  detectLanguage,
+  languagePromise,
+  writeCountryCode,
+  writeLanguage,
+} from "@/lib/locale"
 import { PRIORITIES_BY_SECTOR } from "@/lib/priorities"
 import {
   ACTIVITIES_BY_SECTOR,
@@ -416,8 +424,17 @@ export function OnboardingView({
 
   const [timezoneId, setTimezoneId] = useState(TIMEZONES[0].id)
 
+  /* Country and language are two axes, not one. A Cotonou operator may
+     want French, a Lagos one English, and the country is what says
+     whether a figure is F CFA or naira. Deriving either from the other
+     would be wrong for most of this map. */
+  const [countryCode, setCountryCode] = useState("")
+
+  const [language, setLanguage] = useState("fr")
+
   useEffect(() => {
     setTimezoneId(detectTimezoneId())
+    setLanguage(detectLanguage())
   }, [])
 
   const [multiSector, setMultiSector] = useState(false)
@@ -691,6 +708,8 @@ export function OnboardingView({
 
       writeCompanyName(companyName)
       writeTimezoneId(timezoneId)
+      writeCountryCode(countryCode)
+      writeLanguage(language)
 
       if (sector) {
         localStorage.setItem("sentria_sector", sector)
@@ -932,6 +951,67 @@ export function OnboardingView({
                   <span className="mt-1 block text-xs text-muted-foreground">
                     Vos seuils sont en heures : « bloqué depuis 14 h » n&apos;a
                     pas le même sens partout.
+                  </span>
+                </label>
+
+                <label className="block">
+                  <span className="text-sm font-medium">Pays</span>
+
+                  <select
+                    value={countryCode}
+                    onChange={(event) => {
+                      const code = event.target.value
+
+                      setCountryCode(code)
+
+                      const country = COUNTRIES.find(
+                        (item) => item.code === code
+                      )
+
+                      if (country) setTimezoneId(country.timezoneId)
+                    }}
+                    className="mt-1.5 w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring"
+                  >
+                    <option value="">Non renseigné</option>
+
+                    {COUNTRIES.map((country) => (
+                      <option key={country.code} value={country.code}>
+                        {country.name} · {country.currency.symbol}
+                      </option>
+                    ))}
+                  </select>
+
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    Détermine la devise de vos montants. Sans pays, ils
+                    s&apos;affichent en euros.
+                  </span>
+                </label>
+
+                <label className="block">
+                  <span className="text-sm font-medium">Langue</span>
+
+                  <select
+                    value={language}
+                    onChange={(event) => setLanguage(event.target.value)}
+                    className="mt-1.5 w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring"
+                  >
+                    {LANGUAGES.map((item) => (
+                      <option key={item.code} value={item.code}>
+                        {item.label}
+                        {item.uiReady ? "" : " (réponses SentrIA)"}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* What this choice actually delivers, before it is
+                      made rather than after. SentrIA answers in all six
+                      because the model writes the reply; the interface
+                      exists in two. */}
+                  <span className="mt-1 block text-xs text-muted-foreground">
+                    {languagePromise(
+                      LANGUAGES.find((item) => item.code === language) ??
+                        LANGUAGES[0]
+                    )}
                   </span>
                 </label>
               </div>

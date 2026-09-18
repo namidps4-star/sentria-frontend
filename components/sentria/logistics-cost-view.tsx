@@ -23,15 +23,15 @@ import {
   DEFAULT_COST_RATES,
   deriveExposure,
   deriveStages,
-  formatEuros,
   globalRisk,
   RATE_LABELS,
-  RATE_UNITS,
+  rateUnits,
   type CostRates,
   plural,
   type LogisticsAlert,
   type OpsType,
 } from "@/lib/logistics-signals"
+import { formatMoney, useLocale } from "@/lib/locale"
 
 /* --------------------------------------------------------------------------
  * "Réduire les coûts imprévus".
@@ -82,6 +82,11 @@ export function LogisticsCostView({
   opsType,
   selectedOpsTypesForMulti = [],
 }: LogisticsCostViewProps) {
+  /* The rates below are the operator's own figures. Labelling them in
+     euros regardless of where they operate was wrong, and the country
+     picked at onboarding is what says which symbol to use. */
+  const { currency } = useLocale()
+
   const [rates, setRates] = useState<CostRates>(DEFAULT_COST_RATES)
   const [editing, setEditing] = useState(false)
 
@@ -190,7 +195,7 @@ export function LogisticsCostView({
         title={worst.stageName}
         subtitle={`${worst.kindLabel} à ${worst.measured} ${worst.unit} sur ${worst.equipment}.`}
         figureLabel="Exposition estimée, tous dépassements"
-        figure={`${formatEuros(totalExposure)} €`}
+        figure={formatMoney(totalExposure, currency)}
         figureNote="Estimation, pas un montant facturé : dépassement mesuré multiplié par vos taux, détaillés ci-dessous."
         tone={critical.length > 0 ? "risk" : "neutral"}
         aside={
@@ -200,7 +205,7 @@ export function LogisticsCostView({
             </p>
 
             <p className="mt-1 font-heading text-2xl font-bold tabular-nums">
-              {formatEuros(criticalExposure)} €
+              {formatMoney(criticalExposure, currency)}
             </p>
 
             <p className="text-xs text-muted-foreground">
@@ -229,7 +234,7 @@ export function LogisticsCostView({
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
           label="Exposition totale"
-          value={`${formatEuros(totalExposure)} €`}
+          value={formatMoney(totalExposure, currency)}
           note="Estimation à partir de vos taux"
           tone="risk"
           icon={TrendingUp}
@@ -244,14 +249,14 @@ export function LogisticsCostView({
 
         <StatTile
           label="Poste le plus lourd"
-          value={`${formatEuros(worst.exposure)} €`}
+          value={formatMoney(worst.exposure, currency)}
           note={`${worst.equipment} · ${worst.kindLabel.toLowerCase()}`}
           tone="risk"
         />
 
         <StatTile
           label="Part critique"
-          value={`${formatEuros(criticalExposure)} €`}
+          value={formatMoney(criticalExposure, currency)}
           note="Portée par des alertes CRITICAL"
           tone="watch"
           icon={TrendingDown}
@@ -306,7 +311,7 @@ export function LogisticsCostView({
                 </span>
 
                 <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                  {RATE_UNITS[key]}
+                  {rateUnits(currency.symbol)[key]}
                 </span>
 
                 <input
@@ -383,11 +388,11 @@ export function LogisticsCostView({
                   </td>
 
                   <td className="py-2.5 pr-3 tabular-nums text-muted-foreground">
-                    × {line.ratePerUnit} €
+                    × {line.ratePerUnit} {currency.symbol}
                   </td>
 
                   <td className="py-2.5 text-right font-bold tabular-nums">
-                    {formatEuros(line.exposure)} €
+                    {formatMoney(line.exposure, currency)}
                   </td>
                 </tr>
               ))}
@@ -402,7 +407,7 @@ export function LogisticsCostView({
                 </td>
 
                 <td className="pt-3 text-right font-heading text-lg font-bold tabular-nums">
-                  {formatEuros(totalExposure)} €
+                  {formatMoney(totalExposure, currency)}
                 </td>
               </tr>
             </tfoot>
@@ -429,7 +434,7 @@ export function LogisticsCostView({
                 </p>
 
                 <p className="shrink-0 text-sm font-bold tabular-nums">
-                  {formatEuros(entry.exposure)} €
+                  {formatMoney(entry.exposure, currency)}
                 </p>
               </div>
 

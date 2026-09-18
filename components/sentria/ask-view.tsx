@@ -13,6 +13,7 @@ import {
   timezoneFor,
   useCompanyIdentity,
 } from "@/lib/company"
+import { useLocale } from "@/lib/locale"
 
 const SUGGESTIONS = [
   {
@@ -46,6 +47,13 @@ export function AskView() {
      time rather than stored in the thread so a rename takes effect. */
   const { name: companyName, timezoneId } = useCompanyIdentity()
 
+  /* The language the operator chose, not a hardcoded "fr". SentrIA
+     answers in all six offered languages because the model writes the
+     reply: there is nothing to translate on our side. The interface
+     stays in the language it actually exists in, which is why `language`
+     and `ui` are two different fields. */
+  const { language } = useLocale()
+
   const greeting =
     (companyName ? `Bonjour ${companyName}.` : "Bonjour.") +
     " Je suis SentrIA. Posez-moi une question sur vos systèmes ou" +
@@ -70,7 +78,7 @@ export function AskView() {
         },
         body: JSON.stringify({
           text: t,
-          lang: "fr",
+          lang: language,
           session_id: "user-123",
           /* Who is asking and on which clock. Without these the model
              had nothing to call the customer but "votre entreprise",
