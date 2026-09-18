@@ -1,11 +1,14 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   ArrowUpRight,
   Check,
   ChevronRight,
   Building2,
+  Globe2,
+  Languages,
+  Layers,
   Factory,
   HeartPulse,
   Wheat,
@@ -31,6 +34,7 @@ import {
 import {
   COUNTRIES,
   LANGUAGES,
+  countryFor,
   detectLanguage,
   languagePromise,
   writeCountryCode,
@@ -385,6 +389,38 @@ function ActivityFlowPreview({
   )
 }
 
+/* --------------------------------------------------------------------------
+ * The choice card.
+ *
+ * Every question in the identity steps is a small, closed set, so they are
+ * cards rather than a <select>. A native select on a phone is a system
+ * sheet: it hides the options until tapped, shows no consequence next to
+ * them, and makes four questions feel like a tax form. A card can carry
+ * what the answer means, which is the point on the language step (what
+ * SentrIA will answer in) and the country step (which currency).
+ *
+ * Defined once so the four steps cannot drift apart.
+ * -------------------------------------------------------------------------- */
+
+const CHOICE_CARD = [
+  "group relative w-full rounded-2xl border border-border bg-background p-4 text-left",
+  "transition-all duration-200 hover:-translate-y-0.5 hover:border-ring hover:shadow-sm",
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+  "motion-reduce:transition-none motion-reduce:hover:translate-y-0",
+].join(" ")
+
+/* Selection is carried by the fill AND by aria-pressed AND by the tick,
+   never by colour alone. */
+const CHOICE_ACTIVE = "border-foreground bg-foreground text-background shadow-sm"
+
+function CardTick() {
+  return (
+    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground">
+      <Check className="h-3.5 w-3.5" aria-hidden="true" />
+    </span>
+  )
+}
+
 export function OnboardingView({
   onComplete,
 }: {
@@ -487,17 +523,57 @@ export function OnboardingView({
 
   const isLogistics = sector === "logistics"
 
-  const totalSteps = 4
-  const subTypeStepNumber = 2
-  const equipmentStepNumber = 3
-  const sourcesStepNumber = 4
+  /* Language, country, timezone and company name used to sit in one
+     grid on the sector step, four questions deep before the operator
+     had answered anything. They are four steps now, in the order each
+     one informs the next: the language the screen is read in, then the
+     country, which fills the currency and the clock, then the clock
+     itself to confirm, then the name.
+
+     Asking one thing at a time is the whole point. A form that opens
+     with four unrelated fields reads as paperwork; a form that asks one
+     question reads as a conversation. */
+  const langStepNumber = 1
+  const countryStepNumber = 2
+  const zoneStepNumber = 3
+  const companyStepNumber = 4
+  const sectorStepNumber = 5
+  const subTypeStepNumber = 6
+  const equipmentStepNumber = 7
+  const sourcesStepNumber = 8
+
+  const totalSteps = 8
 
   const STEP_META = [
+    {
+      title: "Votre langue",
+      description:
+        "SentrIA vous répond dans la langue que vous choisissez.",
+      icon: Languages,
+    },
+    {
+      title: "Votre pays",
+      description:
+        "Il détermine la devise de vos montants et votre fuseau.",
+      icon: Globe2,
+    },
+    {
+      title: "Votre fuseau horaire",
+      description:
+        "Vos seuils sont en heures : ils doivent suivre votre journée.",
+      icon: Clock3,
+    },
+    {
+      title: "Votre entreprise",
+      description:
+        "Le nom qui apparaît dans vos rapports et dans Ask SentrIA.",
+      icon: Building2,
+    },
     {
       title: "Votre secteur",
       description:
         "Choisissez le secteur que SentrIA doit surveiller.",
-      icon: Building2,
+      icon: Layers,
     },
     {
       title: "Votre activité",
@@ -523,6 +599,24 @@ export function OnboardingView({
 
   const currentMeta = STEP_META[step - 1] ?? STEP_META[0]
   const CurrentStepIcon = currentMeta.icon
+
+  /* A wizard that changes its whole panel and leaves focus on the button
+     the operator just pressed strands a keyboard or screen reader user
+     at the bottom of a screen they cannot see. Focus moves to the new
+     question; the counter announces itself politely alongside, so the
+     change is heard as well as seen. Not on first paint: stealing focus
+     before anybody has interacted is its own annoyance. */
+  const headingRef = useRef<HTMLHeadingElement>(null)
+  const mounted = useRef(false)
+
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true
+      return
+    }
+
+    headingRef.current?.focus()
+  }, [step])
 
   function chooseSector(id: Sector) {
     setSector(id)
@@ -769,20 +863,33 @@ export function OnboardingView({
     onComplete?.()
   }
 
+  /* The country list carries an explicit "Autre pays (euro)", so there
+     is always a truthful answer and requiring one costs nobody an exit.
+     The language and the zone are pre-selected, so their steps are
+     already satisfied. */
   const canContinue =
-    step === 1
-      ? Boolean(sector)
-      : step === subTypeStepNumber
-        ? subTypes2.length > 0
-        : step === equipmentStepNumber
-          ? selectedEquipment.length > 0
-          : true
+    step === countryStepNumber
+      ? Boolean(countryCode)
+      : step === companyStepNumber
+        ? companyName.trim().length > 0
+        : step === sectorStepNumber
+          ? Boolean(sector)
+          : step === subTypeStepNumber
+            ? subTypes2.length > 0
+            : step === equipmentStepNumber
+              ? selectedEquipment.length > 0
+              : true
 
   return (
     <div className="fixed inset-0 z-[100] animate-in fade-in zoom-in-[0.98] overflow-y-auto bg-background duration-200 ease-out motion-reduce:animate-none">
       <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 md:px-8 md:py-12">
 
-        {/* HERO */}
+        {/* HERO
+            Shown once. Repeating a 200px welcome banner above every one
+            of eight questions pushes the actual question below the fold
+            and makes the flow feel like a brochure. After step one it
+            collapses to a single line. */}
+        {step === 1 ? (
         <div className="rounded-3xl bg-foreground p-6 text-background md:p-10">
           <div className="max-w-3xl">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
@@ -801,120 +908,292 @@ export function OnboardingView({
             </p>
           </div>
         </div>
+        ) : (
+          <div className="flex items-center gap-2.5 px-1">
+            <span
+              className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent"
+              aria-hidden="true"
+            >
+              <Zap className="h-3.5 w-3.5 text-accent-foreground" />
+            </span>
 
-        {/* PROGRESS */}
-        <div className="rounded-3xl border border-border bg-card p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-semibold">
-                Configuration
+            <span className="text-sm font-bold tracking-tight">SentrIA</span>
+
+            <span className="text-sm text-muted-foreground">
+              Configuration
+            </span>
+          </div>
+        )}
+
+        {/* PROGRESS
+            One segment per step rather than eight pill cards: at four
+            steps the cards read as a map, at eight they read as a wall,
+            and the operator only needs to know where they are and how
+            much is left. The completed segments stay clickable, which
+            is what the cards were for. */}
+        <div className="rounded-3xl border border-border bg-card p-5 md:p-6">
+          <div className="flex items-end justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Étape {step} sur {totalSteps}
               </p>
 
-              <p className="mt-1 text-xs text-muted-foreground">
-                Étape {step} sur {totalSteps}
+              <p className="mt-1 truncate font-heading text-lg font-bold tracking-tight">
+                {currentMeta.title}
               </p>
             </div>
 
-            <span className="font-semibold">
-              {Math.round((step / totalSteps) * 100)}%
-            </span>
+            <p className="shrink-0 font-heading text-2xl font-bold tabular-nums">
+              {Math.round((step / totalSteps) * 100)}
+              <span className="text-sm">%</span>
+            </p>
           </div>
 
-          <div className="mt-4 h-2 overflow-hidden rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-accent transition-all duration-500"
-              style={{
-                width: `${(step / totalSteps) * 100}%`,
-              }}
-            />
-          </div>
-        </div>
+          <ol className="mt-4 flex items-center gap-1.5">
+            {STEP_META.map((meta, index) => {
+              const stepNumber = index + 1
+              const done = stepNumber < step
+              const active = stepNumber === step
+              const reachable = stepNumber <= step
 
-        {/* STEP PILLS */}
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-          {STEP_META.map((meta, index) => {
-            const Icon = meta.icon
-            const stepNumber = index + 1
-            const completed = stepNumber < step
-            const active = stepNumber === step
+              return (
+                <li key={meta.title} className="flex-1">
+                  <button
+                    type="button"
+                    onClick={() => goToStep(stepNumber)}
+                    disabled={!reachable}
+                    aria-current={active ? "step" : undefined}
+                    aria-label={`Étape ${stepNumber}, ${meta.title}`}
+                    className={cn(
+                      "block h-1.5 w-full rounded-full transition-colors duration-300",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                      done && "bg-accent",
+                      active && "bg-foreground",
+                      !done && !active && "bg-muted",
+                      reachable ? "cursor-pointer" : "cursor-not-allowed"
+                    )}
+                  />
+                </li>
+              )
+            })}
+          </ol>
 
-            return (
-              <button
-                key={meta.title}
-                type="button"
-                onClick={() => goToStep(stepNumber)}
-                disabled={stepNumber > step}
-                className={cn(
-                  "rounded-3xl border p-5 text-left transition-all",
-                  active
-                    ? "border-foreground bg-card shadow-sm"
-                    : completed
-                      ? "border-accent/40 bg-card"
-                      : "border-border bg-card/50",
-                  stepNumber > step &&
-                    "cursor-not-allowed opacity-60"
-                )}
-              >
-                <div
-                  className={cn(
-                    "flex h-10 w-10 items-center justify-center rounded-2xl",
-                    completed
-                      ? "bg-accent text-accent-foreground"
-                      : active
-                        ? "bg-foreground text-background"
-                        : "bg-muted text-muted-foreground"
-                  )}
-                >
-                  {completed ? (
-                    <Check className="h-5 w-5" />
-                  ) : (
-                    <Icon className="h-5 w-5" />
-                  )}
-                </div>
-
-                <p className="mt-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Étape {stepNumber}
-                </p>
-
-                <p className="mt-1 font-heading text-sm font-bold">
-                  {meta.title}
-                </p>
-              </button>
-            )
-          })}
+          {/* Heard as well as seen. Polite, and separate from the
+              heading, so it does not fight the focus move. */}
+          <p className="sr-only" role="status" aria-live="polite">
+            Étape {step} sur {totalSteps} : {currentMeta.title}
+          </p>
         </div>
 
         {/* CURRENT STEP */}
         <div className="rounded-3xl border border-border bg-card p-6 md:p-8">
           <div className="flex flex-col gap-8">
 
-            {/* STEP HEADER */}
-            <div className="flex gap-4">
+            {/* STEP HEADER
+                The question itself, and the one element that moves when
+                the step changes. One or two animated things per view,
+                not every card: a panel that slides while twelve cards
+                stagger is noise, and it is the first thing to look
+                cheap on a slow device. */}
+            <div
+              key={step}
+              className="flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out motion-reduce:animate-none"
+            >
               <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent/20 text-accent-foreground">
-                <CurrentStepIcon className="h-7 w-7" />
+                <CurrentStepIcon className="h-7 w-7" aria-hidden="true" />
               </div>
 
-              <div>
+              <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Étape {step}
                 </p>
 
-                <h2 className="mt-1 font-heading text-2xl font-bold">
+                <h2
+                  ref={headingRef}
+                  tabIndex={-1}
+                  className="mt-1 max-w-[24ch] text-balance font-heading text-2xl font-bold tracking-tight outline-none md:text-3xl"
+                >
                   {currentMeta.title}
                 </h2>
 
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                <p className="mt-2 max-w-[52ch] text-sm leading-6 text-muted-foreground">
                   {currentMeta.description}
                 </p>
               </div>
             </div>
 
             {/* ---------------------------------------------------------------- */}
-            {/* STEP 1: SECTOR                                                   */}
+            {/* STEP 1: LANGUAGE                                                 */}
             {/* ---------------------------------------------------------------- */}
 
-            {step === 1 && (
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {step === langStepNumber && (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {LANGUAGES.map((item) => {
+                  const active = language === item.code
+
+                  return (
+                    <button
+                      key={item.code}
+                      type="button"
+                      onClick={() => setLanguage(item.code)}
+                      aria-pressed={active}
+                      className={cn(CHOICE_CARD, active && CHOICE_ACTIVE)}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-heading text-lg font-bold tracking-tight">
+                            {item.label}
+                          </p>
+
+                          <p
+                            className={cn(
+                              "mt-0.5 text-xs",
+                              active
+                                ? "text-background/60"
+                                : "text-muted-foreground"
+                            )}
+                          >
+                            {item.region}
+                          </p>
+                        </div>
+
+                        {active && <CardTick />}
+                      </div>
+
+                      {/* What this choice actually delivers, on the card
+                          and before it is made. Six languages are offered
+                          and they do not mean the same thing. */}
+                      <p
+                        className={cn(
+                          "mt-4 text-[11px] leading-4",
+                          active ? "text-background/70" : "text-muted-foreground"
+                        )}
+                      >
+                        {languagePromise(item)}
+                      </p>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* ---------------------------------------------------------------- */}
+            {/* STEP 2: COUNTRY                                                  */}
+            {/* ---------------------------------------------------------------- */}
+
+            {step === countryStepNumber && (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                {COUNTRIES.map((item) => {
+                  const active = countryCode === item.code
+
+                  return (
+                    <button
+                      key={item.code}
+                      type="button"
+                      onClick={() => {
+                        setCountryCode(item.code)
+
+                        /* The clock usually follows the country, so it
+                           arrives pre-answered on the next step rather
+                           than as a fifth question. */
+                        setTimezoneId(item.timezoneId)
+                      }}
+                      aria-pressed={active}
+                      className={cn(CHOICE_CARD, active && CHOICE_ACTIVE)}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="min-w-0 font-heading text-sm font-bold leading-snug">
+                          {item.name}
+                        </p>
+
+                        {active && <CardTick />}
+                      </div>
+
+                      <p
+                        className={cn(
+                          "mt-3 font-heading text-xl font-bold tracking-tight",
+                          active ? "text-accent" : "text-foreground"
+                        )}
+                      >
+                        {item.currency.symbol}
+                      </p>
+
+                      <p
+                        className={cn(
+                          "text-[10px] uppercase tracking-wider",
+                          active ? "text-background/60" : "text-muted-foreground"
+                        )}
+                      >
+                        {item.currency.code}
+                      </p>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            {step === countryStepNumber && (
+              <p className="rounded-2xl border border-dashed border-border bg-background px-4 py-3 text-xs leading-5 text-muted-foreground">
+                La devise sert à étiqueter vos propres montants, ceux que vous
+                saisissez dans la vue Coûts.{" "}
+                <span className="font-semibold text-foreground">
+                  Aucune conversion n&apos;est faite.
+                </span>
+              </p>
+            )}
+
+            {/* ---------------------------------------------------------------- */}
+            {/* STEP 3: TIMEZONE                                                 */}
+            {/* ---------------------------------------------------------------- */}
+
+            {step === zoneStepNumber && (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {TIMEZONES.map((zone) => {
+                  const active = timezoneId === zone.id
+                  const suggested =
+                    countryFor(countryCode)?.timezoneId === zone.id
+
+                  return (
+                    <button
+                      key={zone.id}
+                      type="button"
+                      onClick={() => setTimezoneId(zone.id)}
+                      aria-pressed={active}
+                      className={cn(CHOICE_CARD, active && CHOICE_ACTIVE)}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="min-w-0 font-heading text-base font-bold leading-snug">
+                          {zone.label}
+                        </p>
+
+                        {active && <CardTick />}
+                      </div>
+
+                      {/* Says why it is already selected. A field that
+                          fills itself without explaining looks like a bug
+                          the first time you see it. */}
+                      {suggested && (
+                        <p
+                          className={cn(
+                            "mt-3 text-[10px] font-semibold uppercase tracking-wider",
+                            active ? "text-accent" : "text-muted-foreground"
+                          )}
+                        >
+                          Déduit de votre pays
+                        </p>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* ---------------------------------------------------------------- */}
+            {/* STEP 4: COMPANY                                                  */}
+            {/* ---------------------------------------------------------------- */}
+
+            {step === companyStepNumber && (
+              <div className="max-w-xl">
                 <label className="block">
                   <span className="text-sm font-medium">
                     Nom de votre entreprise
@@ -923,101 +1202,47 @@ export function OnboardingView({
                   <input
                     value={companyName}
                     onChange={(event) => setCompanyName(event.target.value)}
+                    onKeyDown={(event) => {
+                      /* Enter is what anyone types after filling one
+                         field. Without this it does nothing, which reads
+                         as the form being stuck. */
+                      if (event.key === "Enter" && companyName.trim()) {
+                        event.preventDefault()
+                        nextStep()
+                      }
+                    }}
                     placeholder="Ex. Terminal Atlantique SA"
                     autoComplete="organization"
-                    className="mt-1.5 w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring"
+                    className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-4 font-heading text-xl font-bold tracking-tight outline-none transition-colors focus:border-ring md:text-2xl"
                   />
-
-                  <span className="mt-1 block text-xs text-muted-foreground">
-                    Utilisé dans vos rapports et par Ask SentrIA.
-                  </span>
                 </label>
 
-                <label className="block">
-                  <span className="text-sm font-medium">Fuseau horaire</span>
+                {/* The consequence of the answer, as it is typed. An
+                    operator sees where the name ends up instead of being
+                    told. */}
+                <div className="mt-5 rounded-2xl border border-border bg-background p-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Ce que SentrIA dira
+                  </p>
 
-                  <select
-                    value={timezoneId}
-                    onChange={(event) => setTimezoneId(event.target.value)}
-                    className="mt-1.5 w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring"
-                  >
-                    {TIMEZONES.map((zone) => (
-                      <option key={zone.id} value={zone.id}>
-                        {zone.label}
-                      </option>
-                    ))}
-                  </select>
-
-                  <span className="mt-1 block text-xs text-muted-foreground">
-                    Vos seuils sont en heures : « bloqué depuis 14 h » n&apos;a
-                    pas le même sens partout.
-                  </span>
-                </label>
-
-                <label className="block">
-                  <span className="text-sm font-medium">Pays</span>
-
-                  <select
-                    value={countryCode}
-                    onChange={(event) => {
-                      const code = event.target.value
-
-                      setCountryCode(code)
-
-                      const country = COUNTRIES.find(
-                        (item) => item.code === code
-                      )
-
-                      if (country) setTimezoneId(country.timezoneId)
-                    }}
-                    className="mt-1.5 w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring"
-                  >
-                    <option value="">Non renseigné</option>
-
-                    {COUNTRIES.map((country) => (
-                      <option key={country.code} value={country.code}>
-                        {country.name} · {country.currency.symbol}
-                      </option>
-                    ))}
-                  </select>
-
-                  <span className="mt-1 block text-xs text-muted-foreground">
-                    Détermine la devise de vos montants. Sans pays, ils
-                    s&apos;affichent en euros.
-                  </span>
-                </label>
-
-                <label className="block">
-                  <span className="text-sm font-medium">Langue</span>
-
-                  <select
-                    value={language}
-                    onChange={(event) => setLanguage(event.target.value)}
-                    className="mt-1.5 w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring"
-                  >
-                    {LANGUAGES.map((item) => (
-                      <option key={item.code} value={item.code}>
-                        {item.label}
-                        {item.uiReady ? "" : " (réponses SentrIA)"}
-                      </option>
-                    ))}
-                  </select>
-
-                  {/* What this choice actually delivers, before it is
-                      made rather than after. SentrIA answers in all six
-                      because the model writes the reply; the interface
-                      exists in two. */}
-                  <span className="mt-1 block text-xs text-muted-foreground">
-                    {languagePromise(
-                      LANGUAGES.find((item) => item.code === language) ??
-                        LANGUAGES[0]
-                    )}
-                  </span>
-                </label>
+                  <p className="mt-2 text-sm">
+                    <span className="text-muted-foreground">Bonjour </span>
+                    <span className="font-bold">
+                      {companyName.trim() || "…"}
+                    </span>
+                    <span className="text-muted-foreground">
+                      . Je suis SentrIA.
+                    </span>
+                  </p>
+                </div>
               </div>
             )}
 
-            {step === 1 && (
+            {/* ---------------------------------------------------------------- */}
+            {/* STEP 5: SECTOR                                                   */}
+            {/* ---------------------------------------------------------------- */}
+
+            {step === sectorStepNumber && (
               <div className="flex flex-wrap justify-center gap-3">
                 {SECTORS.map((item) => {
                   const Icon = item.icon
@@ -1098,7 +1323,7 @@ export function OnboardingView({
               </div>
             )}
 
-            {step === 1 && (
+            {step === sectorStepNumber && (
               <div className="rounded-2xl border border-border bg-background p-4">
                 <label className="flex cursor-pointer items-start gap-3">
                   <input
