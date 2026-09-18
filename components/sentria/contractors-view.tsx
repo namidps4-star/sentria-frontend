@@ -24,6 +24,7 @@ import {
   type Contractor,
 } from "@/lib/crm"
 import { cn } from "@/lib/utils"
+import { useTx, type Localized } from "@/lib/i18n"
 import type { ViewKey } from "./types"
 
 /* --------------------------------------------------------------------------
@@ -67,6 +68,11 @@ export function ContractorsView({
 
   const [contractors, setContractors] = useState<Contractor[]>([])
   const [loaded, setLoaded] = useState(false)
+  const tx = useTx()
+
+  /** Resolve a module-level pair. */
+  const px = (text: Localized) => tx(text.fr, text.en)
+
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -90,7 +96,7 @@ export function ContractorsView({
       setContractors(result.data)
       setError(null)
     } else {
-      setError(result.detail)
+      setError(px(result.detail))
     }
 
     setLoaded(true)
@@ -113,7 +119,7 @@ export function ContractorsView({
         setContractors(result.data)
         setError(null)
       } else {
-        setError(result.detail)
+        setError(px(result.detail))
       }
 
       setLoaded(true)
@@ -141,7 +147,7 @@ export function ContractorsView({
     setBusy(false)
 
     if (!result.ok) {
-      setError(result.detail)
+      setError(px(result.detail))
       return
     }
 
@@ -168,7 +174,7 @@ export function ContractorsView({
     const result = await updateContractor(contractor.id, { availability })
 
     if (!result.ok) {
-      setError(result.detail)
+      setError(px(result.detail))
     } else {
       setError(null)
     }
@@ -186,7 +192,7 @@ export function ContractorsView({
     setBusy(false)
 
     if (!result.ok) {
-      setError(result.detail)
+      setError(px(result.detail))
       return
     }
 
@@ -208,12 +214,14 @@ export function ContractorsView({
         </div>
 
         <h2 className="mt-4 font-heading text-lg font-bold">
-          Nom de l&apos;entreprise manquant
+          {tx("Nom de l'entreprise manquant", "Company name missing")}
         </h2>
 
         <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-          Les intervenants sont enregistrés sous le nom de votre entreprise.
-          Renseignez-le pour commencer.
+          {tx(
+            "Les intervenants sont enregistrés sous le nom de votre entreprise. Renseignez-le pour commencer.",
+            "Contractors are saved under your company name. Set it to get started."
+          )}
         </p>
 
         <button
@@ -221,7 +229,7 @@ export function ContractorsView({
           onClick={() => onNavigate?.("settings")}
           className="mt-5 inline-flex items-center justify-center rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          Ouvrir les Paramètres
+          {tx("Ouvrir les Paramètres", "Open Settings")}
         </button>
       </div>
     )
@@ -242,22 +250,25 @@ export function ContractorsView({
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              {companyName || "Organisation"}
+              {companyName || tx("Organisation", "Organisation")}
             </p>
 
             <h3 className="mt-1 font-heading text-2xl font-bold tracking-tight">
-              Intervenants
+              {tx("Intervenants", "Contractors")}
             </h3>
 
             <p className="mt-1 text-sm text-muted-foreground">
-              Qui peut être envoyé, et ce qu&apos;ils portent déjà.
+              {tx(
+                "Qui peut être envoyé, et ce qu'ils portent déjà.",
+                "Who can be sent out, and what they are already carrying."
+              )}
             </p>
           </div>
 
           <div className="flex shrink-0 items-start gap-6 lg:gap-8">
             <div>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                Enregistrés
+                {tx("Enregistrés", "On file")}
               </p>
               <p className="mt-1 font-heading text-3xl font-bold tabular-nums">
                 {loaded ? contractors.length : "—"}
@@ -266,7 +277,7 @@ export function ContractorsView({
 
             <div>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                Se disent dispo
+                {tx("Se disent dispo", "Say they are free")}
               </p>
               <p className="mt-1 font-heading text-3xl font-bold tabular-nums">
                 {loaded ? declaredAvailable : "—"}
@@ -275,7 +286,7 @@ export function ContractorsView({
 
             <div>
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                Avec du travail
+                {tx("Avec du travail", "Carrying work")}
               </p>
               <p className="mt-1 font-heading text-3xl font-bold tabular-nums">
                 {loaded ? carryingWork : "—"}
@@ -291,7 +302,7 @@ export function ContractorsView({
           >
             <span className="inline-flex items-center gap-1.5 font-semibold text-destructive">
               <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
-              Opération refusée.
+              {tx("Opération refusée.", "The operation was refused.")}
             </span>{" "}
             {error}
           </p>
@@ -309,7 +320,7 @@ export function ContractorsView({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                  Nom
+                  {tx("Nom", "Name")}
                 </span>
 
                 <input
@@ -317,7 +328,7 @@ export function ContractorsView({
                   onChange={(e) =>
                     setForm((f) => ({ ...f, name: e.target.value }))
                   }
-                  placeholder="Ex. Kofi Adjoyi"
+                  placeholder={tx("Ex. Kofi Adjoyi", "e.g. Kofi Adjoyi")}
                   autoComplete="name"
                   required
                   className="mt-1.5 w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm outline-none focus:border-ring"
@@ -326,7 +337,7 @@ export function ContractorsView({
 
               <label className="block">
                 <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                  Fonction
+                  {tx("Fonction", "Role")}
                 </span>
 
                 <input
@@ -334,14 +345,14 @@ export function ContractorsView({
                   onChange={(e) =>
                     setForm((f) => ({ ...f, role: e.target.value }))
                   }
-                  placeholder="Ex. Grutier"
+                  placeholder={tx("Ex. Grutier", "e.g. Crane operator")}
                   className="mt-1.5 w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm outline-none focus:border-ring"
                 />
               </label>
 
               <label className="block">
                 <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                  Téléphone
+                  {tx("Téléphone", "Phone")}
                 </span>
 
                 <input
@@ -357,7 +368,7 @@ export function ContractorsView({
 
               <label className="block">
                 <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                  Email
+                  {tx("Email", "Email")}
                 </span>
 
                 <input
@@ -365,7 +376,7 @@ export function ContractorsView({
                   onChange={(e) =>
                     setForm((f) => ({ ...f, email: e.target.value }))
                   }
-                  placeholder="nom@exemple.com"
+                  placeholder={tx("nom@exemple.com", "name@example.com")}
                   autoComplete="email"
                   className="mt-1.5 w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm outline-none focus:border-ring"
                 />
@@ -373,9 +384,10 @@ export function ContractorsView({
             </div>
 
             <p className="mt-3 text-[10px] leading-4 text-muted-foreground">
-              L&apos;API SentrIA n&apos;a pas d&apos;authentification. Ne mettez
-              ici que des coordonnées que vous accepteriez de voir lues par un
-              tiers.
+              {tx(
+                "L'API SentrIA n'a pas d'authentification. Ne mettez ici que des coordonnées que vous accepteriez de voir lues par un tiers.",
+                "The SentrIA API has no authentication. Only put contact details here that you would accept a stranger reading."
+              )}
             </p>
 
             <div className="mt-4 flex items-center gap-2">
@@ -389,7 +401,7 @@ export function ContractorsView({
                 ) : (
                   <Check className="h-4 w-4" aria-hidden="true" />
                 )}
-                Enregistrer
+                {tx("Enregistrer", "Save")}
               </button>
 
               <button
@@ -400,7 +412,7 @@ export function ContractorsView({
                 }}
                 className="rounded-xl border border-border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                Annuler
+                {tx("Annuler", "Cancel")}
               </button>
             </div>
           </form>
@@ -411,7 +423,7 @@ export function ContractorsView({
             className="mt-5 inline-flex items-center gap-2 rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
-            Ajouter un intervenant
+            {tx("Ajouter un intervenant", "Add a contractor")}
           </button>
         )}
       </div>
@@ -419,7 +431,7 @@ export function ContractorsView({
       {/* LIST */}
       {!loaded ? (
         <p className="rounded-3xl border border-dashed border-border bg-card px-5 py-8 text-center text-sm text-muted-foreground">
-          Chargement des intervenants…
+          {tx("Chargement des intervenants…", "Loading contractors…")}
         </p>
       ) : contractors.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
@@ -431,13 +443,14 @@ export function ContractorsView({
           </div>
 
           <h2 className="mt-4 font-heading text-lg font-bold">
-            Aucun intervenant
+            {tx("Aucun intervenant", "No contractor")}
           </h2>
 
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-            Tant que personne n&apos;est enregistré, le menu
-            d&apos;assignation du tableau des priorités reste vide et les
-            cartes ne peuvent être confiées à personne.
+            {tx(
+              "Tant que personne n'est enregistré, le menu d'assignation du tableau des priorités reste vide et les cartes ne peuvent être confiées à personne.",
+              "While nobody is on file, the assign menu on the priorities board stays empty and no card can be handed to anyone."
+            )}
           </p>
         </div>
       ) : (
@@ -461,7 +474,7 @@ export function ContractorsView({
                     </p>
 
                     <p className="truncate text-sm text-muted-foreground">
-                      {person.role || "Fonction non renseignée"}
+                      {person.role || tx("Fonction non renseignée", "No role set")}
                     </p>
                   </div>
                 </div>
@@ -469,7 +482,10 @@ export function ContractorsView({
                 <button
                   type="button"
                   onClick={() => remove(person)}
-                  aria-label={`Retirer ${person.name}`}
+                  aria-label={tx(
+                    `Retirer ${person.name}`,
+                    `Remove ${person.name}`
+                  )}
                   className="shrink-0 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -499,7 +515,10 @@ export function ContractorsView({
                 <div
                   className="flex items-center gap-1"
                   role="group"
-                  aria-label={`Disponibilité de ${person.name}`}
+                  aria-label={tx(
+                    `Disponibilité de ${person.name}`,
+                    `${person.name}'s availability`
+                  )}
                 >
                   {AVAILABILITY_ORDER.map((value) => {
                     const active = person.availability === value
@@ -518,7 +537,7 @@ export function ContractorsView({
                             : "text-muted-foreground hover:bg-muted"
                         )}
                       >
-                        {AVAILABILITY_LABEL[value]}
+                        {px(AVAILABILITY_LABEL[value])}
                       </button>
                     )
                   })}
@@ -532,7 +551,10 @@ export function ContractorsView({
                       : "text-muted-foreground"
                   )}
                 >
-                  {person.open_assignments} en cours
+                  {tx(
+                    `${person.open_assignments} en cours`,
+                    `${person.open_assignments} open`
+                  )}
                 </span>
               </div>
 
@@ -541,10 +563,16 @@ export function ContractorsView({
               {person.availability === "available" &&
                 person.open_assignments > 0 && (
                   <p className="mt-2 text-[10px] leading-4 text-muted-foreground">
-                    Se dit disponible tout en portant{" "}
-                    {person.open_assignments} tâche
-                    {person.open_assignments > 1 ? "s" : ""} ouverte
-                    {person.open_assignments > 1 ? "s" : ""}.
+                    {tx(
+                      `Se dit disponible tout en portant ${
+                        person.open_assignments
+                      } tâche${
+                        person.open_assignments > 1 ? "s" : ""
+                      } ouverte${person.open_assignments > 1 ? "s" : ""}.`,
+                      `Says available while carrying ${
+                        person.open_assignments
+                      } open task${person.open_assignments > 1 ? "s" : ""}.`
+                    )}
                   </p>
                 )}
 

@@ -14,6 +14,7 @@ import {
   CircleDollarSign,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { localized, useTx, type Localized, type Tx } from "@/lib/i18n"
 
 type Alert = {
   equipment: string
@@ -23,10 +24,37 @@ type Alert = {
   sector?: string | null
 }
 
+/** Grouped thousands in the reader's own convention. */
+function money(value: number, tx: Tx): string {
+  return value.toLocaleString(tx("fr-FR", "en-GB"))
+}
+
 function matchAny(message: string, keywords: string[]) {
   const m = message.toLowerCase()
   return keywords.some((k) => m.includes(k))
 }
+
+/* Which alert messages belong to which priority.
+ *
+ * Needles matched against the backend's message text, in both languages,
+ * NOT copy: translating "arrêt" would stop the match it exists to make.
+ * Gathered here rather than inline so there is one place to audit, and
+ * one marker rather than six.
+ *
+ * This is also the weak point of this screen: it reads words out of a
+ * sentence. The logistics views moved to matching on alert_key, which is
+ * language-independent, and this one should follow.
+ *
+ * i18n-ignore-start: needles matched against alert text */
+const MATCH_KEYWORDS = {
+  machines: ["panne", "failure", "machine", "arrêt"],
+  motors: ["moteur", "engine", "motor"],
+  temperature: ["temp", "surchauffe", "chaleur", "overheat"],
+  pressure: ["pression", "pressure"],
+  production: ["production", "rendement", "cycle", "yield"],
+  maintenance: ["maintenance", "révision", "entretien", "service"],
+}
+/* i18n-ignore-end */
 
 function HeaderCard({
   icon: Icon,
@@ -34,9 +62,11 @@ function HeaderCard({
   differentiator,
 }: {
   icon: React.ElementType
-  title: string
-  differentiator: string
+  title: Localized
+  differentiator: Localized
 }) {
+  const tx = useTx()
+
   return (
     <div className="rounded-3xl border border-border bg-card p-6">
       <div className="flex items-start gap-3">
@@ -45,10 +75,12 @@ function HeaderCard({
         </div>
 
         <div>
-          <h2 className="font-heading text-xl font-bold">{title}</h2>
+          <h2 className="font-heading text-xl font-bold">
+            {tx(title.fr, title.en)}
+          </h2>
 
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            {differentiator}
+            {tx(differentiator.fr, differentiator.en)}
           </p>
         </div>
       </div>
@@ -61,14 +93,16 @@ function MetricCard({
   value,
   tone = "neutral",
 }: {
-  label: string
+  label: Localized
   value: string
   tone?: "neutral" | "warning" | "critical" | "positive"
 }) {
+  const tx = useTx()
+
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
+        {tx(label.fr, label.en)}
       </p>
 
       <p
@@ -90,8 +124,10 @@ function EmptyPriorityView({
   title,
 }: {
   icon: React.ElementType
-  title: string
+  title: Localized
 }) {
+  const tx = useTx()
+
   return (
     <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center">
       <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
@@ -99,12 +135,17 @@ function EmptyPriorityView({
       </div>
 
       <h3 className="mt-4 font-heading text-lg font-bold">
-        Aucune donnée {title.toLowerCase()} pour le moment
+        {tx(
+          `Aucune donnée ${title.fr.toLowerCase()} pour le moment`,
+          `No ${title.en.toLowerCase()} data yet`
+        )}
       </h3>
 
       <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
-        Connectez votre ERP, vos capteurs IoT, ou importez un fichier CSV pour
-        que SentrIA commence à surveiller cette priorité.
+        {tx(
+          "Connectez votre ERP, vos capteurs IoT, ou importez un fichier CSV pour que SentrIA commence à surveiller cette priorité.",
+          "Connect your ERP or your IoT sensors, or import a CSV file, and SentrIA starts watching this priority."
+        )}
       </p>
     </div>
   )
@@ -117,6 +158,8 @@ function AlertRow({
   alert: Alert
   children: React.ReactNode
 }) {
+  const tx = useTx()
+
   return (
     <div className="flex flex-col gap-3 border-b border-border px-5 py-4 last:border-b-0 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
@@ -151,7 +194,7 @@ function AlertRow({
         </p>
 
         <p className="mt-0.5 text-[11px] text-muted-foreground/70">
-          {new Date(alert.date).toLocaleString("fr-FR")}
+          {new Date(alert.date).toLocaleString(tx("fr-FR", "en-GB"))}
         </p>
       </div>
 
@@ -170,12 +213,19 @@ function estimateDowntimeCost(alert: Alert): number {
 }
 
 export function IndustryMachinesView({ alerts }: { alerts: Alert[] }) {
+  const tx = useTx()
+
   const relevant = alerts.filter((a) =>
-    matchAny(a.message, ["panne", "failure", "machine", "arrêt"])
+    matchAny(a.message, MATCH_KEYWORDS.machines)
   )
 
   if (relevant.length === 0) {
-    return <EmptyPriorityView icon={Cog} title="Machines de production" />
+    return (
+      <EmptyPriorityView
+        icon={Cog}
+        title={localized("Machines de production", "Production machines")}
+      />
+    )
   }
 
   const critical = relevant.filter((a) => a.severity === "CRITICAL")
@@ -188,45 +238,56 @@ export function IndustryMachinesView({ alerts }: { alerts: Alert[] }) {
     <div className="space-y-4">
       <HeaderCard
         icon={Cog}
-        title="Machines de production"
-        differentiator="Chaque anomalie machine est traduite en impact financier estimé, pour prioriser l'intervention selon le risque réel plutôt que la seule sévérité brute."
+        title={localized("Machines de production", "Production machines")}
+        differentiator={localized(
+          "Chaque anomalie machine est traduite en impact financier estimé, pour prioriser l'intervention selon le risque réel plutôt que la seule sévérité brute.",
+          "Every machine anomaly is turned into an estimated financial impact, so work is ordered by real risk rather than raw severity alone."
+        )}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <MetricCard
-          label="Pannes imminentes"
+          label={localized("Pannes imminentes", "Failures imminent")}
           value={String(critical.length)}
           tone={critical.length > 0 ? "critical" : "neutral"}
         />
         <MetricCard
-          label="Machines concernées"
+          label={localized("Machines concernées", "Machines affected")}
           value={String(new Set(relevant.map((a) => a.equipment)).size)}
         />
         <MetricCard
-          label="Perte estimée cumulée"
-          value={`~€${totalCost.toLocaleString("fr-FR")}`}
+          label={localized("Perte estimée cumulée", "Estimated loss in total")}
+          value={`~€${money(totalCost, tx)}`}
           tone="warning"
         />
       </div>
 
       <div className="rounded-3xl border border-border bg-card">
         <div className="border-b border-border px-5 py-3">
-          <p className="text-sm font-semibold">Détail par machine</p>
+          <p className="text-sm font-semibold">
+            {tx("Détail par machine", "By machine")}
+          </p>
           <p className="text-xs text-muted-foreground">
-            Estimation indicative, à affiner avec vos coûts réels d'arrêt.
+            {tx(
+              "Estimation indicative, à affiner avec vos coûts réels d'arrêt.",
+              "An indicative estimate, to refine with your own downtime costs."
+            )}
           </p>
         </div>
 
         {relevant.length === 0 ? (
           <div className="px-5 py-6 text-sm text-muted-foreground">
-            Aucune alerte machine pour le moment.
+            {tx(
+              "Aucune alerte machine pour le moment.",
+              "No machine alert so far."
+            )}
           </div>
         ) : (
           relevant.map((a, i) => (
             <AlertRow key={`${a.equipment}-${a.date}-${i}`} alert={a}>
               <div className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold">
                 <CircleDollarSign className="h-3.5 w-3.5" />
-                ~€{estimateDowntimeCost(a).toLocaleString("fr-FR")}
+                ~€{money(estimateDowntimeCost(a), tx)}
               </div>
             </AlertRow>
           ))
@@ -241,12 +302,19 @@ export function IndustryMachinesView({ alerts }: { alerts: Alert[] }) {
 // ---------------------------------------------------------------------
 
 export function IndustryMotorsView({ alerts }: { alerts: Alert[] }) {
+  const tx = useTx()
+
   const relevant = alerts.filter((a) =>
-    matchAny(a.message, ["moteur", "engine", "motor"])
+    matchAny(a.message, MATCH_KEYWORDS.motors)
   )
 
   if (relevant.length === 0) {
-    return <EmptyPriorityView icon={Activity} title="Moteurs" />
+    return (
+      <EmptyPriorityView
+        icon={Activity}
+        title={localized("Moteurs", "Motors")}
+      />
+    )
   }
 
   const countByEquipment = relevant.reduce<Record<string, number>>(
@@ -265,31 +333,45 @@ export function IndustryMotorsView({ alerts }: { alerts: Alert[] }) {
     <div className="space-y-4">
       <HeaderCard
         icon={Activity}
-        title="Moteurs"
-        differentiator="SentrIA repère les dégradations progressives, plusieurs signaux faibles sur le même moteur, avant que la panne franche ne survienne."
+        title={localized("Moteurs", "Motors")}
+        differentiator={localized(
+          "SentrIA repère les dégradations progressives, plusieurs signaux faibles sur le même moteur, avant que la panne franche ne survienne.",
+          "SentrIA catches gradual decline, several weak signals on the same motor, before it fails outright."
+        )}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <MetricCard label="Alertes moteur" value={String(relevant.length)} />
         <MetricCard
-          label="Moteurs en dégradation progressive"
+          label={localized("Alertes moteur", "Motor alerts")}
+          value={String(relevant.length)}
+        />
+        <MetricCard
+          label={localized(
+            "Moteurs en dégradation progressive",
+            "Motors declining gradually"
+          )}
           value={String(degrading.length)}
           tone={degrading.length > 0 ? "warning" : "neutral"}
         />
         <MetricCard
-          label="Moteurs surveillés"
+          label={localized("Moteurs surveillés", "Motors monitored")}
           value={String(new Set(relevant.map((a) => a.equipment)).size)}
         />
       </div>
 
       <div className="rounded-3xl border border-border bg-card">
         <div className="border-b border-border px-5 py-3">
-          <p className="text-sm font-semibold">Détail par moteur</p>
+          <p className="text-sm font-semibold">
+            {tx("Détail par moteur", "By motor")}
+          </p>
         </div>
 
         {relevant.length === 0 ? (
           <div className="px-5 py-6 text-sm text-muted-foreground">
-            Aucune alerte moteur pour le moment.
+            {tx(
+              "Aucune alerte moteur pour le moment.",
+              "No motor alert so far."
+            )}
           </div>
         ) : (
           relevant.map((a, i) => {
@@ -307,8 +389,8 @@ export function IndustryMotorsView({ alerts }: { alerts: Alert[] }) {
                 >
                   <TrendingDown className="h-3.5 w-3.5" />
                   {isProgressive
-                    ? "Dégradation progressive"
-                    : "Signal ponctuel"}
+                    ? tx("Dégradation progressive", "Declining gradually")
+                    : tx("Signal ponctuel", "One-off signal")}
                 </span>
               </AlertRow>
             )
@@ -335,12 +417,19 @@ function projectHoursToThreshold(alert: Alert): number | null {
 }
 
 export function IndustryTemperatureView({ alerts }: { alerts: Alert[] }) {
+  const tx = useTx()
+
   const relevant = alerts.filter((a) =>
-    matchAny(a.message, ["temp", "surchauffe", "chaleur", "overheat"])
+    matchAny(a.message, MATCH_KEYWORDS.temperature)
   )
 
   if (relevant.length === 0) {
-    return <EmptyPriorityView icon={Thermometer} title="Température" />
+    return (
+      <EmptyPriorityView
+        icon={Thermometer}
+        title={localized("Température", "Temperature")}
+      />
+    )
   }
 
   const critical = relevant.filter((a) => a.severity === "CRITICAL")
@@ -349,38 +438,48 @@ export function IndustryTemperatureView({ alerts }: { alerts: Alert[] }) {
     <div className="space-y-4">
       <HeaderCard
         icon={Thermometer}
-        title="Température"
-        differentiator="Plutôt que d'alerter uniquement quand un seuil est franchi, SentrIA estime la trajectoire actuelle pour anticiper le moment où il sera atteint."
+        title={localized("Température", "Temperature")}
+        differentiator={localized(
+          "Plutôt que d'alerter uniquement quand un seuil est franchi, SentrIA estime la trajectoire actuelle pour anticiper le moment où il sera atteint.",
+          "Rather than only alerting once a threshold is crossed, SentrIA reads the current trajectory to say when it will be."
+        )}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <MetricCard
-          label="Seuils déjà atteints"
+          label={localized("Seuils déjà atteints", "Thresholds already hit")}
           value={String(critical.length)}
           tone={critical.length > 0 ? "critical" : "neutral"}
         />
         <MetricCard
-          label="Actifs sous surveillance"
+          label={localized("Actifs sous surveillance", "Assets being watched")}
           value={String(new Set(relevant.map((a) => a.equipment)).size)}
         />
         <MetricCard
-          label="Alertes température"
+          label={localized("Alertes température", "Temperature alerts")}
           value={String(relevant.length)}
         />
       </div>
 
       <div className="rounded-3xl border border-border bg-card">
         <div className="border-b border-border px-5 py-3">
-          <p className="text-sm font-semibold">Trajectoire estimée</p>
+          <p className="text-sm font-semibold">
+            {tx("Trajectoire estimée", "Estimated trajectory")}
+          </p>
           <p className="text-xs text-muted-foreground">
-            Projection indicative basée sur l'ancienneté du signal, à affiner
-            avec un historique de capteurs.
+            {tx(
+              "Projection indicative basée sur l'ancienneté du signal, à affiner avec un historique de capteurs.",
+              "An indicative projection from how long the signal has been open, to refine with sensor history."
+            )}
           </p>
         </div>
 
         {relevant.length === 0 ? (
           <div className="px-5 py-6 text-sm text-muted-foreground">
-            Aucune alerte température pour le moment.
+            {tx(
+              "Aucune alerte température pour le moment.",
+              "No temperature alert so far."
+            )}
           </div>
         ) : (
           relevant.map((a, i) => {
@@ -398,8 +497,11 @@ export function IndustryTemperatureView({ alerts }: { alerts: Alert[] }) {
                 >
                   <Clock3 className="h-3.5 w-3.5" />
                   {hours === 0
-                    ? "Seuil déjà atteint"
-                    : `Seuil estimé dans ~${hours}h`}
+                    ? tx("Seuil déjà atteint", "Threshold already hit")
+                    : tx(
+                        `Seuil estimé dans ~${hours}h`,
+                        `Threshold in ~${hours}h`
+                      )}
                 </span>
               </AlertRow>
             )
@@ -414,22 +516,22 @@ export function IndustryTemperatureView({ alerts }: { alerts: Alert[] }) {
 // 4. PRESSION — Probable cause suggestion
 // ---------------------------------------------------------------------
 
-const PRESSURE_CAUSES = [
-  "Usure du joint",
-  "Fuite hydraulique probable",
-  "Défaut de valve",
-  "Encrassement du filtre",
+const PRESSURE_CAUSES: Localized[] = [
+  localized("Usure du joint", "Seal wear"),
+  localized("Fuite hydraulique probable", "Probable hydraulic leak"),
+  localized("Défaut de valve", "Valve fault"),
+  localized("Encrassement du filtre", "Clogged filter"),
 ]
 
-function suggestPressureCause(alert: Alert): string {
+function suggestPressureCause(alert: Alert): Localized {
   const m = alert.message.toLowerCase()
 
   if (m.includes("fuite") || m.includes("leak")) {
-    return "Fuite hydraulique probable"
+    return PRESSURE_CAUSES[1]
   }
 
   if (m.includes("valve")) {
-    return "Défaut de valve"
+    return PRESSURE_CAUSES[2]
   }
 
   // Deterministic pick based on equipment name so it stays stable per asset.
@@ -442,30 +544,43 @@ function suggestPressureCause(alert: Alert): string {
 }
 
 export function IndustryPressureView({ alerts }: { alerts: Alert[] }) {
+  const tx = useTx()
+
   const relevant = alerts.filter((a) =>
-    matchAny(a.message, ["pression", "pressure"])
+    matchAny(a.message, MATCH_KEYWORDS.pressure)
   )
 
   if (relevant.length === 0) {
-    return <EmptyPriorityView icon={Gauge} title="Pression" />
+    return (
+      <EmptyPriorityView
+        icon={Gauge}
+        title={localized("Pression", "Pressure")}
+      />
+    )
   }
 
   return (
     <div className="space-y-4">
       <HeaderCard
         icon={Gauge}
-        title="Pression"
-        differentiator="Au-delà de la valeur hors norme, SentrIA propose une cause probable à confirmer par un technicien, pour accélérer le diagnostic."
+        title={localized("Pression", "Pressure")}
+        differentiator={localized(
+          "Au-delà de la valeur hors norme, SentrIA propose une cause probable à confirmer par un technicien, pour accélérer le diagnostic.",
+          "Beyond the out-of-range figure, SentrIA offers a probable cause for a technician to confirm, so the diagnosis starts sooner."
+        )}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <MetricCard label="Alertes pression" value={String(relevant.length)} />
         <MetricCard
-          label="Équipements concernés"
+          label={localized("Alertes pression", "Pressure alerts")}
+          value={String(relevant.length)}
+        />
+        <MetricCard
+          label={localized("Équipements concernés", "Assets affected")}
           value={String(new Set(relevant.map((a) => a.equipment)).size)}
         />
         <MetricCard
-          label="Critiques"
+          label={localized("Critiques", "Critical")}
           value={String(
             relevant.filter((a) => a.severity === "CRITICAL").length
           )}
@@ -479,23 +594,34 @@ export function IndustryPressureView({ alerts }: { alerts: Alert[] }) {
 
       <div className="rounded-3xl border border-border bg-card">
         <div className="border-b border-border px-5 py-3">
-          <p className="text-sm font-semibold">Cause probable suggérée</p>
+          <p className="text-sm font-semibold">
+            {tx("Cause probable suggérée", "Probable cause suggested")}
+          </p>
           <p className="text-xs text-muted-foreground">
-            Hypothèse à confirmer sur le terrain, n'engage pas de diagnostic
-            définitif.
+            {tx(
+              "Hypothèse à confirmer sur le terrain, n'engage pas de diagnostic définitif.",
+              "A hypothesis to confirm on site, not a settled diagnosis."
+            )}
           </p>
         </div>
 
         {relevant.length === 0 ? (
           <div className="px-5 py-6 text-sm text-muted-foreground">
-            Aucune alerte pression pour le moment.
+            {tx(
+              "Aucune alerte pression pour le moment.",
+              "No pressure alert so far."
+            )}
           </div>
         ) : (
           relevant.map((a, i) => (
             <AlertRow key={`${a.equipment}-${a.date}-${i}`} alert={a}>
               <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-foreground">
                 <AlertTriangle className="h-3.5 w-3.5" />
-                {suggestPressureCause(a)}
+                {(() => {
+                  const cause = suggestPressureCause(a)
+
+                  return tx(cause.fr, cause.en)
+                })()}
               </span>
             </AlertRow>
           ))
@@ -514,12 +640,19 @@ function estimateHourlyLoss(alert: Alert): number {
 }
 
 export function IndustryProductionView({ alerts }: { alerts: Alert[] }) {
+  const tx = useTx()
+
   const relevant = alerts.filter((a) =>
-    matchAny(a.message, ["production", "rendement", "cycle", "yield"])
+    matchAny(a.message, MATCH_KEYWORDS.production)
   )
 
   if (relevant.length === 0) {
-    return <EmptyPriorityView icon={Boxes} title="Production" />
+    return (
+      <EmptyPriorityView
+        icon={Boxes}
+        title={localized("Production", "Production")}
+      />
+    )
   }
 
   const totalHourlyLoss = relevant.reduce(
@@ -531,31 +664,42 @@ export function IndustryProductionView({ alerts }: { alerts: Alert[] }) {
     <div className="space-y-4">
       <HeaderCard
         icon={Boxes}
-        title="Production"
-        differentiator="Chaque baisse de rendement est convertie en perte estimée par heure, pour que l'impact business soit visible immédiatement, pas seulement un pourcentage."
+        title={localized("Production", "Production")}
+        differentiator={localized(
+          "Chaque baisse de rendement est convertie en perte estimée par heure, pour que l'impact business soit visible immédiatement, pas seulement un pourcentage.",
+          "Every drop in yield becomes an estimated loss per hour, so the business impact is visible straight away rather than just a percentage."
+        )}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <MetricCard
-          label="Lignes concernées"
+          label={localized("Lignes concernées", "Lines affected")}
           value={String(new Set(relevant.map((a) => a.equipment)).size)}
         />
-        <MetricCard label="Alertes production" value={String(relevant.length)} />
         <MetricCard
-          label="Perte estimée cumulée"
-          value={`~€${totalHourlyLoss.toLocaleString("fr-FR")}/h`}
+          label={localized("Alertes production", "Production alerts")}
+          value={String(relevant.length)}
+        />
+        <MetricCard
+          label={localized("Perte estimée cumulée", "Estimated loss in total")}
+          value={`~€${money(totalHourlyLoss, tx)}/h`}
           tone="warning"
         />
       </div>
 
       <div className="rounded-3xl border border-border bg-card">
         <div className="border-b border-border px-5 py-3">
-          <p className="text-sm font-semibold">Détail par ligne</p>
+          <p className="text-sm font-semibold">
+            {tx("Détail par ligne", "By line")}
+          </p>
         </div>
 
         {relevant.length === 0 ? (
           <div className="px-5 py-6 text-sm text-muted-foreground">
-            Aucune alerte production pour le moment.
+            {tx(
+              "Aucune alerte production pour le moment.",
+              "No production alert so far."
+            )}
           </div>
         ) : (
           relevant.map((a, i) => (
@@ -589,38 +733,51 @@ function recommendMaintenanceWindow(alert: Alert): { from: Date; to: Date } {
   return { from, to }
 }
 
-function formatShortDate(d: Date): string {
-  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })
+function formatShortDate(d: Date, tx: Tx): string {
+  return d.toLocaleDateString(tx("fr-FR", "en-GB"), {
+    day: "2-digit",
+    month: "short",
+  })
 }
 
 export function IndustryMaintenanceView({ alerts }: { alerts: Alert[] }) {
+  const tx = useTx()
+
   const relevant = alerts.filter((a) =>
-    matchAny(a.message, ["maintenance", "révision", "entretien", "service"])
+    matchAny(a.message, MATCH_KEYWORDS.maintenance)
   )
 
   if (relevant.length === 0) {
-    return <EmptyPriorityView icon={ShieldCheck} title="Maintenance" />
+    return (
+      <EmptyPriorityView
+        icon={ShieldCheck}
+        title={localized("Maintenance", "Maintenance")}
+      />
+    )
   }
 
   return (
     <div className="space-y-4">
       <HeaderCard
         icon={ShieldCheck}
-        title="Maintenance"
-        differentiator="Plutôt qu'un calendrier fixe, SentrIA recommande une fenêtre d'intervention adaptée à l'usure réelle observée sur chaque équipement."
+        title={localized("Maintenance", "Maintenance")}
+        differentiator={localized(
+          "Plutôt qu'un calendrier fixe, SentrIA recommande une fenêtre d'intervention adaptée à l'usure réelle observée sur chaque équipement.",
+          "Rather than a fixed calendar, SentrIA recommends a service window that fits the wear actually seen on each asset."
+        )}
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <MetricCard
-          label="Interventions à planifier"
+          label={localized("Interventions à planifier", "Jobs to schedule")}
           value={String(relevant.length)}
         />
         <MetricCard
-          label="Équipements concernés"
+          label={localized("Équipements concernés", "Assets affected")}
           value={String(new Set(relevant.map((a) => a.equipment)).size)}
         />
         <MetricCard
-          label="Urgentes"
+          label={localized("Urgentes", "Urgent")}
           value={String(
             relevant.filter((a) => a.severity === "CRITICAL").length
           )}
@@ -634,15 +791,23 @@ export function IndustryMaintenanceView({ alerts }: { alerts: Alert[] }) {
 
       <div className="rounded-3xl border border-border bg-card">
         <div className="border-b border-border px-5 py-3">
-          <p className="text-sm font-semibold">Fenêtres recommandées</p>
+          <p className="text-sm font-semibold">
+            {tx("Fenêtres recommandées", "Recommended windows")}
+          </p>
           <p className="text-xs text-muted-foreground">
-            Basées sur l'usure détectée, pas sur un planning générique.
+            {tx(
+              "Basées sur l'usure détectée, pas sur un planning générique.",
+              "Based on the wear detected, not on a generic schedule."
+            )}
           </p>
         </div>
 
         {relevant.length === 0 ? (
           <div className="px-5 py-6 text-sm text-muted-foreground">
-            Aucune intervention recommandée pour le moment.
+            {tx(
+              "Aucune intervention recommandée pour le moment.",
+              "No job recommended so far."
+            )}
           </div>
         ) : (
           relevant.map((a, i) => {
@@ -652,7 +817,8 @@ export function IndustryMaintenanceView({ alerts }: { alerts: Alert[] }) {
               <AlertRow key={`${a.equipment}-${a.date}-${i}`} alert={a}>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold">
                   <Wrench className="h-3.5 w-3.5" />
-                  {formatShortDate(window.from)} → {formatShortDate(window.to)}
+                  {formatShortDate(window.from, tx)} →{" "}
+                  {formatShortDate(window.to, tx)}
                 </span>
               </AlertRow>
             )

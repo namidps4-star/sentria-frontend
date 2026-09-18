@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { computeConfidence, confidenceWord } from "@/lib/confidence"
+import { localized, useTx, type Localized, type Tx } from "@/lib/i18n"
 
 type Alert = {
   equipment: string
@@ -65,24 +66,24 @@ type RecommendationsPanelProps = {
   opsType?: string | null
 }
 
-const SECTOR_LABEL: Record<string, string> = {
-  all: "Tous",
-  industry: "Industrie",
-  health: "Santé",
-  agriculture: "Agriculture",
-  transportation: "Transport",
-  logistics: "Logistique",
-  energy: "Énergie",
-  retail: "Commerce",
+const SECTOR_LABEL: Record<string, Localized> = {
+  all: localized("Tous", "All"),
+  industry: localized("Industrie", "Industry"),
+  health: localized("Santé", "Health"),
+  agriculture: localized("Agriculture", "Agriculture"),
+  transportation: localized("Transport", "Transport"),
+  logistics: localized("Logistique", "Logistics"),
+  energy: localized("Énergie", "Energy"),
+  retail: localized("Commerce", "Retail"),
 }
 
-const OPS_TYPE_LABEL: Record<string, string> = {
-  port: "Port & conteneurs",
-  entrepot: "Entrepôt & manutention",
-  transport: "Transport & distribution",
-  expedition: "Expédition",
-  froid: "Chaîne du froid",
-  multi: "Opérations logistiques",
+const OPS_TYPE_LABEL: Record<string, Localized> = {
+  port: localized("Port & conteneurs", "Port & containers"),
+  entrepot: localized("Entrepôt & manutention", "Warehouse & handling"),
+  transport: localized("Transport & distribution", "Transport & distribution"),
+  expedition: localized("Expédition", "Dispatch"),
+  froid: localized("Chaîne du froid", "Cold chain"),
+  multi: localized("Opérations logistiques", "Logistics operations"),
 }
 
 const PANEL_FOCUS =
@@ -108,41 +109,83 @@ const CATEGORY_ICON: Record<string, typeof Wrench> = {
   other: Sparkles,
 }
 
-const CATEGORY_LABEL: Record<string, string> = {
-  maintenance: "Maintenance",
-  fuel: "Carburant",
-  delay: "Retard",
-  stock: "Stock",
-  cold_chain: "Chaine du froid",
-  expiry: "Expiration",
-  capacity: "Capacite",
-  predictive: "Predictif",
-  storage: "Stockage",
-  sales: "Ventes",
-  staffing: "Personnel",
-  shrinkage: "Demarque",
-  operations: "Operations",
-  diagnostics: "Diagnostic",
-  critical_supply: "Stock critique",
-  distribution: "Repartition",
-  other: "Autre",
+const CATEGORY_LABEL: Record<string, Localized> = {
+  maintenance: localized("Maintenance", "Maintenance"),
+  fuel: localized("Carburant", "Fuel"),
+  delay: localized("Retard", "Delay"),
+  stock: localized("Stock", "Stock"),
+  cold_chain: localized("Chaîne du froid", "Cold chain"),
+  expiry: localized("Expiration", "Expiry"),
+  capacity: localized("Capacité", "Capacity"),
+  predictive: localized("Prédictif", "Predictive"),
+  storage: localized("Stockage", "Storage"),
+  sales: localized("Ventes", "Sales"),
+  staffing: localized("Personnel", "Staffing"),
+  shrinkage: localized("Démarque", "Shrinkage"),
+  operations: localized("Opérations", "Operations"),
+  diagnostics: localized("Diagnostic", "Diagnostics"),
+  critical_supply: localized("Stock critique", "Critical stock"),
+  distribution: localized("Répartition", "Distribution"),
+  other: localized("Autre", "Other"),
 }
 
-const IMPACT_HINT: Record<string, string> = {
-  maintenance: "Évite un arrêt non planifié de plusieurs heures",
-  fuel: "Évite une immobilisation faute de carburant",
-  delay: "Limite un retard qui peut s'aggraver rapidement",
-  stock: "Évite une rupture de stock imminente",
-  cold_chain: "Évite une perte de produits par rupture du froid",
-  expiry: "Évite une perte liée à des produits périmés",
-  capacity: "Évite une saturation qui bloque le flux",
-  predictive: "Anticipe une panne avant qu'elle ne survienne",
-  storage: "Évite une perte liée à une durée de stockage trop longue",
-  sales: "Limite une perte de chiffre d'affaires qui s'installe",
-  staffing: "Évite des files d'attente et des ventes perdues",
-  shrinkage: "Limite une perte de marchandise non expliquée",
-  operations: "Débloque une opération qui empêche de vendre",
-  other: "Évite une perturbation opérationnelle",
+const IMPACT_HINT: Record<string, Localized> = {
+  maintenance: localized(
+    "Évite un arrêt non planifié de plusieurs heures",
+    "Avoids an unplanned stoppage of several hours"
+  ),
+  fuel: localized(
+    "Évite une immobilisation faute de carburant",
+    "Avoids a vehicle standing still for want of fuel"
+  ),
+  delay: localized(
+    "Limite un retard qui peut s'aggraver rapidement",
+    "Contains a delay that can get worse quickly"
+  ),
+  stock: localized(
+    "Évite une rupture de stock imminente",
+    "Avoids a stockout that is about to happen"
+  ),
+  cold_chain: localized(
+    "Évite une perte de produits par rupture du froid",
+    "Avoids losing product to a break in the cold chain"
+  ),
+  expiry: localized(
+    "Évite une perte liée à des produits périmés",
+    "Avoids a loss to expired product"
+  ),
+  capacity: localized(
+    "Évite une saturation qui bloque le flux",
+    "Avoids a bottleneck that stops the flow"
+  ),
+  predictive: localized(
+    "Anticipe une panne avant qu'elle ne survienne",
+    "Gets ahead of a breakdown before it happens"
+  ),
+  storage: localized(
+    "Évite une perte liée à une durée de stockage trop longue",
+    "Avoids a loss to goods sitting in storage too long"
+  ),
+  sales: localized(
+    "Limite une perte de chiffre d'affaires qui s'installe",
+    "Contains a revenue loss that is setting in"
+  ),
+  staffing: localized(
+    "Évite des files d'attente et des ventes perdues",
+    "Avoids queues and lost sales"
+  ),
+  shrinkage: localized(
+    "Limite une perte de marchandise non expliquée",
+    "Contains unexplained loss of goods"
+  ),
+  operations: localized(
+    "Débloque une opération qui empêche de vendre",
+    "Unblocks an operation that is stopping you selling"
+  ),
+  other: localized(
+    "Évite une perturbation opérationnelle",
+    "Avoids an operational disruption"
+  ),
 }
 
 /**
@@ -162,20 +205,35 @@ function confidenceOf(rec: Recommendation, recurrence: number): number {
   })
 }
 
-function reasoningOf(rec: Recommendation, recurrence: number): string {
+function reasoningOf(
+  rec: Recommendation,
+  recurrence: number,
+  tx: Tx
+): string {
+  /* Written by the backend in the language it fired in, so it is passed
+     through rather than re-derived. See PASSATION.md. */
   if (rec.reasoning) return rec.reasoning
 
   const parts: string[] = []
 
   parts.push(
     rec.severity === "CRITICAL"
-      ? "Classé critique car le signal dépasse le seuil de sécurité attendu pour cet actif."
-      : "Classé en surveillance car le signal s'écarte du comportement habituel de cet actif."
+      ? tx(
+          "Classé critique car le signal dépasse le seuil de sécurité attendu pour cet actif.",
+          "Rated critical because the signal is past the safety threshold expected for this asset."
+        )
+      : tx(
+          "Classé en surveillance car le signal s'écarte du comportement habituel de cet actif.",
+          "Rated watch because the signal is drifting from this asset's usual behaviour."
+        )
   )
 
   if (recurrence > 1) {
     parts.push(
-      `Ce n'est pas un cas isolé : ${recurrence} alertes similaires cette semaine.`
+      tx(
+        `Ce n'est pas un cas isolé : ${recurrence} alertes similaires cette semaine.`,
+        `This is not a one-off: ${recurrence} similar alerts this week.`
+      )
     )
   }
 
@@ -192,6 +250,11 @@ export function RecommendationsPanel({
   alerts,
   opsType,
 }: RecommendationsPanelProps) {
+  const tx = useTx()
+
+  /** Resolve a module-level pair. */
+  const px = (text: Localized) => tx(text.fr, text.en)
+
   /*
    * Closing the decision loop: once someone acts on a priority, SentrIA
    * remembers it and shows the result back. Without this, the panel is
@@ -242,8 +305,10 @@ export function RecommendationsPanel({
       return (
         <div className="flex items-center gap-3 rounded-3xl border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
           <Sparkles className="h-4 w-4 shrink-0" />
-          Aucune priorité urgente pour ce secteur pour le moment. Tout est
-          sous contrôle ici.
+          {tx(
+            "Aucune priorité urgente pour ce secteur pour le moment. Tout est sous contrôle ici.",
+            "No urgent priority for this sector right now. Everything here is under control."
+          )}
         </div>
       )
     }
@@ -274,11 +339,12 @@ export function RecommendationsPanel({
 
   const topRecurrence = recurrenceOf(top.equipment)
   const topConfidence = confidenceOf(top, topRecurrence)
-  const topReasoning = reasoningOf(top, topRecurrence)
+  const topReasoning = reasoningOf(top, topRecurrence, tx)
   const topKey = actionKeyFor(top)
   const topAction = actionsLog[topKey]
 
-  const opsLabel = opsType ? OPS_TYPE_LABEL[opsType] : undefined
+  const opsMeta = opsType ? OPS_TYPE_LABEL[opsType] : undefined
+  const opsLabel = opsMeta ? px(opsMeta) : undefined
 
   return (
     <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6">
@@ -303,7 +369,7 @@ export function RecommendationsPanel({
             {opsLabel && (
               <span className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 text-[11px] font-medium text-accent-foreground">
                 <Shield className="h-3 w-3" />
-                Vue adaptée : {opsLabel}
+                {tx("Vue adaptée :", "Tailored view:")} {opsLabel}
               </span>
             )}
           </div>
@@ -311,7 +377,10 @@ export function RecommendationsPanel({
 
         {rest.length > 0 && (
           <span className="hidden shrink-0 rounded-full border border-border px-3 py-1 text-[11px] font-medium text-muted-foreground sm:inline-flex">
-            Faites défiler pour voir la suite
+            {tx(
+              "Faites défiler pour voir la suite",
+              "Scroll for the rest"
+            )}
           </span>
         )}
       </div>
@@ -322,7 +391,7 @@ export function RecommendationsPanel({
             <div className="flex items-center justify-between gap-2">
               <span className="inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-accent-foreground">
                 <Sparkles className="h-3 w-3" />
-                Priorité n°1
+                {tx("Priorité n°1", "Priority no. 1")}
               </span>
 
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground shadow-sm">
@@ -347,13 +416,16 @@ export function RecommendationsPanel({
               </span>
 
               <span className="text-[10px] text-muted-foreground">
-                {CATEGORY_LABEL[top.action_category] ?? "Autre"}
+                {px(CATEGORY_LABEL[top.action_category] ?? CATEGORY_LABEL.other)}
               </span>
 
               {topRecurrence > 1 && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive">
                   <TrendingUp className="h-3 w-3" />
-                  {topRecurrence}x cette semaine
+                  {tx(
+                    `${topRecurrence}x cette semaine`,
+                    `${topRecurrence}x this week`
+                  )}
                 </span>
               )}
             </div>
@@ -377,28 +449,35 @@ export function RecommendationsPanel({
                   </div>
 
                   <span className="shrink-0 text-[10px] font-medium text-muted-foreground">
-                    {topRiskPct}% de risque
+                    {tx(`${topRiskPct}% de risque`, `${topRiskPct}% risk`)}
                   </span>
                 </div>
               ) : (
                 <p className="mt-1.5 text-[10px] text-muted-foreground">
-                  Score de risque non calculé pour ce secteur.
+                  {tx(
+                    "Score de risque non calculé pour ce secteur.",
+                    "No risk score computed for this sector."
+                  )}
                 </p>
               )}
 
               <div
                 className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-background/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
-                title="À quel point SentrIA est sûr de cette analyse"
+                title={tx(
+                  "À quel point SentrIA est sûr de cette analyse",
+                  "How sure SentrIA is of this analysis"
+                )}
               >
                 <Gauge className="h-3 w-3" />
-                Confiance {confidenceWord(topConfidence)} · {topConfidence}%
+                {tx("Confiance", "Confidence")}{" "}
+                {confidenceWord(topConfidence)} · {topConfidence}%
               </div>
             </div>
 
             {/* 2 · REASONING */}
             <div className="mt-3">
               <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-muted-foreground">
-                2 · Pourquoi
+                {tx("2 · Pourquoi", "2 · Why")}
               </p>
               <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
                 {topReasoning}
@@ -410,14 +489,14 @@ export function RecommendationsPanel({
               <Shield className="mt-0.5 h-3 w-3 shrink-0 text-accent-foreground" />
 
               <p className="text-[11px] leading-4 text-muted-foreground">
-                {IMPACT_HINT[top.action_category] ?? IMPACT_HINT.other}
+                {px(IMPACT_HINT[top.action_category] ?? IMPACT_HINT.other)}
               </p>
             </div>
 
             {/* 4 · RECOMMENDATION */}
             <div className="mt-3">
               <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-muted-foreground">
-                4 · Recommandation
+                {tx("4 · Recommandation", "4 · Recommendation")}
               </p>
               <p className="mt-1 text-sm leading-5 text-foreground/90">
                 {top.recommended_action}
@@ -435,7 +514,7 @@ export function RecommendationsPanel({
                   className={"inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-foreground px-3 py-2 text-xs font-semibold text-background transition-opacity hover:opacity-90" + PANEL_FOCUS}
                 >
                   <Check className="h-3.5 w-3.5" />
-                  Marquer traité
+                  {tx("Marquer traité", "Mark handled")}
                 </button>
 
                 <button
@@ -444,7 +523,7 @@ export function RecommendationsPanel({
                   className={"inline-flex items-center justify-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted" + PANEL_FOCUS}
                 >
                   <X className="h-3.5 w-3.5" />
-                  Ignorer
+                  {tx("Ignorer", "Dismiss")}
                 </button>
               </div>
             ) : (
@@ -466,13 +545,19 @@ export function RecommendationsPanel({
                   )}
                 >
                   <Check className="h-3 w-3" />
-                  6 · Résultat
+                  {tx("6 · Résultat", "6 · Outcome")}
                 </div>
 
                 <p className="mt-1 text-[11px] leading-4 text-foreground/90">
                   {topAction.status === "done"
-                    ? `Traité à ${topAction.at}. SentrIA continue de surveiller cet actif pour confirmer l'effet.`
-                    : `Écarté à ${topAction.at}. Réapparaîtra si le signal s'aggrave.`}
+                    ? tx(
+                        `Traité à ${topAction.at}. SentrIA continue de surveiller cet actif pour confirmer l'effet.`,
+                        `Handled at ${topAction.at}. SentrIA keeps watching this asset to confirm the effect.`
+                      )
+                    : tx(
+                        `Écarté à ${topAction.at}. Réapparaîtra si le signal s'aggrave.`,
+                        `Dismissed at ${topAction.at}. It will come back if the signal worsens.`
+                      )}
                 </p>
               </div>
             )}
@@ -543,7 +628,10 @@ export function RecommendationsPanel({
 
                     <span
                       className="inline-flex items-center gap-1 text-[9px] font-medium text-muted-foreground"
-                      title="Confiance de SentrIA dans cette analyse"
+                      title={tx(
+                        "Confiance de SentrIA dans cette analyse",
+                        "How confident SentrIA is in this analysis"
+                      )}
                     >
                       <Gauge className="h-2.5 w-2.5" />
                       {confidence}%
@@ -551,7 +639,9 @@ export function RecommendationsPanel({
 
                     {rec.sector && (
                       <span className="truncate text-[9px] uppercase tracking-wider text-muted-foreground">
-                        {SECTOR_LABEL[rec.sector] ?? rec.sector}
+                        {SECTOR_LABEL[rec.sector]
+                          ? px(SECTOR_LABEL[rec.sector])
+                          : rec.sector}
                       </span>
                     )}
                   </div>
@@ -565,14 +655,14 @@ export function RecommendationsPanel({
                           className={"inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-foreground px-2 py-1.5 text-[10px] font-semibold text-background transition-opacity hover:opacity-90" + PANEL_FOCUS}
                         >
                           <Check className="h-3 w-3" />
-                          Traité
+                          {tx("Traité", "Handled")}
                         </button>
 
                         <button
                           type="button"
                           onClick={() => recordAction(key, "dismissed")}
                           className={"inline-flex items-center justify-center rounded-lg border border-border px-2 py-1.5 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-muted" + PANEL_FOCUS}
-                          aria-label="Ignorer"
+                          aria-label={tx("Ignorer", "Dismiss")}
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -589,8 +679,14 @@ export function RecommendationsPanel({
                       >
                         <Check className="h-3 w-3" />
                         {action.status === "done"
-                          ? `Traité à ${action.at}`
-                          : `Écarté à ${action.at}`}
+                          ? tx(
+                              `Traité à ${action.at}`,
+                              `Handled at ${action.at}`
+                            )
+                          : tx(
+                              `Écarté à ${action.at}`,
+                              `Dismissed at ${action.at}`
+                            )}
                       </span>
                     )}
                   </div>

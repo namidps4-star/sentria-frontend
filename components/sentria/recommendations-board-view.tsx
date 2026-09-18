@@ -28,6 +28,7 @@ import {
   type Contractor,
 } from "@/lib/crm"
 import { formatMoney, useLocale } from "@/lib/locale"
+import { localized, useTx, type Localized, type Tx } from "@/lib/i18n"
 
 type Recommendation = {
   id: string
@@ -77,33 +78,36 @@ type Filter = "all" | "critical" | "unassigned"
 
 const COLUMNS: {
   id: Status
-  label: string
-  hint: string
+  label: Localized
+  hint: Localized
 }[] = [
   {
     id: "todo",
-    label: "À traiter",
-    hint: "Détecté, pas encore pris en charge",
+    label: localized("À traiter", "To do"),
+    hint: localized(
+      "Détecté, pas encore pris en charge",
+      "Detected, nobody on it yet"
+    ),
   },
   {
     id: "in_progress",
-    label: "En cours",
-    hint: "Quelqu'un s'en occupe",
+    label: localized("En cours", "In progress"),
+    hint: localized("Quelqu'un s'en occupe", "Somebody is on it"),
   },
   {
     id: "done",
-    label: "Résolu",
-    hint: "Situation traitée",
+    label: localized("Résolu", "Resolved"),
+    hint: localized("Situation traitée", "The situation is handled"),
   },
 ]
 
-const OPS_TYPE_LABEL: Record<string, string> = {
-  port: "Port & conteneurs",
-  entrepot: "Entrepôt & manutention",
-  transport: "Transport & distribution",
-  expedition: "Expédition",
-  froid: "Chaîne du froid",
-  multi: "Opérations logistiques",
+const OPS_TYPE_LABEL: Record<string, Localized> = {
+  port: localized("Port & conteneurs", "Port & containers"),
+  entrepot: localized("Entrepôt & manutention", "Warehouse & handling"),
+  transport: localized("Transport & distribution", "Transport & distribution"),
+  expedition: localized("Expédition", "Dispatch"),
+  froid: localized("Chaîne du froid", "Cold chain"),
+  multi: localized("Opérations logistiques", "Logistics operations"),
 }
 
 const CATEGORY_ICON: Record<string, typeof Wrench> = {
@@ -118,23 +122,23 @@ const CATEGORY_ICON: Record<string, typeof Wrench> = {
   other: Sparkles,
 }
 
-const CATEGORY_LABEL: Record<string, string> = {
-  maintenance: "Maintenance",
-  fuel: "Carburant",
-  delay: "Retard",
-  stock: "Stock",
-  cold_chain: "Chaîne du froid",
-  expiry: "Expiration",
-  capacity: "Capacité",
-  predictive: "Prédictif",
-  other: "Autre",
+const CATEGORY_LABEL: Record<string, Localized> = {
+  maintenance: localized("Maintenance", "Maintenance"),
+  fuel: localized("Carburant", "Fuel"),
+  delay: localized("Retard", "Delay"),
+  stock: localized("Stock", "Stock"),
+  cold_chain: localized("Chaîne du froid", "Cold chain"),
+  expiry: localized("Expiration", "Expiry"),
+  capacity: localized("Capacité", "Capacity"),
+  predictive: localized("Prédictif", "Predictive"),
+  other: localized("Autre", "Other"),
 }
 
-const PRIORITY_LABEL: Record<Priority, string> = {
-  low: "Faible",
-  medium: "Moyenne",
-  high: "Haute",
-  critical: "Critique",
+const PRIORITY_LABEL: Record<Priority, Localized> = {
+  low: localized("Faible", "Low"),
+  medium: localized("Moyenne", "Medium"),
+  high: localized("Haute", "High"),
+  critical: localized("Critique", "Critical"),
 }
 
 /* Where the board used to keep its assignments.
@@ -219,7 +223,7 @@ function taskMapFrom(rows: Assignment[]): Record<string, TaskMeta> {
   return map
 }
 
-function formatDeadline(deadline: string | null) {
+function formatDeadline(deadline: string | null, tx: Tx) {
   if (!deadline) {
     return null
   }
@@ -230,7 +234,7 @@ function formatDeadline(deadline: string | null) {
     return null
   }
 
-  return date.toLocaleDateString("fr-FR", {
+  return date.toLocaleDateString(tx("fr-FR", "en-GB"), {
     day: "2-digit",
     month: "short",
   })
@@ -297,6 +301,8 @@ function toneOf(rec: Recommendation) {
  *  number behind it is exactly the kind of invented progress this product
  *  keeps removing, and an empty rule would still read as "low risk". */
 function RiskRule({ rec }: { rec: Recommendation }) {
+  const tx = useTx()
+
   const score = rec.risk_score
 
   if (score === null || score === undefined || !Number.isFinite(score)) {
@@ -305,6 +311,11 @@ function RiskRule({ rec }: { rec: Recommendation }) {
 
   const filled = Math.max(0, Math.min(10, Math.round(score / 10)))
   const tone = toneOf(rec)
+
+  const srRisk = tx(
+    `Risque ${Math.round(score)} sur 100`,
+    `Risk ${Math.round(score)} out of 100`
+  )
 
   return (
     <div className="mt-3">
@@ -320,7 +331,7 @@ function RiskRule({ rec }: { rec: Recommendation }) {
         ))}
       </div>
 
-      <span className="sr-only">Risque {Math.round(score)} sur 100</span>
+      <span className="sr-only">{srRisk}</span>
     </div>
   )
 }
@@ -329,6 +340,11 @@ export function RecommendationsBoard({
   recommendations,
   opsType,
 }: RecommendationsBoardProps) {
+  const tx = useTx()
+
+  /** Resolve a module-level pair. */
+  const px = (text: Localized) => tx(text.fr, text.en)
+
   /* The company name is the partition these rows live under. It is read
      after mount, like every other stored value in the app, so the first
      client render cannot disagree with the server markup. */
@@ -367,7 +383,7 @@ export function RecommendationsBoard({
       if (people.ok) setContractors(people.data)
 
       if (!stored.ok) {
-        setLoadError(stored.detail)
+        setLoadError(px(stored.detail))
         setLoaded(true)
         return
       }
@@ -488,9 +504,13 @@ export function RecommendationsBoard({
   }, [cards, filter])
 
   const FILTERS: { id: Filter; label: string; count: number }[] = [
-    { id: "all", label: "Toutes", count: cards.length },
-    { id: "critical", label: "Critiques", count: criticalCount },
-    { id: "unassigned", label: "Non assignées", count: unassignedCount },
+    { id: "all", label: tx("Toutes", "All"), count: cards.length },
+    { id: "critical", label: tx("Critiques", "Critical"), count: criticalCount },
+    {
+      id: "unassigned",
+      label: tx("Non assignées", "Unassigned"),
+      count: unassignedCount,
+    },
   ]
 
   /** Apply a change, then persist it.
@@ -513,8 +533,10 @@ export function RecommendationsBoard({
 
     if (!companyName) {
       setSaveError(
-        "Aucun nom d'entreprise renseigné : la modification ne peut pas " +
-          "être enregistrée. Renseignez-le dans les Paramètres."
+        tx(
+          "Aucun nom d'entreprise renseigné : la modification ne peut pas être enregistrée. Renseignez-le dans les Paramètres.",
+          "No company name is set, so the change cannot be saved. Set it in Settings."
+        )
       )
       return
     }
@@ -532,7 +554,7 @@ export function RecommendationsBoard({
         return
       }
 
-      setSaveError(result.detail)
+      setSaveError(px(result.detail))
 
       setTaskMap((current) => {
         const rolledBack = { ...current }
@@ -587,14 +609,17 @@ export function RecommendationsBoard({
     setDragOverColumn(null)
   }
 
-  const opsLabel = opsType ? OPS_TYPE_LABEL[opsType] : undefined
+  const opsMeta = opsType ? OPS_TYPE_LABEL[opsType] : undefined
+  const opsLabel = opsMeta ? px(opsMeta) : undefined
 
   if (recommendations.length === 0) {
     return (
       <div className="flex items-center gap-3 rounded-3xl border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
         <Sparkles className="h-4 w-4 shrink-0 text-accent-foreground" />
-        Aucune priorité urgente pour ce secteur pour le moment. Tout est sous
-        contrôle ici.
+        {tx(
+          "Aucune priorité urgente pour ce secteur pour le moment. Tout est sous contrôle ici.",
+          "No urgent priority for this sector right now. Everything here is under control."
+        )}
       </div>
     )
   }
@@ -607,11 +632,11 @@ export function RecommendationsBoard({
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            {opsLabel ?? "Opérations"}
+            {opsLabel ?? tx("Opérations", "Operations")}
           </p>
 
           <h3 className="mt-1 font-heading text-2xl font-bold tracking-tight">
-            Priorités du moment
+            {tx("Priorités du moment", "What matters now")}
           </h3>
 
           {/* The pill row from the reference. Dark active pill, brand count
@@ -655,7 +680,7 @@ export function RecommendationsBoard({
         <dl className="flex shrink-0 items-start gap-6 lg:gap-8">
           <div>
             <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              Priorités
+              {tx("Priorités", "Priorities")}
             </dt>
             <dd className="mt-1 font-heading text-3xl font-bold tabular-nums">
               {cards.length}
@@ -664,7 +689,7 @@ export function RecommendationsBoard({
 
           <div>
             <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              Critiques
+              {tx("Critiques", "Critical")}
             </dt>
             <dd className="mt-1 font-heading text-3xl font-bold tabular-nums">
               {criticalCount}
@@ -674,7 +699,7 @@ export function RecommendationsBoard({
           {totalExposure > 0 && (
             <div>
               <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                Exposition
+                {tx("Exposition", "Exposure")}
               </dt>
               <dd className="mt-1 font-heading text-3xl font-bold tabular-nums">
                 {formatMoney(totalExposure, currency)}
@@ -691,10 +716,13 @@ export function RecommendationsBoard({
       {loadError && (
         <p className="mt-5 rounded-2xl border border-dashed border-border bg-background px-4 py-3 text-xs leading-5 text-muted-foreground">
           <span className="font-semibold text-foreground">
-            Assignations non chargées.
+            {tx("Assignations non chargées.", "Assignments not loaded.")}
           </span>{" "}
-          {loadError} Les cartes ci-dessous sont réelles, mais leur statut
-          et leur responsable ne sont pas ceux enregistrés.
+          {loadError}{" "}
+          {tx(
+            "Les cartes ci-dessous sont réelles, mais leur statut et leur responsable ne sont pas ceux enregistrés.",
+            "The cards below are real, but their status and owner are not the saved ones."
+          )}
         </p>
       )}
 
@@ -704,9 +732,13 @@ export function RecommendationsBoard({
           className="mt-5 rounded-2xl border border-destructive/30 bg-destructive/[0.06] px-4 py-3 text-xs leading-5"
         >
           <span className="font-semibold text-destructive">
-            Modification non enregistrée.
+            {tx("Modification non enregistrée.", "Change not saved.")}
           </span>{" "}
-          {saveError} La carte a été remise dans son état précédent.
+          {saveError}{" "}
+          {tx(
+            "La carte a été remise dans son état précédent.",
+            "The card has been put back the way it was."
+          )}
         </p>
       )}
 
@@ -760,9 +792,9 @@ export function RecommendationsBoard({
 
               <div className="mb-3 flex items-baseline justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="text-sm font-bold">{column.label}</p>
+                  <p className="text-sm font-bold">{px(column.label)}</p>
                   <p className="mt-0.5 text-[10px] text-muted-foreground">
-                    {column.hint}
+                    {px(column.hint)}
                   </p>
                 </div>
 
@@ -790,8 +822,8 @@ export function RecommendationsBoard({
                     )}
                   >
                     {filter === "all"
-                      ? "Déposez une priorité ici"
-                      : "Rien dans ce filtre"}
+                      ? tx("Déposez une priorité ici", "Drop a priority here")
+                      : tx("Rien dans ce filtre", "Nothing in this filter")}
                   </div>
                 )}
 
@@ -872,23 +904,32 @@ export function RecommendationsBoard({
 
                         <span className="inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[9px] font-medium text-muted-foreground">
                           <Icon className="h-3 w-3" aria-hidden="true" />
-                          {CATEGORY_LABEL[rec.action_category] ?? "Autre"}
+                          {px(
+                            CATEGORY_LABEL[rec.action_category] ??
+                              CATEGORY_LABEL.other
+                          )}
                         </span>
 
                         {(rec.downstream ?? 0) > 0 && (
                           <span className="rounded-md border border-brand/40 bg-brand/10 px-2 py-1 text-[9px] font-semibold">
-                            {rec.downstream} en aval
+                            {tx(
+                              `${rec.downstream} en aval`,
+                              `${rec.downstream} downstream`
+                            )}
                           </span>
                         )}
 
                         {(rec.alertCount ?? 0) > 1 && (
                           <span className="rounded-md border border-border bg-background/60 px-2 py-1 text-[9px] font-medium text-muted-foreground">
-                            {rec.alertCount} signaux
+                            {tx(
+                              `${rec.alertCount} signaux`,
+                              `${rec.alertCount} signals`
+                            )}
                           </span>
                         )}
 
                         <span className="rounded-md border border-border bg-background/60 px-2 py-1 text-[9px] font-medium text-muted-foreground">
-                          {PRIORITY_LABEL[task.priority]}
+                          {px(PRIORITY_LABEL[task.priority])}
                         </span>
                       </div>
 
@@ -925,7 +966,7 @@ export function RecommendationsBoard({
                               </span>
 
                               <span className="text-[11px] text-muted-foreground">
-                                Assigner
+                                {tx("Assigner", "Assign")}
                               </span>
                             </>
                           )}
@@ -951,15 +992,18 @@ export function RecommendationsBoard({
                           />
 
                           {task.deadline
-                            ? formatDeadline(task.deadline)
-                            : "Échéance"}
+                            ? formatDeadline(task.deadline, tx)
+                            : tx("Échéance", "Due date")}
                         </button>
                       </div>
 
                       <div className="pointer-events-none absolute bottom-1.5 right-2 flex items-center gap-0.5 opacity-0 transition-opacity focus-within:pointer-events-auto focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
                         <button
                           type="button"
-                          aria-label="Déplacer vers la colonne précédente"
+                          aria-label={tx(
+                            "Déplacer vers la colonne précédente",
+                            "Move to the previous column"
+                          )}
                           disabled={columnIndex === 0}
                           onClick={(e) => {
                             e.stopPropagation()
@@ -975,7 +1019,10 @@ export function RecommendationsBoard({
 
                         <button
                           type="button"
-                          aria-label="Déplacer vers la colonne suivante"
+                          aria-label={tx(
+                            "Déplacer vers la colonne suivante",
+                            "Move to the next column"
+                          )}
                           disabled={columnIndex === COLUMNS.length - 1}
                           onClick={(e) => {
                             e.stopPropagation()
@@ -998,13 +1045,16 @@ export function RecommendationsBoard({
                         >
                           <div className="mb-3 flex items-center justify-between">
                             <p className="text-xs font-semibold">
-                              Détails de la priorité
+                              {tx(
+                                "Détails de la priorité",
+                                "Priority detail"
+                              )}
                             </p>
 
                             <button
                               type="button"
                               onClick={() => setEditingId(null)}
-                              aria-label="Fermer"
+                              aria-label={tx("Fermer", "Close")}
                               className="rounded-md p-1 text-muted-foreground hover:bg-muted"
                             >
                               <X className="h-3.5 w-3.5" />
@@ -1012,7 +1062,7 @@ export function RecommendationsBoard({
                           </div>
 
                           <label className="mb-1 block text-[10px] font-medium text-muted-foreground">
-                            Responsable
+                            {tx("Responsable", "Owner")}
                           </label>
 
                           {/* Each option carries what the person said
@@ -1029,15 +1079,20 @@ export function RecommendationsBoard({
                             }
                             className="mb-1 w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs outline-none focus:border-accent"
                           >
-                            <option value="">Non assigné</option>
+                            <option value="">
+                              {tx("Non assigné", "Unassigned")}
+                            </option>
 
                             {contractors.map((person) => (
                               <option key={person.id} value={person.id}>
                                 {person.name}
                                 {" · "}
-                                {AVAILABILITY_LABEL[person.availability]}
+                                {px(AVAILABILITY_LABEL[person.availability])}
                                 {person.open_assignments > 0 &&
-                                  ` · ${person.open_assignments} en cours`}
+                                  tx(
+                                    ` · ${person.open_assignments} en cours`,
+                                    ` · ${person.open_assignments} open`
+                                  )}
                               </option>
                             ))}
                           </select>
@@ -1045,13 +1100,19 @@ export function RecommendationsBoard({
                           {contractors.length === 0 && (
                             <p className="mb-3 text-[10px] leading-4 text-muted-foreground">
                               {loaded
-                                ? "Aucun intervenant enregistré. Ajoutez-les depuis Intervenants."
-                                : "Chargement des intervenants…"}
+                                ? tx(
+                                    "Aucun intervenant enregistré. Ajoutez-les depuis Intervenants.",
+                                    "No contractor on file. Add them from Contractors."
+                                  )
+                                : tx(
+                                    "Chargement des intervenants…",
+                                    "Loading contractors…"
+                                  )}
                             </p>
                           )}
 
                           <label className="mb-1 mt-2 block text-[10px] font-medium text-muted-foreground">
-                            Échéance
+                            {tx("Échéance", "Due date")}
                           </label>
 
                           <div className="relative mb-3">
@@ -1070,7 +1131,7 @@ export function RecommendationsBoard({
                           </div>
 
                           <label className="mb-1 block text-[10px] font-medium text-muted-foreground">
-                            Priorité
+                            {tx("Priorité", "Priority")}
                           </label>
 
                           <select
@@ -1082,10 +1143,18 @@ export function RecommendationsBoard({
                             }
                             className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs outline-none focus:border-accent"
                           >
-                            <option value="low">Faible</option>
-                            <option value="medium">Moyenne</option>
-                            <option value="high">Haute</option>
-                            <option value="critical">Critique</option>
+                            <option value="low">
+                              {px(PRIORITY_LABEL.low)}
+                            </option>
+                            <option value="medium">
+                              {px(PRIORITY_LABEL.medium)}
+                            </option>
+                            <option value="high">
+                              {px(PRIORITY_LABEL.high)}
+                            </option>
+                            <option value="critical">
+                              {px(PRIORITY_LABEL.critical)}
+                            </option>
                           </select>
 
                           <button
@@ -1094,7 +1163,7 @@ export function RecommendationsBoard({
                             className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground transition-colors hover:bg-accent/90"
                           >
                             <Check className="h-3.5 w-3.5" />
-                            Enregistrer
+                            {tx("Enregistrer", "Save")}
                           </button>
                         </div>
                       )}

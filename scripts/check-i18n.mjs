@@ -123,6 +123,15 @@ function isUserFacing(text, kind = "literal") {
   if (/^(flex|grid|block|inline|hidden|absolute|relative|sticky|fixed)\b/.test(trimmed)) return false
   if (/\b(rounded|border|bg|text|font|shadow|ring|gap|px|py|pt|pb|pl|pr|mx|my|mt|mb|ml|mr|w|h|min|max|space|divide|items|justify|self|overflow|truncate|leading|tracking|opacity|transition|duration|ease|animate|motion|hover|focus|group|peer|dark|sm|md|lg|xl)-/.test(trimmed)) return false
 
+  /* A CSS value. */
+  if (
+    /^(?:repeating-)?(?:linear|radial|conic)-gradient\(|^(?:color-mix|var|calc|rgba?|hsla?|oklch|clamp|url)\(/.test(
+      trimmed
+    )
+  ) {
+    return false
+  }
+
   /* Identifiers, dotted keys, urls, formats, codes. */
   if (
     !isCopyPosition &&
@@ -132,6 +141,9 @@ function isUserFacing(text, kind = "literal") {
     return false
   }
   if (/^https?:\/\//.test(trimmed)) return false
+
+  /* A route or asset path: "/contractors", "/api/alerts", "./x". */
+  if (/^\.{0,2}\/[^\s]*$/.test(trimmed)) return false
   if (!isCopyPosition && /^[A-Z][a-z]+([A-Z][a-z]+)+$/.test(trimmed)) return false
   if (/^[A-Z0-9_]+$/.test(trimmed)) return false
   if (/^(application|text|image|audio|video)\//.test(trimmed)) return false
@@ -209,8 +221,10 @@ function callSpan(source, openIndex) {
 function translatedSpans(source) {
   const spans = []
 
-  /* Whole calls first, nested arguments included. */
-  const callRe = /\b(?:tx|localized)\s*\(/g
+  /* Whole calls first, nested arguments included. A console call is in
+     here too: its message may be concatenated across several literals,
+     and none of them is copy. */
+  const callRe = /\b(?:tx|localized|console\.(?:log|warn|error|info|debug))\s*\(/g
   let call
 
   while ((call = callRe.exec(source))) {
@@ -229,7 +243,7 @@ function translatedSpans(source) {
 
     /* Not copy: written for whoever opens the console, not for the
        operator. A translated stack trace helps nobody. */
-    /\bconsole\.(?:log|warn|error|info|debug)\(\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1/g,
+
     /\bnew Error\(\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1/g,
 
     /* Not copy: a value being compared against. Translating the right
@@ -254,6 +268,11 @@ function inSpans(index, spans) {
 
 function findings(file) {
   const source = readFileSync(file, "utf8")
+
+  /* Only a .tsx file has JSX. Running the between-the-tags scan on a .ts
+     file read TypeScript generics as page copy, because a type argument
+     list sits between a ">" and a "<". */
+  const hasJsx = file.endsWith(".tsx")
   const skip = translatedSpans(source)
   const out = []
 
@@ -309,6 +328,10 @@ function findings(file) {
   while ((m = strRe.exec(code))) {
     if (inSpans(m.index, skip)) continue
     if (inSpans(m.index, propSpans)) continue
+
+    /* An object key, not copy: { "Content-Type": "application/json" }. */
+    if (/^\s*:/.test(code.slice(m.index + m[0].length))) continue
+
     if (isUserFacing(m[2])) {
       out.push({
         line: code.slice(0, m.index).split("\n").length,
@@ -322,7 +345,7 @@ function findings(file) {
         useState<string[]>([...]) read as copy until isCode() rejected
         it. */
   const jsxRe = />([^<>{}]{4,200})</g
-  while ((m = jsxRe.exec(code))) {
+  while (hasJsx && (m = jsxRe.exec(code))) {
     if (!isCode(m[1]) && isUserFacing(m[1], "jsx")) {
       out.push({
         line: code.slice(0, m.index).split("\n").length,

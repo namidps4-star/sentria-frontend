@@ -31,13 +31,14 @@
  */
 
 import { API_BASE } from "@/lib/api"
+import { localized, type Localized, type Tx } from "@/lib/i18n"
 
 export type Availability = "available" | "busy" | "off"
 
-export const AVAILABILITY_LABEL: Record<Availability, string> = {
-  available: "Disponible",
-  busy: "Occupé",
-  off: "Indisponible",
+export const AVAILABILITY_LABEL: Record<Availability, Localized> = {
+  available: localized("Disponible", "Available"),
+  busy: localized("Occupé", "Busy"),
+  off: localized("Indisponible", "Unavailable"),
 }
 
 export type AssignmentStatus = "todo" | "in_progress" | "done"
@@ -69,15 +70,29 @@ export type Assignment = {
 
 export type CrmResult<T> =
   | { ok: true; data: T }
-  | { ok: false; code: string; detail: string }
+  /** `detail` is a pair so a caller can show it in the reader's own
+   *  language. Text the API itself chose is wrapped as the same string in
+   *  both, because that is the truth: the server picked those words and
+   *  this module is not going to re-derive them. */
+  | { ok: false; code: string; detail: Localized }
 
 /** A request that never reached the API at all: CORS, DNS, the server
  *  being down. Distinct from a rejection the API sent back, because the
  *  two need different words in front of a user. */
 const UNREACHABLE = "unreachable"
 
-function failed(code: string, detail: string): CrmResult<never> {
+function failed(code: string, detail: Localized): CrmResult<never> {
   return { ok: false, code, detail }
+}
+
+/** A message the API wrote, carried through unchanged. */
+function fromApi(detail: string): Localized {
+  return localized(detail, detail)
+}
+
+/** Resolve a failed result's wording. */
+export function crmErrorText(detail: Localized, tx: Tx): string {
+  return tx(detail.fr, detail.en)
 }
 
 async function call<T>(
@@ -100,7 +115,10 @@ async function call<T>(
 
     return failed(
       UNREACHABLE,
-      "L'API SentrIA n'a pas répondu. Origine bloquée par CORS, ou API hors service."
+      localized(
+        "L'API SentrIA n'a pas répondu. Origine bloquée par CORS, ou API hors service.",
+        "The SentrIA API did not answer. Either CORS blocked the origin, or the API is down."
+      )
     )
   }
 
@@ -112,7 +130,13 @@ async function call<T>(
       text
     )
 
-    return failed("http_error", `L'API a répondu ${res.status}.`)
+    return failed(
+      "http_error",
+      localized(
+        `L'API a répondu ${res.status}.`,
+        `The API answered ${res.status}.`
+      )
+    )
   }
 
   let body: Record<string, unknown>
@@ -122,7 +146,13 @@ async function call<T>(
   } catch (error) {
     console.error(`[SentrIA] ${path} returned a body that is not JSON.`, error)
 
-    return failed("bad_json", "Réponse illisible de l'API.")
+    return failed(
+      "bad_json",
+      localized(
+        "Réponse illisible de l'API.",
+        "The API's response could not be read."
+      )
+    )
   }
 
   /* The 200-with-an-error-code case. Checked before the payload is read,
@@ -136,7 +166,7 @@ async function call<T>(
 
     console.error(`[SentrIA] ${path} -> ${body.error_code}`, detail)
 
-    return failed(body.error_code, detail)
+    return failed(body.error_code, fromApi(detail))
   }
 
   return { ok: true, data: pick(body) }
@@ -157,7 +187,10 @@ export function fetchContractors(
     return Promise.resolve(
       failed(
         "company_name_required",
-        "Renseignez le nom de l'entreprise dans les Paramètres."
+        localized(
+          "Renseignez le nom de l'entreprise dans les Paramètres.",
+          "Set the company name in Settings."
+        )
       )
     )
   }
@@ -231,7 +264,10 @@ export function fetchAssignments(
     return Promise.resolve(
       failed(
         "company_name_required",
-        "Renseignez le nom de l'entreprise dans les Paramètres."
+        localized(
+          "Renseignez le nom de l'entreprise dans les Paramètres.",
+          "Set the company name in Settings."
+        )
       )
     )
   }
