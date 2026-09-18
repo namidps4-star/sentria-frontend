@@ -1,304 +1,304 @@
-# Passation SentrIA
+# SentrIA handover
 
-> Rédigée le 2026-09-17. Trois dépôts, tous poussés, rien en attente
-> localement.
+> Written 2026-09-18, in English by request. Previous handovers were in
+> French; this one replaces the 2026-09-17 version.
 >
-> | Dépôt | Branche | HEAD | État |
+> | Repo | Branch | HEAD | State |
 > |---|---|---|---|
-> | `namidps4-star/Sentria` | `main` | `e7f58ac` | déployé sur Render |
-> | `namidps4-star/sentria-landing-page` | `main` | `a3d8a8a` | mergé |
-> | `namidps4-star/sentria-frontend` | `feature/onboarding-view` | `880d08d` | **jamais mergé, aucune branche `main` n'existe** |
+> | `namidps4-star/Sentria` | `main` | `95b6f0f` | pushed, deployed on Render |
+> | `namidps4-star/sentria-landing-page` | `main` | `a3d8a8a` | merged, untouched this session |
+> | `namidps4-star/sentria-frontend` | `feature/onboarding-view` | `4c900c2` | pushed, never merged |
+>
+> Nothing is waiting locally in the frontend. The backend working tree is
+> clean except for `__pycache__` files, which are tracked in git by
+> mistake (see section 5).
 
 ---
 
-## 1. L'objectif
+## 1. The objective
 
-Rendre SentrIA utilisable sur quatre fronts menés en parallèle.
+Make the logistics side of SentrIA as real as the health side, and make
+the product address the operator by name.
 
-**a. Couvrir les quatre métiers de la santé.** L'onboarding proposait
-Pharmacie, Grossiste-répartiteur, Clinique/Hôpital et Laboratoire. Le
-backend n'implémentait que les contrôles d'une officine et appliquait les
-mêmes aux trois autres.
+**a. One way to show selected priorities.** Onboarding lets the operator
+pick priorities. Five different screens rendered that choice five
+different ways, and one of them invented a default.
 
-**b. Réparer Ask AI**, qui ne répondait plus du tout.
+**b. Turn the logistics priority views into real product.** Blockages,
+cost, waiting and anticipate were premium-looking shells filled with
+hardcoded numbers. They had to become derivations of the alerts actually
+returned by the backend, with honest empty states when there is nothing to
+show.
 
-**c. Rendre le tableau de bord honnête.** Qu'il reflète l'activité choisie
-à l'onboarding et les données réellement importées, au lieu de panneaux
-figés remplis de chiffres inventés.
+**c. Reproduce the reference flow aesthetic exactly.** The user supplied a
+screenshot: a charcoal capsule, lime circular nodes, connectors passing
+behind the circles. Not "in that spirit", identical, on all four screens.
 
-**d. Rendre la landing page premium, vivante et intuitive.**
+**d. Fill the two blank port stages.** Arrival and Customs always read
+"Aucun signal" because no backend signal existed for them. A missing data
+source, not a display bug.
 
-Puis, sur demande : audit accessibilité, alignement de la palette, et
-installation de plusieurs packs de compétences de design.
+**e. Let one company run several logistics activities.** A port operator
+may also run cold chain. Onboarding forced a single choice.
 
----
-
-## 2. La problématique qu'on essaye de résoudre
-
-Un seul fil conducteur : **l'interface affirmait des choses que les
-données ne soutenaient pas.** Cinq formes, par ordre de gravité.
-
-### Les alertes n'étaient pas séparées par métier
-
-`save_alert()` n'enregistrait que `sector`. Pharmacie, grossiste, hôpital
-et laboratoire écrivaient tous `sector: "health"` et tombaient dans le
-même panier. Un laboratoire voyait les alertes d'une pharmacie.
-
-C'est la cause racine que j'ai d'abord manquée : mon premier correctif
-n'avait renommé que les libellés des cartes. Cosmétique. Les lignes
-restaient indistinguables.
-
-### Zéro ne se distinguait pas de « aucune donnée »
-
-Quatre cartes à `0` et une courbe plate se lisent « tout va bien ». C'est
-une affirmation très différente de « rien n'a été importé ». Sans données,
-le tableau de bord rassurait à tort.
-
-### Les graphiques mentaient, dans les deux langues
-
-Chaque carte KPI portait un tableau `spark` codé en dur, 32 au total,
-dessiné comme sept jours d'historique. Et le graphique de répartition
-comptait les alertes en cherchant des mots **français** dans le message
-(`rupture`, `bas`, `froid`, `expir`).
-
-Mesuré : un laboratoire et un grossiste n'emploient aucun de ces mots,
-leur graphique était donc toujours vide. Et en anglais, trois colonnes sur
-quatre tombaient à zéro même pour une pharmacie, puisque ces mots
-n'existent que dans les traductions françaises. Le graphique comparait des
-traductions.
-
-### Un échec ressemblait à un succès
-
-Côté Ask AI, toute erreur renvoyait HTTP 200 avec la même phrase et le
-`catch` du frontend ne journalisait rien : trois causes indiscernables.
-Côté import CSV, un échec s'affichait **en vert**.
-
-### Le thème sombre n'avait jamais reçu la marque
-
-La palette claire avait été personnalisée au vert lime et au crème. La
-sombre était restée en neutres shadcn d'origine. Mesuré au navigateur :
-`--ring` sombre était un gris moyen et `--chart-1` à `--chart-5` avaient
-tous une chroma nulle. Conséquence : **tous les anneaux de focus étaient
-quasi invisibles sur fond sombre**, et les graphiques rendaient en
-monochrome. Aucun token ne portait le lime, ce qui explique pourquoi trois
-appels avaient écrit `#a3e635` à la main.
+**f. Give the product the operator's identity.** Company name and
+timezone, captured at onboarding, used in the report header and in the Ask
+AI prompt, with alert timestamps converted to the operator's own zone.
 
 ---
 
-## 3. Les fichiers importants sur lesquels il bosse
+## 2. The problem we are trying to solve
 
-### Backend : `namidps4-star/Sentria`, branche `main`
+Same single thread as the previous handover, one layer deeper: **the
+interface asserted things the data did not support.** On the logistics
+side it was not a rounding error, it was fabrication.
 
-| Fichier | Rôle |
+### The logistics views were theatre
+
+Four views rendered figures that came from nowhere. Two of them
+(`logistics-cost-view`, `logistics-waiting-view`) shipped a `TICK_OFFSETS`
+array driven by `setInterval`, so the numbers visibly moved on screen.
+Nothing was measuring anything. A demo that animates invented data is
+worse than a blank panel, because a blank panel cannot be believed.
+
+### Money was invented from thresholds of zero
+
+The cost model priced "cycles" against a threshold of zero, which yielded
+214 cycles at 30 EUR, so 6420 EUR of exposure that did not exist. A
+separate bug priced `transport.service.*` kilometres at the per-day rate:
+22000 km at 15 EUR came out as 330000 EUR on a single card.
+
+### Exposure summed history instead of reading the present
+
+`deriveExposure` walked every alert row, so an asset that reported the
+same breach hourly was billed once per report. Cold chain read 9900 EUR
+where the current state was 5745 EUR.
+
+### The onboarding vocabulary did not match the consumer vocabulary
+
+Onboarding wrote `port-conteneurs` to `localStorage`. Every consumer
+expected `port`. The value fell through to the `multi` branch, so a real
+port operator got a 19 stage union chain and generic checks instead of
+their own 5 stage chain. Silent, and it looked plausible enough to survive
+several rounds.
+
+### Zero still did not distinguish itself from "no data"
+
+Carried over from the previous session and now applied to logistics: every
+one of the eight logistics panels needed an explicit empty state, because
+an empty flow track reads as "everything is fine".
+
+### The report was entirely fictional
+
+`report-view.tsx` carried a 75 line `MOCK_DATA` block: site name "Clinique
+Nord, Site principal", inventory 82 percent, cold chain 98.6 percent.
+`app-shell.tsx` rendered `<ReportView />` with no props at all. There was
+no wiring to remove, because there was no wiring.
+
+### Dark mode did not exist, and the tokens behind it were wrong
+
+`app/layout.tsx` hardcoded `className="light"` on `<html>`, so the theme
+toggle did nothing. Underneath, the dark block still carried shadcn
+defaults: `--ring`, `--accent` and `--sidebar-primary` at hue 264 (blue),
+and `--sidebar` equal to `--card`.
+
+---
+
+## 3. The important files
+
+### Frontend: `namidps4-star/sentria-frontend`, branch `feature/onboarding-view`
+
+| File | Role |
 |---|---|
-| `pipeline/alerts.py` | Cœur du système, ~2000 lignes. Routeur `check_health()`, les quatre contrôles métier, `save_alert()`, le `ContextVar` qui étiquette les alertes |
-| `pipeline/lab_panels.py` | **Nouveau.** `TEST_PANELS` : quels réactifs chaque analyse consomme. C'est ici qu'on configure un nouveau laboratoire |
-| `pipeline/critical_supplies.py` | **Nouveau.** Catégories sans alternative en pharmacie (oxygène, sang, perfusion, antivenin, urgence, vaccin), synonymes FR/EN |
-| `pipeline/i18n.py` | Messages fr + en. 25 clés ajoutées cette session |
-| `pipeline/action_map.py` | Action recommandée par clé. 25 entrées ajoutées |
-| `api/main.py` | FastAPI. CORS, `/health`, `/ask`, `/upload`, `/alerts` |
-| `pipeline/demo_supplier.py` | **Le garde-fou.** Sa sortie doit rester identique au caractère près après toute modification |
-| `pipeline/demo_laboratory.py`<br>`pipeline/demo_hospital.py`<br>`pipeline/demo_wholesaler.py` | **Nouveaux.** Démos avec assertions |
+| `lib/logistics-signals.ts` | **The data layer, 1400 lines. Start here.** `METRICS` maps each `alert_key` to a metric definition with a per ops type stage mapping. Everything else derives from it: `stageOf`, `deriveStages`, `deriveBreakpoints`, `deriveExposure`, `deriveQueues`, `deriveAnticipation`, `deriveRecommendations`, `currentReadings`, `chainFor` |
+| `components/sentria/flow-track.tsx` | The reference flow. Charcoal `bg-track` capsule, lime circular nodes, connectors sized `-mx-2 h-4 min-w-4 flex-1` so the circles overlap them. Labels live in a separate `<ul aria-hidden>` below. Shared by all four logistics views |
+| `components/sentria/logistics-blockages-view.tsx`<br>`logistics-cost-view.tsx`<br>`logistics-waiting-view.tsx`<br>`logistics-anticipate-view.tsx` | The four priority views. Each one reads alerts, derives, and shows an empty state rather than a zero |
+| `lib/activities.ts` | Activity catalogue plus `normalizeOpsType` (maps `port-conteneurs` to `port`), `readOpsTypes` / `writeOpsTypes` / `opsTypeFor`, `SINGLE_OPS_TYPES`. Multi activity support lives here |
+| `lib/priorities.ts` | The single priority catalogue, shared by onboarding and dashboard. Replaced five duplicated renderings |
+| `lib/company.ts` | **New.** Company name and timezone: `TIMEZONES` (5 African and European zones), `readCompanyName`, `readTimezoneId`, `detectTimezoneId` (via `Intl.DateTimeFormat`), `formatInCompanyZone` |
+| `lib/report.ts` | **New.** `buildReport(alerts, companyName, timezoneId, days)` returns KPIs, trends and 40 alert rows, all counted from real alerts, all timestamped in the operator zone, `empty: true` when there is nothing |
+| `lib/theme.ts` | `THEME_INIT_SCRIPT` inlined in `<head>` so the theme applies before paint, `DEFAULT_THEME = "light"` |
+| `components/sentria/onboarding-modal.tsx` | 1560 lines. Company name, timezone, multi activity picker, select all / deselect all per priority step, flush grids for odd card counts, CSV import panel with a per file activity selector |
+| `components/sentria/report-view.tsx` | Split into a fetching `ReportView` and a presentational `ReportBody` |
+| `components/sentria/ask-view.tsx` | Sends `company_name`, `timezone` (IANA) and `timezone_label` with every question |
+| `test-data/` | 8 CSVs plus a README, validated against the real pipeline |
 
-### Frontend : `namidps4-star/sentria-frontend`, branche `feature/onboarding-view`
+### Backend: `namidps4-star/Sentria`, branch `main`
 
-| Fichier | Rôle |
+| File | Role |
 |---|---|
-| `app/globals.css` | Tokens de thème. Contient désormais `--brand`, la règle globale de focus en `:where()`, et le bloc `prefers-reduced-motion` |
-| `components/sentria/dashboard-view.tsx` | ~2400 lignes, le plus modifié. `SECTOR_META`, `dailySeries()`, `alertBreakdown()`, `activityOf()`, filtrage par activité, états vides |
-| `components/sentria/onboarding-modal.tsx` | Badges de maturité, `CSV_COLUMNS`, panneau d'import CSV |
-| `components/sentria/ask-view.tsx` | Chat. Indicateur de rédaction, région live, gestion d'erreurs |
-| `components/sentria/app-shell.tsx` | Récupère le compte d'alertes critiques pour la cloche |
-| `components/sentria/topbar.tsx` | Pastille de notification pilotée par `unreadCount` |
-| `lib/api.ts` | **Nouveau.** `API_BASE`, source unique de l'URL backend |
-| `.claude/skills/` | 41 compétences installées, ~13 Mo |
-
-### Landing page : `namidps4-star/sentria-landing-page`, branche `main`
-
-| Fichier | Rôle |
-|---|---|
-| `index.html` | Fichier unique, 4569 lignes. CSS et JS ajoutés **en fin de bloc** pour ne pas toucher au parallaxe du hero ni au sélecteur de langue existants |
+| `pipeline/port_flow.py` | **New, 361 lines.** The arrival and customs signals: ETA drift, berth window, discharge overrun, free time risk, missing documents, dwell, inspection. `projected_clearance_hours` adds 6 h per missing document and 24 h per inspection to the remaining median |
+| `pipeline/alerts.py` | Still the core. `fire()` now passes `risk_score` through to `translate()` |
+| `api/main.py` | `/ask` reads `company_name`, `timezone`, `timezone_label`, adds a "WHO YOU ARE TALKING TO" block to the prompt, and renders alert timestamps with `zoneinfo.ZoneInfo` |
+| `pipeline/demo_supplier.py` | Still the guard rail. Its output must stay byte identical after any backend change |
 
 ---
 
-## 4. Ce qu'il a essayé et qui a raté
+## 4. What was tried and failed
 
-Les erreurs réelles. C'est la section la plus utile du document.
+The real mistakes. As before, the most useful section.
 
-### Le correctif cosmétique du tableau de bord
+### Fourteen fabricated figures, found one at a time
 
-J'ai renommé les libellés des cartes par activité et annoncé que les
-métiers étaient séparés. **C'était faux.** Les alertes partageaient
-toujours `sector: "health"`. L'utilisateur l'a vu immédiatement : « je vois
-encore des trucs de pharmacie avec clinique, lab ». Il a fallu remonter
-jusqu'à `save_alert()`.
+Replacing the hardcoded logistics numbers was not one edit, it was a
+sequence of discoveries, and most were found by testing rather than by
+reading:
 
-**Leçon :** renommer un affichage ne sépare pas des données.
+- `formatHours` printed **"21 h 60"**, because minutes were rounded after
+  the hour was split off instead of before.
+- French plurals came out as **"4 signalaux"** and **"2 cass"**, from
+  naive `+ "s"` and `+ "x"` concatenation.
+- "Ouvert depuis" read the **newest** reading, so a condition open for
+  48 h displayed "2 h".
+- `logistics.risk.elevated` mapped to **no stage in 4 of the 5 chains**,
+  so the most common alert key was silently dropped.
+- `stageOf` ignored the chain for `multi` **despite a comment claiming it
+  did not**, so a temperature reading for a port plus warehouse operator
+  landed on `transportRefrigere` and was discarded.
 
-### Le diagnostic CORS abandonné à tort
+### A backend bug that shipped a template literal to users
 
-J'avais correctement identifié que la liste blanche CORS bloquait leur
-origine. Puis je me suis rétracté, en raisonnant que « si le tableau de
-bord marche, CORS va bien ». Le test a montré que leur origine réelle
-(`sentria-dashboard-git-...`) était bel et bien bloquée : HTTP 400
-`Disallowed CORS origin`, exactement 22 octets.
+`fire()` takes `risk_score` as a named parameter, so `{risk_score}` was
+never substituted. Messages went out containing the literal text
+**"(score {risk_score}/100)"**. In production. Found only when the test
+CSVs produced real alerts to read.
 
-**Leçon :** j'ai déduit au lieu de demander l'URL. Une question aurait
-tranché en une minute.
+### The recommendation ranking was backwards, twice
 
-### L'URL cherchée dans un seul fichier
+First it ordered by leverage before risk, so a vessel at risk 81 outranked
+a crane at 95. Then, once corrected to `risk + downstream * 5`, the
+exposure figure was keyed on the asset alone, so GRUE-02's 1110 EUR
+appeared in full on both its Quai card and its Cour card. Fixed by keying
+on `stage:equipment` (720 EUR at Quai).
 
-J'ai lu `ask-view.tsx`, trouvé une URL Railway morte, et bâti une théorie
-autour. Sans chercher ailleurs. Elle était déclarée **deux fois**, et seule
-la copie du tableau de bord avait été mise à jour au passage à Render. Un
-`grep` global l'aurait montré tout de suite.
+### A bug I fixed that was not mine, and one I wrongly assumed was
 
-### Un bug inventé, mis à l'ordre du jour
+The hydration mismatch was real: six `useState` initialisers read
+`localStorage`. Before claiming credit or blame I stashed everything and
+tested `bcf5ad6`: the error was **pre-existing**, not introduced by this
+session's work. That check cost five minutes and prevented a false
+statement in both directions.
 
-J'ai proposé de « corriger l'avertissement d'hydratation » en citant une
-erreur **React #418 que je n'avais jamais observée**. L'utilisateur l'a
-choisie dans une liste de tâches. Vérification faite : les quatre
-initialiseurs `useState` qui lisent `localStorage` ont tous leur garde
-`typeof window`, et un test navigateur avec `localStorage` pré-rempli
-différemment du rendu serveur produit **zéro** erreur d'hydratation.
+### Two bugs the mock data had been hiding in the report
 
-**Leçon :** ne jamais proposer un correctif pour un bug non mesuré.
+These only appeared once real numbers arrived, which is the argument for
+deleting mocks rather than improving them:
 
-### Un défaut introduit par mon propre correctif
+- `DeltaBadge` appended **"%" to a plain alert count**, and painted a rise
+  **green**. More alerts read as good news.
+- `TrendCard` compared the first day against the last as a percentage, so
+  **every card read "stable"**, and it inherited the metric unit, so a
+  single alert printed as **"1.0 °C"**.
 
-J'ai construit la règle globale de focus sur `--ring`. Or `--ring` était
-un gris en thème sombre. Tous les anneaux que je venais d'ajouter étaient
-donc quasi invisibles sur fond sombre. Trouvé seulement en mesurant la
-palette au tour suivant.
+### I gave advice about a feature that did not exist
 
-### La garde de panneau trop permissive
+I told the user to "hide the multi-sector picker" at onboarding. There was
+no multi-sector picker. `finish()` hardcoded `JSON.stringify([sector])`. I
+said so plainly and built the thing instead of quietly changing subject.
 
-Pour les laboratoires, j'incluais un panel dès qu'**un** de ses réactifs
-apparaissait. La solution de calibration étant partagée, importer un seul
-réactif faisait remonter des analyses que le labo ne pratique pas, en
-CRITIQUE à « 0 test possible ». Corrigé en exigeant que **tous** les
-réactifs du panel soient présents. Trouvé en passant de vrais CSV, pas en
-relisant le code.
+**Lesson:** I described the code from memory instead of reading it.
 
-### Deux outils de mesure qui ont produit de faux résultats
+### My own test harness produced three false results
 
-Mon script de détection des boutons sans libellé a signalé **cinq faux
-positifs** : tous avaient du texte via une expression JSX (`{t.cancel}`,
-`{tab}`) que ma regex supprimait, et l'un était déjà un `role="switch"`
-correct. J'ai lu les cinq au lieu de corriger en masse.
+- I shadowed the fake Supabase client's `eq` **method** with an `eq`
+  **attribute**, so every query returned everything.
+- I overrode `fire` in a test without the `risk_score` pass through, which
+  masked the very bug I was verifying.
+- Two DOM scrapers climbed to the wrong ancestor and reported empty
+  panels that were rendering correctly.
 
-Mon premier script de contraste lisait des valeurs `lab()` en les traitant
-comme du RGB : tous les ratios étaient faux. Refait via lecture de pixels
-sur canvas.
+**Lesson:** when a measurement is surprising, suspect the instrument
+first. Twice it was the instrument.
 
-### Une assertion de démo écrite à l'envers
+### The structural limit is unchanged
 
-J'ai affirmé que 15 analyses restantes déclenchaient un CRITIQUE. Le seuil
-est à 10. Le code avait raison, mon test avait tort.
-
-### La régression du lien d'évitement
-
-En ajoutant « Skip to content » sur la landing page, je l'ai fait pointer
-vers `#main` alors que `<main>` n'avait pas d'`id`. J'ai introduit un lien
-mort en corrigeant des liens morts. Rattrapé par la vérification des
-ancres.
-
-### Une fausse alerte visuelle
-
-Sur une capture de la landing page, le titre semblait coupé à gauche.
-Mesure au navigateur : boîte correcte, 130 à 630, aucun débordement.
-Artefact d'affichage de l'image. J'ai failli « corriger » une mise en page
-intacte.
-
-### Limite structurelle de la session
-
-**Je n'ai jamais pu atteindre le site en ligne.** Le proxy du bac à sable
-bloque Render et Vercel (403 sur CONNECT).
-
-Ce qui a vraiment changé les choses, tardivement : **installer les
-dépendances** du frontend (`pnpm install`). À partir de là, `tsc` avec leur
-propre `tsconfig.json`, `next build`, le serveur de dev et les tests
-clavier au navigateur ont tous été possibles. Les deux derniers tours sont
-mesurés, pas raisonnés.
-
-**À faire tôt la prochaine fois.** Deux bugs sur trois ont d'abord été
-trouvés par l'utilisateur en regardant son écran.
+**The deployed site is still unreachable.** The sandbox proxy returns 403
+on CONNECT for Render and Vercel. Everything in this session was verified
+against a local dev server and the real pipeline, never against
+production. Ask AI with the company name and timezone is therefore
+**built and locally verified, not confirmed live**.
 
 ---
 
-## 5. Ce qu'il compte faire ensuite
+## 5. What comes next
 
-### Bloquant, côté utilisateur
+### Blocking, on the user's side
 
-**1. Exécuter la migration SQL.** Sans elle, la séparation par métier
-reste approximative.
+**1. Upload the 8 test CSVs.** They live in `test-data/` with a README
+explaining what each one should produce. Until they are uploaded the
+logistics views correctly show empty states, which reads as "the feature
+is broken" to anyone who does not know.
 
-```sql
-alter table alerts add column if not exists business_type text;
-create index if not exists alerts_business_type_idx
-  on alerts (sector, business_type);
-```
+**2. Confirm Ask AI answers on the deployed site**, with the company name
+and timezone in play. The payload and the prompt are verified locally; the
+round trip is not.
 
-Rien ne casse si elle n'est pas faite : `save_alert()` retombe sur un
-enregistrement sans étiquette plutôt que de perdre l'alerte, ce chemin est
-testé. Mais un hôpital réutilise la clé partagée `health.stock.low` pour
-ses articles non critiques, et ces lignes continueront d'apparaître sous
-Pharmacie tant que la colonne n'existe pas.
+**3. Decide what happens to the frontend branch.** This changed since the
+last handover and the last handover was **wrong** about it.
 
-**2. Confirmer que Ask AI répond.** `/health` renvoie déjà
-`model: gemini-3.5-flash-lite`, clés Gemini et Supabase prêtes. Il reste à
-envoyer un message. En cas d'échec, la console nomme la cause.
+`origin/main` **does exist** in `sentria-frontend`. The previous
+PASSATION.md stated it did not. What is actually true is worse and more
+specific:
 
-**3. Valider les quatre CSV d'essai.** Deux points : le labo doit désigner
-**Réactif A** comme réactif limitant (16 unités) et non la solution de
-calibration (9 unités mais 0,5 par test) ; et l'oxygène doit sortir en
-CRITIQUE alors que les compresses, au même ratio de 60 % du minimum,
-restent un simple avertissement.
+- `origin/main` tip is `ae6eca9`, dated 2026-09-09, message "landing
+  page", holding **39 files**.
+- `feature/onboarding-view` tip is `4c900c2`, dated 2026-09-18, holding
+  **517 files** across 86 commits.
+- The two branches have **no common ancestor**. `git merge-base` returns
+  nothing.
 
-**4. Décider du merge frontend.** 18 commits sur
-`feature/onboarding-view`, et **ce dépôt n'a aucune branche `main`**. Tout
-le travail vit sur cette seule branche, sans version stable de repli.
+So there is no ordinary merge and no ordinary pull request. Merging needs
+`--allow-unrelated-histories`, or `main` gets reset to the feature branch,
+or the branch simply stays the trunk and `main` is deleted. This is a call
+for the user, not a cleanup to perform quietly, because one of those
+options discards a branch.
 
-### Travail restant identifié
+### Carried over from the previous handover
 
-| Sujet | Détail |
+| Item | State |
 |---|---|
-| 48 hexadécimaux bruts dans `pricing-view.tsx` | Laissés **à la demande explicite**. Cette vue porte une palette claire délibérée ; la convertir change son apparence. Décision visuelle, pas correction d'accessibilité |
-| Pas de token `--warning` | La pastille WARNING utilise `bg-amber-500/15 text-amber-600`, palette Tailwind brute. L'ambre rend correctement sur fond clair comme sombre, donc rien n'est cassé, mais un token serait plus propre |
-| Contraste 1,24 du lime sur fond clair | Faible. Non corrigé sciemment : le tableau affiche la sévérité **en texte** dans sa propre cellule, donc le sens ne dépend jamais de la couleur. Relever ce contraste changerait la marque |
-| Anciennes alertes non étiquetées | Impossible à rétro-remplir : rien dans ces lignes n'indique le métier. Elles disparaîtront à mesure que des données étiquetées arrivent. Les supprimer est sans risque |
-| API sans authentification | CORS ne protège que les navigateurs. N'importe quel appel serveur peut consommer le quota Gemini via `/ask`. À traiter avant une vraie mise en production |
-| `Procfile.txt` | Render ne le lit pas : il attend `Procfile` ou un `render.yaml`, et utilise la commande de son tableau de bord. Le contenu est correct, à vérifier côté Render |
-| Pastille de notification | Pilotée par un vrai `unreadCount`, mais alimentée par un `fetch` dédié dans `app-shell`. Si l'état des alertes est un jour remonté, brancher dessus plutôt que refetcher |
+| SQL migration for `business_type` | **Done.** The user confirmed it was run |
+| API has no authentication | Still open. CORS only protects browsers. Any server side caller can burn the Gemini quota through `/ask`. Worth handling before a real launch |
+| No `--warning` token | Still open. The WARNING pill uses raw `bg-amber-500/15 text-amber-600`. Nothing is broken, amber reads correctly on both themes, a token would be cleaner |
+| 48 raw hex values in `pricing-view.tsx` | Left alone **at the user's explicit request**. That view carries a deliberate light palette |
+| Lime contrast 1.24 on light backgrounds | Left alone on purpose. Severity is always written as text in its own cell, so meaning never depends on colour |
+| `Procfile.txt` | Render does not read it. Content is correct, the dashboard command is what actually runs |
 
-### Sur la landing page
+### Noticed while writing this, not yet fixed
 
-Mergée et vérifiée dans un vrai navigateur : 50 éléments `reveal`, 3
-visibles en haut puis 31 au milieu puis 50 en bas, spotlight suivant le
-curseur, aucune erreur JS. Le logo « S » est remplacé par la balise beacon
-fournie, en SVG inline, favicon assorti.
+**`__pycache__` is tracked in git in the backend.** 12 `.pyc` files are
+under version control, which is why `git status` is never clean there.
+A `git rm -r --cached` plus a `.gitignore` line would settle it. Not done
+because it touches tracked files in a repo that is deployed, and it was
+not part of any request.
 
-Deux pistes non prises, faute de mandat clair :
+### Product work that is now unblocked
 
-- Les sections alternent `section-light` / `section-dark`. Rythme
-  éditorial défendable, mais l'audit signale les ruptures de fond comme un
-  motif à surveiller. À trancher à l'œil.
-- Aucune image de fond. Plusieurs sections sont du texte sur fond uni.
-  L'audit recommande des fonds photographiques discrets pour donner de la
-  présence. C'est ce qui manque au « cinématique ».
+- **Recommendations exist for logistics** (`deriveRecommendations`,
+  grouped by stage and equipment, scored `risk + downstream * 5`). The
+  industry side still uses `recommendations-board-view.tsx` with its own
+  structure. Unifying them is the obvious next step and nobody has asked
+  for it yet.
+- **Arrival and Customs now produce signals**, so the port chain has no
+  permanently blank stage. The thresholds in `port_flow.py` are informed
+  guesses about port operations, not measured against a real terminal.
+  They deserve a review by someone who runs one.
 
 ---
 
-## Conventions à garder
+## Conventions to keep
 
-- **Jamais de tirets cadratins** dans les réponses. Demande explicite.
-- **Résumés en format « ADHD friendly »** : titres scannables, listes
-  courtes, gras sur l'essentiel, tableaux plutôt que paragraphes, mauvaises
-  nouvelles marquées.
-- **Messages de commit en anglais normal**, jamais compressés.
-- **Relancer `pipeline/demo_supplier.py` après toute modification du
-  backend.** Sortie identique au caractère près : c'est la preuve que le
-  comportement pharmacie n'a pas bougé.
-- **Installer les dépendances du frontend en début de session**
-  (`pnpm install`). C'est ce qui permet `tsc`, `next build` et les tests
-  navigateur, donc de vérifier au lieu de supposer.
+- **Never use em dashes** in replies. Explicit request.
+- **Summaries in ADHD friendly format**: scannable headings, short lists,
+  bold on what matters, tables over paragraphs, bad news marked as bad
+  news.
+- **Explain what changed in simple language after every task**, before
+  moving on.
+- **Always work on `feature/onboarding-view`** in the frontend. Never push
+  elsewhere without asking.
+- **Commit messages in plain English**, never compressed.
+- **Re-run `pipeline/demo_supplier.py` after any backend change.** Byte
+  identical output is the proof that pharmacy behaviour did not move.
+- **Run `pnpm install` at the start of the session.** It is what makes
+  `tsc`, `next build` and browser testing possible, which is the
+  difference between verifying and guessing.
