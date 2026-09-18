@@ -424,7 +424,7 @@ function ActivityFlowPreview({
               )}
             >
               <p className="w-14 shrink-0 px-0.5 text-center text-[10px] font-semibold leading-tight">
-                {PRIMITIVE_NAMES[id]}
+                {tx(PRIMITIVE_NAMES[id].fr, PRIMITIVE_NAMES[id].en)}
               </p>
 
               {index < chain.length - 1 && (

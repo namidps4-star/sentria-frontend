@@ -41,6 +41,7 @@ import {
   type OpsType,
   type PrimitiveId,
 } from "@/lib/logistics-signals"
+import { useTx } from "@/lib/i18n"
 
 /* --------------------------------------------------------------------------
  * "Éviter les blocages".
@@ -64,11 +65,13 @@ export function LogisticsBlockagesView({
   opsType,
   selectedOpsTypesForMulti = [],
 }: LogisticsBlockagesViewProps) {
+  const tx = useTx()
+
   const [openStage, setOpenStage] = useState<PrimitiveId | null>(null)
 
   const stages = useMemo(
-    () => deriveStages(alerts, opsType, selectedOpsTypesForMulti),
-    [alerts, opsType, selectedOpsTypesForMulti]
+    () => deriveStages(alerts, opsType, tx, selectedOpsTypesForMulti),
+    [alerts, opsType, tx, selectedOpsTypesForMulti]
   )
 
   const attributed = useMemo(
@@ -99,10 +102,13 @@ export function LogisticsBlockagesView({
   const blockingStage = blockingIndex >= 0 ? stages[blockingIndex] : undefined
   const lead = useMemo(() => leadAlert(blockingStage?.alerts ?? []), [blockingStage])
   const risk = globalRisk(stages)
-  const breakpoints = useMemo(() => deriveBreakpoints(stages), [stages])
+  const breakpoints = useMemo(
+    () => deriveBreakpoints(stages, tx),
+    [stages, tx]
+  )
   const projection = useMemo(
-    () => deriveProjection(lead, blockingStage),
-    [lead, blockingStage]
+    () => deriveProjection(lead, blockingStage, tx),
+    [lead, blockingStage, tx]
   )
 
   const confidence = useMemo(() => {
@@ -124,19 +130,34 @@ export function LogisticsBlockagesView({
     return (
       <div className="space-y-4">
         <ViewHeader
-          eyebrow="Blocages"
+          eyebrow={tx("Blocages", "Blockages")}
           opsType={opsType}
-        selectedOpsTypes={selectedOpsTypesForMulti}
-          title="Aucun blocage détecté pour le moment."
-          lede="Cette vue lit vos alertes logistiques. Elle reste vide jusqu'au premier fichier importé, parce qu'afficher des zéros donnerait l'impression que tout va bien."
+          selectedOpsTypes={selectedOpsTypesForMulti}
+          title={tx(
+            "Aucun blocage détecté pour le moment.",
+            "No blockage detected so far."
+          )}
+          lede={tx(
+            "Cette vue lit vos alertes logistiques. Elle reste vide jusqu'au premier fichier importé, parce qu'afficher des zéros donnerait l'impression que tout va bien.",
+            "This view reads your logistics alerts. It stays empty until the first file is imported, because showing zeroes would read as all clear."
+          )}
           risk={0}
           icon={PackageX}
         />
 
         <NoSignal
-          title="Rien à analyser pour cette activité"
-          detail="Aucune alerte logistique n'a encore été enregistrée, ou aucune ne correspond aux étapes de votre chaîne."
-          expected="Les colonnes attendues sont avg_wait_hours, temperature, daily_cycles, hydraulic_pressure, fuel_level et last_service_date. Importez votre CSV via le bouton Importer CSV du tableau de bord."
+          title={tx(
+            "Rien à analyser pour cette activité",
+            "Nothing to analyse for this activity"
+          )}
+          detail={tx(
+            "Aucune alerte logistique n'a encore été enregistrée, ou aucune ne correspond aux étapes de votre chaîne.",
+            "No logistics alert has been recorded yet, or none matches a stage of your chain."
+          )}
+          expected={tx(
+            "Les colonnes attendues sont avg_wait_hours, temperature, daily_cycles, hydraulic_pressure, fuel_level et last_service_date. Importez votre CSV via le bouton Importer CSV du tableau de bord.",
+            "The expected columns are avg_wait_hours, temperature, daily_cycles, hydraulic_pressure, fuel_level and last_service_date. Import your CSV with the Import CSV button on the dashboard."
+          )}
         />
       </div>
     )
@@ -167,25 +188,51 @@ export function LogisticsBlockagesView({
   return (
     <div className="space-y-4">
       <ViewHeader
-        eyebrow="Blocages"
+        eyebrow={tx("Blocages", "Blockages")}
         opsType={opsType}
         selectedOpsTypes={selectedOpsTypesForMulti}
         title={
           blockingStage
-            ? `Le flux s'arrête sur ${blockingStage.name}.`
-            : "Votre chaîne est fluide sur toutes les étapes suivies."
+            ? tx(
+                `Le flux s'arrête sur ${blockingStage.name}.`,
+                `The flow stops at ${blockingStage.name}.`
+              )
+            : tx(
+                "Votre chaîne est fluide sur toutes les étapes suivies.",
+                "Your chain is running clear at every stage being followed."
+              )
         }
         lede={
           blockingStage
-            ? `${countOf(
-                blockingStage.alerts.length,
-                "signal",
-                "signaux"
-              )} sur cette étape, ${countOf(
-                downstream,
-                "étape"
-              )} en aval qui en ${plural(downstream, "dépend", "dépendent")}.`
-            : "Aucune étape ne présente de signal critique sur la période analysée."
+            ? tx(
+                `${countOf(
+                  blockingStage.alerts.length,
+                  "signal",
+                  "signaux"
+                )} sur cette étape, ${countOf(
+                  downstream,
+                  "étape"
+                )} en aval qui en ${plural(
+                  downstream,
+                  "dépend",
+                  "dépendent"
+                )}.`,
+                `${countOf(
+                  blockingStage.alerts.length,
+                  "signal"
+                )} at this stage, ${countOf(
+                  downstream,
+                  "stage"
+                )} downstream ${plural(
+                  downstream,
+                  "depends",
+                  "depend"
+                )} on it.`
+              )
+            : tx(
+                "Aucune étape ne présente de signal critique sur la période analysée.",
+                "No stage shows a critical signal over the period analysed."
+              )
         }
         risk={risk}
         icon={PackageX}
@@ -195,25 +242,41 @@ export function LogisticsBlockagesView({
         title={
           blockingStage
             ? blockingStage.name
-            : "Chaîne fluide"
+            : tx("Chaîne fluide", "Chain running clear")
         }
         subtitle={
           lead
             ? messageFinding(lead)
-            : "Aucune rupture mesurée sur la chaîne."
+            : tx(
+                "Aucune rupture mesurée sur la chaîne.",
+                "No breakdown measured anywhere on the chain."
+              )
         }
-        figureLabel={openFor !== null ? "Ouvert depuis" : undefined}
+        figureLabel={
+          openFor !== null ? tx("Ouvert depuis", "Open for") : undefined
+        }
         figure={openFor !== null ? formatHours(openFor) : undefined}
         figureNote={
           firstSeen
-            ? `Premier relevé le ${new Date(firstSeen.date).toLocaleString(
-                "fr-FR",
-                { dateStyle: "short", timeStyle: "short" }
-              )} sur ${firstSeen.equipment}${
-                lastSeen !== null
-                  ? `, dernier il y a ${formatHours(lastSeen)}`
-                  : ""
-              }.`
+            ? (() => {
+                const when = new Date(firstSeen.date).toLocaleString(
+                  tx("fr-FR", "en-GB"),
+                  { dateStyle: "short", timeStyle: "short" }
+                )
+
+                return tx(
+                  `Premier relevé le ${when} sur ${firstSeen.equipment}${
+                    lastSeen !== null
+                      ? `, dernier il y a ${formatHours(lastSeen)}`
+                      : ""
+                  }.`,
+                  `First reading on ${when} at ${firstSeen.equipment}${
+                    lastSeen !== null
+                      ? `, latest ${formatHours(lastSeen)} ago`
+                      : ""
+                  }.`
+                )
+              })()
             : undefined
         }
         tone={blockingStage?.status === "risk" ? "risk" : "neutral"}
@@ -221,7 +284,7 @@ export function LogisticsBlockagesView({
           confidence !== null ? (
             <div className="rounded-2xl border border-border bg-muted/40 px-4 py-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Confiance
+                {tx("Confiance", "Confidence")}
               </p>
 
               <p className="mt-1 font-heading text-2xl font-bold tabular-nums">
@@ -248,9 +311,15 @@ export function LogisticsBlockagesView({
         />
 
         <p className="mt-3 text-xs text-muted-foreground">
-          Touchez une étape pour voir les relevés qui la concernent.
+          {tx(
+            "Touchez une étape pour voir les relevés qui la concernent.",
+            "Tap a stage to see the readings that belong to it."
+          )}
           {blockingIndex >= 0 &&
-            ` Les étapes après ${stages[blockingIndex].name} attendent son déblocage.`}
+            tx(
+              ` Les étapes après ${stages[blockingIndex].name} attendent son déblocage.`,
+              ` The stages after ${stages[blockingIndex].name} are waiting on it.`
+            )}
         </p>
       </FlowCard>
 
@@ -275,11 +344,20 @@ export function LogisticsBlockagesView({
 
                 <p className="text-sm text-muted-foreground">
                   {selected.alerts.length === 0
-                    ? "Aucun relevé pour cette étape."
-                    : `${countOf(
-                        selected.alerts.length,
-                        "relevé"
-                      )} · risque ${selected.risk}/100`}
+                    ? tx(
+                        "Aucun relevé pour cette étape.",
+                        "No reading for this stage."
+                      )
+                    : tx(
+                        `${countOf(
+                          selected.alerts.length,
+                          "relevé"
+                        )} · risque ${selected.risk}/100`,
+                        `${countOf(
+                          selected.alerts.length,
+                          "reading"
+                        )} · risk ${selected.risk}/100`
+                      )}
                 </p>
               </div>
             </div>
@@ -290,7 +368,10 @@ export function LogisticsBlockagesView({
                 TONE_CHIP[selected.status]
               )}
             >
-              {STATUS_WORDS[selected.status]}
+              {tx(
+                STATUS_WORDS[selected.status].fr,
+                STATUS_WORDS[selected.status].en
+              )}
             </span>
           </div>
 
@@ -330,40 +411,43 @@ export function LogisticsBlockagesView({
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
-          label="Signaux sur la chaîne"
+          label={tx("Signaux sur la chaîne", "Signals on the chain")}
           value={String(attributed.length)}
-          note="Alertes rattachées à une étape"
+          note={tx(
+            "Alertes rattachées à une étape",
+            "Alerts attached to a stage"
+          )}
           tone={attributed.length > 0 ? "watch" : "good"}
           icon={CircleAlert}
         />
 
         <StatTile
-          label="Dont critiques"
+          label={tx("Dont critiques", "Of which critical")}
           value={String(criticalCount)}
-          note="Severité CRITICAL"
+          note={tx("Severité CRITICAL", "CRITICAL severity")}
           tone={criticalCount > 0 ? "risk" : "good"}
           icon={TrendingUp}
         />
 
         <StatTile
-          label="Équipements concernés"
+          label={tx("Équipements concernés", "Assets affected")}
           value={String(assets)}
-          note="Identifiants distincts"
+          note={tx("Identifiants distincts", "Distinct identifiers")}
           tone="watch"
         />
 
         <StatTile
-          label="Étapes en aval"
+          label={tx("Étapes en aval", "Stages downstream")}
           value={String(downstream)}
-          note="Dépendent du déblocage"
+          note={tx("Dépendent du déblocage", "Waiting on this to clear")}
           tone={downstream > 0 ? "watch" : "good"}
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
         <section className="rounded-3xl border border-border bg-card p-6 lg:col-span-3">
-          <SectionTitle note="Classés par risque mesuré">
-            Points de rupture
+          <SectionTitle note={tx("Classés par risque mesuré", "Ranked by measured risk")}>
+            {tx("Points de rupture", "Breaking points")}
           </SectionTitle>
 
           <ul className="space-y-2">
@@ -377,7 +461,12 @@ export function LogisticsBlockagesView({
                     <p className="text-sm font-bold">{bp.title}</p>
 
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      {bp.stageName} · {countOf(bp.equipmentCount, "équipement")} ·{" "}
+                      {bp.stageName} ·{" "}
+                      {tx(
+                        countOf(bp.equipmentCount, "équipement"),
+                        countOf(bp.equipmentCount, "asset")
+                      )}{" "}
+                      ·{" "}
                       {bp.equipment.slice(0, 2).join(", ")}
                       {bp.equipment.length > 2 &&
                         ` +${bp.equipment.length - 2}`}
@@ -409,7 +498,9 @@ export function LogisticsBlockagesView({
         </section>
 
         <section className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
-          <SectionTitle>Ce qui se passe ensuite</SectionTitle>
+          <SectionTitle>
+            {tx("Ce qui se passe ensuite", "What happens next")}
+          </SectionTitle>
 
           {projection.length > 0 ? (
             <ol className="space-y-3">
@@ -430,7 +521,7 @@ export function LogisticsBlockagesView({
                   <div className="min-w-0">
                     <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                       {step.when}
-                      {step.measured && " · mesuré"}
+                      {step.measured && tx(" · mesuré", " · measured")}
                     </p>
 
                     <p className="mt-0.5 text-sm leading-5">{step.detail}</p>
@@ -440,7 +531,10 @@ export function LogisticsBlockagesView({
             </ol>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Pas assez de relevés pour projeter une suite.
+              {tx(
+                "Pas assez de relevés pour projeter une suite.",
+                "Not enough readings to project what comes next."
+              )}
             </p>
           )}
 
@@ -448,7 +542,7 @@ export function LogisticsBlockagesView({
             <div className="mt-5 rounded-2xl border border-brand/40 bg-brand/10 p-4">
               <p className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
                 <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-                Action recommandée
+                {tx("Action recommandée", "Recommended action")}
               </p>
 
               <p className="mt-1.5 text-sm font-semibold leading-5">
@@ -457,9 +551,16 @@ export function LogisticsBlockagesView({
 
               <p className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
                 <ArrowRight className="h-3 w-3" aria-hidden="true" />
-                Sur {lead.equipment}
-                {metricFor(lead) && ` · ${metricFor(lead)!.label.toLowerCase()}`}
-                {` · risque ${riskOf(lead)}/100`}
+                {tx("Sur", "On")} {lead.equipment}
+                {metricFor(lead) &&
+                  ` · ${tx(
+                    metricFor(lead)!.label.fr,
+                    metricFor(lead)!.label.en
+                  ).toLowerCase()}`}
+                {tx(
+                  ` · risque ${riskOf(lead)}/100`,
+                  ` · risk ${riskOf(lead)}/100`
+                )}
               </p>
             </div>
           )}

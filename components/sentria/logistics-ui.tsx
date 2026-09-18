@@ -8,6 +8,7 @@ import {
   type OpsType,
   type StageStatus,
 } from "@/lib/logistics-signals"
+import { useTx } from "@/lib/i18n"
 
 /* --------------------------------------------------------------------------
  * Shared chrome for the four logistics priority views, so a stat tile,
@@ -41,7 +42,7 @@ export function ViewHeader({
   title,
   lede,
   risk,
-  riskLabel = "Risque mesuré",
+  riskLabel,
   icon: Icon,
   selectedOpsTypes = [],
 }: {
@@ -54,6 +55,14 @@ export function ViewHeader({
   riskLabel?: string
   icon: LucideIcon
 }) {
+  const tx = useTx()
+
+  /* Resolved in the body: a default parameter cannot call a hook, which
+     is how this heading stayed French on an English screen. */
+  const dialLabel = riskLabel ?? tx("Risque mesuré", "Measured risk")
+
+  const activity = opsLabelFor(opsType, tx, selectedOpsTypes)
+
   return (
     <section className="rounded-3xl bg-sidebar p-6 text-sidebar-foreground sm:p-8">
       <div className="flex flex-wrap items-start justify-between gap-6">
@@ -64,9 +73,9 @@ export function ViewHeader({
               {eyebrow}
             </span>
 
-            {opsLabelFor(opsType, selectedOpsTypes) && (
+            {activity && (
               <span className="inline-flex items-center rounded-full border border-sidebar-border bg-sidebar-accent px-3 py-1 text-xs font-medium text-sidebar-foreground/80">
-                {opsLabelFor(opsType, selectedOpsTypes)}
+                {activity}
               </span>
             )}
           </div>
@@ -80,7 +89,7 @@ export function ViewHeader({
           </p>
         </div>
 
-        <RiskDial value={risk} label={riskLabel} />
+        <RiskDial value={risk} label={dialLabel} />
       </div>
     </section>
   )
@@ -95,6 +104,8 @@ export function RiskDial({
   value: number
   label: string
 }) {
+  const tx = useTx()
+
   const clamped = Math.max(0, Math.min(100, Math.round(value)))
   const radius = 34
   const circumference = 2 * Math.PI * radius
@@ -102,12 +113,12 @@ export function RiskDial({
 
   const word =
     clamped === 0
-      ? "Aucun"
+      ? tx("Aucun", "None")
       : clamped >= 70
-        ? "Élevé"
+        ? tx("Élevé", "High")
         : clamped >= 40
-          ? "Modéré"
-          : "Faible"
+          ? tx("Modéré", "Moderate")
+          : tx("Faible", "Low")
 
   return (
     <div className="flex shrink-0 items-center gap-3">
@@ -152,7 +163,9 @@ export function RiskDial({
 
         <p className="mt-1 text-base font-bold">{word}</p>
 
-        <p className="mt-0.5 text-sidebar-foreground/50">sur 100</p>
+        <p className="mt-0.5 text-sidebar-foreground/50">
+          {tx("sur 100", "out of 100")}
+        </p>
       </div>
     </div>
   )

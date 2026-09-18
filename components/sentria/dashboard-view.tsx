@@ -2160,6 +2160,7 @@ export function DashboardView({
             recommendations={deriveRecommendations(
               logisticsViewAlerts,
               normalizedOpsType,
+              tx,
               opsTypesForChain
             )}
             opsType={normalizedOpsType}

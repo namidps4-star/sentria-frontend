@@ -181,7 +181,7 @@ export function ProfileView({
   )
 
   const activityLabel =
-    opsLabelFor(opsTypeFor(opsTypes), opsTypes) ??
+    opsLabelFor(opsTypeFor(opsTypes), tx, opsTypes) ??
     tx("Aucune activité sélectionnée", "No activity selected")
 
   const zoneLabel = timezoneId ? timezoneFor(timezoneId).label : "—"

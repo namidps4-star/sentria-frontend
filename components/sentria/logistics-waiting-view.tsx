@@ -28,6 +28,7 @@ import {
   type LogisticsAlert,
   type OpsType,
 } from "@/lib/logistics-signals"
+import { useTx } from "@/lib/i18n"
 
 /* --------------------------------------------------------------------------
  * "Réduire les temps d'attente".
@@ -52,14 +53,16 @@ export function LogisticsWaitingView({
   opsType,
   selectedOpsTypesForMulti = [],
 }: LogisticsWaitingViewProps) {
+  const tx = useTx()
+
   const queues = useMemo(
-    () => deriveQueues(alerts, opsType, selectedOpsTypesForMulti),
-    [alerts, opsType, selectedOpsTypesForMulti]
+    () => deriveQueues(alerts, opsType, tx, selectedOpsTypesForMulti),
+    [alerts, opsType, tx, selectedOpsTypesForMulti]
   )
 
   const stages = useMemo(
-    () => deriveStages(alerts, opsType, selectedOpsTypesForMulti),
-    [alerts, opsType, selectedOpsTypesForMulti]
+    () => deriveStages(alerts, opsType, tx, selectedOpsTypesForMulti),
+    [alerts, opsType, tx, selectedOpsTypesForMulti]
   )
 
   /* The blocking stage here is the one holding the longest queue, which
@@ -80,19 +83,31 @@ export function LogisticsWaitingView({
     return (
       <div className="space-y-4">
         <ViewHeader
-          eyebrow="Temps d'attente"
+          eyebrow={tx("Temps d'attente", "Waiting time")}
           opsType={opsType}
-        selectedOpsTypes={selectedOpsTypesForMulti}
-          title="Aucun temps d'attente mesuré."
-          lede="Cette vue ne montre que des durées relevées par vos équipements. Elle reste vide tant qu'aucune n'a été enregistrée."
+          selectedOpsTypes={selectedOpsTypesForMulti}
+          title={tx(
+            "Aucun temps d'attente mesuré.",
+            "No waiting time measured."
+          )}
+          lede={tx(
+            "Cette vue ne montre que des durées relevées par vos équipements. Elle reste vide tant qu'aucune n'a été enregistrée.",
+            "This view only shows durations your equipment actually reported. It stays empty until one is recorded."
+          )}
           risk={0}
           icon={Clock3}
         />
 
         <NoSignal
-          title="Aucune file mesurée"
-          detail="Aucune alerte de type temps d'attente n'a été enregistrée pour cette activité."
-          expected="La colonne attendue est avg_wait_hours. Au-delà de 4 h SentrIA émet un avertissement, au-delà de 8 h une alerte critique."
+          title={tx("Aucune file mesurée", "No queue measured")}
+          detail={tx(
+            "Aucune alerte de type temps d'attente n'a été enregistrée pour cette activité.",
+            "No waiting-time alert has been recorded for this activity."
+          )}
+          expected={tx(
+            "La colonne attendue est avg_wait_hours. Au-delà de 4 h SentrIA émet un avertissement, au-delà de 8 h une alerte critique.",
+            "The expected column is avg_wait_hours. Past 4 h SentrIA raises a warning, past 8 h a critical alert."
+          )}
         />
       </div>
     )
@@ -113,38 +128,56 @@ export function LogisticsWaitingView({
   return (
     <div className="space-y-4">
       <ViewHeader
-        eyebrow="Temps d'attente"
+        eyebrow={tx("Temps d'attente", "Waiting time")}
         opsType={opsType}
         selectedOpsTypes={selectedOpsTypesForMulti}
-        title={`${worst.equipment} immobilise la file depuis ${formatHours(
-          worst.hours
-        )}.`}
-        lede={`${countOf(queues.length, "file")} ${plural(
-          queues.length,
-          "mesurée",
-          "mesurées"
-        )}, ${overThreshold.length} au-delà du seuil de ${WAIT_THRESHOLD_HOURS} h.`}
+        title={tx(
+          `${worst.equipment} immobilise la file depuis ${formatHours(
+            worst.hours
+          )}.`,
+          `${worst.equipment} has been holding the queue for ${formatHours(
+            worst.hours
+          )}.`
+        )}
+        lede={tx(
+          `${countOf(queues.length, "file")} ${plural(
+            queues.length,
+            "mesurée",
+            "mesurées"
+          )}, ${overThreshold.length} au-delà du seuil de ${WAIT_THRESHOLD_HOURS} h.`,
+          `${countOf(queues.length, "queue")} measured, ${
+            overThreshold.length
+          } past the ${WAIT_THRESHOLD_HOURS} h threshold.`
+        )}
         risk={risk}
         icon={Clock3}
       />
 
       <FlowCard
         title={worst.stageName}
-        subtitle={`File la plus longue de la chaîne, sur ${worst.equipment}.`}
-        figureLabel="Attente mesurée"
+        subtitle={tx(
+          `File la plus longue de la chaîne, sur ${worst.equipment}.`,
+          `The longest queue on the chain, at ${worst.equipment}.`
+        )}
+        figureLabel={tx("Attente mesurée", "Measured wait")}
         figure={formatClock(worst.hours)}
         figureNote={
           openFor !== null
-            ? `Relevé il y a ${formatHours(openFor)} · seuil critique à ${
-                WAIT_THRESHOLD_HOURS
-              } h.`
+            ? tx(
+                `Relevé il y a ${formatHours(
+                  openFor
+                )} · seuil critique à ${WAIT_THRESHOLD_HOURS} h.`,
+                `Recorded ${formatHours(
+                  openFor
+                )} ago · critical threshold at ${WAIT_THRESHOLD_HOURS} h.`
+              )
             : undefined
         }
         tone={worst.hours > WAIT_THRESHOLD_HOURS ? "risk" : "neutral"}
         aside={
           <div className="rounded-2xl border border-border bg-muted/40 px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Heures au-delà du seuil
+              {tx("Heures au-delà du seuil", "Hours past the threshold")}
             </p>
 
             <p className="mt-1 font-heading text-2xl font-bold tabular-nums">
@@ -152,7 +185,10 @@ export function LogisticsWaitingView({
             </p>
 
             <p className="text-xs text-muted-foreground">
-              cumulées sur {countOf(overThreshold.length, "file")}
+              {tx(
+                `cumulées sur ${countOf(overThreshold.length, "file")}`,
+                `across ${countOf(overThreshold.length, "queue")}`
+              )}
             </p>
           </div>
         }
@@ -169,14 +205,20 @@ export function LogisticsWaitingView({
 
         <p className="mt-3 text-xs text-muted-foreground">
           {blockingIndex >= 0
-            ? `La file se forme sur ${stages[blockingIndex].name}. Les étapes suivantes attendent son écoulement.`
-            : "Les files mesurées ne sont rattachées à aucune étape de cette chaîne."}
+            ? tx(
+                `La file se forme sur ${stages[blockingIndex].name}. Les étapes suivantes attendent son écoulement.`,
+                `The queue forms at ${stages[blockingIndex].name}. The stages after it are waiting for it to clear.`
+              )
+            : tx(
+                "Les files mesurées ne sont rattachées à aucune étape de cette chaîne.",
+                "The measured queues are not attached to any stage of this chain."
+              )}
         </p>
       </FlowCard>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
-          label="File la plus longue"
+          label={tx("File la plus longue", "Longest queue")}
           value={formatHours(maxHours)}
           note={worst.equipment}
           tone={maxHours > WAIT_THRESHOLD_HOURS ? "risk" : "watch"}
@@ -184,26 +226,35 @@ export function LogisticsWaitingView({
         />
 
         <StatTile
-          label="Attente moyenne"
+          label={tx("Attente moyenne", "Average wait")}
           value={formatHours(average)}
-          note={`Sur ${countOf(queues.length, "relevé")}`}
+          note={tx(
+            `Sur ${countOf(queues.length, "relevé")}`,
+            `Across ${countOf(queues.length, "reading")}`
+          )}
           tone={average > WAIT_THRESHOLD_HOURS ? "risk" : "watch"}
           icon={Timer}
         />
 
         <StatTile
-          label="Files au-delà du seuil"
+          label={tx("Files au-delà du seuil", "Queues over threshold")}
           value={`${overThreshold.length}`}
           unit={`/ ${queues.length}`}
-          note={`Seuil ${WAIT_THRESHOLD_HOURS} h`}
+          note={tx(
+            `Seuil ${WAIT_THRESHOLD_HOURS} h`,
+            `Threshold ${WAIT_THRESHOLD_HOURS} h`
+          )}
           tone={overThreshold.length > 0 ? "risk" : "good"}
         />
 
         <StatTile
-          label="Heures cumulées"
+          label={tx("Heures cumulées", "Hours in total")}
           value={String(Math.round(total))}
           unit="h"
-          note="Somme des attentes relevées"
+          note={tx(
+            "Somme des attentes relevées",
+            "The sum of the waits recorded"
+          )}
           tone="watch"
           icon={TrendingUp}
         />
@@ -211,8 +262,13 @@ export function LogisticsWaitingView({
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
         <section className="rounded-3xl border border-border bg-card p-6 lg:col-span-3">
-          <SectionTitle note={`Seuil critique ${WAIT_THRESHOLD_HOURS} h`}>
-            Files mesurées
+          <SectionTitle
+            note={tx(
+              `Seuil critique ${WAIT_THRESHOLD_HOURS} h`,
+              `Critical threshold ${WAIT_THRESHOLD_HOURS} h`
+            )}
+          >
+            {tx("Files mesurées", "Queues measured")}
           </SectionTitle>
 
           <div className="space-y-4">
@@ -236,16 +292,32 @@ export function LogisticsWaitingView({
 
           {queues.length > 8 && (
             <p className="mt-4 text-xs text-muted-foreground">
-              {countOf(queues.length - 8, "autre file", "autres files")}{" "}
-              {plural(queues.length - 8, "mesurée", "mesurées")}, plus{" "}
-              {plural(queues.length - 8, "courte", "courtes")}.
+              {tx(
+                `${countOf(
+                  queues.length - 8,
+                  "autre file",
+                  "autres files"
+                )} ${plural(
+                  queues.length - 8,
+                  "mesurée",
+                  "mesurées"
+                )}, plus ${plural(
+                  queues.length - 8,
+                  "courte",
+                  "courtes"
+                )}.`,
+                `${countOf(
+                  queues.length - 8,
+                  "other queue"
+                )} measured, shorter than these.`
+              )}
             </p>
           )}
         </section>
 
         <section className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
-          <SectionTitle note="7 derniers jours">
-            Alertes d&apos;attente
+          <SectionTitle note={tx("7 derniers jours", "Last 7 days")}>
+            {tx("Alertes d'attente", "Waiting alerts")}
           </SectionTitle>
 
           {trend.some((value) => value > 0) ? (
@@ -255,7 +327,10 @@ export function LogisticsWaitingView({
               </p>
 
               <p className="text-xs text-muted-foreground">
-                alertes de temps d&apos;attente sur la période
+                {tx(
+                  "alertes de temps d'attente sur la période",
+                  "waiting-time alerts over the period"
+                )}
               </p>
 
               <Sparkline
@@ -265,8 +340,10 @@ export function LogisticsWaitingView({
             </>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Aucune alerte d&apos;attente sur les 7 derniers jours. Les
-              relevés affichés sont plus anciens.
+              {tx(
+                "Aucune alerte d'attente sur les 7 derniers jours. Les relevés affichés sont plus anciens.",
+                "No waiting alert in the last 7 days. The readings shown are older than that."
+              )}
             </p>
           )}
 

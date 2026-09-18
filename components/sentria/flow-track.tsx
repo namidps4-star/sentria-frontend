@@ -19,6 +19,7 @@ import {
   Warehouse,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useTx } from "@/lib/i18n"
 import {
   STATUS_WORDS,
   type PrimitiveId,
@@ -92,6 +93,15 @@ export function FlowTrack({
      connector is filled. */
   const fillUpTo = blockingIndex < 0 ? nodes.length - 1 : blockingIndex
 
+  const tx = useTx()
+
+  /** The stage status word, or "blocking" for the stage holding the flow
+   *  up. Used by both the visible label and the screen-reader one. */
+  const statusWord = (status: StageStatus, blocking: boolean) =>
+    blocking
+      ? tx("Bloquante", "Blocking")
+      : tx(STATUS_WORDS[status].fr, STATUS_WORDS[status].en)
+
   return (
     <div className={cn("w-full", className)}>
       <div className="overflow-x-auto pb-1">
@@ -103,7 +113,10 @@ export function FlowTrack({
               than crowding it. */}
           <ol
             className="flex w-full items-center rounded-full bg-track px-3 py-3 sm:px-4 sm:py-4"
-            aria-label="Chaîne logistique, étape par étape"
+            aria-label={tx(
+              "Chaîne logistique, étape par étape",
+              "Logistics chain, stage by stage"
+            )}
           >
             {nodes.map((node, index) => {
               const Icon = STAGE_ICONS[node.id]
@@ -129,15 +142,20 @@ export function FlowTrack({
                 </span>
               )
 
-              const label = `${node.name}, ${
-                blocking ? "étape bloquante" : STATUS_WORDS[node.status]
-              }${
+              const alertCount =
                 node.alertCount > 0
-                  ? `, ${node.alertCount} alerte${
-                      node.alertCount > 1 ? "s" : ""
+                  ? `, ${node.alertCount} ${
+                      node.alertCount > 1
+                        ? tx("alertes", "alerts")
+                        : tx("alerte", "alert")
                     }`
                   : ""
-              }`
+
+              const label = `${node.name}, ${
+                blocking
+                  ? tx("étape bloquante", "blocking stage")
+                  : statusWord(node.status, false)
+              }${alertCount}`
 
               return (
                 <li
@@ -213,13 +231,15 @@ export function FlowTrack({
                             : "text-muted-foreground"
                       )}
                     >
-                      {blocking ? "Bloquante" : STATUS_WORDS[node.status]}
+                      {statusWord(node.status, blocking)}
                     </p>
 
                     {node.alertCount > 0 && (
                       <p className="mt-0.5 text-[10px] tabular-nums text-muted-foreground">
-                        {node.alertCount} alerte
-                        {node.alertCount > 1 ? "s" : ""}
+                        {node.alertCount}{" "}
+                        {node.alertCount > 1
+                          ? tx("alertes", "alerts")
+                          : tx("alerte", "alert")}
                       </p>
                     )}
                   </div>

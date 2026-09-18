@@ -13,6 +13,8 @@
  * rate and the arithmetic is shown to the user rather than baked in.
  */
 
+import { localized, type Localized, type Tx } from "@/lib/i18n"
+
 export type OpsType =
   | "port"
   | "entrepot"
@@ -60,27 +62,27 @@ export type PrimitiveId =
   | "transportRefrigere"
   | "livraison"
 
-export const PRIMITIVE_NAMES: Record<PrimitiveId, string> = {
-  fournisseurs: "Fournisseurs",
-  stock: "Stock",
-  entrepot: "Entrepôt",
-  transport: "Transport",
-  douane: "Douane",
-  client: "Client",
-  arrivee: "Arrivée",
-  quai: "Quai",
-  cour: "Cour",
-  enlevement: "Enlèvement",
-  reception: "Réception",
-  stockage: "Stockage",
-  preparation: "Préparation",
-  expedition: "Expédition",
-  commande: "Commande",
-  emballage: "Emballage",
-  depart: "Départ",
-  stockageFroid: "Stockage froid",
-  transportRefrigere: "Transport réfrigéré",
-  livraison: "Livraison",
+export const PRIMITIVE_NAMES: Record<PrimitiveId, Localized> = {
+  fournisseurs: localized("Fournisseurs", "Suppliers"),
+  stock: localized("Stock", "Stock"),
+  entrepot: localized("Entrepôt", "Warehouse"),
+  transport: localized("Transport", "Transport"),
+  douane: localized("Douane", "Customs"),
+  client: localized("Client", "Customer"),
+  arrivee: localized("Arrivée", "Arrival"),
+  quai: localized("Quai", "Berth"),
+  cour: localized("Cour", "Yard"),
+  enlevement: localized("Enlèvement", "Pickup"),
+  reception: localized("Réception", "Goods in"),
+  stockage: localized("Stockage", "Storage"),
+  preparation: localized("Préparation", "Picking"),
+  expedition: localized("Expédition", "Dispatch"),
+  commande: localized("Commande", "Order"),
+  emballage: localized("Emballage", "Packing"),
+  depart: localized("Départ", "Departure"),
+  stockageFroid: localized("Stockage froid", "Cold storage"),
+  transportRefrigere: localized("Transport réfrigéré", "Refrigerated transport"),
+  livraison: localized("Livraison", "Delivery"),
 }
 
 /** The flow chain per ops type. Order is the physical order of the flow. */
@@ -92,13 +94,13 @@ export const OPS_CHAINS: Record<Exclude<OpsType, "multi">, PrimitiveId[]> = {
   froid: ["reception", "stockageFroid", "transportRefrigere", "livraison"],
 }
 
-export const OPS_LABELS: Record<OpsType, string> = {
-  port: "Port & conteneurs",
-  entrepot: "Entrepôt & stockage",
-  transport: "Transport & distribution",
-  expedition: "Expédition & envoi",
-  froid: "Chaîne du froid",
-  multi: "Plusieurs activités",
+export const OPS_LABELS: Record<OpsType, Localized> = {
+  port: localized("Port & conteneurs", "Port & containers"),
+  entrepot: localized("Entrepôt & stockage", "Warehouse & storage"),
+  transport: localized("Transport & distribution", "Transport & distribution"),
+  expedition: localized("Expédition & envoi", "Dispatch & shipping"),
+  froid: localized("Chaîne du froid", "Cold chain"),
+  multi: localized("Plusieurs activités", "Several activities"),
 }
 
 /** How to name the activity in a header.
@@ -109,19 +111,25 @@ export const OPS_LABELS: Record<OpsType, string> = {
  *  not the place for a five-item list. */
 export function opsLabelFor(
   opsType: OpsType | undefined,
+  tx: Tx,
   selected: Exclude<OpsType, "multi">[] = []
 ): string | undefined {
+  const name = (type: OpsType) => tx(OPS_LABELS[type].fr, OPS_LABELS[type].en)
+
   if (!opsType) return undefined
 
-  if (opsType !== "multi") return OPS_LABELS[opsType]
+  if (opsType !== "multi") return name(opsType)
 
-  if (selected.length === 0) return OPS_LABELS.multi
+  if (selected.length === 0) return name("multi")
 
   if (selected.length <= 3) {
-    return selected.map((type) => OPS_LABELS[type]).join(" + ")
+    return selected.map(name).join(" + ")
   }
 
-  return `${selected.length} activités`
+  return tx(
+    `${selected.length} activités`,
+    `${selected.length} activities`
+  )
 }
 
 export function chainFor(
@@ -175,8 +183,8 @@ export type MetricKind =
 type MetricDef = {
   kind: MetricKind
   /** What the number in the message means. */
-  label: string
-  unit: string
+  label: Localized
+  unit: Localized
   /** Where this signal sits in the flow, per ops type. */
   stage: Partial<Record<Exclude<OpsType, "multi">, PrimitiveId>>
   /** Any-ops-type fallback stage. */
@@ -190,8 +198,11 @@ type MetricDef = {
 export const METRICS: Record<string, MetricDef> = {
   "logistics.wait.critical": {
     kind: "wait",
-    label: "Temps d'immobilisation",
-    unit: "h",
+    label: localized(
+      "Temps d'immobilisation",
+      "Time standing still"
+    ),
+    unit: localized("h", "h"),
     stage: { port: "cour", entrepot: "stockage", froid: "stockageFroid", expedition: "preparation" },
     defaultStage: "transport",
     riskAt: 8,
@@ -199,8 +210,11 @@ export const METRICS: Record<string, MetricDef> = {
   },
   "logistics.wait.warning": {
     kind: "wait",
-    label: "Temps d'attente",
-    unit: "h",
+    label: localized(
+      "Temps d'attente",
+      "Waiting time"
+    ),
+    unit: localized("h", "h"),
     stage: { port: "quai", entrepot: "preparation", froid: "reception", expedition: "preparation" },
     defaultStage: "transport",
     riskAt: 8,
@@ -208,8 +222,11 @@ export const METRICS: Record<string, MetricDef> = {
   },
   "logistics.temperature.critical": {
     kind: "temperature",
-    label: "Température relevée",
-    unit: "°C",
+    label: localized(
+      "Température relevée",
+      "Temperature recorded"
+    ),
+    unit: localized("°C", "°C"),
     stage: { froid: "transportRefrigere", entrepot: "stockage", port: "cour" },
     defaultStage: "transport",
     riskAt: 8,
@@ -217,8 +234,11 @@ export const METRICS: Record<string, MetricDef> = {
   },
   "logistics.temperature.warning": {
     kind: "temperature",
-    label: "Température relevée",
-    unit: "°C",
+    label: localized(
+      "Température relevée",
+      "Temperature recorded"
+    ),
+    unit: localized("°C", "°C"),
     stage: { froid: "stockageFroid", entrepot: "stockage", port: "cour" },
     defaultStage: "transport",
     riskAt: 8,
@@ -226,8 +246,11 @@ export const METRICS: Record<string, MetricDef> = {
   },
   "logistics.cycles.critical": {
     kind: "cycles",
-    label: "Cycles effectués",
-    unit: "cycles",
+    label: localized(
+      "Cycles effectués",
+      "Cycles completed"
+    ),
+    unit: localized("cycles", "cycles"),
     stage: { port: "quai", entrepot: "preparation", expedition: "emballage", froid: "stockageFroid" },
     defaultStage: "entrepot",
     riskAt: 1,
@@ -235,8 +258,11 @@ export const METRICS: Record<string, MetricDef> = {
   },
   "logistics.cycles.warning": {
     kind: "cycles",
-    label: "Cycles effectués",
-    unit: "cycles",
+    label: localized(
+      "Cycles effectués",
+      "Cycles completed"
+    ),
+    unit: localized("cycles", "cycles"),
     stage: { port: "quai", entrepot: "preparation", expedition: "emballage", froid: "stockageFroid" },
     defaultStage: "entrepot",
     riskAt: 1,
@@ -244,8 +270,11 @@ export const METRICS: Record<string, MetricDef> = {
   },
   "logistics.pressure.critical": {
     kind: "pressure",
-    label: "Pression hydraulique",
-    unit: "bar",
+    label: localized(
+      "Pression hydraulique",
+      "Hydraulic pressure"
+    ),
+    unit: localized("bar", "bar"),
     stage: { port: "quai", entrepot: "stockage", expedition: "emballage" },
     defaultStage: "entrepot",
     riskAt: 0,
@@ -253,8 +282,11 @@ export const METRICS: Record<string, MetricDef> = {
   },
   "logistics.fuel.warning": {
     kind: "fuel",
-    label: "Carburant restant",
-    unit: "%",
+    label: localized(
+      "Carburant restant",
+      "Fuel remaining"
+    ),
+    unit: localized("%", "%"),
     stage: { port: "enlevement", entrepot: "expedition", froid: "transportRefrigere" },
     defaultStage: "transport",
     riskAt: 10,
@@ -262,8 +294,11 @@ export const METRICS: Record<string, MetricDef> = {
   },
   "logistics.service.warning": {
     kind: "service",
-    label: "Jours sans entretien",
-    unit: "j",
+    label: localized(
+      "Jours sans entretien",
+      "Days without servicing"
+    ),
+    unit: localized("j", "d"),
     stage: { port: "quai", entrepot: "stockage", expedition: "emballage", froid: "stockageFroid" },
     defaultStage: "entrepot",
     riskAt: 90,
@@ -271,8 +306,11 @@ export const METRICS: Record<string, MetricDef> = {
   },
   "logistics.risk.elevated": {
     kind: "risk",
-    label: "Score de risque composite",
-    unit: "/100",
+    label: localized(
+      "Score de risque composite",
+      "Composite risk score"
+    ),
+    unit: localized("/100", "/100"),
     /* A whole-equipment composite rather than one metric, so it is
        pinned to each chain's own load-bearing stage. With an empty map
        it fell through to "transport", which is not in the port,
@@ -294,8 +332,11 @@ export const METRICS: Record<string, MetricDef> = {
      a declaration signal. */
   "port.arrival.berth_miss": {
     kind: "berth",
-    label: "Créneau de quai dépassé",
-    unit: "h",
+    label: localized(
+      "Créneau de quai dépassé",
+      "Berth window missed"
+    ),
+    unit: localized("h", "h"),
     stage: { port: "arrivee" },
     defaultStage: "arrivee",
     riskAt: 0,
@@ -303,8 +344,11 @@ export const METRICS: Record<string, MetricDef> = {
   },
   "port.arrival.berth_tight": {
     kind: "berth",
-    label: "Créneau de quai restant",
-    unit: "h",
+    label: localized(
+      "Créneau de quai restant",
+      "Berth window remaining"
+    ),
+    unit: localized("h", "h"),
     stage: { port: "arrivee" },
     defaultStage: "arrivee",
     riskAt: 2,
@@ -312,8 +356,11 @@ export const METRICS: Record<string, MetricDef> = {
   },
   "port.arrival.eta_drift": {
     kind: "eta",
-    label: "Décalage d'ETA",
-    unit: "h",
+    label: localized(
+      "Décalage d'ETA",
+      "ETA slippage"
+    ),
+    unit: localized("h", "h"),
     stage: { port: "arrivee" },
     defaultStage: "arrivee",
     riskAt: 12,
@@ -321,8 +368,11 @@ export const METRICS: Record<string, MetricDef> = {
   },
   "port.arrival.discharge_overrun": {
     kind: "discharge",
-    label: "Déchargement hors créneau",
-    unit: "h",
+    label: localized(
+      "Déchargement hors créneau",
+      "Unloading outside the window"
+    ),
+    unit: localized("h", "h"),
     stage: { port: "arrivee" },
     defaultStage: "arrivee",
     riskAt: 6,
@@ -333,8 +383,11 @@ export const METRICS: Record<string, MetricDef> = {
        it, so it is the one the cost view can price honestly. The message
        leads with the exposed hours for exactly that reason. */
     kind: "demurrage",
-    label: "Surestarie exposée",
-    unit: "h",
+    label: localized(
+      "Surestarie exposée",
+      "Demurrage exposure"
+    ),
+    unit: localized("h", "h"),
     stage: { port: "douane" },
     defaultStage: "douane",
     riskAt: 0,
@@ -342,8 +395,11 @@ export const METRICS: Record<string, MetricDef> = {
   },
   "port.customs.docs_missing": {
     kind: "documents",
-    label: "Documents manquants",
-    unit: "",
+    label: localized(
+      "Documents manquants",
+      "Documents missing"
+    ),
+    unit: localized("", ""),
     stage: { port: "douane" },
     defaultStage: "douane",
     riskAt: 3,
@@ -351,8 +407,11 @@ export const METRICS: Record<string, MetricDef> = {
   },
   "port.customs.dwell_exceeded": {
     kind: "dwell",
-    label: "Temps en douane",
-    unit: "h",
+    label: localized(
+      "Temps en douane",
+      "Time in customs"
+    ),
+    unit: localized("h", "h"),
     stage: { port: "douane" },
     defaultStage: "douane",
     riskAt: 36,
@@ -360,8 +419,11 @@ export const METRICS: Record<string, MetricDef> = {
   },
   "port.customs.inspection_hold": {
     kind: "inspection",
-    label: "Franchise restante au contrôle",
-    unit: "h",
+    label: localized(
+      "Franchise restante au contrôle",
+      "Free time left at the checkpoint"
+    ),
+    unit: localized("h", "h"),
     stage: { port: "douane" },
     defaultStage: "douane",
     riskAt: 24,
@@ -369,8 +431,11 @@ export const METRICS: Record<string, MetricDef> = {
   },
   "transport.service.critical_due": {
     kind: "mileage",
-    label: "Km depuis l'entretien",
-    unit: "km",
+    label: localized(
+      "Km depuis l'entretien",
+      "Km since servicing"
+    ),
+    unit: localized("km", "km"),
     stage: {},
     defaultStage: "transport",
     riskAt: 20000,
@@ -378,8 +443,11 @@ export const METRICS: Record<string, MetricDef> = {
   },
   "transport.service.due": {
     kind: "mileage",
-    label: "Km depuis l'entretien",
-    unit: "km",
+    label: localized(
+      "Km depuis l'entretien",
+      "Km since servicing"
+    ),
+    unit: localized("km", "km"),
     stage: {},
     defaultStage: "transport",
     riskAt: 20000,
@@ -387,8 +455,11 @@ export const METRICS: Record<string, MetricDef> = {
   },
   "transport.engine.overheat": {
     kind: "engine",
-    label: "Température moteur",
-    unit: "°C",
+    label: localized(
+      "Température moteur",
+      "Engine temperature"
+    ),
+    unit: localized("°C", "°C"),
     stage: {},
     defaultStage: "transport",
     riskAt: 100,
@@ -396,8 +467,11 @@ export const METRICS: Record<string, MetricDef> = {
   },
   "transport.oil.critical_low": {
     kind: "oil",
-    label: "Niveau d'huile",
-    unit: "",
+    label: localized(
+      "Niveau d'huile",
+      "Oil level"
+    ),
+    unit: localized("", ""),
     stage: {},
     defaultStage: "transport",
     riskAt: 0,
@@ -405,8 +479,11 @@ export const METRICS: Record<string, MetricDef> = {
   },
   "transport.fuel_low": {
     kind: "fuel",
-    label: "Carburant restant",
-    unit: "%",
+    label: localized(
+      "Carburant restant",
+      "Fuel remaining"
+    ),
+    unit: localized("%", "%"),
     stage: {},
     defaultStage: "transport",
     riskAt: 10,
@@ -414,8 +491,11 @@ export const METRICS: Record<string, MetricDef> = {
   },
   "transportation.tires.replacement_due": {
     kind: "tires",
-    label: "Âge des pneus",
-    unit: "mois",
+    label: localized(
+      "Âge des pneus",
+      "Tyre age"
+    ),
+    unit: localized("mois", "months"),
     stage: {},
     defaultStage: "transport",
     riskAt: 48,
@@ -532,6 +612,22 @@ export function hoursSince(iso: string): number | null {
   return Math.max(0, (Date.now() - then) / 36e5)
 }
 
+/** Resolve a catalogue pair. The stage names, metric labels, units,
+ *  rate labels and status words are module constants, so they hold pairs
+ *  and every derivation below takes the translator that resolves them. */
+function px(text: Localized, tx: Tx): string {
+  return tx(text.fr, text.en)
+}
+
+/** A stage's name, or the words for a reading that sits on no stage of
+ *  this chain. Written once because three derivations needed it and each
+ *  had its own copy of "Hors chaîne". */
+function stageName(stage: PrimitiveId | undefined, tx: Tx): string {
+  return stage
+    ? px(PRIMITIVE_NAMES[stage], tx)
+    : tx("Hors chaîne", "Off the chain")
+}
+
 export function severityRank(severity: string): number {
   return severity === "CRITICAL" ? 2 : 1
 }
@@ -558,14 +654,17 @@ export type StageState = {
   signals: StageSignal[]
 }
 
-function formatMeasured(value: number, unit: string): string {
+function formatMeasured(value: number, unit: Localized, tx: Tx): string {
   const rounded =
     Math.abs(value) >= 100 ? Math.round(value) : Math.round(value * 10) / 10
 
-  return unit ? `${rounded.toLocaleString("fr-FR")} ${unit}`.trim() : String(rounded)
+  const number = rounded.toLocaleString(tx("fr-FR", "en-GB"))
+  const suffix = px(unit, tx)
+
+  return suffix ? `${number} ${suffix}`.trim() : String(rounded)
 }
 
-export function signalOf(alert: LogisticsAlert): StageSignal | null {
+export function signalOf(alert: LogisticsAlert, tx: Tx): StageSignal | null {
   const def = metricFor(alert)
 
   if (!def) return null
@@ -580,8 +679,8 @@ export function signalOf(alert: LogisticsAlert): StageSignal | null {
   )
 
   return {
-    label: def.label,
-    value: formatMeasured(value, def.unit),
+    label: px(def.label, tx),
+    value: formatMeasured(value, def.unit, tx),
     percent,
     tone: alert.severity === "CRITICAL" ? "risk" : "watch",
     equipment: alert.equipment,
@@ -596,6 +695,7 @@ export function signalOf(alert: LogisticsAlert): StageSignal | null {
 export function deriveStages(
   alerts: LogisticsAlert[],
   opsType: OpsType | undefined,
+  tx: Tx,
   selectedForMulti: Exclude<OpsType, "multi">[] = []
 ): StageState[] {
   const chain = chainFor(opsType, selectedForMulti)
@@ -625,12 +725,12 @@ export function deriveStages(
       stageAlerts.length === 0 ? "good" : critical ? "risk" : "watch"
 
     const signals = stageAlerts
-      .map(signalOf)
+      .map((alert) => signalOf(alert, tx))
       .filter((s): s is StageSignal => s !== null)
 
     return {
       id,
-      name: PRIMITIVE_NAMES[id],
+      name: px(PRIMITIVE_NAMES[id], tx),
       status,
       alerts: stageAlerts,
       risk: stageAlerts.length > 0 ? Math.max(...stageAlerts.map(riskOf)) : 0,
@@ -697,6 +797,7 @@ export type Breakpoint = {
 /** Real breakpoints: one per (stage, alert family), ranked by risk. */
 export function deriveBreakpoints(
   stages: StageState[],
+  tx: Tx,
   limit = 4
 ): Breakpoint[] {
   const groups = new Map<string, Breakpoint>()
@@ -727,7 +828,7 @@ export function deriveBreakpoints(
       groups.set(key, {
         stage: stage.id,
         stageName: stage.name,
-        title: def?.label ?? messageFinding(alert),
+        title: def ? px(def.label, tx) : messageFinding(alert),
         risk,
         equipmentCount: 1,
         equipment: [alert.equipment],
@@ -763,7 +864,8 @@ export type ProjectionStep = {
  *  step is a measurement rather than a guess. */
 export function deriveProjection(
   alert: LogisticsAlert | null,
-  stage: StageState | undefined
+  stage: StageState | undefined,
+  tx: Tx
 ): ProjectionStep[] {
   if (!alert) return []
 
@@ -774,17 +876,25 @@ export function deriveProjection(
     age === null
       ? null
       : age < 1
-        ? `depuis ${Math.max(1, Math.round(age * 60))} min`
-        : `depuis ${Math.round(age)} h`
+        ? tx(
+            `depuis ${Math.max(1, Math.round(age * 60))} min`,
+            `for ${Math.max(1, Math.round(age * 60))} min`
+          )
+        : tx(`depuis ${Math.round(age)} h`, `for ${Math.round(age)} h`)
 
   const steps: ProjectionStep[] = [
     {
-      when: "Constaté",
+      when: tx("Constaté", "Observed"),
       detail:
         value !== null && def
-          ? `${def.label} à ${formatMeasured(value, def.unit)}${
-              openFor ? `, ${openFor}` : ""
-            }`
+          ? tx(
+              `${px(def.label, tx)} à ${formatMeasured(value, def.unit, tx)}${
+                openFor ? `, ${openFor}` : ""
+              }`,
+              `${px(def.label, tx)} at ${formatMeasured(value, def.unit, tx)}${
+                openFor ? `, ${openFor}` : ""
+              }`
+            )
           : sentenceCase(messageFinding(alert)),
       measured: true,
     },
@@ -794,12 +904,18 @@ export function deriveProjection(
 
   if (otherStageAlerts.length > 0) {
     steps.push({
-      when: "En parallèle",
-      detail: `${countOf(
-        otherStageAlerts.length,
-        "autre signal",
-        "autres signaux"
-      )} sur ${stage?.name ?? "cette étape"}`,
+      when: tx("En parallèle", "At the same time"),
+      detail: tx(
+        `${countOf(
+          otherStageAlerts.length,
+          "autre signal",
+          "autres signaux"
+        )} sur ${stage?.name ?? tx("cette étape", "this stage")}`,
+        `${countOf(
+          otherStageAlerts.length,
+          "other signal"
+        )} at ${stage?.name ?? tx("cette étape", "this stage")}`
+      ),
       tone: "watch",
     })
   }
@@ -809,8 +925,11 @@ export function deriveProjection(
      printed the same sentence twice on the same screen. */
   if (alert.severity === "CRITICAL") {
     steps.push({
-      when: "Niveau",
-      detail: "Seuil critique franchi, cette étape bloque le flux en aval.",
+      when: tx("Niveau", "Level"),
+      detail: tx(
+        "Seuil critique franchi, cette étape bloque le flux en aval.",
+        "Past the critical threshold: this stage is holding up everything downstream."
+      ),
       tone: "risk",
     })
   }
@@ -846,11 +965,11 @@ export const DEFAULT_COST_RATES: CostRates = {
   demurrage: 6,
 }
 
-export const RATE_LABELS: Record<keyof CostRates, string> = {
-  wait: "Immobilisation",
-  temperature: "Écart de température",
-  service: "Entretien différé",
-  demurrage: "Surestarie",
+export const RATE_LABELS: Record<keyof CostRates, Localized> = {
+  wait: localized("Immobilisation", "Standing time"),
+  temperature: localized("Écart de température", "Temperature deviation"),
+  service: localized("Entretien différé", "Deferred servicing"),
+  demurrage: localized("Surestarie", "Demurrage"),
 }
 
 /** The unit beside each rate, in the operator's own currency.
@@ -860,14 +979,29 @@ export const RATE_LABELS: Record<keyof CostRates, string> = {
  *  entering 45000 for immobilisation means naira, and stamping "€ / h"
  *  on it was simply false. No conversion happens here: the symbol
  *  labels their own figure. */
-export function rateUnits(symbol: string): Record<keyof CostRates, string> {
+export function rateUnits(
+  symbol: string,
+  tx: Tx
+): Record<keyof CostRates, string> {
   return {
-    wait: `${symbol} / h au-delà de 8 h`,
-    temperature: `${symbol} / °C au-delà de 8 °C`,
-    service: `${symbol} / jour au-delà de 30 j`,
+    wait: tx(
+      `${symbol} / h au-delà de 8 h`,
+      `${symbol} / h past 8 h`
+    ),
+    temperature: tx(
+      `${symbol} / °C au-delà de 8 °C`,
+      `${symbol} / °C past 8 °C`
+    ),
+    service: tx(
+      `${symbol} / jour au-delà de 30 j`,
+      `${symbol} / day past 30 d`
+    ),
     /* Already the overrun past free time, so the threshold is zero: the
        backend did the comparison against the deadline. */
-    demurrage: `${symbol} / h de surestarie exposée`,
+    demurrage: tx(
+      `${symbol} / h de surestarie exposée`,
+      `${symbol} / h of demurrage exposure`
+    ),
   }
 }
 
@@ -929,6 +1063,7 @@ export function currentReadings(alerts: LogisticsAlert[]): LogisticsAlert[] {
 export function deriveExposure(
   alerts: LogisticsAlert[],
   opsType: OpsType | undefined,
+  tx: Tx,
   rates: CostRates = DEFAULT_COST_RATES,
   selectedForMulti: Exclude<OpsType, "multi">[] = []
 ): ExposureLine[] {
@@ -965,11 +1100,11 @@ export function deriveExposure(
     lines.push({
       equipment: alert.equipment,
       stage,
-      stageName: stage ? PRIMITIVE_NAMES[stage] : "Hors chaîne",
+      stageName: stageName(stage, tx),
       kind,
-      kindLabel: def.label,
+      kindLabel: px(def.label, tx),
       measured,
-      unit: def.unit,
+      unit: px(def.unit, tx),
       overrun: Math.round(overrun * 10) / 10,
       ratePerUnit: rates[kind],
       exposure: Math.round(overrun * rates[kind]),
@@ -1000,6 +1135,7 @@ export type QueueLine = {
 export function deriveQueues(
   alerts: LogisticsAlert[],
   opsType: OpsType | undefined,
+  tx: Tx,
   selectedForMulti: Exclude<OpsType, "multi">[] = []
 ): QueueLine[] {
   const chain = chainFor(opsType, selectedForMulti)
@@ -1021,7 +1157,7 @@ export function deriveQueues(
       hours,
       severity: alert.severity,
       stage,
-      stageName: stage ? PRIMITIVE_NAMES[stage] : "Hors chaîne",
+      stageName: stageName(stage, tx),
       risk: riskOf(alert),
       date: alert.date,
       advice: messageAdvice(alert),
@@ -1059,8 +1195,11 @@ export function dailyCounts(
   return counts
 }
 
-export function formatEuros(value: number): string {
-  return Math.round(value).toLocaleString("fr-FR")
+/** Grouped thousands in the reader's own convention. The name is
+ *  historical: no currency is applied here, because the caller knows the
+ *  operator's symbol and appends it. */
+export function formatEuros(value: number, tx: Tx): string {
+  return Math.round(value).toLocaleString(tx("fr-FR", "en-GB"))
 }
 
 export function formatHours(hours: number): string {
@@ -1116,10 +1255,10 @@ export function sentenceCase(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1)
 }
 
-export const STATUS_WORDS: Record<StageStatus, string> = {
-  good: "Aucun signal",
-  watch: "Sous tension",
-  risk: "Rupture",
+export const STATUS_WORDS: Record<StageStatus, Localized> = {
+  good: localized("Aucun signal", "No signal"),
+  watch: localized("Sous tension", "Under strain"),
+  risk: localized("Rupture", "Breakdown"),
 }
 
 /* ------------------------------------------------------------------ */
@@ -1158,6 +1297,7 @@ export type AnticipationLine = {
 export function deriveAnticipation(
   alerts: LogisticsAlert[],
   opsType: OpsType | undefined,
+  tx: Tx,
   selectedForMulti: Exclude<OpsType, "multi">[] = []
 ): AnticipationLine[] {
   const chain = chainFor(opsType, selectedForMulti)
@@ -1195,12 +1335,18 @@ export function deriveAnticipation(
         warnedAt: warning.date,
         warnedRisk: riskOf(warning),
         confirmedAt: confirmation?.date ?? null,
-        confirmedBy: confirmation ? metricFor(confirmation)?.label ?? null : null,
+        confirmedBy: (() => {
+          const label = confirmation
+            ? metricFor(confirmation)?.label
+            : undefined
+
+          return label ? px(label, tx) : null
+        })(),
         confirmedSeverity: confirmation?.severity ?? null,
         leadHours,
         openHours: confirmation ? null : hoursSince(warning.date),
         stage,
-        stageName: stage ? PRIMITIVE_NAMES[stage] : "Hors chaîne",
+        stageName: stageName(stage, tx),
       }
     })
     .sort((a, b) => (b.leadHours ?? -1) - (a.leadHours ?? -1))
@@ -1291,12 +1437,13 @@ const KIND_CATEGORY: Partial<Record<MetricKind, string>> = {
 export function deriveRecommendations(
   alerts: LogisticsAlert[],
   opsType: OpsType | undefined,
+  tx: Tx,
   selectedForMulti: Exclude<OpsType, "multi">[] = [],
   rates: CostRates = DEFAULT_COST_RATES,
   limit = 12
 ): LogisticsRecommendation[] {
   const chain = chainFor(opsType, selectedForMulti)
-  const stages = deriveStages(alerts, opsType, selectedForMulti)
+  const stages = deriveStages(alerts, opsType, tx, selectedForMulti)
 
   /* Euro exposure per asset AND stage. Keying it on the asset alone
      double-counted: GRUE-02 carries readings at both Quai and Cour, so
@@ -1305,7 +1452,13 @@ export function deriveRecommendations(
      each overrun sits on, so use it. */
   const exposureByAssetStage = new Map<string, number>()
 
-  for (const line of deriveExposure(alerts, opsType, rates, selectedForMulti)) {
+  for (const line of deriveExposure(
+    alerts,
+    opsType,
+    tx,
+    rates,
+    selectedForMulti
+  )) {
     if (!line.stage) continue
 
     const key = `${line.stage}:${line.equipment}`
@@ -1349,29 +1502,48 @@ export function deriveRecommendations(
       const findings =
         assetAlerts.length === 1
           ? messageFinding(lead)
-          : `${countOf(assetAlerts.length, "signal", "signaux")} sur ${
-              stage.name
-            }, dont ${countOf(critical, "critique")}`
+          : tx(
+              `${countOf(assetAlerts.length, "signal", "signaux")} sur ${
+                stage.name
+              }, dont ${countOf(critical, "critique")}`,
+              `${countOf(assetAlerts.length, "signal")} at ${
+                stage.name
+              }, ${countOf(critical, "of them critical")}`
+            )
 
       const reasons: string[] = []
 
-      if (critical > 0) reasons.push("seuil critique franchi")
-
-      if (downstream > 0) {
+      if (critical > 0) {
         reasons.push(
-          `débloque ${countOf(downstream, "étape")} en aval, +${
-            downstream * LEVERAGE_POINTS_PER_STAGE
-          } pts`
+          tx("seuil critique franchi", "past the critical threshold")
         )
       }
 
-      reasons.push(`risque ${risk}/100`)
+      if (downstream > 0) {
+        reasons.push(
+          tx(
+            `débloque ${countOf(downstream, "étape")} en aval, +${
+              downstream * LEVERAGE_POINTS_PER_STAGE
+            } pts`,
+            `unblocks ${countOf(downstream, "stage")} downstream, +${
+              downstream * LEVERAGE_POINTS_PER_STAGE
+            } pts`
+          )
+        )
+      }
+
+      reasons.push(tx(`risque ${risk}/100`, `risk ${risk}/100`))
 
       if (exposure > 0) {
         /* No symbol here: the caller knows the operator's currency and
            appends it. Embedding one made every recommendation claim
            euros. */
-        reasons.push(`${formatEuros(exposure)} exposés`)
+        reasons.push(
+          tx(
+            `${formatEuros(exposure, tx)} exposés`,
+            `${formatEuros(exposure, tx)} exposed`
+          )
+        )
       }
 
       const score =

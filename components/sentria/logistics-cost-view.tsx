@@ -31,6 +31,7 @@ import {
   type LogisticsAlert,
   type OpsType,
 } from "@/lib/logistics-signals"
+import { useTx } from "@/lib/i18n"
 import { formatMoney, useLocale } from "@/lib/locale"
 
 /* --------------------------------------------------------------------------
@@ -108,6 +109,8 @@ export function LogisticsCostView({
     })
   }
 
+  const tx = useTx()
+
   function resetRates() {
     setRates(DEFAULT_COST_RATES)
 
@@ -119,13 +122,13 @@ export function LogisticsCostView({
   }
 
   const lines = useMemo(
-    () => deriveExposure(alerts, opsType, rates, selectedOpsTypesForMulti),
-    [alerts, opsType, rates, selectedOpsTypesForMulti]
+    () => deriveExposure(alerts, opsType, tx, rates, selectedOpsTypesForMulti),
+    [alerts, opsType, tx, rates, selectedOpsTypesForMulti]
   )
 
   const stages = useMemo(
-    () => deriveStages(alerts, opsType, selectedOpsTypesForMulti),
-    [alerts, opsType, selectedOpsTypesForMulti]
+    () => deriveStages(alerts, opsType, tx, selectedOpsTypesForMulti),
+    [alerts, opsType, tx, selectedOpsTypesForMulti]
   )
 
   const blockingIndex = useMemo(() => {
@@ -138,19 +141,34 @@ export function LogisticsCostView({
     return (
       <div className="space-y-4">
         <ViewHeader
-          eyebrow="Coûts"
+          eyebrow={tx("Coûts", "Cost")}
           opsType={opsType}
-        selectedOpsTypes={selectedOpsTypesForMulti}
-          title="Aucun dépassement facturable mesuré."
-          lede="Cette vue ne chiffre que des dépassements réels. Tant qu'aucun relevé ne franchit son seuil, il n'y a rien à chiffrer."
+          selectedOpsTypes={selectedOpsTypesForMulti}
+          title={tx(
+            "Aucun dépassement facturable mesuré.",
+            "No billable overrun measured."
+          )}
+          lede={tx(
+            "Cette vue ne chiffre que des dépassements réels. Tant qu'aucun relevé ne franchit son seuil, il n'y a rien à chiffrer.",
+            "This view only puts a figure on real overruns. While no reading is past its threshold, there is nothing to cost."
+          )}
           risk={0}
           icon={CircleDollarSign}
         />
 
         <NoSignal
-          title="Aucune exposition à chiffrer"
-          detail="Aucune alerte n'a franchi un seuil facturable pour cette activité : ni immobilisation au-delà de 8 h, ni écart de température, ni sur-utilisation, ni entretien différé."
-          expected="Les colonnes attendues sont avg_wait_hours, temperature, daily_cycles et last_service_date."
+          title={tx(
+            "Aucune exposition à chiffrer",
+            "No exposure to put a figure on"
+          )}
+          detail={tx(
+            "Aucune alerte n'a franchi un seuil facturable pour cette activité : ni immobilisation au-delà de 8 h, ni écart de température, ni sur-utilisation, ni entretien différé.",
+            "No alert has crossed a billable threshold for this activity: no standing time past 8 h, no temperature deviation, no over-use, no deferred servicing."
+          )}
+          expected={tx(
+            "Les colonnes attendues sont avg_wait_hours, temperature, daily_cycles et last_service_date.",
+            "The expected columns are avg_wait_hours, temperature, daily_cycles and last_service_date."
+          )}
         />
       </div>
     )
@@ -179,29 +197,41 @@ export function LogisticsCostView({
   return (
     <div className="space-y-4">
       <ViewHeader
-        eyebrow="Coûts"
+        eyebrow={tx("Coûts", "Cost")}
         opsType={opsType}
         selectedOpsTypes={selectedOpsTypesForMulti}
-        title={`${countOf(
-          lines.length,
-          "dépassement"
-        )} au-delà de leur seuil.`}
-        lede={`Le plus coûteux est ${worst.equipment} sur ${worst.stageName} : ${worst.overrun} ${worst.unit} au-delà du seuil.`}
+        title={tx(
+          `${countOf(lines.length, "dépassement")} au-delà de leur seuil.`,
+          `${countOf(lines.length, "overrun")} past their threshold.`
+        )}
+        lede={tx(
+          `Le plus coûteux est ${worst.equipment} sur ${worst.stageName} : ${worst.overrun} ${worst.unit} au-delà du seuil.`,
+          `The costliest is ${worst.equipment} at ${worst.stageName}: ${worst.overrun} ${worst.unit} past the threshold.`
+        )}
         risk={risk}
         icon={CircleDollarSign}
       />
 
       <FlowCard
         title={worst.stageName}
-        subtitle={`${worst.kindLabel} à ${worst.measured} ${worst.unit} sur ${worst.equipment}.`}
-        figureLabel="Exposition estimée, tous dépassements"
+        subtitle={tx(
+          `${worst.kindLabel} à ${worst.measured} ${worst.unit} sur ${worst.equipment}.`,
+          `${worst.kindLabel} at ${worst.measured} ${worst.unit} on ${worst.equipment}.`
+        )}
+        figureLabel={tx(
+          "Exposition estimée, tous dépassements",
+          "Estimated exposure, all overruns"
+        )}
         figure={formatMoney(totalExposure, currency)}
-        figureNote="Estimation, pas un montant facturé : dépassement mesuré multiplié par vos taux, détaillés ci-dessous."
+        figureNote={tx(
+          "Estimation, pas un montant facturé : dépassement mesuré multiplié par vos taux, détaillés ci-dessous.",
+          "An estimate, not an invoiced amount: the measured overrun times your own rates, set out below."
+        )}
         tone={critical.length > 0 ? "risk" : "neutral"}
         aside={
           <div className="rounded-2xl border border-border bg-muted/40 px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Dont critiques
+              {tx("Dont critiques", "Of which critical")}
             </p>
 
             <p className="mt-1 font-heading text-2xl font-bold tabular-nums">
@@ -209,7 +239,10 @@ export function LogisticsCostView({
             </p>
 
             <p className="text-xs text-muted-foreground">
-              sur {countOf(critical.length, "ligne")}
+              {tx(
+                `sur ${countOf(critical.length, "ligne")}`,
+                `across ${countOf(critical.length, "line")}`
+              )}
             </p>
           </div>
         }
@@ -226,38 +259,50 @@ export function LogisticsCostView({
 
         <p className="mt-3 text-xs text-muted-foreground">
           {blockingIndex >= 0
-            ? `Le poste le plus coûteux se situe sur ${stages[blockingIndex].name}.`
-            : "Les dépassements ne sont rattachés à aucune étape de cette chaîne."}
+            ? tx(
+                `Le poste le plus coûteux se situe sur ${stages[blockingIndex].name}.`,
+                `The costliest item sits at ${stages[blockingIndex].name}.`
+              )
+            : tx(
+                "Les dépassements ne sont rattachés à aucune étape de cette chaîne.",
+                "The overruns are not attached to any stage of this chain."
+              )}
         </p>
       </FlowCard>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
-          label="Exposition totale"
+          label={tx("Exposition totale", "Total exposure")}
           value={formatMoney(totalExposure, currency)}
-          note="Estimation à partir de vos taux"
+          note={tx(
+            "Estimation à partir de vos taux",
+            "Estimated from your own rates"
+          )}
           tone="risk"
           icon={TrendingUp}
         />
 
         <StatTile
-          label="Lignes en dépassement"
+          label={tx("Lignes en dépassement", "Lines over threshold")}
           value={String(lines.length)}
-          note="Relevés au-delà du seuil"
+          note={tx("Relevés au-delà du seuil", "Readings past the threshold")}
           tone="watch"
         />
 
         <StatTile
-          label="Poste le plus lourd"
+          label={tx("Poste le plus lourd", "Heaviest item")}
           value={formatMoney(worst.exposure, currency)}
           note={`${worst.equipment} · ${worst.kindLabel.toLowerCase()}`}
           tone="risk"
         />
 
         <StatTile
-          label="Part critique"
+          label={tx("Part critique", "Critical share")}
           value={formatMoney(criticalExposure, currency)}
-          note="Portée par des alertes CRITICAL"
+          note={tx(
+            "Portée par des alertes CRITICAL",
+            "Carried by CRITICAL alerts"
+          )}
           tone="watch"
           icon={TrendingDown}
         />
@@ -265,8 +310,13 @@ export function LogisticsCostView({
 
       <section className="rounded-3xl border border-border bg-card p-6">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <SectionTitle note="Dépassement mesuré × votre taux">
-            Détail du chiffrage
+          <SectionTitle
+            note={tx(
+              "Dépassement mesuré × votre taux",
+              "Measured overrun × your rate"
+            )}
+          >
+            {tx("Détail du chiffrage", "How the figure is built")}
           </SectionTitle>
 
           <div className="flex items-center gap-2">
@@ -276,7 +326,9 @@ export function LogisticsCostView({
               className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-accent hover:text-accent-foreground"
             >
               <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-              {editing ? "Masquer les taux" : "Régler mes taux"}
+              {editing
+                ? tx("Masquer les taux", "Hide the rates")
+                : tx("Régler mes taux", "Set my rates")}
             </button>
 
             {editing && (
@@ -286,7 +338,7 @@ export function LogisticsCostView({
                 className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-accent hover:text-accent-foreground"
               >
                 <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-                Valeurs par défaut
+                {tx("Valeurs par défaut", "Default values")}
               </button>
             )}
           </div>
@@ -294,9 +346,10 @@ export function LogisticsCostView({
 
         <p className="flex items-start gap-1.5 rounded-2xl border border-border bg-muted/40 p-3 text-xs leading-5 text-muted-foreground">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          Les dépassements viennent de vos relevés. Les euros viennent des
-          taux ci-dessous, qui sont des hypothèses que vous contrôlez :
-          SentrIA ne mesure pas votre facturation.
+          {tx(
+            "Les dépassements viennent de vos relevés. Les montants viennent des taux ci-dessous, qui sont des hypothèses que vous contrôlez : SentrIA ne mesure pas votre facturation.",
+            "The overruns come from your readings. The amounts come from the rates below, which are assumptions you control: SentrIA does not measure your billing."
+          )}
         </p>
 
         {editing && (
@@ -307,11 +360,11 @@ export function LogisticsCostView({
                 className="rounded-2xl border border-border bg-muted/30 p-3"
               >
                 <span className="block text-xs font-semibold">
-                  {RATE_LABELS[key]}
+                  {tx(RATE_LABELS[key].fr, RATE_LABELS[key].en)}
                 </span>
 
                 <span className="mt-0.5 block text-[11px] text-muted-foreground">
-                  {rateUnits(currency.symbol)[key]}
+                  {rateUnits(currency.symbol, tx)[key]}
                 </span>
 
                 <input
@@ -334,22 +387,22 @@ export function LogisticsCostView({
             <thead>
               <tr className="border-b border-border text-[11px] uppercase tracking-wide text-muted-foreground">
                 <th scope="col" className="py-2 pr-3 font-semibold">
-                  Équipement
+                  {tx("Équipement", "Asset")}
                 </th>
                 <th scope="col" className="py-2 pr-3 font-semibold">
-                  Étape
+                  {tx("Étape", "Stage")}
                 </th>
                 <th scope="col" className="py-2 pr-3 font-semibold">
-                  Relevé
+                  {tx("Relevé", "Reading")}
                 </th>
                 <th scope="col" className="py-2 pr-3 font-semibold">
-                  Dépassement
+                  {tx("Dépassement", "Overrun")}
                 </th>
                 <th scope="col" className="py-2 pr-3 font-semibold">
-                  Taux
+                  {tx("Taux", "Rate")}
                 </th>
                 <th scope="col" className="py-2 text-right font-semibold">
-                  Exposition
+                  {tx("Exposition", "Exposure")}
                 </th>
               </tr>
             </thead>
@@ -370,7 +423,7 @@ export function LogisticsCostView({
                           TONE_CHIP.risk
                         )}
                       >
-                        Critique
+                        {tx("Critique", "Critical")}
                       </span>
                     )}
                   </td>
@@ -402,8 +455,14 @@ export function LogisticsCostView({
               <tr>
                 <td colSpan={5} className="pt-3 text-xs text-muted-foreground">
                   {lines.length > 12
-                    ? `12 lignes sur ${lines.length} affichées, les plus coûteuses.`
-                    : `${countOf(lines.length, "ligne")}.`}
+                    ? tx(
+                        `12 lignes sur ${lines.length} affichées, les plus coûteuses.`,
+                        `Showing the 12 costliest of ${lines.length} lines.`
+                      )
+                    : tx(
+                        `${countOf(lines.length, "ligne")}.`,
+                        `${countOf(lines.length, "line")}.`
+                      )}
                 </td>
 
                 <td className="pt-3 text-right font-heading text-lg font-bold tabular-nums">
@@ -416,8 +475,10 @@ export function LogisticsCostView({
       </section>
 
       <section className="rounded-3xl border border-border bg-card p-6">
-        <SectionTitle note="Par nature de dépassement">
-          Où part l&apos;argent
+        <SectionTitle
+          note={tx("Par nature de dépassement", "By kind of overrun")}
+        >
+          {tx("Où part l'argent", "Where the money goes")}
         </SectionTitle>
 
         <div className="space-y-4">
@@ -425,11 +486,20 @@ export function LogisticsCostView({
             <div key={entry.kind}>
               <div className="flex items-baseline justify-between gap-3">
                 <p className="text-sm font-semibold">
-                  {RATE_LABELS[entry.kind]}
+                  {tx(
+                    RATE_LABELS[entry.kind].fr,
+                    RATE_LABELS[entry.kind].en
+                  )}
 
                   <span className="ml-2 text-xs font-normal text-muted-foreground">
-                    {countOf(entry.count, "ligne")} ·{" "}
-                    {Math.round(entry.overrun * 10) / 10} de dépassement cumulé
+                    {tx(
+                      `${countOf(entry.count, "ligne")} · ${
+                        Math.round(entry.overrun * 10) / 10
+                      } de dépassement cumulé`,
+                      `${countOf(entry.count, "line")} · ${
+                        Math.round(entry.overrun * 10) / 10
+                      } of overrun in total`
+                    )}
                   </span>
                 </p>
 

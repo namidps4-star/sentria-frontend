@@ -107,19 +107,62 @@ function blank(text) {
  *  fat arrow, a quoted string, a hook call. A sentence with an equals
  *  sign in it would be missed, and that is the trade this makes. */
 function isCode(text) {
-  return /=>|=|;|["'`]|\buseState\b|\bconst\b|\blet\b|\breturn\b/.test(text)
+  return (
+    /=>|=|;|["'`]|\buseState\b|\bconst\b|\blet\b|\breturn\b/.test(text) ||
+    /\.\w+\(|\(\s*\)|\bnew\s+\w+\(/.test(text)
+  )
+}
+
+/** The span of one call, from its opening paren to the matching close.
+ *
+ *  Needed because a translated string is not always a direct argument:
+ *  tx(countOf(n, "équipement"), countOf(n, "asset")) puts both languages
+ *  one level down, and a regex that only looked at the first two
+ *  arguments reported the French half of a call that is fully
+ *  translated. Tracks string literals so a paren inside one does not
+ *  close the call. */
+function callSpan(source, openIndex) {
+  let depth = 0
+  let quote = null
+
+  for (let i = openIndex; i < source.length; i += 1) {
+    const ch = source[i]
+
+    if (quote) {
+      if (ch === "\\") i += 1
+      else if (ch === quote) quote = null
+      continue
+    }
+
+    if (ch === '"' || ch === "'" || ch === "`") quote = ch
+    else if (ch === "(") depth += 1
+    else if (ch === ")") {
+      depth -= 1
+      if (depth === 0) return i + 1
+    }
+  }
+
+  return source.length
 }
 
 /** Spans that are already translated, so their French half is fine.
  *
- *  Matches the first argument of tx("...", "...") and of
- *  localized("...", "...") and the fr: "..." of a Localized literal.
+ *  Covers whole tx() and localized() calls, the fr:/en: fields of a
+ *  Localized literal, and t("key") lookups.
  */
 function translatedSpans(source) {
   const spans = []
 
+  /* Whole calls first, nested arguments included. */
+  const callRe = /\b(?:tx|localized)\s*\(/g
+  let call
+
+  while ((call = callRe.exec(source))) {
+    const open = source.indexOf("(", call.index)
+    spans.push([call.index, callSpan(source, open)])
+  }
+
   const patterns = [
-    /\b(?:tx|localized)\(\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1\s*,\s*(["'`])((?:\\.|(?!\3)[^\\])*)\3/g,
     /\bfr:\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1/g,
     /\ben:\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1/g,
     /\bt\(\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1/g,
