@@ -6,5 +6,6 @@ export type ViewKey =
   | "profile"
   | "settings"
   | "report"
+  | "contractors"
 
   

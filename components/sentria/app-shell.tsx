@@ -14,6 +14,7 @@ import { ProfileView } from "./profile-view"
 import { SettingsView } from "./settings-view"
 import { OnboardingView } from "./onboarding-modal"
 import { ReportView } from "./report-view"
+import { ContractorsView } from "./contractors-view"
 
 const META: Record<ViewKey, { title: string; subtitle: string }> = {
   dashboard: {
@@ -43,6 +44,10 @@ const META: Record<ViewKey, { title: string; subtitle: string }> = {
   report: {
     title: "Rapport",
     subtitle: "Analyse détaillée de vos opérations",
+  },
+  contractors: {
+    title: "Intervenants",
+    subtitle: "Qui est disponible, et qui fait quoi",
   },
 }
 
@@ -143,6 +148,9 @@ export function AppShell() {
             {view === "profile" && <ProfileView onNavigate={setView} />}
             {view === "settings" && <SettingsView />}
             {view === "report" && <ReportView />}
+            {view === "contractors" && (
+              <ContractorsView onNavigate={setView} />
+            )}
           </main>
         </div>
       </div>

@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Bot,
+  UsersRound,
 } from "lucide-react"
 
 interface SidebarProps {
@@ -46,6 +47,11 @@ const sections: {
         id: "sites",
         label: "Sites",
         icon: Factory,
+      },
+      {
+        id: "contractors",
+        label: "Intervenants",
+        icon: UsersRound,
       },
     ],
   },

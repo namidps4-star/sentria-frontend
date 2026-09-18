@@ -18,6 +18,15 @@ import {
   X,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useCompanyIdentity } from "@/lib/company"
+import {
+  AVAILABILITY_LABEL,
+  fetchAssignments,
+  fetchContractors,
+  saveAssignment,
+  type Assignment,
+  type Contractor,
+} from "@/lib/crm"
 import { formatEuros } from "@/lib/logistics-signals"
 
 type Recommendation = {
@@ -46,9 +55,12 @@ type Status = "todo" | "in_progress" | "done"
 
 type Priority = "low" | "medium" | "high" | "critical"
 
+/** One card's state. The field names are the server's column names on
+ *  purpose: a translation layer between "assignee" here and
+ *  "contractor_id" there would be one more place to get it wrong. */
 type TaskMeta = {
   status: Status
-  assignee: string | null
+  contractor_id: string | null
   deadline: string | null
   priority: Priority
 }
@@ -56,10 +68,6 @@ type TaskMeta = {
 type RecommendationsBoardProps = {
   recommendations: Recommendation[]
   opsType?: string | null
-  assignees?: {
-    id: string
-    name: string
-  }[]
 }
 
 /** Which cards the pill row is showing. Every one of these is counted
@@ -129,7 +137,13 @@ const PRIORITY_LABEL: Record<Priority, string> = {
   critical: "Critique",
 }
 
-const STORAGE_KEY = "sentria_recommendation_tasks_v2"
+/* Where the board used to keep its assignments.
+ *
+ * It is a migration source now, not a store. Every assignment lived in
+ * the administrator's own browser, which meant assigning a task to a
+ * contractor and the contractor never seeing it. The rows are pushed to
+ * the server once, then this key is dropped. */
+const LEGACY_STORAGE_KEY = "sentria_recommendation_tasks_v2"
 
 function getRecommendationId(rec: Recommendation): string {
   return rec.id
@@ -144,13 +158,13 @@ function getInitials(name: string) {
     .join("")
 }
 
-function loadTaskMap(): Record<string, TaskMeta> {
+function loadLegacyTaskMap(): Record<string, TaskMeta> {
   if (typeof window === "undefined") {
     return {}
   }
 
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(LEGACY_STORAGE_KEY)
 
     if (!raw) {
       return {}
@@ -168,16 +182,41 @@ function loadTaskMap(): Record<string, TaskMeta> {
   }
 }
 
-function saveTaskMap(map: Record<string, TaskMeta>) {
-  if (typeof window === "undefined") {
-    return
-  }
-
+function clearLegacyTaskMap() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(map))
+    localStorage.removeItem(LEGACY_STORAGE_KEY)
   } catch {
     // Ignore localStorage errors.
   }
+}
+
+/** The state a card has before anyone has touched it. Priority is
+ *  seeded from the severity so a critical card does not sit in the
+ *  board as "medium" until somebody sets it. */
+function defaultTask(rec: Recommendation): TaskMeta {
+  return {
+    status: "todo",
+    contractor_id: null,
+    deadline: null,
+    priority: getDefaultPriority(rec),
+  }
+}
+
+function taskMapFrom(rows: Assignment[]): Record<string, TaskMeta> {
+  const map: Record<string, TaskMeta> = {}
+
+  for (const row of rows) {
+    if (!row?.task_key) continue
+
+    map[row.task_key] = {
+      status: (row.status ?? "todo") as Status,
+      contractor_id: row.contractor_id ?? null,
+      deadline: row.deadline ?? null,
+      priority: (row.priority ?? "medium") as Priority,
+    }
+  }
+
+  return map
 }
 
 function formatDeadline(deadline: string | null) {
@@ -289,16 +328,117 @@ function RiskRule({ rec }: { rec: Recommendation }) {
 export function RecommendationsBoard({
   recommendations,
   opsType,
-  assignees = [],
 }: RecommendationsBoardProps) {
-  /* This used to read localStorage inside the useState initialiser, which
-     makes the first client render disagree with the server markup. It is
-     read after mount instead, like every other stored value in the app. */
+  /* The company name is the partition these rows live under. It is read
+     after mount, like every other stored value in the app, so the first
+     client render cannot disagree with the server markup. */
+  const { name: companyName } = useCompanyIdentity()
+
   const [taskMap, setTaskMap] = useState<Record<string, TaskMeta>>({})
+  const [contractors, setContractors] = useState<Contractor[]>([])
+  const [loaded, setLoaded] = useState(false)
+
+  /* Two separate failures, because they need different words. One means
+     the board is showing nothing when there may be something; the other
+     means a change the administrator just made did not stick. */
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
-    setTaskMap(loadTaskMap())
-  }, [])
+    if (!companyName) {
+      setLoaded(true)
+      return
+    }
+
+    let cancelled = false
+
+    async function load() {
+      const [stored, people] = await Promise.all([
+        fetchAssignments(companyName),
+        fetchContractors(companyName),
+      ])
+
+      if (cancelled) return
+
+      if (people.ok) setContractors(people.data)
+
+      if (!stored.ok) {
+        setLoadError(stored.detail)
+        setLoaded(true)
+        return
+      }
+
+      setLoadError(null)
+
+      const map = taskMapFrom(stored.data)
+
+      /* One-shot rescue of the assignments that were stranded in this
+         browser before there was a server to hold them. Only when the
+         server has none: if it already has rows, they are the truth and
+         a stale local copy must not overwrite them. */
+      const legacy = loadLegacyTaskMap()
+      const legacyKeys = Object.keys(legacy)
+
+      if (stored.data.length === 0 && legacyKeys.length > 0) {
+        const pushed: string[] = []
+
+        for (const key of legacyKeys) {
+          const task = legacy[key]
+
+          const result = await saveAssignment(companyName, {
+            task_key: key,
+            status: (task.status ?? "todo") as Status,
+            priority: (task.priority ?? "medium") as Priority,
+            deadline: task.deadline ?? null,
+            /* The old shape called this "assignee" and its values were
+               never real contractor ids, so they cannot be carried over
+               without inventing a link. Status, priority and deadline
+               are real; the assignment has to be made again. */
+            contractor_id: null,
+          })
+
+          if (result.ok) pushed.push(key)
+        }
+
+        if (cancelled) return
+
+        if (pushed.length === legacyKeys.length) {
+          clearLegacyTaskMap()
+        }
+
+        for (const key of pushed) {
+          map[key] = {
+            status: (legacy[key].status ?? "todo") as Status,
+            priority: (legacy[key].priority ?? "medium") as Priority,
+            deadline: legacy[key].deadline ?? null,
+            contractor_id: null,
+          }
+        }
+
+        console.info(
+          `[SentrIA] Migrated ${pushed.length}/${legacyKeys.length} board ` +
+            "assignments out of localStorage and onto the server."
+        )
+      }
+
+      setTaskMap(map)
+      setLoaded(true)
+    }
+
+    load()
+
+    return () => {
+      cancelled = true
+    }
+  }, [companyName])
+
+  async function refreshContractors() {
+    if (!companyName) return
+
+    const people = await fetchContractors(companyName)
+
+    if (people.ok) setContractors(people.data)
+  }
 
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<Status | null>(null)
@@ -313,12 +453,7 @@ export function RecommendationsBoard({
       return {
         id,
         rec,
-        task: {
-          status: stored?.status ?? "todo",
-          assignee: stored?.assignee ?? null,
-          deadline: stored?.deadline ?? null,
-          priority: stored?.priority ?? getDefaultPriority(rec),
-        },
+        task: stored ?? defaultTask(rec),
       }
     })
   }, [recommendations, taskMap])
@@ -327,7 +462,9 @@ export function RecommendationsBoard({
     (card) => card.rec.severity === "CRITICAL"
   ).length
 
-  const unassignedCount = cards.filter((card) => !card.task.assignee).length
+  const unassignedCount = cards.filter(
+    (card) => !card.task.contractor_id
+  ).length
 
   const totalExposure = cards.reduce(
     (sum, card) => sum + (card.rec.exposureEUR ?? 0),
@@ -340,7 +477,7 @@ export function RecommendationsBoard({
     }
 
     if (filter === "unassigned") {
-      return cards.filter((card) => !card.task.assignee)
+      return cards.filter((card) => !card.task.contractor_id)
     }
 
     return cards
@@ -352,26 +489,55 @@ export function RecommendationsBoard({
     { id: "unassigned", label: "Non assignées", count: unassignedCount },
   ]
 
+  /** Apply a change, then persist it.
+   *
+   *  Optimistic, because waiting on a round trip before moving a card
+   *  makes the board feel broken. But a rejected save is rolled back and
+   *  said out loud: a board that keeps a change the server refused is
+   *  lying about the state of the operation, which is worse than a board
+   *  that feels slow.
+   */
   function updateTask(id: string, patch: Partial<TaskMeta>) {
-    setTaskMap((current) => {
-      const existing = current[id] ?? {
-        status: "todo" as Status,
-        assignee: null,
-        deadline: null,
-        priority: "medium" as Priority,
+    const card = cards.find((entry) => entry.id === id)
+
+    if (!card) return
+
+    const before = taskMap[id]
+    const next: TaskMeta = { ...card.task, ...patch }
+
+    setTaskMap((current) => ({ ...current, [id]: next }))
+
+    if (!companyName) {
+      setSaveError(
+        "Aucun nom d'entreprise renseigné : la modification ne peut pas " +
+          "être enregistrée. Renseignez-le dans les Paramètres."
+      )
+      return
+    }
+
+    saveAssignment(companyName, { task_key: id, ...next }).then((result) => {
+      if (result.ok) {
+        setSaveError(null)
+
+        /* The open-task counts next to each contractor are derived from
+           these rows, so they move whenever one does. */
+        if ("contractor_id" in patch || "status" in patch) {
+          refreshContractors()
+        }
+
+        return
       }
 
-      const next = {
-        ...current,
-        [id]: {
-          ...existing,
-          ...patch,
-        },
-      }
+      setSaveError(result.detail)
 
-      saveTaskMap(next)
+      setTaskMap((current) => {
+        const rolledBack = { ...current }
 
-      return next
+        if (before) rolledBack[id] = before
+        else delete rolledBack[id]
+
+        return rolledBack
+      })
     })
   }
 
@@ -515,6 +681,32 @@ export function RecommendationsBoard({
         </dl>
       </div>
 
+      {/* Nothing here is silent. A board that cannot read its
+          assignments and a board that has none look identical, and a
+          change that did not reach the server must not sit on screen
+          looking saved. */}
+      {loadError && (
+        <p className="mt-5 rounded-2xl border border-dashed border-border bg-background px-4 py-3 text-xs leading-5 text-muted-foreground">
+          <span className="font-semibold text-foreground">
+            Assignations non chargées.
+          </span>{" "}
+          {loadError} Les cartes ci-dessous sont réelles, mais leur statut
+          et leur responsable ne sont pas ceux enregistrés.
+        </p>
+      )}
+
+      {saveError && (
+        <p
+          role="alert"
+          className="mt-5 rounded-2xl border border-destructive/30 bg-destructive/[0.06] px-4 py-3 text-xs leading-5"
+        >
+          <span className="font-semibold text-destructive">
+            Modification non enregistrée.
+          </span>{" "}
+          {saveError} La carte a été remise dans son état précédent.
+        </p>
+      )}
+
       {/* ------------------------------------------------------------------
           The columns.
           ------------------------------------------------------------------ */}
@@ -606,8 +798,8 @@ export function RecommendationsBoard({
                   const isDragging = draggingId === id
                   const overdue = isDeadlineOverdue(task.deadline)
 
-                  const assignee = assignees.find(
-                    (person) => person.id === task.assignee
+                  const assignee = contractors.find(
+                    (person) => person.id === task.contractor_id
                   )
 
                   return (
@@ -820,27 +1012,38 @@ export function RecommendationsBoard({
                             Responsable
                           </label>
 
+                          {/* Each option carries what the person said
+                              about themselves and how much they are
+                              already holding, because "disponible" next
+                              to "4 en cours" is the case worth seeing
+                              before handing them a fifth. */}
                           <select
-                            value={task.assignee ?? ""}
+                            value={task.contractor_id ?? ""}
                             onChange={(e) =>
                               updateTask(id, {
-                                assignee: e.target.value || null,
+                                contractor_id: e.target.value || null,
                               })
                             }
                             className="mb-1 w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs outline-none focus:border-accent"
                           >
                             <option value="">Non assigné</option>
 
-                            {assignees.map((person) => (
+                            {contractors.map((person) => (
                               <option key={person.id} value={person.id}>
                                 {person.name}
+                                {" · "}
+                                {AVAILABILITY_LABEL[person.availability]}
+                                {person.open_assignments > 0 &&
+                                  ` · ${person.open_assignments} en cours`}
                               </option>
                             ))}
                           </select>
 
-                          {assignees.length === 0 && (
+                          {contractors.length === 0 && (
                             <p className="mb-3 text-[10px] leading-4 text-muted-foreground">
-                              Aucun intervenant enregistré pour l&apos;instant.
+                              {loaded
+                                ? "Aucun intervenant enregistré. Ajoutez-les depuis Intervenants."
+                                : "Chargement des intervenants…"}
                             </p>
                           )}
 
