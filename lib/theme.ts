@@ -34,15 +34,23 @@ export function applyThemeClass(theme: Theme) {
   else if (theme === "light") root.classList.add("light")
 }
 
+/** Light unless the user chose otherwise.
+ *
+ *  This used to default to "system", so anyone whose OS was in dark mode
+ *  landed in a dark SentrIA without ever asking for it. The product is
+ *  designed light first, so light is the default and dark is a choice.
+ *  "system" stays a valid stored value for anyone who picks it. */
+export const DEFAULT_THEME: Theme = "light"
+
 export function readTheme(): Theme {
-  if (typeof window === "undefined") return "system"
+  if (typeof window === "undefined") return DEFAULT_THEME
 
   try {
     const stored = localStorage.getItem(THEME_KEY)
 
-    return isTheme(stored) ? stored : "system"
+    return isTheme(stored) ? stored : DEFAULT_THEME
   } catch {
-    return "system"
+    return DEFAULT_THEME
   }
 }
 
@@ -73,4 +81,4 @@ export function resolvedTheme(theme: Theme): "light" | "dark" {
 /** Runs in <head> before the first paint. Kept dependency-free and
  *  wrapped in try/catch so a blocked localStorage cannot stop the page
  *  from rendering. */
-export const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("${THEME_KEY}");var r=document.documentElement;r.classList.remove("light","dark");if(t==="dark"){r.classList.add("dark")}else if(t==="light"){r.classList.add("light")}}catch(e){}})();`
+export const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("${THEME_KEY}");var r=document.documentElement;r.classList.remove("light","dark");if(t==="dark"){r.classList.add("dark")}else if(t!=="system"){r.classList.add("light")}}catch(e){var r2=document.documentElement;r2.classList.add("light")}})();`

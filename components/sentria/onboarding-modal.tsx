@@ -12,29 +12,24 @@ import {
   Truck,
   Ship,
   Zap,
-  Gauge,
-  Cog,
-  Warehouse,
-  BatteryCharging,
   Activity,
-  Boxes,
-  Snowflake,
-  Radio,
   Database,
   Upload,
   Wifi,
   Clock3,
   Sparkles,
-  Anchor,
-  PackageSearch,
-  Recycle,
   Store,
-  ShoppingCart,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { API_BASE } from "@/lib/api"
 import { PRIORITIES_BY_SECTOR } from "@/lib/priorities"
 import { ACTIVITIES_BY_SECTOR, normalizeOpsType } from "@/lib/activities"
+import {
+  chainFor,
+  PRIMITIVE_NAMES,
+  type OpsType,
+} from "@/lib/logistics-signals"
+import { STAGE_ICONS } from "./flow-track"
 
 type Sector =
   | "industry"
@@ -194,132 +189,50 @@ const CSV_COLUMNS: Record<string, string[]> = {
 /* LOGISTICS PREVIEW                                                          */
 /* -------------------------------------------------------------------------- */
 
-function ContainerYardPreview() {
-  const total = 32
-  const amberIndexes = useMemo(() => [5, 18, 26], [])
-  const redIndex = 11
-
-  const [statuses, setStatuses] = useState<
-    ("ok" | "watch" | "blocked")[]
-  >(() => Array(total).fill("ok"))
-
-  const [showRecommendation, setShowRecommendation] =
-    useState(false)
-
-  useEffect(() => {
-    const timers: ReturnType<typeof setTimeout>[] = []
-
-    timers.push(
-      setTimeout(() => {
-        setStatuses((current) => {
-          const next = [...current]
-
-          amberIndexes.forEach((i) => {
-            next[i] = "watch"
-          })
-
-          return next
-        })
-      }, 450)
-    )
-
-    timers.push(
-      setTimeout(() => {
-        setStatuses((current) => {
-          const next = [...current]
-          next[redIndex] = "watch"
-          return next
-        })
-      }, 950)
-    )
-
-    timers.push(
-      setTimeout(() => {
-        setStatuses((current) => {
-          const next = [...current]
-          next[redIndex] = "blocked"
-          return next
-        })
-      }, 1750)
-    )
-
-    timers.push(
-      setTimeout(() => {
-        setShowRecommendation(true)
-      }, 2100)
-    )
-
-    return () => timers.forEach(clearTimeout)
-  }, [amberIndexes])
-
+/** Bulk selection for a multi-select step. One component so the
+ *  priorities step and the data-sources step offer the same control in
+ *  the same place, with a live count. */
+function BulkSelect({
+  count,
+  total,
+  allSelected,
+  onSelectAll,
+  onClear,
+  noun,
+}: {
+  count: number
+  total: number
+  allSelected: boolean
+  onSelectAll: () => void
+  onClear: () => void
+  noun: string
+}) {
   return (
-    <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-background">
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <div>
-          <p className="text-xs font-semibold text-foreground">
-            Aperçu du terminal conteneurs
-          </p>
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <p className="text-xs text-muted-foreground">
+        <span className="font-semibold text-foreground">{count}</span>
+        {" sur "}
+        {total} {noun}
+      </p>
 
-          <p className="text-[11px] text-muted-foreground">
-            Exemple avec vos futures données
-          </p>
-        </div>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onSelectAll}
+          disabled={allSelected}
+          className="rounded-full border border-border px-3 py-1 text-xs font-semibold transition-colors hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Tout sélectionner
+        </button>
 
-        <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-            Normal
-          </span>
-
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-            À surveiller
-          </span>
-
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-            Bloqué
-          </span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-8 gap-1.5 p-4">
-        {statuses.map((status, i) => (
-          <div
-            key={i}
-            className={cn(
-              "aspect-[7/5] rounded-md border transition-colors duration-300",
-              status === "ok" &&
-                "border-emerald-500/25 bg-emerald-500/[0.06]",
-              status === "watch" &&
-                "border-amber-500/60 bg-amber-500/[0.12]",
-              status === "blocked" &&
-                "border-red-500 bg-red-500/[0.15]"
-            )}
-          />
-        ))}
-      </div>
-
-      <div
-        className={cn(
-          "mx-4 mb-4 flex items-start gap-3 rounded-xl border border-l-2 border-border border-l-red-500 bg-card px-3.5 py-3 transition-all duration-500",
-          showRecommendation
-            ? "translate-y-0 opacity-100"
-            : "translate-y-1 opacity-0"
-        )}
-      >
-        <span className="whitespace-nowrap font-mono text-[11px] text-muted-foreground">
-          CNT-0417
-        </span>
-
-        <p className="text-xs leading-5 text-foreground">
-          Immobile depuis{" "}
-          <span className="font-semibold text-amber-600">
-            18h
-          </span>
-          , contre 4h en moyenne. Vérifier le document douanier
-          avant qu&apos;il ne déclenche des frais de stockage.
-        </p>
+        <button
+          type="button"
+          onClick={onClear}
+          disabled={count === 0}
+          className="rounded-full border border-border px-3 py-1 text-xs font-semibold transition-colors hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Tout désélectionner
+        </button>
       </div>
     </div>
   )
@@ -328,6 +241,107 @@ function ContainerYardPreview() {
 /* -------------------------------------------------------------------------- */
 /* ONBOARDING                                                                 */
 /* -------------------------------------------------------------------------- */
+
+/** What SentrIA will follow for the chosen activity.
+ *
+ *  This replaces an animated container yard: thirty two tiles that went
+ *  amber then red on a timer, with a recommendation appearing at 2.1
+ *  seconds. It showed a scripted incident rather than anything the
+ *  customer's own data would produce, and it only existed for one of the
+ *  six logistics activities.
+ *
+ *  What an operator actually wants to know before uploading is which
+ *  stages will be watched, so this draws their real chain, in the same
+ *  capsule the dashboard uses, in its empty state. Nothing is filled in,
+ *  because nothing has been measured yet, and it says so. */
+function ActivityFlowPreview({ opsType }: { opsType?: OpsType }) {
+  const chain = chainFor(opsType)
+
+  if (chain.length === 0) return null
+
+  return (
+    <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-background">
+      <div className="border-b border-border px-4 py-3">
+        <p className="text-xs font-semibold text-foreground">
+          La chaîne que SentrIA va suivre
+        </p>
+
+        <p className="mt-0.5 text-[11px] text-muted-foreground">
+          {chain.length}{" "}
+          {chain.length > 1 ? "étapes" : "étape"}. Chacune
+          s&apos;allume dès qu&apos;un de vos relevés la concerne.
+        </p>
+      </div>
+
+      <div className="overflow-x-auto p-4">
+        <ol className="flex w-full min-w-max items-center rounded-full bg-track px-3 py-3">
+          {chain.map((id, index) => {
+            const Icon = STAGE_ICONS[id]
+
+            return (
+              <li
+                key={id}
+                className={cn(
+                  "flex items-center",
+                  index < chain.length - 1 && "flex-1"
+                )}
+              >
+                <div className="flex w-14 shrink-0 flex-col items-center">
+                  <span className="relative z-10 flex h-11 w-11 items-center justify-center rounded-full bg-track-muted text-track-muted-foreground">
+                    <Icon className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                </div>
+
+                {index < chain.length - 1 && (
+                  <span
+                    aria-hidden="true"
+                    className="-mx-2 h-6 min-w-10 flex-1 bg-track-muted"
+                  />
+                )}
+              </li>
+            )
+          })}
+        </ol>
+
+        <ol className="mt-2 flex w-full min-w-max items-start px-3">
+          {chain.map((id, index) => (
+            <li
+              key={id}
+              className={cn(
+                "flex items-start",
+                index < chain.length - 1 && "flex-1"
+              )}
+            >
+              <p className="w-14 shrink-0 px-0.5 text-center text-[10px] font-semibold leading-tight">
+                {PRIMITIVE_NAMES[id]}
+              </p>
+
+              {index < chain.length - 1 && (
+                <span className="-mx-2 min-w-10 flex-1" />
+              )}
+            </li>
+          ))}
+        </ol>
+      </div>
+
+      <p className="border-t border-border px-4 py-2.5 text-[11px] leading-5 text-muted-foreground">
+        {opsType === "multi" ? (
+          <>
+            Toutes les étapes possibles sont listées : dites-nous
+            lesquelles vous exploitez réellement et la chaîne se
+            réduira à celles-là.
+          </>
+        ) : (
+          <>
+            En gris parce qu&apos;aucune donnée n&apos;a encore été
+            importée. SentrIA n&apos;invente rien avant votre premier
+            fichier.
+          </>
+        )}
+      </p>
+    </div>
+  )
+}
 
 export function OnboardingView({
   onComplete,
@@ -438,6 +452,30 @@ export function OnboardingView({
         : [...current, id]
     )
   }
+
+  /* Bulk selection. The selectable set skips anything marked coming
+     soon, so "tout sélectionner" never turns on a priority the product
+     does not run yet. */
+  const selectableEquipment = useMemo(
+    () => equipment.filter((item) => !item.comingSoon).map((item) => item.id),
+    [equipment]
+  )
+
+  const allEquipmentSelected =
+    selectableEquipment.length > 0 &&
+    selectableEquipment.every((id) => selectedEquipment.includes(id))
+
+  function selectAllEquipment() {
+    setSelectedEquipment(selectableEquipment)
+  }
+
+  function clearEquipment() {
+    setSelectedEquipment([])
+  }
+
+  const allSourcesSelected =
+    DATA_SOURCES.length > 0 &&
+    DATA_SOURCES.every((source) => selectedSources.includes(source.id))
 
   /** Columns expected for whatever was chosen in steps 1 and 2. */
   const csvColumns =
@@ -922,11 +960,11 @@ export function OnboardingView({
                   </span>
                 </div>
 
-                {/* Keep the original logistics-specific demonstration. */}
-                {isLogistics &&
-                  subType === "port-conteneurs" && (
-                    <ContainerYardPreview />
-                  )}
+                {isLogistics && subType && (
+                  <ActivityFlowPreview
+                    opsType={normalizeOpsType(subType)}
+                  />
+                )}
               </div>
             )}
 
@@ -952,6 +990,19 @@ export function OnboardingView({
                     </>
                   )}
                 </div>
+
+                <BulkSelect
+                  count={selectedEquipment.length}
+                  total={selectableEquipment.length}
+                  allSelected={allEquipmentSelected}
+                  onSelectAll={selectAllEquipment}
+                  onClear={clearEquipment}
+                  noun={
+                    selectedEquipment.length > 1
+                      ? "priorités sélectionnées"
+                      : "priorité sélectionnée"
+                  }
+                />
 
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   {equipment.map((item) => {
@@ -1011,20 +1062,9 @@ export function OnboardingView({
                   })}
                 </div>
 
-                <div className="mt-4 flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
-                  <span className="text-xs text-muted-foreground">
-                    <span className="font-semibold text-foreground">
-                      {selectedEquipment.length}
-                    </span>{" "}
-                    {selectedEquipment.length > 1
-                      ? "priorités sélectionnées"
-                      : "priorité sélectionnée"}
-                  </span>
-
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Modifiable plus tard
-                  </span>
-                </div>
+                <p className="mt-4 rounded-xl border border-border bg-background px-4 py-3 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Modifiable plus tard
+                </p>
               </div>
             )}
 
@@ -1034,6 +1074,19 @@ export function OnboardingView({
 
             {step === sourcesStepNumber && (
               <div>
+                <BulkSelect
+                  count={selectedSources.length}
+                  total={DATA_SOURCES.length}
+                  allSelected={allSourcesSelected}
+                  onSelectAll={() =>
+                    setSelectedSources(DATA_SOURCES.map((s) => s.id))
+                  }
+                  onClear={() => setSelectedSources([])}
+                  noun={
+                    selectedSources.length > 1 ? "sources choisies" : "source choisie"
+                  }
+                />
+
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                   {DATA_SOURCES.map((source) => {
                     const Icon = source.icon
