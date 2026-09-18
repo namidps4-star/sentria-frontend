@@ -10,6 +10,7 @@ import {
   priorityMeta,
   type Sector,
 } from "@/lib/priorities"
+import { useTx } from "@/lib/i18n"
 
 /* --------------------------------------------------------------------------
  * One rule, so the same selection never looks like two different features:
@@ -44,6 +45,8 @@ export function PriorityCards({
   onOpen: (id: string) => void
   emptyLabel: string
 }) {
+  const tx = useTx()
+
   if (ids.length === 0) {
     return (
       <div className="rounded-3xl border border-border bg-card p-6 text-sm text-muted-foreground">
@@ -68,11 +71,11 @@ export function PriorityCards({
               <div>
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-accent-foreground">
                   {Icon && <Icon className="h-3 w-3" aria-hidden="true" />}
-                  Priorité
+                  {tx("Priorité", "Priority")}
                 </span>
 
                 <h4 className="mt-3 font-heading text-lg font-bold">
-                  {priorityGoal(sector, id)}
+                  {priorityGoal(sector, id, tx)}
                 </h4>
               </div>
 
@@ -82,11 +85,11 @@ export function PriorityCards({
             </div>
 
             <p className="mt-3 text-sm leading-5 text-muted-foreground">
-              {priorityDescription(sector, id)}
+              {priorityDescription(sector, id, tx)}
             </p>
 
             <div className="mt-5 text-xs font-semibold text-foreground">
-              Ouvrir la priorité →
+              {tx("Ouvrir la priorité →", "Open this priority →")}
             </div>
           </button>
         )
@@ -105,7 +108,7 @@ export function PriorityPills({
   ids,
   activeId,
   onOpen,
-  label = "Priorités",
+  label,
   className,
 }: PriorityNavProps & {
   activeId?: string | null
@@ -113,6 +116,13 @@ export function PriorityPills({
   label?: string
   className?: string
 }) {
+  const tx = useTx()
+
+  /* Resolved here rather than as a default parameter: a default cannot
+     call a hook, and hardcoding "Priorités" there is how the pill row
+     kept its French heading in an English dashboard. */
+  const heading = label ?? tx("Priorités", "Priorities")
+
   if (ids.length === 0) return null
 
   return (
@@ -124,12 +134,12 @@ export function PriorityPills({
     >
       <div className="flex flex-wrap items-center gap-2">
         <span className="mr-1 text-xs font-semibold text-muted-foreground">
-          {label}
+          {heading}
         </span>
 
         {ids.map((id) => {
           const Icon = priorityMeta(sector, id)?.icon
-          const text = priorityLabel(sector, id)
+          const text = priorityLabel(sector, id, tx)
 
           if (!onOpen) {
             return (
@@ -177,16 +187,25 @@ export function PriorityHeading({
   count: number
   total?: number
 }) {
+  const tx = useTx()
+
+  const scope =
+    count > 0 && total && total > count
+      ? tx(` (${count} sur ${total})`, ` (${count} of ${total})`)
+      : ""
+
   return (
     <div className="mb-4">
-      <h3 className="font-heading text-lg font-bold">Vos priorités</h3>
+      <h3 className="font-heading text-lg font-bold">
+        {tx("Vos priorités", "Your priorities")}
+      </h3>
 
       <p className="mt-1 text-sm text-muted-foreground">
-        {count > 0
-          ? `Sélectionnées lors de votre onboarding${
-              total && total > count ? ` (${count} sur ${total})` : ""
-            }.`
-          : "Sélectionnées lors de votre onboarding."}
+        {tx(
+          "Sélectionnées lors de votre onboarding",
+          "Selected while you were setting up"
+        )}
+        {scope}.
       </p>
     </div>
   )

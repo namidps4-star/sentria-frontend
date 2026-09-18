@@ -132,6 +132,11 @@ function translatedSpans(source) {
        operator. A translated stack trace helps nobody. */
     /\bconsole\.(?:log|warn|error|info|debug)\(\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1/g,
     /\bnew Error\(\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1/g,
+
+    /* Not copy: a value being compared against. Translating the right
+       side of `data.message === "Processed successfully"` would break the
+       comparison, which is the opposite of what this tool is for. */
+    /[=!]==\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1/g,
   ]
 
   for (const re of patterns) {
@@ -158,7 +163,19 @@ function findings(file) {
        - comments, because a French explanation of the code is not copy
        - import and export-from lines, whose strings are module paths
        - "use client" and friends */
-  const code = source
+  // An explicit, reviewable opt-out for spans that are not copy at all:
+  // CSV header names the customer's own file must carry, for instance.
+  // Wrap them between an "i18n-ignore-start: why" block comment and an
+  // "i18n-ignore-end" one. An unclosed start runs to the end of the
+  // file, which is loud enough to notice. Nothing else in this tool lets
+  // a string through, so this marker is the only place a reader has to
+  // check before believing a zero.
+  const withoutIgnored = source.replace(
+    /i18n-ignore-start[\s\S]*?(?:i18n-ignore-end|$)/g,
+    blank
+  )
+
+  const code = withoutIgnored
     .replace(/\/\*[\s\S]*?\*\//g, blank)
     .replace(/(^|[^:])\/\/[^\n]*/g, blank)
     .replace(/^\s*(?:import|export)\s[\s\S]*?from\s*["'][^"'\n]*["']/gm, blank)

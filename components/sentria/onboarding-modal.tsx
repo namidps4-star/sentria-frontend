@@ -24,6 +24,7 @@ import {
   Store,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { localized, useTx, type Localized, type Tx } from "@/lib/i18n"
 import { API_BASE } from "@/lib/api"
 import {
   detectTimezoneId,
@@ -66,18 +67,28 @@ type Sector =
 
 type SectorConfig = {
   id: Sector
-  label: string
-  description: string
+  label: Localized
+  description: Localized
   icon: React.ElementType
   recommended?: boolean
-  maturity?: "Pilote recommandé" | "Accès anticipé"
+  /* A key, not the badge text. Storing the French words here meant the
+     badge could only ever be French, and comparing against them meant
+     the comparison broke the moment one was translated. */
+  maturity?: "pilot" | "early"
+}
+
+/** The badge wording for a maturity key. */
+function maturityLabel(maturity: "pilot" | "early", tx: Tx): string {
+  return maturity === "pilot"
+    ? tx("Pilote recommandé", "Recommended pilot")
+    : tx("Accès anticipé", "Early access")
 }
 
 type DataSource = {
   id: "erp" | "iot" | "csv"
-  label: string
-  description: string
-  detail: string
+  label: Localized
+  description: Localized
+  detail: Localized
   icon: React.ElementType
 }
 
@@ -88,53 +99,74 @@ type DataSource = {
 const SECTORS: SectorConfig[] = [
   {
     id: "logistics",
-    label: "Logistique",
-    description: "Port, entrepôt, transport et flux",
+    label: localized("Logistique", "Logistics"),
+    description: localized(
+      "Port, entrepôt, transport et flux",
+      "Port, warehouse, transport and flows"
+    ),
     icon: Ship,
     recommended: true,
-    maturity: "Pilote recommandé",
+    maturity: "pilot",
   },
   {
     id: "industry",
-    label: "Industrie",
-    description: "Machines, production et maintenance",
+    label: localized("Industrie", "Industry"),
+    description: localized(
+      "Machines, production et maintenance",
+      "Machines, production and maintenance"
+    ),
     icon: Factory,
-    maturity: "Accès anticipé",
+    maturity: "early",
   },
   {
     id: "health",
-    label: "Santé",
-    description: "Stocks, chaîne du froid et produits",
+    label: localized("Santé", "Health"),
+    description: localized(
+      "Stocks, chaîne du froid et produits",
+      "Stock, cold chain and products"
+    ),
     icon: HeartPulse,
-    maturity: "Accès anticipé",
+    maturity: "early",
   },
   {
     id: "agriculture",
-    label: "Agriculture",
-    description: "Récoltes, stockage et transport",
+    label: localized("Agriculture", "Agriculture"),
+    description: localized(
+      "Récoltes, stockage et transport",
+      "Harvests, storage and transport"
+    ),
     icon: Wheat,
-    maturity: "Accès anticipé",
+    maturity: "early",
   },
   {
     id: "transportation",
-    label: "Transport",
-    description: "Flotte, moteurs et maintenance",
+    label: localized("Transport", "Transport"),
+    description: localized(
+      "Flotte, moteurs et maintenance",
+      "Fleet, engines and maintenance"
+    ),
     icon: Truck,
-    maturity: "Accès anticipé",
+    maturity: "early",
   },
   {
     id: "energy",
-    label: "Énergie",
-    description: "Générateurs, carburant et température",
+    label: localized("Énergie", "Energy"),
+    description: localized(
+      "Générateurs, carburant et température",
+      "Generators, fuel and temperature"
+    ),
     icon: Zap,
-    maturity: "Accès anticipé",
+    maturity: "early",
   },
   {
     id: "commerce",
-    label: "Commerce",
-    description: "Stocks, rayons et approvisionnement",
+    label: localized("Commerce", "Retail"),
+    description: localized(
+      "Stocks, rayons et approvisionnement",
+      "Stock, shelves and replenishment"
+    ),
     icon: Store,
-    maturity: "Accès anticipé",
+    maturity: "early",
   },
 ]
 
@@ -149,23 +181,41 @@ const SECTORS: SectorConfig[] = [
 const DATA_SOURCES: DataSource[] = [
   {
     id: "erp",
-    label: "ERP",
-    description: "Odoo, SAP ou autre logiciel de gestion",
-    detail: "Stocks, achats, production, maintenance...",
+    label: localized("ERP", "ERP"),
+    description: localized(
+      "Odoo, SAP ou autre logiciel de gestion",
+      "Odoo, SAP or another management system"
+    ),
+    detail: localized(
+      "Stocks, achats, production, maintenance...",
+      "Stock, purchasing, production, maintenance..."
+    ),
     icon: Database,
   },
   {
     id: "iot",
-    label: "IoT / Capteurs",
-    description: "Données provenant de vos équipements",
-    detail: "Température, pression, vibrations, consommation...",
+    label: localized("IoT / Capteurs", "IoT / Sensors"),
+    description: localized(
+      "Données provenant de vos équipements",
+      "Readings coming from your equipment"
+    ),
+    detail: localized(
+      "Température, pression, vibrations, consommation...",
+      "Temperature, pressure, vibration, consumption..."
+    ),
     icon: Wifi,
   },
   {
     id: "csv",
-    label: "CSV / Excel",
-    description: "Importez vos données existantes",
-    detail: "Une solution simple pour commencer sans connexion",
+    label: localized("CSV / Excel", "CSV / Excel"),
+    description: localized(
+      "Importez vos données existantes",
+      "Import the data you already have"
+    ),
+    detail: localized(
+      "Une solution simple pour commencer sans connexion",
+      "The simple way to start, with nothing to connect"
+    ),
     icon: Upload,
   },
 ]
@@ -177,7 +227,12 @@ const DATA_SOURCES: DataSource[] = [
  *  the user which columns are expected is the difference between an
  *  upload that works and one that silently produces no alerts.
  *
- *  Keyed by business_type first, then sector as the fallback. */
+ *  Keyed by business_type first, then sector as the fallback.
+ *
+ *  These are the header names the customer's own file must carry, not
+ *  copy: translating "Torque [Nm]" would stop the column matching.
+ *
+ *  i18n-ignore-start: CSV header names, matched against the file */
 const CSV_COLUMNS: Record<string, string[]> = {
   // Health
   "pharmacie": [
@@ -208,6 +263,7 @@ const CSV_COLUMNS: Record<string, string[]> = {
   "energy": ["generator_id", "fuel_level", "coolant_temp"],
   "commerce": ["product_name", "stock_qty", "min_stock", "shrinkage_rate"],
 }
+/* i18n-ignore-end */
 
 /* -------------------------------------------------------------------------- */
 /* LOGISTICS PREVIEW                                                          */
@@ -246,11 +302,13 @@ function BulkSelect({
   onClear: () => void
   noun: string
 }) {
+  const tx = useTx()
+
   return (
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
       <p className="text-xs text-muted-foreground">
         <span className="font-semibold text-foreground">{count}</span>
-        {" sur "}
+        {tx(" sur ", " of ")}
         {total} {noun}
       </p>
 
@@ -261,7 +319,7 @@ function BulkSelect({
           disabled={allSelected}
           className="rounded-full border border-border px-3 py-1 text-xs font-semibold transition-colors hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Tout sélectionner
+          {tx("Tout sélectionner", "Select all")}
         </button>
 
         <button
@@ -270,7 +328,7 @@ function BulkSelect({
           disabled={count === 0}
           className="rounded-full border border-border px-3 py-1 text-xs font-semibold transition-colors hover:bg-accent hover:text-accent-foreground disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Tout désélectionner
+          {tx("Tout désélectionner", "Clear all")}
         </button>
       </div>
     </div>
@@ -300,6 +358,8 @@ function ActivityFlowPreview({
   opsType?: OpsType
   selected?: Exclude<OpsType, "multi">[]
 }) {
+  const tx = useTx()
+
   const chain = chainFor(opsType, selected)
 
   if (chain.length === 0) return null
@@ -308,13 +368,19 @@ function ActivityFlowPreview({
     <div className="mt-5 overflow-hidden rounded-2xl border border-border bg-background">
       <div className="border-b border-border px-4 py-3">
         <p className="text-xs font-semibold text-foreground">
-          La chaîne que SentrIA va suivre
+          {tx(
+            "La chaîne que SentrIA va suivre",
+            "The chain SentrIA will follow"
+          )}
         </p>
 
         <p className="mt-0.5 text-[11px] text-muted-foreground">
           {chain.length}{" "}
-          {chain.length > 1 ? "étapes" : "étape"}. Chacune
-          s&apos;allume dès qu&apos;un de vos relevés la concerne.
+          {chain.length > 1 ? tx("étapes", "stages") : tx("étape", "stage")}.{" "}
+          {tx(
+            "Chacune s'allume dès qu'un de vos relevés la concerne.",
+            "Each one lights up as soon as one of your readings touches it."
+          )}
         </p>
       </div>
 
@@ -426,6 +492,23 @@ export function OnboardingView({
 }: {
   onComplete?: () => void
 }) {
+  /* The language the wizard itself is written in. It follows the choice
+     made on step 1: picking English on the first screen and then reading
+     French for the next seven was the whole of the complaint. */
+  const tx = useTx()
+
+  /** Resolve a module-level fr/en pair. The sector, priority and source
+   *  catalogues are built outside React, so they hold pairs. */
+  const px = (text: Localized) => tx(text.fr, text.en)
+
+  /** A sector's display name, falling back to its id so a stale id saved
+   *  by an older build still renders as something. */
+  const sectorName = (id: string) => {
+    const found = SECTORS.find((item) => item.id === id)
+
+    return found ? px(found.label) : id
+  }
+
   useEffect(() => {
     const previous = document.body.style.overflow
 
@@ -546,53 +629,69 @@ export function OnboardingView({
 
   const STEP_META = [
     {
-      title: "Votre langue",
-      description:
+      title: tx("Votre langue", "Your language"),
+      description: tx(
         "SentrIA vous répond dans la langue que vous choisissez.",
+        "SentrIA answers you in the language you choose."
+      ),
       icon: Languages,
     },
     {
-      title: "Votre pays",
-      description:
+      title: tx("Votre pays", "Your country"),
+      description: tx(
         "Il détermine la devise de vos montants et votre fuseau.",
+        "It sets the currency your amounts are in, and your time zone."
+      ),
       icon: Globe2,
     },
     {
-      title: "Votre fuseau horaire",
-      description:
+      title: tx("Votre fuseau horaire", "Your time zone"),
+      description: tx(
         "Vos seuils sont en heures : ils doivent suivre votre journée.",
+        "Your thresholds are in hours, so they have to follow your day."
+      ),
       icon: Clock3,
     },
     {
-      title: "Votre entreprise",
-      description:
+      title: tx("Votre entreprise", "Your company"),
+      description: tx(
         "Le nom qui apparaît dans vos rapports et dans Ask SentrIA.",
+        "The name that appears in your reports and in Ask SentrIA."
+      ),
       icon: Building2,
     },
     {
-      title: "Votre secteur",
-      description:
+      title: tx("Votre secteur", "Your sector"),
+      description: tx(
         "Choisissez le secteur que SentrIA doit surveiller.",
+        "Choose the sector SentrIA should monitor."
+      ),
       icon: Layers,
     },
     {
-      title: "Votre activité",
-      description:
+      title: tx("Votre activité", "Your activity"),
+      description: tx(
         "Précisez votre activité pour adapter les seuils d'alerte.",
+        "Say which activity it is, so the alert thresholds fit it."
+      ),
       icon: Store,
     },
     {
       title: isLogistics
-        ? "Vos priorités"
-        : "Que voulez-vous surveiller ?",
-      description:
+        ? tx("Vos priorités", "Your priorities")
+        : tx("Que voulez-vous surveiller ?", "What do you want to monitor?"),
+      description: tx(
         "Sélectionnez ce qui compte pour votre activité.",
+        "Select what matters for your activity."
+      ),
       icon: Sparkles,
     },
     {
-      title: "Vos données",
-      description:
+      title: tx("Vos données", "Your data"),
+      description: tx(
         "Connectez une source, ou configurez plus tard.",
+        "Connect a source, or set this up later."
+      ),
       icon: Database,
     },
   ]
@@ -747,15 +846,24 @@ export function OnboardingView({
 
       setCsvDone(true)
       setCsvMsg(
+        /* The backend's own success sentinel, not copy: it is compared
+           against, so it must not be translated. */
         data.message === "Processed successfully"
-          ? `${file.name} importé. Les alertes apparaîtront sur le tableau de bord.`
-          : data.message ?? `${file.name} importé.`
+          ? tx(
+              `${file.name} importé. Les alertes apparaîtront sur le tableau de bord.`,
+              `${file.name} imported. The alerts will appear on the dashboard.`
+            )
+          : data.message ??
+            tx(`${file.name} importé.`, `${file.name} imported.`)
       )
     } catch (error) {
       console.error("[SentrIA] onboarding upload failed:", error)
       setCsvFailed(true)
       setCsvMsg(
-        "Import impossible. Vérifiez la console du navigateur, puis réessayez."
+        tx(
+          "Import impossible. Vérifiez la console du navigateur, puis réessayez.",
+          "The import failed. Check the browser console, then try again."
+        )
       )
     } finally {
       setCsvUploading(false)
@@ -894,17 +1002,21 @@ export function OnboardingView({
           <div className="max-w-3xl">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
               <Zap className="h-3.5 w-3.5" />
-              Bienvenue sur SentrIA
+              {tx("Bienvenue sur SentrIA", "Welcome to SentrIA")}
             </span>
 
             <h1 className="mt-4 font-heading text-3xl font-bold tracking-tight md:text-5xl">
-              Configurez votre surveillance opérationnelle.
+              {tx(
+                "Configurez votre surveillance opérationnelle.",
+                "Set up your operational monitoring."
+              )}
             </h1>
 
             <p className="mt-4 max-w-2xl text-sm leading-6 text-background/70 md:text-base">
-              Quelques étapes suffisent pour connecter vos données,
-              configurer votre activité et commencer à détecter les
-              situations critiques.
+              {tx(
+                "Quelques étapes suffisent pour connecter vos données, configurer votre activité et commencer à détecter les situations critiques.",
+                "A few steps connect your data, describe your operation, and start catching the situations that matter."
+              )}
             </p>
           </div>
         </div>
@@ -1179,7 +1291,7 @@ export function OnboardingView({
                             active ? "text-accent" : "text-muted-foreground"
                           )}
                         >
-                          Déduit de votre pays
+                          {tx("Déduit de votre pays", "From your country")}
                         </p>
                       )}
                     </button>
@@ -1196,7 +1308,7 @@ export function OnboardingView({
               <div className="max-w-xl">
                 <label className="block">
                   <span className="text-sm font-medium">
-                    Nom de votre entreprise
+                    {tx("Nom de votre entreprise", "Your company name")}
                   </span>
 
                   <input
@@ -1211,7 +1323,10 @@ export function OnboardingView({
                         nextStep()
                       }
                     }}
-                    placeholder="Ex. Terminal Atlantique SA"
+                    placeholder={tx(
+                      "Ex. Terminal Atlantique SA",
+                      "e.g. Atlantic Terminal Ltd"
+                    )}
                     autoComplete="organization"
                     className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-4 font-heading text-xl font-bold tracking-tight outline-none transition-colors focus:border-ring md:text-2xl"
                   />
@@ -1222,16 +1337,18 @@ export function OnboardingView({
                     told. */}
                 <div className="mt-5 rounded-2xl border border-border bg-background p-4">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    Ce que SentrIA dira
+                    {tx("Ce que SentrIA dira", "What SentrIA will say")}
                   </p>
 
                   <p className="mt-2 text-sm">
-                    <span className="text-muted-foreground">Bonjour </span>
+                    <span className="text-muted-foreground">
+                      {tx("Bonjour ", "Hello ")}
+                    </span>
                     <span className="font-bold">
                       {companyName.trim() || "…"}
                     </span>
                     <span className="text-muted-foreground">
-                      . Je suis SentrIA.
+                      {tx(". Je suis SentrIA.", ". I am SentrIA.")}
                     </span>
                   </p>
                 </div>
@@ -1285,7 +1402,7 @@ export function OnboardingView({
                                 : "bg-muted text-muted-foreground"
                           )}
                         >
-                          {item.maturity}
+                          {maturityLabel(item.maturity, tx)}
                         </span>
                       )}
 
@@ -1298,7 +1415,7 @@ export function OnboardingView({
                       </div>
 
                       <span className="mt-2 text-sm font-semibold">
-                        {item.label}
+                        {px(item.label)}
                       </span>
 
                       <span
@@ -1309,12 +1426,12 @@ export function OnboardingView({
                             : "text-muted-foreground"
                         )}
                       >
-                        {item.description}
+                        {px(item.description)}
                       </span>
 
                       {secondary && (
                         <span className="mt-1.5 rounded-full bg-foreground px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-background">
-                          Secteur secondaire
+                          {tx("Secteur secondaire", "Secondary sector")}
                         </span>
                       )}
                     </button>
@@ -1339,13 +1456,17 @@ export function OnboardingView({
 
                   <span>
                     <span className="block text-sm font-semibold">
-                      Mon entreprise couvre plusieurs secteurs
+                      {tx(
+                        "Mon entreprise couvre plusieurs secteurs",
+                        "My company covers more than one sector"
+                      )}
                     </span>
 
                     <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
-                      Par exemple une usine avec son propre entrepôt.
-                      Le secteur choisi ci-dessus reste le principal,
-                      et les autres s&apos;ajoutent au tableau de bord.
+                      {tx(
+                        "Par exemple une usine avec son propre entrepôt. Le secteur choisi ci-dessus reste le principal, et les autres s'ajoutent au tableau de bord.",
+                        "A factory with its own warehouse, for instance. The sector chosen above stays the main one, and the others are added to the dashboard."
+                      )}
                     </span>
                   </span>
                 </label>
@@ -1354,20 +1475,26 @@ export function OnboardingView({
                   <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">
                     {extraSectors.length > 0 ? (
                       <>
-                        Secteurs :{" "}
+                        {tx("Secteurs :", "Sectors:")}{" "}
                         <span className="font-semibold text-foreground">
                           {allSectors
                             .map(
                               (id) =>
-                                SECTORS.find((x) => x.id === id)?.label ?? id
+                                sectorName(id)
                             )
                             .join(", ")}
                         </span>
                       </>
                     ) : sector ? (
-                      "Touchez un autre secteur pour l'ajouter. Le premier reste le principal."
+                      tx(
+                        "Touchez un autre secteur pour l'ajouter. Le premier reste le principal.",
+                        "Tap another sector to add it. The first stays the main one."
+                      )
                     ) : (
-                      "Choisissez d'abord votre secteur principal."
+                      tx(
+                        "Choisissez d'abord votre secteur principal.",
+                        "Choose your main sector first."
+                      )
                     )}
                   </p>
                 )}
@@ -1382,7 +1509,7 @@ export function OnboardingView({
               <div>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
-                    {selectedSector?.label}
+                    {selectedSector ? px(selectedSector.label) : null}
                   </div>
 
                   <p className="text-xs leading-5 text-muted-foreground">
@@ -1441,14 +1568,14 @@ export function OnboardingView({
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex min-w-0 items-center gap-2">
                               <span className="truncate text-sm font-semibold">
-                                {item.label}
+                                {px(item.label)}
                               </span>
 
                               {item.maturity && (
                                 <span
                                   className={cn(
                                     "shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider",
-                                    item.maturity === "Pilote recommandé"
+                                    item.maturity === "pilot"
                                       ? active
                                         ? "bg-accent text-accent-foreground"
                                         : "bg-accent/20 text-accent-foreground"
@@ -1457,7 +1584,7 @@ export function OnboardingView({
                                         : "bg-muted text-muted-foreground"
                                   )}
                                 >
-                                  {item.maturity}
+                                  {maturityLabel(item.maturity, tx)}
                                 </span>
                               )}
                             </div>
@@ -1476,7 +1603,7 @@ export function OnboardingView({
                                 : "text-muted-foreground"
                             )}
                           >
-                            {item.description}
+                            {px(item.description)}
                           </span>
                         </div>
                       </button>
@@ -1489,28 +1616,36 @@ export function OnboardingView({
                     {subTypes2.length > 0 ? (
                       <>
                         {subTypes2.length > 1
-                          ? "Activités retenues : "
-                          : "Activité retenue : "}
+                          ? tx("Activités retenues : ", "Activities chosen: ")
+                          : tx("Activité retenue : ", "Activity chosen: ")}
 
                         <span className="font-semibold text-foreground">
                           {subTypes2
-                            .map(
-                              (id) =>
-                                subTypes.find((item) => item.id === id)
-                                  ?.label ?? id
-                            )
+                            .map((id) => {
+                              const found = subTypes.find(
+                                (item) => item.id === id
+                              )
+
+                              return found ? px(found.label) : id
+                            })
                             .join(", ")}
                         </span>
                       </>
                     ) : isLogistics ? (
-                      "Cochez chaque activité que vous exploitez"
+                      tx(
+                        "Cochez chaque activité que vous exploitez",
+                        "Tick every activity you run"
+                      )
                     ) : (
-                      "Sélectionnez l'activité la plus proche de la vôtre"
+                      tx(
+                        "Sélectionnez l'activité la plus proche de la vôtre",
+                        "Pick the activity closest to yours"
+                      )
                     )}
                   </span>
 
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Modifiable plus tard
+                    {tx("Modifiable plus tard", "Changeable later")}
                   </span>
                 </div>
 
@@ -1530,7 +1665,7 @@ export function OnboardingView({
             {step === equipmentStepNumber && sector && (
               <div>
                 <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
-                  {selectedSector?.label}
+                  {selectedSector ? px(selectedSector.label) : null}
                   {subType && (
                     <>
                       <span className="text-muted-foreground/50">
@@ -1554,8 +1689,8 @@ export function OnboardingView({
                   onClear={clearEquipment}
                   noun={
                     selectedEquipment.length > 1
-                      ? "priorités sélectionnées"
-                      : "priorité sélectionnée"
+                      ? tx("priorités sélectionnées", "priorities selected")
+                      : tx("priorité sélectionnée", "priority selected")
                   }
                 />
 
@@ -1587,7 +1722,7 @@ export function OnboardingView({
                       >
                         {disabled && (
                           <span className="absolute right-4 top-4 rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-700 dark:border-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-                            Bientôt disponible
+                            {tx("Bientôt disponible", "Coming soon")}
                           </span>
                         )}
 
@@ -1600,7 +1735,7 @@ export function OnboardingView({
                         </div>
 
                         <span className="mt-2 text-sm font-semibold">
-                          {item.label}
+                          {px(item.label)}
                         </span>
 
                         <span
@@ -1611,7 +1746,7 @@ export function OnboardingView({
                               : "text-muted-foreground"
                           )}
                         >
-                          {item.description}
+                          {px(item.description)}
                         </span>
                       </button>
                     )
@@ -1619,7 +1754,7 @@ export function OnboardingView({
                 </div>
 
                 <p className="mt-4 rounded-xl border border-border bg-background px-4 py-3 text-[10px] uppercase tracking-wider text-muted-foreground">
-                  Modifiable plus tard
+                  {tx("Modifiable plus tard", "Changeable later")}
                 </p>
               </div>
             )}
@@ -1639,7 +1774,9 @@ export function OnboardingView({
                   }
                   onClear={() => setSelectedSources([])}
                   noun={
-                    selectedSources.length > 1 ? "sources choisies" : "source choisie"
+                    selectedSources.length > 1
+                      ? tx("sources choisies", "sources chosen")
+                      : tx("source choisie", "source chosen")
                   }
                 />
 
@@ -1670,7 +1807,7 @@ export function OnboardingView({
                         </div>
 
                         <span className="mt-2 text-sm font-semibold">
-                          {source.label}
+                          {px(source.label)}
                         </span>
 
                         <span
@@ -1681,7 +1818,7 @@ export function OnboardingView({
                               : "text-muted-foreground"
                           )}
                         >
-                          {source.description}
+                          {px(source.description)}
                         </span>
 
                         <span
@@ -1692,7 +1829,7 @@ export function OnboardingView({
                               : "text-muted-foreground/70"
                           )}
                         >
-                          {source.detail}
+                          {px(source.detail)}
                         </span>
                       </button>
                     )
@@ -1709,17 +1846,25 @@ export function OnboardingView({
 
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold">
-                          Importez votre fichier maintenant
+                          {tx(
+                            "Importez votre fichier maintenant",
+                            "Import your file now"
+                          )}
                         </p>
 
                         <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                          Chaque activité attend ses propres colonnes.
-                          Pour{" "}
+                          {tx(
+                            "Chaque activité attend ses propres colonnes. Pour",
+                            "Each activity expects its own columns. For"
+                          )}{" "}
                           <span className="font-semibold text-foreground">
-                            {selectedSubType?.label ??
-                              selectedSector?.label}
+                            {selectedSubType
+                              ? px(selectedSubType.label)
+                              : selectedSector
+                                ? px(selectedSector.label)
+                                : null}
                           </span>
-                          , SentrIA lit :
+                          {tx(", SentrIA lit :", ", SentrIA reads:")}
                         </p>
 
                         {csvColumns.length > 0 && (
@@ -1736,8 +1881,10 @@ export function OnboardingView({
                         )}
 
                         <p className="mt-2 text-[11px] leading-5 text-muted-foreground">
-                          Les colonnes manquantes sont simplement
-                          ignorées, jamais une erreur.
+                          {tx(
+                            "Les colonnes manquantes sont simplement ignorées, jamais une erreur.",
+                            "Missing columns are simply skipped, never an error."
+                          )}
                         </p>
 
                         <label
@@ -1752,10 +1899,16 @@ export function OnboardingView({
                           <Upload className="h-4 w-4" aria-hidden="true" />
 
                           {csvUploading
-                            ? "Import en cours..."
+                            ? tx("Import en cours...", "Importing...")
                             : csvDone
-                              ? "Importer un autre fichier"
-                              : "Choisir un fichier CSV"}
+                              ? tx(
+                                  "Importer un autre fichier",
+                                  "Import another file"
+                                )
+                              : tx(
+                                  "Choisir un fichier CSV",
+                                  "Choose a CSV file"
+                                )}
 
                           <input
                             type="file"
@@ -1763,7 +1916,10 @@ export function OnboardingView({
                             className="sr-only"
                             onChange={handleOnboardingUpload}
                             disabled={csvUploading || !sector}
-                            aria-label="Importer un fichier CSV"
+                            aria-label={tx(
+                              "Importer un fichier CSV",
+                              "Import a CSV file"
+                            )}
                           />
                         </label>
 
@@ -1853,7 +2009,7 @@ export function OnboardingView({
                   onClick={finish}
                   className="inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-semibold text-accent-foreground"
                 >
-                  Ouvrir mon dashboard
+                  {tx("Ouvrir mon dashboard", "Open my dashboard")}
                   <ArrowUpRight className="h-4 w-4" />
                 </button>
               )}

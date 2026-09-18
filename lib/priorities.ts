@@ -24,6 +24,8 @@ import {
   Zap,
 } from "lucide-react"
 
+import { localized, type Localized, type Tx } from "@/lib/i18n"
+
 export type Sector =
   | "industry"
   | "health"
@@ -37,20 +39,25 @@ export type Sector =
  *  onboarding modal, the dashboard, the sites view, the recommendations
  *  panel and the profile page, which is how the profile page ended up
  *  listing six sectors nobody had selected. */
-export const SECTOR_LABELS: Record<Sector, string> = {
-  industry: "Industrie",
-  health: "Santé",
-  agriculture: "Agriculture",
-  transportation: "Transport",
-  logistics: "Logistique",
-  energy: "Énergie",
-  commerce: "Commerce",
+export const SECTOR_LABELS: Record<Sector, Localized> = {
+  industry: localized("Industrie", "Industry"),
+  health: localized("Santé", "Health"),
+  agriculture: localized("Agriculture", "Agriculture"),
+  transportation: localized("Transport", "Transport"),
+  logistics: localized("Logistique", "Logistics"),
+  energy: localized("Énergie", "Energy"),
+  commerce: localized("Commerce", "Retail"),
 }
 
-export function sectorLabel(sector: string | null | undefined): string {
+export function sectorLabel(
+  sector: string | null | undefined,
+  tx: Tx
+): string {
   if (!sector) return ""
 
-  return SECTOR_LABELS[sector as Sector] ?? sector
+  const label = SECTOR_LABELS[sector as Sector]
+
+  return label ? tx(label.fr, label.en) : sector
 }
 
 /** One monitoring priority a user can pick during onboarding.
@@ -63,10 +70,10 @@ export function sectorLabel(sector: string | null | undefined): string {
 export type Priority = {
   id: string
   /** Goal-phrased name. Shown in onboarding, where we explain the value. */
-  label: string
+  label: Localized
   /** Short name for nav chips and cards, when `label` is a full sentence. */
-  short?: string
-  description: string
+  short?: Localized
+  description: Localized
   icon: React.ElementType
   comingSoon?: boolean
 }
@@ -75,38 +82,74 @@ export const PRIORITIES_BY_SECTOR: Record<Sector, Priority[]> = {
   industry: [
     {
       id: "machines",
-      label: "Machines de production",
-      description: "Usure, vibrations et pannes",
+      label: localized(
+        "Machines de production",
+        "Production machines"
+      ),
+      description: localized(
+        "Usure, vibrations et pannes",
+        "Wear, vibration and breakdowns"
+      ),
       icon: Cog,
     },
     {
       id: "motors",
-      label: "Moteurs",
-      description: "Performance et anomalies",
+      label: localized(
+        "Moteurs",
+        "Motors"
+      ),
+      description: localized(
+        "Performance et anomalies",
+        "Performance and anomalies"
+      ),
       icon: Activity,
     },
     {
       id: "temperature",
-      label: "Température",
-      description: "Surchauffe et dérives thermiques",
+      label: localized(
+        "Température",
+        "Temperature"
+      ),
+      description: localized(
+        "Surchauffe et dérives thermiques",
+        "Overheating and thermal drift"
+      ),
       icon: Thermometer,
     },
     {
       id: "pressure",
-      label: "Pression",
-      description: "Pression hydraulique et pneumatique",
+      label: localized(
+        "Pression",
+        "Pressure"
+      ),
+      description: localized(
+        "Pression hydraulique et pneumatique",
+        "Hydraulic and pneumatic pressure"
+      ),
       icon: Gauge,
     },
     {
       id: "production",
-      label: "Production",
-      description: "Cycles, rendement et arrêts",
+      label: localized(
+        "Production",
+        "Production"
+      ),
+      description: localized(
+        "Cycles, rendement et arrêts",
+        "Cycles, output and stoppages"
+      ),
       icon: Boxes,
     },
     {
       id: "maintenance",
-      label: "Maintenance",
-      description: "Révisions et interventions",
+      label: localized(
+        "Maintenance",
+        "Maintenance"
+      ),
+      description: localized(
+        "Révisions et interventions",
+        "Services and interventions"
+      ),
       icon: ShieldCheck,
     },
   ],
@@ -114,38 +157,74 @@ export const PRIORITIES_BY_SECTOR: Record<Sector, Priority[]> = {
   health: [
     {
       id: "stocks",
-      label: "Stocks",
-      description: "Niveaux bas et risques de rupture",
+      label: localized(
+        "Stocks",
+        "Stock"
+      ),
+      description: localized(
+        "Niveaux bas et risques de rupture",
+        "Low levels and stockout risk"
+      ),
       icon: Package,
     },
     {
       id: "cold-chain",
-      label: "Chaîne du froid",
-      description: "Température et conservation",
+      label: localized(
+        "Chaîne du froid",
+        "Cold chain"
+      ),
+      description: localized(
+        "Température et conservation",
+        "Temperature and preservation"
+      ),
       icon: Snowflake,
     },
     {
       id: "temperature",
-      label: "Température",
-      description: "Surveillance des conditions de stockage",
+      label: localized(
+        "Température",
+        "Temperature"
+      ),
+      description: localized(
+        "Surveillance des conditions de stockage",
+        "Monitoring of storage conditions"
+      ),
       icon: Thermometer,
     },
     {
       id: "expiry",
-      label: "Péremption",
-      description: "Produits proches de l'expiration",
+      label: localized(
+        "Péremption",
+        "Expiry"
+      ),
+      description: localized(
+        "Produits proches de l'expiration",
+        "Products close to their expiry date"
+      ),
       icon: CalendarClock,
     },
     {
       id: "medications",
-      label: "Médicaments",
-      description: "Disponibilité et risque de rupture",
+      label: localized(
+        "Médicaments",
+        "Medicines"
+      ),
+      description: localized(
+        "Disponibilité et risque de rupture",
+        "Availability and stockout risk"
+      ),
       icon: HeartPulse,
     },
     {
       id: "storage",
-      label: "Stockage",
-      description: "Conditions et capacité",
+      label: localized(
+        "Stockage",
+        "Storage"
+      ),
+      description: localized(
+        "Conditions et capacité",
+        "Conditions and capacity"
+      ),
       icon: Warehouse,
     },
   ],
@@ -153,38 +232,74 @@ export const PRIORITIES_BY_SECTOR: Record<Sector, Priority[]> = {
   agriculture: [
     {
       id: "crops",
-      label: "Récoltes",
-      description: "Pertes et risques de production",
+      label: localized(
+        "Récoltes",
+        "Harvests"
+      ),
+      description: localized(
+        "Pertes et risques de production",
+        "Losses and production risk"
+      ),
       icon: Wheat,
     },
     {
       id: "storage",
-      label: "Stockage",
-      description: "Conditions et conservation",
+      label: localized(
+        "Stockage",
+        "Storage"
+      ),
+      description: localized(
+        "Conditions et conservation",
+        "Conditions and preservation"
+      ),
       icon: Warehouse,
     },
     {
       id: "temperature",
-      label: "Température",
-      description: "Conditions de conservation",
+      label: localized(
+        "Température",
+        "Temperature"
+      ),
+      description: localized(
+        "Conditions de conservation",
+        "Preservation conditions"
+      ),
       icon: Thermometer,
     },
     {
       id: "transport",
-      label: "Transport",
-      description: "Retards et livraisons",
+      label: localized(
+        "Transport",
+        "Transport"
+      ),
+      description: localized(
+        "Retards et livraisons",
+        "Delays and deliveries"
+      ),
       icon: Truck,
     },
     {
       id: "stocks",
-      label: "Stocks",
-      description: "Disponibilité des produits",
+      label: localized(
+        "Stocks",
+        "Stock"
+      ),
+      description: localized(
+        "Disponibilité des produits",
+        "Product availability"
+      ),
       icon: Package,
     },
     {
       id: "irrigation",
-      label: "Irrigation",
-      description: "Eau et fonctionnement des systèmes",
+      label: localized(
+        "Irrigation",
+        "Irrigation"
+      ),
+      description: localized(
+        "Eau et fonctionnement des systèmes",
+        "Water and system operation"
+      ),
       icon: Droplets,
     },
   ],
@@ -192,38 +307,74 @@ export const PRIORITIES_BY_SECTOR: Record<Sector, Priority[]> = {
   transportation: [
     {
       id: "vehicles",
-      label: "Véhicules",
-      description: "État général de la flotte",
+      label: localized(
+        "Véhicules",
+        "Vehicles"
+      ),
+      description: localized(
+        "État général de la flotte",
+        "Overall fleet condition"
+      ),
       icon: Truck,
     },
     {
       id: "engine",
-      label: "Moteurs",
-      description: "Performance et anomalies",
+      label: localized(
+        "Moteurs",
+        "Motors"
+      ),
+      description: localized(
+        "Performance et anomalies",
+        "Performance and anomalies"
+      ),
       icon: Activity,
     },
     {
       id: "oil",
-      label: "Huile",
-      description: "Niveaux et maintenance",
+      label: localized(
+        "Huile",
+        "Oil"
+      ),
+      description: localized(
+        "Niveaux et maintenance",
+        "Levels and maintenance"
+      ),
       icon: Droplets,
     },
     {
       id: "fuel",
-      label: "Carburant",
-      description: "Niveau et consommation",
+      label: localized(
+        "Carburant",
+        "Fuel"
+      ),
+      description: localized(
+        "Niveau et consommation",
+        "Level and consumption"
+      ),
       icon: Fuel,
     },
     {
       id: "tires",
-      label: "Pneus",
-      description: "Usure et pression",
+      label: localized(
+        "Pneus",
+        "Tyres"
+      ),
+      description: localized(
+        "Usure et pression",
+        "Wear and pressure"
+      ),
       icon: Gauge,
     },
     {
       id: "maintenance",
-      label: "Maintenance",
-      description: "Révisions et interventions",
+      label: localized(
+        "Maintenance",
+        "Maintenance"
+      ),
+      description: localized(
+        "Révisions et interventions",
+        "Services and interventions"
+      ),
       icon: ShieldCheck,
     },
   ],
@@ -231,50 +382,98 @@ export const PRIORITIES_BY_SECTOR: Record<Sector, Priority[]> = {
   logistics: [
     {
       id: "blockages",
-      label: "Éviter les blocages",
-      short: "Blocages",
-      description:
+      label: localized(
+        "Éviter les blocages",
+        "Avoid blockages"
+      ),
+      short: localized(
+        "Blocages",
+        "Blockages"
+      ),
+      description: localized(
         "Identifier les équipements, flux ou opérations actuellement bloqués",
+        "Spot the equipment, flows or operations that are blocked right now"
+      ),
       icon: PackageX,
     },
     {
       id: "wait",
-      label: "Réduire les temps d'attente",
-      short: "Temps d'attente",
-      description:
+      label: localized(
+        "Réduire les temps d'attente",
+        "Cut waiting times"
+      ),
+      short: localized(
+        "Temps d'attente",
+        "Waiting time"
+      ),
+      description: localized(
         "Surveiller les files d'attente et les temps d'immobilisation",
+        "Watch the queues and the time things spend standing still"
+      ),
       icon: Clock,
     },
     {
       id: "cost",
-      label: "Réduire les coûts imprévus",
-      short: "Coûts",
-      description:
+      label: localized(
+        "Réduire les coûts imprévus",
+        "Cut unplanned cost"
+      ),
+      short: localized(
+        "Coûts",
+        "Cost"
+      ),
+      description: localized(
         "Analyser les postes qui génèrent les coûts logistiques les plus importants",
+        "See which items drive the largest logistics cost"
+      ),
       icon: CircleDollarSign,
     },
     {
       id: "anticipate",
-      label: "Être alerté à temps",
-      short: "Anticipation",
-      description:
+      label: localized(
+        "Être alerté à temps",
+        "Be warned in time"
+      ),
+      short: localized(
+        "Anticipation",
+        "Anticipation"
+      ),
+      description: localized(
         "Anticiper les risques et les perturbations à venir",
+        "Anticipate the risks and disruptions that are coming"
+      ),
       icon: Radar,
     },
     {
       id: "recommend",
-      label: "Obtenir des recommandations",
-      short: "Recommandations",
-      description:
+      label: localized(
+        "Obtenir des recommandations",
+        "Get recommendations"
+      ),
+      short: localized(
+        "Recommandations",
+        "Recommendations"
+      ),
+      description: localized(
         "Les 5 alertes les plus urgentes, chacune avec une action concrète à mener en priorité",
+        "The 5 most urgent alerts, each with one concrete action to take first"
+      ),
       icon: Sparkles,
     },
     {
       id: "resources",
-      label: "Optimiser les ressources",
-      short: "Ressources",
-      description:
+      label: localized(
+        "Optimiser les ressources",
+        "Make the most of resources"
+      ),
+      short: localized(
+        "Ressources",
+        "Resources"
+      ),
+      description: localized(
         "Identifier les équipements, équipes ou capacités qui risquent de devenir un point de blocage",
+        "Spot the equipment, teams or capacity about to become a bottleneck"
+      ),
       icon: Cog,
       comingSoon: true,
     },
@@ -283,38 +482,74 @@ export const PRIORITIES_BY_SECTOR: Record<Sector, Priority[]> = {
   energy: [
     {
       id: "generators",
-      label: "Générateurs",
-      description: "Performance et disponibilité",
+      label: localized(
+        "Générateurs",
+        "Generators"
+      ),
+      description: localized(
+        "Performance et disponibilité",
+        "Performance and availability"
+      ),
       icon: Zap,
     },
     {
       id: "fuel",
-      label: "Carburant",
-      description: "Niveau et réapprovisionnement",
+      label: localized(
+        "Carburant",
+        "Fuel"
+      ),
+      description: localized(
+        "Niveau et réapprovisionnement",
+        "Level and refuelling"
+      ),
       icon: Fuel,
     },
     {
       id: "temperature",
-      label: "Température",
-      description: "Surchauffe et conditions thermiques",
+      label: localized(
+        "Température",
+        "Temperature"
+      ),
+      description: localized(
+        "Surchauffe et conditions thermiques",
+        "Overheating and thermal conditions"
+      ),
       icon: Thermometer,
     },
     {
       id: "oil",
-      label: "Huile",
-      description: "Niveau et maintenance",
+      label: localized(
+        "Huile",
+        "Oil"
+      ),
+      description: localized(
+        "Niveau et maintenance",
+        "Level and maintenance"
+      ),
       icon: Droplets,
     },
     {
       id: "load",
-      label: "Charge",
-      description: "Surcharge et capacité",
+      label: localized(
+        "Charge",
+        "Load"
+      ),
+      description: localized(
+        "Surcharge et capacité",
+        "Overload and capacity"
+      ),
       icon: BatteryCharging,
     },
     {
       id: "sensors",
-      label: "Capteurs",
-      description: "Données et connectivité",
+      label: localized(
+        "Capteurs",
+        "Sensors"
+      ),
+      description: localized(
+        "Données et connectivité",
+        "Data and connectivity"
+      ),
       icon: Radio,
     },
   ],
@@ -322,38 +557,74 @@ export const PRIORITIES_BY_SECTOR: Record<Sector, Priority[]> = {
   commerce: [
     {
       id: "stocks",
-      label: "Stocks",
-      description: "Niveaux bas et risques de rupture",
+      label: localized(
+        "Stocks",
+        "Stock"
+      ),
+      description: localized(
+        "Niveaux bas et risques de rupture",
+        "Low levels and stockout risk"
+      ),
       icon: Package,
     },
     {
       id: "shelf-availability",
-      label: "Disponibilité en rayon",
-      description: "Ruptures visibles côté client",
+      label: localized(
+        "Disponibilité en rayon",
+        "On-shelf availability"
+      ),
+      description: localized(
+        "Ruptures visibles côté client",
+        "Gaps the customer can see"
+      ),
       icon: Boxes,
     },
     {
       id: "expiry",
-      label: "Péremption",
-      description: "Produits proches de la date limite",
+      label: localized(
+        "Péremption",
+        "Expiry"
+      ),
+      description: localized(
+        "Produits proches de la date limite",
+        "Products close to their use-by date"
+      ),
       icon: CalendarClock,
     },
     {
       id: "cold-chain",
-      label: "Chaîne du froid",
-      description: "Température des produits frais et surgelés",
+      label: localized(
+        "Chaîne du froid",
+        "Cold chain"
+      ),
+      description: localized(
+        "Température des produits frais et surgelés",
+        "Temperature of chilled and frozen goods"
+      ),
       icon: Snowflake,
     },
     {
       id: "replenishment",
-      label: "Réapprovisionnement",
-      description: "Délais et anticipation des commandes",
+      label: localized(
+        "Réapprovisionnement",
+        "Replenishment"
+      ),
+      description: localized(
+        "Délais et anticipation des commandes",
+        "Lead times and order planning"
+      ),
       icon: Truck,
     },
     {
       id: "storage",
-      label: "Stockage / entrepôt",
-      description: "Capacité et conditions de conservation",
+      label: localized(
+        "Stockage / entrepôt",
+        "Storage / warehouse"
+      ),
+      description: localized(
+        "Capacité et conditions de conservation",
+        "Capacity and preservation conditions"
+      ),
       icon: Warehouse,
     },
   ],
@@ -376,27 +647,38 @@ export function priorityMeta(
  *  unknown priority saved by an older build still renders as something. */
 export function priorityLabel(
   sector: Sector | string | null | undefined,
-  id: string
+  id: string,
+  tx: Tx
 ): string {
   const meta = priorityMeta(sector, id)
 
-  return meta ? (meta.short ?? meta.label) : id
+  if (!meta) return id
+
+  const name = meta.short ?? meta.label
+
+  return tx(name.fr, name.en)
 }
 
 /** Goal-phrased name, as worded in onboarding. Used on the overview
  *  cards so the dashboard echoes the wording the user chose. */
 export function priorityGoal(
   sector: Sector | string | null | undefined,
-  id: string
+  id: string,
+  tx: Tx
 ): string {
-  return priorityMeta(sector, id)?.label ?? id
+  const label = priorityMeta(sector, id)?.label
+
+  return label ? tx(label.fr, label.en) : id
 }
 
 export function priorityDescription(
   sector: Sector | string | null | undefined,
-  id: string
+  id: string,
+  tx: Tx
 ): string {
-  return priorityMeta(sector, id)?.description ?? ""
+  const text = priorityMeta(sector, id)?.description
+
+  return text ? tx(text.fr, text.en) : ""
 }
 
 /** Order stored ids the way the catalog lists them, and drop anything

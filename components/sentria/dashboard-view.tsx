@@ -1470,11 +1470,13 @@ export function DashboardView({
 
     if (!configured) return undefined
 
+    const fallback = activitiesFor(sector).find(
+      (a) => normalizeOpsType(a.id) === normalizeOpsType(configured)
+    )?.label
+
     return (
-      activityLabel(sector, configured) ??
-      activitiesFor(sector).find(
-        (a) => normalizeOpsType(a.id) === normalizeOpsType(configured)
-      )?.label
+      activityLabel(sector, configured, tx) ??
+      (fallback ? px(fallback) : undefined)
     )
   }
 
@@ -2699,7 +2701,7 @@ export function DashboardView({
                   type="button"
                   onClick={() => setUploadActivity(activity.id)}
                   aria-pressed={uploadActivity === activity.id}
-                  title={activity.description}
+                  title={px(activity.description)}
                   className={cn(
                     "rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
                     uploadActivity === activity.id
@@ -2707,7 +2709,7 @@ export function DashboardView({
                       : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
-                  {activity.label}
+                  {px(activity.label)}
                 </button>
               ))}
             </div>
@@ -2756,7 +2758,7 @@ export function DashboardView({
             <>
               {" · "}
               <span className="font-semibold text-foreground">
-                {activityLabel(uploadSector, uploadActivity) ??
+                {activityLabel(uploadSector, uploadActivity, tx) ??
                   uploadActivity}
               </span>
             </>

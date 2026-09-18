@@ -32,6 +32,7 @@ import {
   opsLabelFor,
   type LogisticsAlert,
 } from "@/lib/logistics-signals"
+import { useTx } from "@/lib/i18n"
 import { sectorLabel } from "@/lib/priorities"
 import { cn } from "@/lib/utils"
 import type { ViewKey } from "./types"
@@ -117,6 +118,8 @@ export function ProfileView({
       .finally(() => setLoaded(true))
   }, [])
 
+  const tx = useTx()
+
   const empty = loaded && alerts.length === 0
 
   const stats = useMemo(() => {
@@ -130,12 +133,28 @@ export function ProfileView({
     const week = alerts.filter((a) => timeOf(a) >= since).length
 
     return [
-      { label: "Équipements suivis", value: equipment.size, icon: ActivityIcon },
-      { label: "Signaux reçus", value: alerts.length, icon: Bell },
-      { label: "Signaux critiques", value: critical, icon: AlertTriangle },
-      { label: "Signaux sur 7 jours", value: week, icon: Clock3 },
+      {
+        label: tx("Équipements suivis", "Assets monitored"),
+        value: equipment.size,
+        icon: ActivityIcon,
+      },
+      {
+        label: tx("Signaux reçus", "Signals received"),
+        value: alerts.length,
+        icon: Bell,
+      },
+      {
+        label: tx("Signaux critiques", "Critical signals"),
+        value: critical,
+        icon: AlertTriangle,
+      },
+      {
+        label: tx("Signaux sur 7 jours", "Signals over 7 days"),
+        value: week,
+        icon: Clock3,
+      },
     ]
-  }, [alerts])
+  }, [alerts, tx])
 
   /* The sectors the operator selected, each carrying the number of alerts
      the backend attributed to it. A sector with nothing against it shows
@@ -151,10 +170,10 @@ export function ProfileView({
 
     return sectors.map((id) => ({
       id,
-      label: sectorLabel(id),
+      label: sectorLabel(id, tx),
       count: counts.get(id) ?? 0,
     }))
-  }, [sectors, alerts])
+  }, [sectors, alerts, tx])
 
   const recent = useMemo(
     () => [...alerts].sort((a, b) => timeOf(b) - timeOf(a)).slice(0, 5),
@@ -162,7 +181,8 @@ export function ProfileView({
   )
 
   const activityLabel =
-    opsLabelFor(opsTypeFor(opsTypes), opsTypes) ?? "Aucune activité sélectionnée"
+    opsLabelFor(opsTypeFor(opsTypes), opsTypes) ??
+    tx("Aucune activité sélectionnée", "No activity selected")
 
   const zoneLabel = timezoneId ? timezoneFor(timezoneId).label : "—"
 
@@ -176,7 +196,7 @@ export function ProfileView({
           <div className="absolute bottom-4 left-6 flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-accent" aria-hidden="true" />
             <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-background/50">
-              Espace SentrIA
+              {tx("Espace SentrIA", "SentrIA workspace")}
             </span>
           </div>
         </div>
@@ -193,7 +213,8 @@ export function ProfileView({
           <div className="mt-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="min-w-0">
               <h2 className="truncate font-heading text-2xl font-bold tracking-tight">
-                {companyName || "Organisation non renseignée"}
+                {companyName ||
+                  tx("Organisation non renseignée", "Organisation not set")}
               </h2>
 
               <p className="mt-1 text-sm text-muted-foreground">
@@ -210,7 +231,7 @@ export function ProfileView({
                   <Layers className="h-4 w-4" aria-hidden="true" />
                   {sectorRows.length > 0
                     ? sectorRows.map((s) => s.label).join(", ")
-                    : "Aucun secteur sélectionné"}
+                    : tx("Aucun secteur sélectionné", "No sector selected")}
                 </span>
               </div>
             </div>
@@ -221,7 +242,7 @@ export function ProfileView({
               className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
               <Pencil className="h-4 w-4" aria-hidden="true" />
-              Modifier
+              {tx("Modifier", "Edit")}
             </button>
           </div>
         </div>
@@ -268,10 +289,15 @@ export function ProfileView({
             </div>
 
             <div>
-              <h3 className="font-heading text-lg font-bold">Mon espace</h3>
+              <h3 className="font-heading text-lg font-bold">
+                {tx("Mon espace", "My workspace")}
+              </h3>
 
               <p className="text-sm text-muted-foreground">
-                Ce qui a été renseigné à l&apos;onboarding
+                {tx(
+                  "Ce qui a été renseigné à l'onboarding",
+                  "What was filled in during setup"
+                )}
               </p>
             </div>
           </div>
@@ -279,17 +305,17 @@ export function ProfileView({
           <dl className="mt-6 space-y-5">
             <div>
               <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Organisation
+                {tx("Organisation", "Organisation")}
               </dt>
 
               <dd className="mt-1 text-sm font-semibold">
-                {companyName || "Non renseignée"}
+                {companyName || tx("Non renseignée", "Not set")}
               </dd>
             </div>
 
             <div>
               <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Fuseau horaire
+                {tx("Fuseau horaire", "Time zone")}
               </dt>
 
               <dd className="mt-1 text-sm font-semibold">{zoneLabel}</dd>
@@ -297,13 +323,13 @@ export function ProfileView({
 
             <div>
               <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Activités suivies
+                {tx("Activités suivies", "Activities monitored")}
               </dt>
 
               <dd className="mt-1 text-sm font-semibold">
                 {opsTypes.length > 0
                   ? opsTypes.map((type) => OPS_LABELS[type]).join(", ")
-                  : "Aucune"}
+                  : tx("Aucune", "None")}
               </dd>
             </div>
           </dl>
@@ -312,10 +338,15 @@ export function ProfileView({
         <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-heading text-lg font-bold">Secteurs actifs</h3>
+              <h3 className="font-heading text-lg font-bold">
+                {tx("Secteurs actifs", "Active sectors")}
+              </h3>
 
               <p className="mt-1 text-sm text-muted-foreground">
-                Vos secteurs, et les signaux reçus pour chacun.
+                {tx(
+                  "Vos secteurs, et les signaux reçus pour chacun.",
+                  "Your sectors, and the signals received for each."
+                )}
               </p>
             </div>
 
@@ -326,7 +357,10 @@ export function ProfileView({
 
           {sectorRows.length === 0 ? (
             <p className="mt-6 rounded-2xl border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
-              Aucun secteur n&apos;a été sélectionné à l&apos;onboarding.
+              {tx(
+                "Aucun secteur n'a été sélectionné à l'onboarding.",
+                "No sector was selected during setup."
+              )}
             </p>
           ) : (
             <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -360,10 +394,15 @@ export function ProfileView({
       <div className="rounded-3xl border border-border bg-card p-6">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="font-heading text-lg font-bold">Signaux récents</h3>
+            <h3 className="font-heading text-lg font-bold">
+              {tx("Signaux récents", "Recent signals")}
+            </h3>
 
             <p className="text-sm text-muted-foreground">
-              Les dernières alertes reçues, à l&apos;heure de votre fuseau.
+              {tx(
+                "Les dernières alertes reçues, à l'heure de votre fuseau.",
+                "The latest alerts received, in your own time zone."
+              )}
             </p>
           </div>
 
@@ -372,7 +411,7 @@ export function ProfileView({
             onClick={() => onNavigate?.("dashboard")}
             className="rounded text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           >
-            Voir le tableau de bord →
+            {tx("Voir le tableau de bord →", "See the dashboard →")}
           </button>
         </div>
 
@@ -384,8 +423,11 @@ export function ProfileView({
 
             <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-muted-foreground">
               {loaded
-                ? "Aucun signal reçu pour l'instant. Cette liste se remplira dès le premier import."
-                : "Chargement des signaux…"}
+                ? tx(
+                    "Aucun signal reçu pour l'instant. Cette liste se remplira dès le premier import.",
+                    "No signal received yet. This list fills up from the first import."
+                  )
+                : tx("Chargement des signaux…", "Loading signals…")}
             </p>
           </div>
         ) : (
@@ -416,7 +458,8 @@ export function ProfileView({
 
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold">
-                      {alert.equipment || "Équipement non nommé"}
+                      {alert.equipment ||
+                        tx("Équipement non nommé", "Unnamed asset")}
                     </p>
 
                     <p className="mt-0.5 truncate text-sm text-muted-foreground">
@@ -445,11 +488,15 @@ export function ProfileView({
           </div>
 
           <div>
-            <h3 className="font-heading font-bold">Intelligence SentrIA</h3>
+            <h3 className="font-heading font-bold">
+              {tx("Intelligence SentrIA", "SentrIA intelligence")}
+            </h3>
 
             <p className="mt-1 text-sm text-background/60">
-              Analyse prédictive et recommandations pour anticiper les risques
-              opérationnels.
+              {tx(
+                "Analyse prédictive et recommandations pour anticiper les risques opérationnels.",
+                "Predictive analysis and recommendations, so operational risk is seen coming."
+              )}
             </p>
           </div>
         </div>

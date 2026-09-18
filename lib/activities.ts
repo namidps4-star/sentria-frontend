@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import type { OpsType } from "@/lib/logistics-signals"
 import type { Sector } from "@/lib/priorities"
+import { localized, type Localized, type Tx } from "@/lib/i18n"
 
 /** One activity inside a sector: what the user picks at step 2 of
  *  onboarding, and what the import panel now lets them confirm per file.
@@ -30,30 +31,61 @@ import type { Sector } from "@/lib/priorities"
  *  send and the user had to set localStorage by hand to change it. */
 export type Activity = {
   id: string
-  label: string
-  description: string
+  label: Localized
+  description: Localized
   icon: React.ElementType
-  maturity?: "Pilote recommandé" | "Accès anticipé"
+  /* A key, not the badge text: the French words used to be the value AND
+     the thing every comparison was written against, so translating the
+     badge would have broken the comparison. */
+  maturity?: "pilot" | "early"
+}
+
+/** The badge wording for a maturity key. */
+export function activityMaturityLabel(
+  maturity: "pilot" | "early",
+  tx: Tx
+): string {
+  return maturity === "pilot"
+    ? tx("Pilote recommandé", "Recommended pilot")
+    : tx("Accès anticipé", "Early access")
 }
 
 export const ACTIVITIES_BY_SECTOR: Record<Sector, Activity[]> = {
   industry: [
     {
       id: "usine-production",
-      label: "Usine de production",
-      description: "Lignes de fabrication et machines critiques",
+      label: localized(
+        "Usine de production",
+        "Production plant"
+      ),
+      description: localized(
+        "Lignes de fabrication et machines critiques",
+        "Production lines and critical machines"
+      ),
       icon: Factory,
     },
     {
       id: "atelier-soustraitance",
-      label: "Atelier / sous-traitance",
-      description: "Production pour le compte de tiers",
+      label: localized(
+        "Atelier / sous-traitance",
+        "Workshop / subcontracting"
+      ),
+      description: localized(
+        "Production pour le compte de tiers",
+        "Production on behalf of others"
+      ),
       icon: Cog,
     },
     {
       id: "usine-agroalimentaire",
-      label: "Usine agroalimentaire",
-      description: "Production avec contraintes sanitaires",
+      label: localized(
+        "Usine agroalimentaire",
+        "Food processing plant"
+      ),
+      description: localized(
+        "Production avec contraintes sanitaires",
+        "Production under hygiene constraints"
+      ),
       icon: Boxes,
     },
   ],
@@ -61,51 +93,93 @@ export const ACTIVITIES_BY_SECTOR: Record<Sector, Activity[]> = {
   health: [
     {
       id: "pharmacie",
-      label: "Pharmacie",
-      description: "Officine et vente au détail de médicaments",
+      label: localized(
+        "Pharmacie",
+        "Pharmacy"
+      ),
+      description: localized(
+        "Officine et vente au détail de médicaments",
+        "Dispensary and retail sale of medicines"
+      ),
       icon: HeartPulse,
-      maturity: "Pilote recommandé",
+      maturity: "pilot",
     },
     {
       id: "grossiste-pharma",
-      label: "Grossiste-répartiteur pharmaceutique",
-      description: "Distribution en gros de produits de santé",
+      label: localized(
+        "Grossiste-répartiteur pharmaceutique",
+        "Pharmaceutical wholesaler"
+      ),
+      description: localized(
+        "Distribution en gros de produits de santé",
+        "Wholesale distribution of health products"
+      ),
       icon: Warehouse,
-      maturity: "Accès anticipé",
+      maturity: "early",
     },
     {
       id: "clinique-hopital",
-      label: "Clinique / Hôpital",
-      description: "Établissement de soins et stocks cliniques",
+      label: localized(
+        "Clinique / Hôpital",
+        "Clinic / Hospital"
+      ),
+      description: localized(
+        "Établissement de soins et stocks cliniques",
+        "Care facility and clinical stock"
+      ),
       icon: Building2,
-      maturity: "Accès anticipé",
+      maturity: "early",
     },
     {
       id: "laboratoire",
-      label: "Laboratoire",
-      description: "Analyses, réactifs et échantillons",
+      label: localized(
+        "Laboratoire",
+        "Laboratory"
+      ),
+      description: localized(
+        "Analyses, réactifs et échantillons",
+        "Tests, reagents and samples"
+      ),
       icon: Activity,
-      maturity: "Accès anticipé",
+      maturity: "early",
     },
   ],
 
   agriculture: [
     {
       id: "exploitation-agricole",
-      label: "Exploitation agricole",
-      description: "Production, culture et élevage",
+      label: localized(
+        "Exploitation agricole",
+        "Farm"
+      ),
+      description: localized(
+        "Production, culture et élevage",
+        "Production, crops and livestock"
+      ),
       icon: Wheat,
     },
     {
       id: "cooperative-agricole",
-      label: "Coopérative agricole",
-      description: "Mutualisation entre plusieurs producteurs",
+      label: localized(
+        "Coopérative agricole",
+        "Agricultural cooperative"
+      ),
+      description: localized(
+        "Mutualisation entre plusieurs producteurs",
+        "Shared operations between several growers"
+      ),
       icon: Building2,
     },
     {
       id: "silo-stockage",
-      label: "Silo / stockage de récolte",
-      description: "Conservation avant transformation ou vente",
+      label: localized(
+        "Silo / stockage de récolte",
+        "Silo / harvest storage"
+      ),
+      description: localized(
+        "Conservation avant transformation ou vente",
+        "Keeping the crop before processing or sale"
+      ),
       icon: Warehouse,
     },
   ],
@@ -113,20 +187,38 @@ export const ACTIVITIES_BY_SECTOR: Record<Sector, Activity[]> = {
   transportation: [
     {
       id: "transporteur-routier",
-      label: "Transporteur routier",
-      description: "Transport pour compte d'autrui",
+      label: localized(
+        "Transporteur routier",
+        "Road haulier"
+      ),
+      description: localized(
+        "Transport pour compte d'autrui",
+        "Haulage for third parties"
+      ),
       icon: Truck,
     },
     {
       id: "flotte-entreprise",
-      label: "Flotte d'entreprise",
-      description: "Véhicules utilisés pour votre propre activité",
+      label: localized(
+        "Flotte d'entreprise",
+        "Company fleet"
+      ),
+      description: localized(
+        "Véhicules utilisés pour votre propre activité",
+        "Vehicles used for your own operation"
+      ),
       icon: Truck,
     },
     {
       id: "location-vehicules",
-      label: "Location de véhicules",
-      description: "Parc mis à disposition de clients",
+      label: localized(
+        "Location de véhicules",
+        "Vehicle rental"
+      ),
+      description: localized(
+        "Parc mis à disposition de clients",
+        "A fleet made available to customers"
+      ),
       icon: Gauge,
     },
   ],
@@ -134,38 +226,74 @@ export const ACTIVITIES_BY_SECTOR: Record<Sector, Activity[]> = {
   logistics: [
     {
       id: "port-conteneurs",
-      label: "Port & conteneurs",
-      description: "Opérations portuaires et manutention de conteneurs",
+      label: localized(
+        "Port & conteneurs",
+        "Port & containers"
+      ),
+      description: localized(
+        "Opérations portuaires et manutention de conteneurs",
+        "Port operations and container handling"
+      ),
       icon: Anchor,
     },
     {
       id: "entrepot-manutention",
-      label: "Entrepôt & manutention",
-      description: "Stockage et mouvements de marchandises",
+      label: localized(
+        "Entrepôt & manutention",
+        "Warehouse & handling"
+      ),
+      description: localized(
+        "Stockage et mouvements de marchandises",
+        "Storage and movement of goods"
+      ),
       icon: Warehouse,
     },
     {
       id: "transport-distribution",
-      label: "Transport & distribution",
-      description: "Acheminement vers plusieurs points de livraison",
+      label: localized(
+        "Transport & distribution",
+        "Transport & distribution"
+      ),
+      description: localized(
+        "Acheminement vers plusieurs points de livraison",
+        "Delivery to several drop points"
+      ),
       icon: Truck,
     },
     {
       id: "preparation-expedition",
-      label: "Préparation & expédition",
-      description: "Traitement et envoi des commandes",
+      label: localized(
+        "Préparation & expédition",
+        "Picking & dispatch"
+      ),
+      description: localized(
+        "Traitement et envoi des commandes",
+        "Processing and sending orders"
+      ),
       icon: PackageSearch,
     },
     {
       id: "chaine-froid",
-      label: "Chaîne du froid",
-      description: "Logistique sous température dirigée",
+      label: localized(
+        "Chaîne du froid",
+        "Cold chain"
+      ),
+      description: localized(
+        "Logistique sous température dirigée",
+        "Temperature-controlled logistics"
+      ),
       icon: Snowflake,
     },
     {
       id: "plusieurs-activites",
-      label: "Plusieurs activités",
-      description: "Une combinaison de ces opérations",
+      label: localized(
+        "Plusieurs activités",
+        "Several activities"
+      ),
+      description: localized(
+        "Une combinaison de ces opérations",
+        "A combination of these operations"
+      ),
       icon: Recycle,
     },
   ],
@@ -173,20 +301,38 @@ export const ACTIVITIES_BY_SECTOR: Record<Sector, Activity[]> = {
   energy: [
     {
       id: "centrale-production",
-      label: "Centrale de production",
-      description: "Production d'énergie à grande échelle",
+      label: localized(
+        "Centrale de production",
+        "Power plant"
+      ),
+      description: localized(
+        "Production d'énergie à grande échelle",
+        "Large-scale power generation"
+      ),
       icon: Zap,
     },
     {
       id: "generateurs-secours",
-      label: "Générateurs de secours",
-      description: "Alimentation de secours et continuité",
+      label: localized(
+        "Générateurs de secours",
+        "Backup generators"
+      ),
+      description: localized(
+        "Alimentation de secours et continuité",
+        "Standby power and continuity"
+      ),
       icon: BatteryCharging,
     },
     {
       id: "distribution-energetique",
-      label: "Distribution énergétique",
-      description: "Réseau et acheminement de l'énergie",
+      label: localized(
+        "Distribution énergétique",
+        "Power distribution"
+      ),
+      description: localized(
+        "Réseau et acheminement de l'énergie",
+        "The grid and how power gets there"
+      ),
       icon: Radio,
     },
   ],
@@ -194,26 +340,50 @@ export const ACTIVITIES_BY_SECTOR: Record<Sector, Activity[]> = {
   commerce: [
     {
       id: "grossiste-distributeur",
-      label: "Grossiste / distributeur",
-      description: "Vente en gros à d'autres commerces",
+      label: localized(
+        "Grossiste / distributeur",
+        "Wholesaler / distributor"
+      ),
+      description: localized(
+        "Vente en gros à d'autres commerces",
+        "Wholesale to other businesses"
+      ),
       icon: Warehouse,
     },
     {
       id: "supermarche-hypermarche",
-      label: "Supermarché / hypermarché",
-      description: "Grande surface avec rayons multiples",
+      label: localized(
+        "Supermarché / hypermarché",
+        "Supermarket / hypermarket"
+      ),
+      description: localized(
+        "Grande surface avec rayons multiples",
+        "A large store with many aisles"
+      ),
       icon: Store,
     },
     {
       id: "chaine-magasins",
-      label: "Chaîne de magasins",
-      description: "Plusieurs points de vente à surveiller",
+      label: localized(
+        "Chaîne de magasins",
+        "Retail chain"
+      ),
+      description: localized(
+        "Plusieurs points de vente à surveiller",
+        "Several outlets to keep an eye on"
+      ),
       icon: Store,
     },
     {
       id: "epicerie-proximite",
-      label: "Épicerie / commerce de proximité",
-      description: "Commerce local à taille humaine",
+      label: localized(
+        "Épicerie / commerce de proximité",
+        "Grocery / convenience store"
+      ),
+      description: localized(
+        "Commerce local à taille humaine",
+        "A small local shop"
+      ),
       icon: ShoppingCart,
     },
   ],
@@ -227,11 +397,14 @@ export function activitiesFor(sector: string | null | undefined): Activity[] {
 
 export function activityLabel(
   sector: string | null | undefined,
-  id: string | null | undefined
+  id: string | null | undefined,
+  tx: Tx
 ): string | undefined {
   if (!id) return undefined
 
-  return activitiesFor(sector).find((a) => a.id === id)?.label
+  const label = activitiesFor(sector).find((a) => a.id === id)?.label
+
+  return label ? tx(label.fr, label.en) : undefined
 }
 
 /* ------------------------------------------------------------------ */
