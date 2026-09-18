@@ -80,3 +80,57 @@ export function useT(): Translate {
 
   return translator(ui)
 }
+
+/* --------------------------------------------------------------------------
+ * Bulk translation: tx()
+ *
+ * The catalogue above is right for strings used in more than one place:
+ * the nav, the view titles, the repeated buttons. It is the wrong tool for
+ * the other thousand, which are prose that appears exactly once.
+ *
+ * Per string, the catalogue costs four edits: invent a key, add it to
+ * fr.ts, add it to en.ts, replace the usage. Across ~1050 strings that is
+ * 4200 edits and 1050 key names nobody will ever look up.
+ *
+ * tx("Coûts", "Costs") costs one edit, and it keeps the guarantee that
+ * matters in a stronger form than the catalogue does: the SIGNATURE
+ * requires both languages. You cannot add a French string without its
+ * English, because the function does not compile without it. The
+ * catalogue catches a missing key at build time; this makes a missing
+ * translation unwriteable.
+ *
+ * It also reviews better. A reviewer sees both languages on one line
+ * instead of holding a key in their head across two files.
+ * -------------------------------------------------------------------------- */
+
+/** A string that exists in both languages. For module-level catalogues
+ *  (priorities, activities, the metric definitions) that are built
+ *  outside a React render and so cannot call a hook. */
+export type Localized = { fr: string; en: string }
+
+export function localized(fr: string, en: string): Localized {
+  return { fr, en }
+}
+
+/** Resolve a Localized outside React. */
+export function pick(text: Localized, ui: LanguageCode): string {
+  return ui === "en" ? text.en : text.fr
+}
+
+export type Tx = (fr: string, en: string) => string
+
+/** Resolve a pair outside React, when the language is already known. */
+export function txFor(ui: LanguageCode): Tx {
+  return (frText, enText) => (ui === "en" ? enText : frText)
+}
+
+/** The hook for view bodies.
+ *
+ *  Reads the same narrowed ui language as useT(), so a language whose
+ *  interface does not exist still renders French.
+ */
+export function useTx(): Tx {
+  const { ui } = useLocale()
+
+  return txFor(ui)
+}

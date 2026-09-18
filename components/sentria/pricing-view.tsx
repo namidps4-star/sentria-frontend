@@ -3,100 +3,117 @@
 import { useState } from "react"
 import { Check, Sparkles, TrendingUp, X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useLocale } from "@/lib/locale"
+import { pick, useTx, type Localized } from "@/lib/i18n"
 
+/* Built at module level, outside any render, so the copy is stored as
+   { fr, en } pairs and resolved with pick(). `name` stays a plain string:
+   "Pro" and "Enterprise" are product names, not prose. */
 type Tier = {
   name: string
-  tagline: string
+  tagline: Localized
   monthly: number | null
-  priceLabel?: string
-  cta: string
+  priceLabel?: Localized
+  cta: Localized
   featured?: boolean
-  features: string[]
-  missing?: string[]
+  features: Localized[]
+  missing?: Localized[]
   highlight?: {
     icon: typeof TrendingUp
     label: string
-    features: string[]
+    features: Localized[]
   }
 }
 
 const TIERS: Tier[] = [
   {
     name: "Starter",
-    tagline: "Best for getting started",
+    tagline: { fr: "Idéal pour démarrer", en: "Best for getting started" },
     monthly: 0,
-    cta: "Commencer gratuitement",
+    cta: { fr: "Commencer gratuitement", en: "Start for free" },
     features: [
-      "1 site surveillé",
-      "1 secteur au choix",
-      "Upload CSV manuel",
-      "Alertes SMS · 10/mois",
-      "Ask SentrIA · 20 requêtes/mois",
-      "Historique 7 jours",
+      { fr: "1 site surveillé", en: "1 site monitored" },
+      { fr: "1 secteur au choix", en: "1 sector of your choice" },
+      { fr: "Upload CSV manuel", en: "Manual CSV upload" },
+      { fr: "Alertes SMS · 10/mois", en: "SMS alerts · 10/month" },
+      { fr: "Ask SentrIA · 20 requêtes/mois", en: "Ask SentrIA · 20 queries/month" },
+      { fr: "Historique 7 jours", en: "7-day history" },
     ],
   },
   {
     name: "Pro",
-    tagline: "Perfect to get started",
+    tagline: { fr: "Le bon départ", en: "Perfect to get started" },
     monthly: 49,
-    cta: "Passer au Pro",
+    cta: { fr: "Passer au Pro", en: "Upgrade to Pro" },
     featured: true,
     features: [
-      "Jusqu'à 5 sites · 3 secteurs",
-      "Alertes SMS illimitées",
-      "Ask SentrIA illimité",
-      "Historique 12 mois & exports CSV/PDF",
-      "IA prédictive & détection d'anomalies",
-      "SentrIA Network Insights",
+      { fr: "Jusqu'à 5 sites · 3 secteurs", en: "Up to 5 sites · 3 sectors" },
+      { fr: "Alertes SMS illimitées", en: "Unlimited SMS alerts" },
+      { fr: "Ask SentrIA illimité", en: "Unlimited Ask SentrIA" },
+      { fr: "Historique 12 mois & exports CSV/PDF", en: "12-month history & CSV/PDF exports" },
+      { fr: "IA prédictive & détection d'anomalies", en: "Predictive AI & anomaly detection" },
+      { fr: "SentrIA Network Insights", en: "SentrIA Network Insights" },
     ],
     highlight: {
       icon: TrendingUp,
       label: "SentrIA Intelligence",
       features: [
-        "Comparaison avec les tendances du secteur",
-        "Benchmarks anonymisés",
-        "Alertes basées sur les tendances du marché",
+        { fr: "Comparaison avec les tendances du secteur", en: "Benchmarked against sector trends" },
+        { fr: "Benchmarks anonymisés", en: "Anonymised benchmarks" },
+        { fr: "Alertes basées sur les tendances du marché", en: "Alerts driven by market trends" },
       ],
     },
   },
   {
     name: "Team",
-    tagline: "Best for teams and agencies",
+    tagline: { fr: "Pour les équipes et les agences", en: "Best for teams and agencies" },
     monthly: 199,
-    priceLabel: "jusqu'à 5 sièges",
-    cta: "Choisir Team",
-    missing: ["Modèles dédiés & option on-premise"],
+    priceLabel: { fr: "jusqu'à 5 sièges", en: "up to 5 seats" },
+    cta: { fr: "Choisir Team", en: "Choose Team" },
+    missing: [
+      {
+        fr: "Modèles dédiés & option on-premise",
+        en: "Dedicated models & on-premise option",
+      },
+    ],
     features: [
-      "Sites & secteurs illimités",
-      "IoT sensors intégrés",
-      "Espaces partagés + rôles & permissions",
-      "Accès API & webhooks",
-      "Scoring de risque personnalisé",
-      "Support prioritaire",
+      { fr: "Sites & secteurs illimités", en: "Unlimited sites & sectors" },
+      { fr: "Capteurs IoT intégrés", en: "Built-in IoT sensors" },
+      { fr: "Espaces partagés + rôles & permissions", en: "Shared workspaces + roles & permissions" },
+      { fr: "Accès API & webhooks", en: "API access & webhooks" },
+      { fr: "Scoring de risque personnalisé", en: "Custom risk scoring" },
+      { fr: "Support prioritaire", en: "Priority support" },
     ],
   },
   {
     name: "Enterprise",
-    tagline: "Best for institutions & scale",
+    tagline: { fr: "Pour les institutions et les grands volumes", en: "Best for institutions & scale" },
     monthly: null,
-    priceLabel: "Sur devis",
-    cta: "Contacter les ventes",
+    priceLabel: { fr: "Sur devis", en: "On request" },
+    cta: { fr: "Contacter les ventes", en: "Contact sales" },
     features: [
-      "SSO / SAML, journaux d'audit",
-      "Modèles dédiés & option on-premise",
-      "SLA + responsable de compte dédié",
-      "Sièges & volume API illimités",
-      "White label disponible",
+      { fr: "SSO / SAML, journaux d'audit", en: "SSO / SAML, audit logs" },
+      { fr: "Modèles dédiés & option on-premise", en: "Dedicated models & on-premise option" },
+      { fr: "SLA + responsable de compte dédié", en: "SLA + dedicated account manager" },
+      { fr: "Sièges & volume API illimités", en: "Unlimited seats & API volume" },
+      { fr: "Marque blanche disponible", en: "White label available" },
     ],
   },
 ]
 
 export function PricingView() {
+  const tx = useTx()
+  const { ui } = useLocale()
+
+  /* The tier copy lives in module-level pairs, so it is resolved here
+     rather than translated here. */
+  const p = (text: Localized) => pick(text, ui)
+
   const [annual, setAnnual] = useState(false)
 
   const formatPrice = (t: Tier) => {
-    if (t.monthly === null) return t.priceLabel
-    if (t.monthly === 0) return "Gratuit"
+    if (t.monthly === null) return t.priceLabel ? p(t.priceLabel) : ""
+    if (t.monthly === 0) return tx("Gratuit", "Free")
 
     const price = annual ? Math.round(t.monthly * 0.8) : t.monthly
 
@@ -110,16 +127,21 @@ export function PricingView() {
         <div className="flex flex-col items-center gap-4 text-center">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-[#d9f36e] px-3 py-1 text-xs font-semibold text-[#1d1d1b]">
             <Sparkles className="h-3.5 w-3.5" />
-            Tarification
+            {tx("Tarification", "Pricing")}
           </span>
 
           <h2 className="max-w-2xl text-balance font-heading text-3xl font-bold tracking-tight text-[#1d1d1b] sm:text-4xl">
-            Une intelligence opérationnelle pour chaque échelle
+            {tx(
+              "Une intelligence opérationnelle pour chaque échelle",
+              "Operational intelligence at every scale"
+            )}
           </h2>
 
           <p className="max-w-xl text-pretty text-sm text-[#6b6a5e]">
-            Des petits commerçants aux institutions : choisissez le plan
-            adapté à vos opérations, partout dans le monde.
+            {tx(
+              "Des petits commerçants aux institutions : choisissez le plan adapté à vos opérations, partout dans le monde.",
+              "From corner shops to institutions: pick the plan that fits your operations, anywhere in the world."
+            )}
           </p>
 
           {/* Billing toggle */}
@@ -134,7 +156,7 @@ export function PricingView() {
                   : "text-[#6b6a5e] hover:text-[#1d1d1b]",
               )}
             >
-              Mensuel
+              {tx("Mensuel", "Monthly")}
             </button>
 
             <button
@@ -147,7 +169,7 @@ export function PricingView() {
                   : "text-[#6b6a5e] hover:text-[#1d1d1b]",
               )}
             >
-              Annuel
+              {tx("Annuel", "Annual")}
 
               <span
                 className={cn(
@@ -183,12 +205,12 @@ export function PricingView() {
 
                 {t.featured && (
                   <span className="rounded-full bg-[#d9f36e] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#1d1d1b]">
-                    Populaire
+                    {tx("Populaire", "Popular")}
                   </span>
                 )}
               </div>
 
-              <p className="mt-1 text-xs text-[#8a887a]">{t.tagline}</p>
+              <p className="mt-1 text-xs text-[#8a887a]">{p(t.tagline)}</p>
 
               {/* Price */}
               <div className="mt-6 flex items-end gap-1.5">
@@ -198,16 +220,16 @@ export function PricingView() {
 
                 {t.monthly !== null && t.monthly > 0 && (
                   <span className="pb-1.5 text-sm text-[#8a887a]">
-                    /mois
+                    {tx("/mois", "/month")}
                   </span>
                 )}
               </div>
 
               <p className="mt-1 min-h-4 text-[11px] text-[#8a887a]">
                 {t.monthly !== null && t.monthly > 0 && annual
-                  ? "facturé annuellement"
+                  ? tx("facturé annuellement", "billed annually")
                   : t.priceLabel && t.monthly !== null
-                    ? t.priceLabel
+                    ? p(t.priceLabel)
                     : ""}
               </p>
 
@@ -221,7 +243,7 @@ export function PricingView() {
                 <ul className="space-y-2.5">
                   {t.features.map((feature) => (
                     <li
-                      key={feature}
+                      key={feature.fr}
                       className="flex items-start gap-2.5 text-[13px] text-[#3c3b33]"
                     >
                       <span
@@ -238,14 +260,14 @@ export function PricingView() {
                         />
                       </span>
 
-                      <span>{feature}</span>
+                      <span>{p(feature)}</span>
                     </li>
                   ))}
 
                   {/* Missing features */}
                   {(t.missing ?? []).map((feature) => (
                     <li
-                      key={feature}
+                      key={feature.fr}
                       className="flex items-start gap-2.5 text-[13px] text-[#b0ae9f]"
                     >
                       <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#e2d4d4]">
@@ -256,7 +278,7 @@ export function PricingView() {
                       </span>
 
                       <span className="line-through decoration-[#c08a8a]/60">
-                        {feature}
+                        {p(feature)}
                       </span>
                     </li>
                   ))}
@@ -276,7 +298,7 @@ export function PricingView() {
                     <ul className="space-y-2">
                       {t.highlight.features.map((feature) => (
                         <li
-                          key={feature}
+                          key={feature.fr}
                           className="flex items-start gap-2 text-xs text-[#3c3b33]"
                         >
                           <Check
@@ -284,7 +306,7 @@ export function PricingView() {
                             strokeWidth={3}
                           />
 
-                          <span>{feature}</span>
+                          <span>{p(feature)}</span>
                         </li>
                       ))}
                     </ul>
@@ -294,11 +316,23 @@ export function PricingView() {
 
               {/* Plan description */}
               <p className="mt-5 text-xs leading-relaxed text-[#6b6a5e]">
+                {/* These three were English only, which was the same bug
+                    in the other direction: a French operator read them in
+                    English. */}
                 {t.featured
-                  ? "Full power for operational teams who need scale, intelligence and flexibility."
+                  ? tx(
+                      "Toute la puissance pour les équipes qui ont besoin d'échelle, d'intelligence et de souplesse.",
+                      "Full power for operational teams who need scale, intelligence and flexibility."
+                    )
                   : t.monthly === null
-                    ? "Custom deployment, dedicated models and enterprise-grade support for large institutions."
-                    : "All the essentials to monitor, alert and act with confidence."}
+                    ? tx(
+                        "Déploiement sur mesure, modèles dédiés et support de niveau entreprise pour les grandes institutions.",
+                        "Custom deployment, dedicated models and enterprise-grade support for large institutions."
+                      )
+                    : tx(
+                        "L'essentiel pour surveiller, alerter et agir en confiance.",
+                        "All the essentials to monitor, alert and act with confidence."
+                      )}
               </p>
 
               {/* CTA */}
@@ -311,7 +345,7 @@ export function PricingView() {
                     : "mt-5 bg-[#1d1d1b] text-[#f5f4ec]",
                 )}
               >
-                {t.cta}
+                {p(t.cta)}
               </button>
             </div>
           ))}
@@ -319,9 +353,10 @@ export function PricingView() {
 
         {/* Footer */}
         <p className="text-center text-xs text-[#6b6a5e]">
-          Tous les plans incluent le chiffrement des données et un essai de
-          14 jours sans engagement. Paiement par MTN Mobile Money, Orange Money
-          ou carte bancaire.
+          {tx(
+            "Tous les plans incluent le chiffrement des données et un essai de 14 jours sans engagement. Paiement par MTN Mobile Money, Orange Money ou carte bancaire.",
+            "Every plan includes data encryption and a 14-day trial with no commitment. Pay by MTN Mobile Money, Orange Money or card."
+          )}
         </p>
       </div>
     </div>

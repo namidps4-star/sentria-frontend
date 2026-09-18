@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
+import { useTx } from "@/lib/i18n"
 import { computeConfidence, confidenceWord } from "@/lib/confidence"
 import { LogisticsBlockagesView } from "./logistics-blockages-view"
 import { LogisticsWaitingView } from "./logistics-waiting-view"
@@ -942,6 +943,8 @@ export function DashboardView({
 }: {
   search?: string
 }) {
+  const tx = useTx()
+
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [recommendations, setRecommendations] = useState<
     Recommendation[]
@@ -2139,7 +2142,7 @@ export function DashboardView({
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
               <Zap className="h-3.5 w-3.5" />
-              Temps réel
+              {tx("Temps réel", "Live")}
             </span>
 
             {/* Which business this dashboard is for. Stated here, in
@@ -2154,34 +2157,45 @@ export function DashboardView({
           </div>
 
           <h2 className="mt-3 text-balance font-heading text-2xl font-bold leading-tight md:text-3xl">
-            Qu&apos;est-ce qui a besoin de votre attention maintenant ?
+            {tx(
+              "Qu'est-ce qui a besoin de votre attention maintenant ?",
+              "What needs your attention right now?"
+            )}
           </h2>
 
           <p className="mt-2 text-pretty text-sm text-sidebar-foreground/70">
-            SentrIA ne se contente pas d&apos;alerter : chaque priorité
-            montre sa preuve, sa confiance et son impact, puis garde en
-            mémoire ce que vous en avez fait.
+            {tx(
+              "SentrIA ne se contente pas d'alerter : chaque priorité montre sa preuve, sa confiance et son impact, puis garde en mémoire ce que vous en avez fait.",
+              "SentrIA does more than alert: every priority shows its evidence, its confidence and its impact, then remembers what you did about it."
+            )}
           </p>
 
           {subtypeName && (
             <p className="mt-3 text-xs leading-5 text-sidebar-foreground/60">
               {activitySeparationActive ? (
                 <>
-                  Vue limitée à votre activité :{" "}
+                  {tx(
+                    "Vue limitée à votre activité :",
+                    "Limited to your activity:"
+                  )}{" "}
                   <span className="font-bold text-sidebar-foreground">
                     {subtypeName}
                   </span>
-                  . Les alertes des autres activités ne sont pas
-                  affichées.
+                  {tx(
+                    ". Les alertes des autres activités ne sont pas affichées.",
+                    ". Alerts from other activities are not shown."
+                  )}
                 </>
               ) : (
                 <>
-                  Activité configurée :{" "}
+                  {tx("Activité configurée :", "Configured activity:")}{" "}
                   <span className="font-bold text-sidebar-foreground">
                     {subtypeName}
                   </span>
-                  . Aucune alerte importée ne porte encore d&apos;activité,
-                  elles sont donc toutes affichées.
+                  {tx(
+                    ". Aucune alerte importée ne porte encore d'activité, elles sont donc toutes affichées.",
+                    ". No imported alert carries an activity yet, so all of them are shown."
+                  )}
                 </>
               )}
             </p>
