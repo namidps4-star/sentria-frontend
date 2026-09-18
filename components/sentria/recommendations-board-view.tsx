@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   CalendarDays,
   Check,
@@ -9,10 +9,9 @@ import {
   Clock3,
   Cpu,
   Fuel,
-  GripVertical,
+  MoreHorizontal,
   Package,
   Radar,
-  Shield,
   Sparkles,
   UserRound,
   Wrench,
@@ -45,11 +44,7 @@ type Recommendation = {
 
 type Status = "todo" | "in_progress" | "done"
 
-type Priority =
-  | "low"
-  | "medium"
-  | "high"
-  | "critical"
+type Priority = "low" | "medium" | "high" | "critical"
 
 type TaskMeta = {
   status: Status
@@ -66,6 +61,11 @@ type RecommendationsBoardProps = {
     name: string
   }[]
 }
+
+/** Which cards the pill row is showing. Every one of these is counted
+ *  from the cards themselves, so a pill can never claim a number the
+ *  board does not hold. */
+type Filter = "all" | "critical" | "unassigned"
 
 const COLUMNS: {
   id: Status
@@ -158,11 +158,7 @@ function loadTaskMap(): Record<string, TaskMeta> {
 
     const parsed = JSON.parse(raw)
 
-    if (
-      !parsed ||
-      typeof parsed !== "object" ||
-      Array.isArray(parsed)
-    ) {
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       return {}
     }
 
@@ -178,10 +174,7 @@ function saveTaskMap(map: Record<string, TaskMeta>) {
   }
 
   try {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(map)
-    )
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(map))
   } catch {
     // Ignore localStorage errors.
   }
@@ -209,9 +202,7 @@ function isDeadlineOverdue(deadline: string | null) {
     return false
   }
 
-  const deadlineDate = new Date(
-    `${deadline}T23:59:59`
-  )
+  const deadlineDate = new Date(`${deadline}T23:59:59`)
 
   return deadlineDate.getTime() < Date.now()
 }
@@ -232,24 +223,87 @@ function getDefaultPriority(rec: Recommendation): Priority {
   return "medium"
 }
 
+/* --------------------------------------------------------------------------
+ * The severity palette.
+ *
+ * The reference board tints each card by the group it belongs to. Here the
+ * group is the severity the backend assigned, and the tint never carries
+ * the meaning on its own: the card also states the severity in words, so
+ * the board reads correctly in greyscale and to a screen reader.
+ * -------------------------------------------------------------------------- */
+
+const TONE = {
+  critical: {
+    card: "border-destructive/25 bg-destructive/[0.06]",
+    fill: "bg-destructive",
+    pill: "bg-destructive/10 text-destructive",
+    word: "Critique",
+  },
+  warning: {
+    card: "border-amber-500/25 bg-amber-500/[0.07]",
+    fill: "bg-amber-500",
+    pill: "bg-amber-500/15 text-amber-600",
+    word: "Attention",
+  },
+} as const
+
+function toneOf(rec: Recommendation) {
+  return rec.severity === "CRITICAL" ? TONE.critical : TONE.warning
+}
+
+/** The segmented risk rule from the reference, driven by the backend's
+ *  own 0-100 score.
+ *
+ *  It renders nothing at all when the row carries no score. A bar with no
+ *  number behind it is exactly the kind of invented progress this product
+ *  keeps removing, and an empty rule would still read as "low risk". */
+function RiskRule({ rec }: { rec: Recommendation }) {
+  const score = rec.risk_score
+
+  if (score === null || score === undefined || !Number.isFinite(score)) {
+    return null
+  }
+
+  const filled = Math.max(0, Math.min(10, Math.round(score / 10)))
+  const tone = toneOf(rec)
+
+  return (
+    <div className="mt-3">
+      <div className="flex items-center gap-[3px]" aria-hidden="true">
+        {Array.from({ length: 10 }, (_, index) => (
+          <span
+            key={index}
+            className={cn(
+              "h-1 flex-1 rounded-full transition-colors",
+              index < filled ? tone.fill : "bg-foreground/10"
+            )}
+          />
+        ))}
+      </div>
+
+      <span className="sr-only">Risque {Math.round(score)} sur 100</span>
+    </div>
+  )
+}
+
 export function RecommendationsBoard({
   recommendations,
   opsType,
   assignees = [],
 }: RecommendationsBoardProps) {
-  const [taskMap, setTaskMap] =
-    useState<Record<string, TaskMeta>>(
-      () => loadTaskMap()
-    )
+  /* This used to read localStorage inside the useState initialiser, which
+     makes the first client render disagree with the server markup. It is
+     read after mount instead, like every other stored value in the app. */
+  const [taskMap, setTaskMap] = useState<Record<string, TaskMeta>>({})
 
-  const [draggingId, setDraggingId] =
-    useState<string | null>(null)
+  useEffect(() => {
+    setTaskMap(loadTaskMap())
+  }, [])
 
-  const [dragOverColumn, setDragOverColumn] =
-    useState<Status | null>(null)
-
-  const [editingId, setEditingId] =
-    useState<string | null>(null)
+  const [draggingId, setDraggingId] = useState<string | null>(null)
+  const [dragOverColumn, setDragOverColumn] = useState<Status | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [filter, setFilter] = useState<Filter>("all")
 
   const cards = useMemo(() => {
     return recommendations.map((rec) => {
@@ -263,26 +317,49 @@ export function RecommendationsBoard({
           status: stored?.status ?? "todo",
           assignee: stored?.assignee ?? null,
           deadline: stored?.deadline ?? null,
-          priority:
-            stored?.priority ??
-            getDefaultPriority(rec),
+          priority: stored?.priority ?? getDefaultPriority(rec),
         },
       }
     })
   }, [recommendations, taskMap])
 
-  function updateTask(
-    id: string,
-    patch: Partial<TaskMeta>
-  ) {
+  const criticalCount = cards.filter(
+    (card) => card.rec.severity === "CRITICAL"
+  ).length
+
+  const unassignedCount = cards.filter((card) => !card.task.assignee).length
+
+  const totalExposure = cards.reduce(
+    (sum, card) => sum + (card.rec.exposureEUR ?? 0),
+    0
+  )
+
+  const visible = useMemo(() => {
+    if (filter === "critical") {
+      return cards.filter((card) => card.rec.severity === "CRITICAL")
+    }
+
+    if (filter === "unassigned") {
+      return cards.filter((card) => !card.task.assignee)
+    }
+
+    return cards
+  }, [cards, filter])
+
+  const FILTERS: { id: Filter; label: string; count: number }[] = [
+    { id: "all", label: "Toutes", count: cards.length },
+    { id: "critical", label: "Critiques", count: criticalCount },
+    { id: "unassigned", label: "Non assignées", count: unassignedCount },
+  ]
+
+  function updateTask(id: string, patch: Partial<TaskMeta>) {
     setTaskMap((current) => {
-      const existing =
-        current[id] ?? {
-          status: "todo" as Status,
-          assignee: null,
-          deadline: null,
-          priority: "medium" as Priority,
-        }
+      const existing = current[id] ?? {
+        status: "todo" as Status,
+        assignee: null,
+        deadline: null,
+        priority: "medium" as Priority,
+      }
 
       const next = {
         ...current,
@@ -303,31 +380,19 @@ export function RecommendationsBoard({
       return
     }
 
-    updateTask(id, {
-      status,
-    })
+    updateTask(id, { status })
   }
 
-  function handleDragStart(
-    e: React.DragEvent<HTMLDivElement>,
-    id: string
-  ) {
+  function handleDragStart(e: React.DragEvent<HTMLDivElement>, id: string) {
     e.stopPropagation()
 
-    e.dataTransfer.setData(
-      "text/plain",
-      id
-    )
-
+    e.dataTransfer.setData("text/plain", id)
     e.dataTransfer.effectAllowed = "move"
 
     setDraggingId(id)
   }
 
-  function handleDrop(
-    e: React.DragEvent<HTMLDivElement>,
-    status: Status
-  ) {
+  function handleDrop(e: React.DragEvent<HTMLDivElement>, status: Status) {
     e.preventDefault()
     e.stopPropagation()
 
@@ -339,11 +404,7 @@ export function RecommendationsBoard({
       return
     }
 
-    const cardExists = cards.some(
-      (card) => card.id === id
-    )
-
-    if (cardExists) {
+    if (cards.some((card) => card.id === id)) {
       moveTo(id, status)
     }
 
@@ -356,18 +417,13 @@ export function RecommendationsBoard({
     setDragOverColumn(null)
   }
 
-  const opsLabel = opsType
-    ? OPS_TYPE_LABEL[opsType]
-    : undefined
+  const opsLabel = opsType ? OPS_TYPE_LABEL[opsType] : undefined
 
   if (recommendations.length === 0) {
     return (
       <div className="flex items-center gap-3 rounded-3xl border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
         <Sparkles className="h-4 w-4 shrink-0 text-accent-foreground" />
-
-        Aucune priorité urgente
-        pour ce secteur pour le
-        moment. Tout est sous
+        Aucune priorité urgente pour ce secteur pour le moment. Tout est sous
         contrôle ici.
       </div>
     )
@@ -375,556 +431,470 @@ export function RecommendationsBoard({
 
   return (
     <div className="rounded-3xl border border-border bg-card p-5 shadow-sm md:p-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/10">
-              <Sparkles className="h-4 w-4 text-accent-foreground" />
-            </div>
+      {/* ------------------------------------------------------------------
+          Header strip: eyebrow, title, filter pills, and the three counts.
+          ------------------------------------------------------------------ */}
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            {opsLabel ?? "Opérations"}
+          </p>
 
-            <div>
-              <h3 className="font-heading text-lg font-bold">
-                Priorités du moment
-              </h3>
+          <h3 className="mt-1 font-heading text-2xl font-bold tracking-tight">
+            Priorités du moment
+          </h3>
 
-              <p className="text-xs text-muted-foreground">
-                Pilotez chaque action
-                comme une tâche
-                opérationnelle.
-              </p>
-            </div>
+          {/* The pill row from the reference. Dark active pill, brand count
+              badge, every number counted from the cards on screen. */}
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {FILTERS.map((item) => {
+              const active = filter === item.id
+
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setFilter(item.id)}
+                  aria-pressed={active}
+                  className={cn(
+                    "flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    active
+                      ? "bg-foreground text-background"
+                      : "border border-border bg-background text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  {item.label}
+
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
+                      active
+                        ? "bg-accent text-accent-foreground"
+                        : "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    {item.count}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <dl className="flex shrink-0 items-start gap-6 lg:gap-8">
+          <div>
+            <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Priorités
+            </dt>
+            <dd className="mt-1 font-heading text-3xl font-bold tabular-nums">
+              {cards.length}
+            </dd>
           </div>
 
-          {opsLabel && (
-            <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-2.5 py-1 text-[11px] font-medium text-accent-foreground">
-              <Shield className="h-3 w-3" />
-              Vue adaptée : {opsLabel}
-            </span>
+          <div>
+            <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Critiques
+            </dt>
+            <dd className="mt-1 font-heading text-3xl font-bold tabular-nums">
+              {criticalCount}
+            </dd>
+          </div>
+
+          {totalExposure > 0 && (
+            <div>
+              <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Exposition
+              </dt>
+              <dd className="mt-1 font-heading text-3xl font-bold tabular-nums">
+                {formatEuros(totalExposure)}
+                <span className="ml-1 text-sm font-semibold">€</span>
+              </dd>
+            </div>
           )}
-        </div>
-
-        <div className="rounded-xl border border-border bg-background px-3 py-2 text-right">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Priorités
-          </p>
-
-          <p className="font-heading text-lg font-bold">
-            {cards.length}
-          </p>
-        </div>
+        </dl>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+      {/* ------------------------------------------------------------------
+          The columns.
+          ------------------------------------------------------------------ */}
+      <div className="mt-7 grid grid-cols-1 gap-x-5 gap-y-6 md:grid-cols-3">
         {COLUMNS.map((column, columnIndex) => {
-          const columnCards = cards.filter(
-            (card) =>
-              card.task.status === column.id
+          const columnCards = visible.filter(
+            (card) => card.task.status === column.id
           )
 
-          const isDropTarget =
-            dragOverColumn === column.id
+          const isDropTarget = dragOverColumn === column.id
 
           return (
             <div
               key={column.id}
               onDragOver={(e) => {
                 e.preventDefault()
-
-                e.dataTransfer.dropEffect =
-                  "move"
-
+                e.dataTransfer.dropEffect = "move"
                 setDragOverColumn(column.id)
               }}
               onDragEnter={(e) => {
                 e.preventDefault()
                 setDragOverColumn(column.id)
               }}
-              onDrop={(e) =>
-                handleDrop(e, column.id)
-              }
-              className={cn(
-                "flex min-h-[260px] flex-col rounded-2xl border p-3 transition-all duration-200",
-                "bg-background/70",
-                isDropTarget
-                  ? "border-accent bg-accent/[0.06] shadow-[0_0_0_3px_hsl(var(--accent)/0.08)]"
-                  : "border-border"
-              )}
+              onDrop={(e) => handleDrop(e, column.id)}
+              className="flex min-h-[260px] flex-col"
             >
-              <div className="mb-3 flex items-center justify-between px-1">
-                <div className="flex items-center gap-2">
-                  <div
-                    className={cn(
-                      "h-2 w-2 rounded-full",
-                      column.id === "todo" &&
-                        "bg-amber-500",
-                      column.id === "in_progress" &&
-                        "bg-accent",
-                      column.id === "done" &&
-                        "bg-emerald-500"
-                    )}
-                  />
+              {/* The segmented rule from the reference: one segment per
+                  card in this column, coloured by that card's severity, so
+                  the shape of the column is readable before the cards are. */}
+              <div
+                className="flex items-center gap-1 pb-3"
+                aria-hidden="true"
+              >
+                {columnCards.length === 0 ? (
+                  <span className="h-[3px] flex-1 rounded-full bg-foreground/10" />
+                ) : (
+                  columnCards.map((card) => (
+                    <span
+                      key={card.id}
+                      className={cn(
+                        "h-[3px] flex-1 rounded-full",
+                        toneOf(card.rec).fill
+                      )}
+                    />
+                  ))
+                )}
+              </div>
 
-                  <div>
-                    <p className="text-sm font-semibold">
-                      {column.label}
-                    </p>
-
-                    <p className="text-[10px] text-muted-foreground">
-                      {column.hint}
-                    </p>
-                  </div>
+              <div className="mb-3 flex items-baseline justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-sm font-bold">{column.label}</p>
+                  <p className="mt-0.5 text-[10px] text-muted-foreground">
+                    {column.hint}
+                  </p>
                 </div>
 
-                <span className="rounded-full border border-border bg-card px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                <span className="shrink-0 text-sm font-bold tabular-nums text-muted-foreground">
                   {columnCards.length}
                 </span>
               </div>
 
-              <div className="flex flex-1 flex-col gap-2">
+              <div className="flex flex-1 flex-col gap-3">
                 {columnCards.length === 0 && (
                   <div
+                    style={{
+                      /* The hatched drop slot from the reference. Written
+                         as a style rather than an arbitrary class because
+                         the tokens are oklch() values: hsl(var(--token))
+                         is invalid and the browser drops the whole rule. */
+                      backgroundImage:
+                        "repeating-linear-gradient(135deg, transparent, transparent 6px, color-mix(in oklab, var(--foreground) 4%, transparent) 6px, color-mix(in oklab, var(--foreground) 4%, transparent) 12px)",
+                    }}
                     className={cn(
-                      "flex flex-1 items-center justify-center rounded-xl border border-dashed py-8 text-[11px]",
+                      "flex flex-1 items-center justify-center rounded-2xl border border-dashed py-10 text-[11px] transition-colors",
                       isDropTarget
                         ? "border-accent text-accent-foreground"
-                        : "border-border/70 text-muted-foreground"
+                        : "border-border text-muted-foreground"
                     )}
                   >
-                    Déposez une
-                    priorité ici
+                    {filter === "all"
+                      ? "Déposez une priorité ici"
+                      : "Rien dans ce filtre"}
                   </div>
                 )}
 
-                {columnCards.map(
-                  ({
-                    id,
-                    rec,
-                    task,
-                  }) => {
-                    const Icon =
-                      CATEGORY_ICON[
-                        rec.action_category
-                      ] ?? Sparkles
+                {columnCards.map(({ id, rec, task }) => {
+                  const Icon = CATEGORY_ICON[rec.action_category] ?? Sparkles
+                  const tone = toneOf(rec)
+                  const isDragging = draggingId === id
+                  const overdue = isDeadlineOverdue(task.deadline)
 
-                    const isCritical =
-                      rec.severity ===
-                      "CRITICAL"
+                  const assignee = assignees.find(
+                    (person) => person.id === task.assignee
+                  )
 
-                    const isDragging =
-                      draggingId === id
-
-                    const overdue =
-                      isDeadlineOverdue(
-                        task.deadline
-                      )
-
-                    const assignee =
-                      assignees.find(
-                        (person) =>
-                          person.id ===
-                          task.assignee
-                      )
-
-                    return (
-                      <div
-                        key={id}
-                        draggable
-                        onDragStart={(e) =>
-                          handleDragStart(
-                            e,
-                            id
-                          )
-                        }
-                        onDragEnd={
-                          handleDragEnd
-                        }
-                        className={cn(
-                          "group relative rounded-xl border bg-card p-3.5",
-                          "cursor-grab shadow-sm transition-all duration-200",
-                          "hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md",
-                          "active:cursor-grabbing",
-                          isDragging &&
-                            "z-50 scale-[1.03] border-accent bg-accent/[0.08] opacity-90 shadow-[0_12px_35px_hsl(var(--accent)/0.22)] ring-2 ring-accent/30",
-                          isCritical &&
-                            !isDragging &&
-                            "border-destructive/25"
-                        )}
-                      >
-                        {isDragging && (
-                          <div className="pointer-events-none absolute inset-x-3 top-0 h-0.5 rounded-full bg-accent" />
-                        )}
-
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-1.5 text-muted-foreground">
-                            <GripVertical className="h-3.5 w-3.5 opacity-40 transition-opacity group-hover:opacity-100" />
-
-                            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-accent/10">
-                              <Icon className="h-3.5 w-3.5 text-accent-foreground" />
-                            </div>
-                          </div>
-
-                          <span
-                            className={cn(
-                              "rounded-full px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider",
-                              isCritical
-                                ? "bg-destructive/10 text-destructive"
-                                : "bg-amber-500/10 text-amber-600"
-                            )}
-                          >
-                            {rec.severity}
-                          </span>
-                        </div>
-
-                        <p className="mt-3 text-sm font-semibold leading-snug">
+                  return (
+                    <div
+                      key={id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, id)}
+                      onDragEnd={handleDragEnd}
+                      className={cn(
+                        "group relative rounded-2xl border px-4 pb-3.5 pt-4",
+                        "cursor-grab transition-all duration-200",
+                        "hover:-translate-y-0.5 hover:shadow-md",
+                        "active:cursor-grabbing",
+                        tone.card,
+                        isDragging &&
+                          "z-50 scale-[1.03] opacity-90 shadow-xl ring-2 ring-accent"
+                      )}
+                    >
+                      {/* Title block, two lines like the reference. */}
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="min-w-0 text-sm font-bold leading-snug">
                           {rec.equipment}
 
                           {rec.stageName && (
-                            <span className="font-normal text-muted-foreground">
-                              {" · "}
+                            <span className="block font-medium text-muted-foreground">
                               {rec.stageName}
                             </span>
                           )}
                         </p>
 
-                        <p className="mt-1 line-clamp-2 text-xs leading-4 text-muted-foreground">
-                          {rec.recommended_action}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setEditingId(id)
+                          }}
+                          aria-label={`Détails de la priorité ${rec.equipment}`}
+                          className="-mr-1 -mt-1 shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <RiskRule rec={rec} />
+
+                      <p className="mt-3 line-clamp-2 text-xs leading-5 text-muted-foreground">
+                        {rec.recommended_action}
+                      </p>
+
+                      {(rec.exposureEUR ?? 0) > 0 && (
+                        <p className="mt-2 text-xs font-bold tabular-nums">
+                          {formatEuros(rec.exposureEUR!)} € exposés
                         </p>
+                      )}
 
-                        {(rec.exposureEUR ?? 0) > 0 && (
-                          <p className="mt-2 text-xs font-bold tabular-nums">
-                            {formatEuros(rec.exposureEUR!)} € exposés
-                          </p>
+                      {/* Severity in words, so the tint is never the only
+                          thing carrying it. */}
+                      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                        <span
+                          className={cn(
+                            "rounded-md px-2 py-1 text-[9px] font-semibold uppercase tracking-wider",
+                            tone.pill
+                          )}
+                        >
+                          {tone.word}
+                        </span>
+
+                        <span className="inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[9px] font-medium text-muted-foreground">
+                          <Icon className="h-3 w-3" aria-hidden="true" />
+                          {CATEGORY_LABEL[rec.action_category] ?? "Autre"}
+                        </span>
+
+                        {(rec.downstream ?? 0) > 0 && (
+                          <span className="rounded-md border border-brand/40 bg-brand/10 px-2 py-1 text-[9px] font-semibold">
+                            {rec.downstream} en aval
+                          </span>
                         )}
 
-                        {rec.reasoning && (
-                          <p className="mt-1.5 text-[10px] leading-4 text-muted-foreground">
-                            {rec.reasoning}
-                            {rec.score !== undefined && (
-                              <>
-                                {" · "}
-                                <span className="font-semibold text-foreground">
-                                  score {rec.score}
-                                </span>
-                              </>
-                            )}
-                          </p>
+                        {(rec.alertCount ?? 0) > 1 && (
+                          <span className="rounded-md border border-border bg-background/60 px-2 py-1 text-[9px] font-medium text-muted-foreground">
+                            {rec.alertCount} signaux
+                          </span>
                         )}
 
-                        <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                          <span className="rounded-md border border-border bg-background px-2 py-1 text-[9px] font-medium text-muted-foreground">
-                            {CATEGORY_LABEL[
-                              rec.action_category
-                            ] ?? "Autre"}
-                          </span>
+                        <span className="rounded-md border border-border bg-background/60 px-2 py-1 text-[9px] font-medium text-muted-foreground">
+                          {PRIORITY_LABEL[task.priority]}
+                        </span>
+                      </div>
 
-                          {(rec.downstream ?? 0) > 0 && (
-                            <span className="rounded-md border border-brand/40 bg-brand/10 px-2 py-1 text-[9px] font-semibold">
-                              {rec.downstream} en aval
-                            </span>
+                      {/* Footer: who is on it, and by when. In the reference
+                          this row carries a photo and a name; here it carries
+                          the assigned contractor, and says plainly that there
+                          is nobody rather than showing a placeholder face. */}
+                      <div className="mt-3 flex items-center justify-between gap-2 border-t border-foreground/10 pt-2.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setEditingId(id)
+                          }}
+                          className="flex min-w-0 items-center gap-2 rounded-lg py-1 pr-1 text-left transition-colors hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {assignee ? (
+                            <>
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-foreground text-[9px] font-bold text-background">
+                                {getInitials(assignee.name)}
+                              </span>
+
+                              <span className="max-w-[110px] truncate text-[11px] font-semibold">
+                                {assignee.name}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-dashed border-foreground/25 text-muted-foreground">
+                                <UserRound
+                                  className="h-3.5 w-3.5"
+                                  aria-hidden="true"
+                                />
+                              </span>
+
+                              <span className="text-[11px] text-muted-foreground">
+                                Assigner
+                              </span>
+                            </>
                           )}
+                        </button>
 
-                          {(rec.alertCount ?? 0) > 1 && (
-                            <span className="rounded-md border border-border bg-background px-2 py-1 text-[9px] font-medium text-muted-foreground">
-                              {rec.alertCount} signaux
-                            </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setEditingId(id)
+                          }}
+                          className={cn(
+                            "flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 text-[11px] transition-colors hover:bg-foreground/5",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            overdue
+                              ? "font-bold text-destructive"
+                              : "text-muted-foreground"
                           )}
+                        >
+                          <CalendarDays
+                            className="h-3.5 w-3.5"
+                            aria-hidden="true"
+                          />
 
-                          <span
-                            className={cn(
-                              "rounded-md px-2 py-1 text-[9px] font-medium",
-                              task.priority ===
-                                "critical" &&
-                                "bg-destructive/10 text-destructive",
-                              task.priority ===
-                                "high" &&
-                                "bg-orange-500/10 text-orange-600",
-                              task.priority ===
-                                "medium" &&
-                                "bg-amber-500/10 text-amber-600",
-                              task.priority ===
-                                "low" &&
-                                "bg-muted text-muted-foreground"
-                            )}
-                          >
-                            {
-                              PRIORITY_LABEL[
-                                task.priority
-                              ]
+                          {task.deadline
+                            ? formatDeadline(task.deadline)
+                            : "Échéance"}
+                        </button>
+                      </div>
+
+                      <div className="pointer-events-none absolute bottom-1.5 right-2 flex items-center gap-0.5 opacity-0 transition-opacity focus-within:pointer-events-auto focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
+                        <button
+                          type="button"
+                          aria-label="Déplacer vers la colonne précédente"
+                          disabled={columnIndex === 0}
+                          onClick={(e) => {
+                            e.stopPropagation()
+
+                            if (columnIndex > 0) {
+                              moveTo(id, COLUMNS[columnIndex - 1].id)
                             }
-                          </span>
-                        </div>
+                          }}
+                          className="rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-20"
+                        >
+                          <ChevronLeft className="h-3.5 w-3.5" />
+                        </button>
 
-                        <div className="mt-3 flex items-center justify-between border-t border-border/70 pt-3">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setEditingId(id)
-                            }}
-                            className="flex min-w-0 items-center gap-2 rounded-lg px-1 py-1 text-left transition-colors hover:bg-muted"
-                          >
-                            {assignee ? (
-                              <>
-                                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-[9px] font-bold text-accent-foreground">
-                                  {getInitials(
-                                    assignee.name
-                                  )}
-                                </span>
+                        <button
+                          type="button"
+                          aria-label="Déplacer vers la colonne suivante"
+                          disabled={columnIndex === COLUMNS.length - 1}
+                          onClick={(e) => {
+                            e.stopPropagation()
 
-                                <span className="max-w-[90px] truncate text-[10px] font-medium">
-                                  {assignee.name}
-                                </span>
-                              </>
-                            ) : (
-                              <>
-                                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-border text-muted-foreground">
-                                  <UserRound className="h-3 w-3" />
-                                </span>
-
-                                <span className="text-[10px] text-muted-foreground">
-                                  Assigner
-                                </span>
-                              </>
-                            )}
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setEditingId(id)
-                            }}
-                            className={cn(
-                              "flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] transition-colors hover:bg-muted",
-                              overdue
-                                ? "font-semibold text-destructive"
-                                : "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarDays className="h-3 w-3" />
-
-                            {task.deadline
-                              ? formatDeadline(
-                                  task.deadline
-                                )
-                              : "Échéance"}
-                          </button>
-                        </div>
-
-                        <div className="mt-2 flex items-center justify-end gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                          <button
-                            type="button"
-                            aria-label="Déplacer vers la colonne précédente"
-                            disabled={
-                              columnIndex === 0
+                            if (columnIndex < COLUMNS.length - 1) {
+                              moveTo(id, COLUMNS[columnIndex + 1].id)
                             }
-                            onClick={(e) => {
-                              e.stopPropagation()
+                          }}
+                          className="rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-20"
+                        >
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
 
-                              if (
-                                columnIndex >
-                                0
-                              ) {
-                                moveTo(
-                                  id,
-                                  COLUMNS[
-                                    columnIndex -
-                                      1
-                                  ].id
-                                )
-                              }
-                            }}
-                            className="rounded-md p-1 text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-20"
-                          >
-                            <ChevronLeft className="h-3.5 w-3.5" />
-                          </button>
-
-                          <button
-                            type="button"
-                            aria-label="Déplacer vers la colonne suivante"
-                            disabled={
-                              columnIndex ===
-                              COLUMNS.length -
-                                1
-                            }
-                            onClick={(e) => {
-                              e.stopPropagation()
-
-                              if (
-                                columnIndex <
-                                COLUMNS.length -
-                                  1
-                              ) {
-                                moveTo(
-                                  id,
-                                  COLUMNS[
-                                    columnIndex +
-                                      1
-                                  ].id
-                                )
-                              }
-                            }}
-                            className="rounded-md p-1 text-muted-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-20"
-                          >
-                            <ChevronRight className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-
-                        {editingId === id && (
-                          <div
-                            className="absolute inset-x-2 bottom-2 z-20 rounded-xl border border-border bg-card p-3 shadow-xl"
-                            onClick={(e) =>
-                              e.stopPropagation()
-                            }
-                            onMouseDown={(e) =>
-                              e.stopPropagation()
-                            }
-                          >
-                            <div className="mb-3 flex items-center justify-between">
-                              <p className="text-xs font-semibold">
-                                Détails de la
-                                priorité
-                              </p>
-
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setEditingId(
-                                    null
-                                  )
-                                }
-                                className="rounded-md p-1 text-muted-foreground hover:bg-muted"
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-
-                            <label className="mb-1 block text-[10px] font-medium text-muted-foreground">
-                              Responsable
-                            </label>
-
-                            <select
-                              value={
-                                task.assignee ??
-                                ""
-                              }
-                              onChange={(e) =>
-                                updateTask(
-                                  id,
-                                  {
-                                    assignee:
-                                      e.target
-                                        .value ||
-                                      null,
-                                  }
-                                )
-                              }
-                              className="mb-3 w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs outline-none focus:border-accent"
-                            >
-                              <option value="">
-                                Non assigné
-                              </option>
-
-                              {assignees.map(
-                                (person) => (
-                                  <option
-                                    key={
-                                      person.id
-                                    }
-                                    value={
-                                      person.id
-                                    }
-                                  >
-                                    {person.name}
-                                  </option>
-                                )
-                              )}
-                            </select>
-
-                            <label className="mb-1 block text-[10px] font-medium text-muted-foreground">
-                              Échéance
-                            </label>
-
-                            <div className="relative mb-3">
-                              <CalendarDays className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-
-                              <input
-                                type="date"
-                                value={
-                                  task.deadline ??
-                                  ""
-                                }
-                                onChange={(e) =>
-                                  updateTask(
-                                    id,
-                                    {
-                                      deadline:
-                                        e.target
-                                          .value ||
-                                        null,
-                                    }
-                                  )
-                                }
-                                className="w-full rounded-lg border border-border bg-background py-2 pl-8 pr-2 text-xs outline-none focus:border-accent"
-                              />
-                            </div>
-
-                            <label className="mb-1 block text-[10px] font-medium text-muted-foreground">
-                              Priorité
-                            </label>
-
-                            <select
-                              value={
-                                task.priority
-                              }
-                              onChange={(e) =>
-                                updateTask(
-                                  id,
-                                  {
-                                    priority:
-                                      e.target
-                                        .value as Priority,
-                                  }
-                                )
-                              }
-                              className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs outline-none focus:border-accent"
-                            >
-                              <option value="low">
-                                Faible
-                              </option>
-
-                              <option value="medium">
-                                Moyenne
-                              </option>
-
-                              <option value="high">
-                                Haute
-                              </option>
-
-                              <option value="critical">
-                                Critique
-                              </option>
-                            </select>
+                      {editingId === id && (
+                        <div
+                          className="absolute inset-x-2 bottom-2 z-20 rounded-xl border border-border bg-card p-3 shadow-xl"
+                          onClick={(e) => e.stopPropagation()}
+                          onMouseDown={(e) => e.stopPropagation()}
+                        >
+                          <div className="mb-3 flex items-center justify-between">
+                            <p className="text-xs font-semibold">
+                              Détails de la priorité
+                            </p>
 
                             <button
                               type="button"
-                              onClick={() =>
-                                setEditingId(
-                                  null
-                                )
-                              }
-                              className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground transition-colors hover:bg-accent/90"
+                              onClick={() => setEditingId(null)}
+                              aria-label="Fermer"
+                              className="rounded-md p-1 text-muted-foreground hover:bg-muted"
                             >
-                              <Check className="h-3.5 w-3.5" />
-
-                              Enregistrer
+                              <X className="h-3.5 w-3.5" />
                             </button>
                           </div>
-                        )}
-                      </div>
-                    )
-                  }
-                )}
+
+                          <label className="mb-1 block text-[10px] font-medium text-muted-foreground">
+                            Responsable
+                          </label>
+
+                          <select
+                            value={task.assignee ?? ""}
+                            onChange={(e) =>
+                              updateTask(id, {
+                                assignee: e.target.value || null,
+                              })
+                            }
+                            className="mb-1 w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs outline-none focus:border-accent"
+                          >
+                            <option value="">Non assigné</option>
+
+                            {assignees.map((person) => (
+                              <option key={person.id} value={person.id}>
+                                {person.name}
+                              </option>
+                            ))}
+                          </select>
+
+                          {assignees.length === 0 && (
+                            <p className="mb-3 text-[10px] leading-4 text-muted-foreground">
+                              Aucun intervenant enregistré pour l&apos;instant.
+                            </p>
+                          )}
+
+                          <label className="mb-1 mt-2 block text-[10px] font-medium text-muted-foreground">
+                            Échéance
+                          </label>
+
+                          <div className="relative mb-3">
+                            <CalendarDays className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+
+                            <input
+                              type="date"
+                              value={task.deadline ?? ""}
+                              onChange={(e) =>
+                                updateTask(id, {
+                                  deadline: e.target.value || null,
+                                })
+                              }
+                              className="w-full rounded-lg border border-border bg-background py-2 pl-8 pr-2 text-xs outline-none focus:border-accent"
+                            />
+                          </div>
+
+                          <label className="mb-1 block text-[10px] font-medium text-muted-foreground">
+                            Priorité
+                          </label>
+
+                          <select
+                            value={task.priority}
+                            onChange={(e) =>
+                              updateTask(id, {
+                                priority: e.target.value as Priority,
+                              })
+                            }
+                            className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs outline-none focus:border-accent"
+                          >
+                            <option value="low">Faible</option>
+                            <option value="medium">Moyenne</option>
+                            <option value="high">Haute</option>
+                            <option value="critical">Critique</option>
+                          </select>
+
+                          <button
+                            type="button"
+                            onClick={() => setEditingId(null)}
+                            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground transition-colors hover:bg-accent/90"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                            Enregistrer
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
               </div>
             </div>
           )
