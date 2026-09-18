@@ -52,7 +52,10 @@ export function LogisticsWaitingView({
   opsType,
   selectedOpsTypesForMulti = [],
 }: LogisticsWaitingViewProps) {
-  const queues = useMemo(() => deriveQueues(alerts, opsType), [alerts, opsType])
+  const queues = useMemo(
+    () => deriveQueues(alerts, opsType, selectedOpsTypesForMulti),
+    [alerts, opsType, selectedOpsTypesForMulti]
+  )
 
   const stages = useMemo(
     () => deriveStages(alerts, opsType, selectedOpsTypesForMulti),
@@ -79,6 +82,7 @@ export function LogisticsWaitingView({
         <ViewHeader
           eyebrow="Temps d'attente"
           opsType={opsType}
+        selectedOpsTypes={selectedOpsTypesForMulti}
           title="Aucun temps d'attente mesuré."
           lede="Cette vue ne montre que des durées relevées par vos équipements. Elle reste vide tant qu'aucune n'a été enregistrée."
           risk={0}
@@ -111,6 +115,7 @@ export function LogisticsWaitingView({
       <ViewHeader
         eyebrow="Temps d'attente"
         opsType={opsType}
+        selectedOpsTypes={selectedOpsTypesForMulti}
         title={`${worst.equipment} immobilise la file depuis ${formatHours(
           worst.hours
         )}.`}

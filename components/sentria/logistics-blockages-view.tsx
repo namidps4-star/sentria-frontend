@@ -126,6 +126,7 @@ export function LogisticsBlockagesView({
         <ViewHeader
           eyebrow="Blocages"
           opsType={opsType}
+        selectedOpsTypes={selectedOpsTypesForMulti}
           title="Aucun blocage détecté pour le moment."
           lede="Cette vue lit vos alertes logistiques. Elle reste vide jusqu'au premier fichier importé, parce qu'afficher des zéros donnerait l'impression que tout va bien."
           risk={0}
@@ -168,6 +169,7 @@ export function LogisticsBlockagesView({
       <ViewHeader
         eyebrow="Blocages"
         opsType={opsType}
+        selectedOpsTypes={selectedOpsTypesForMulti}
         title={
           blockingStage
             ? `Le flux s'arrête sur ${blockingStage.name}.`

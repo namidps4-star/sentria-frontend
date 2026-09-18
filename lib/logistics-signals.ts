@@ -101,6 +101,29 @@ export const OPS_LABELS: Record<OpsType, string> = {
   multi: "Plusieurs activités",
 }
 
+/** How to name the activity in a header.
+ *
+ *  With a set of two, "Plusieurs activités" says less than naming them,
+ *  and a reefer terminal wants to see that both of its activities are
+ *  being followed. Past three it stays a count, because the header is
+ *  not the place for a five-item list. */
+export function opsLabelFor(
+  opsType: OpsType | undefined,
+  selected: Exclude<OpsType, "multi">[] = []
+): string | undefined {
+  if (!opsType) return undefined
+
+  if (opsType !== "multi") return OPS_LABELS[opsType]
+
+  if (selected.length === 0) return OPS_LABELS.multi
+
+  if (selected.length <= 3) {
+    return selected.map((type) => OPS_LABELS[type]).join(" + ")
+  }
+
+  return `${selected.length} activités`
+}
+
 export function chainFor(
   opsType: OpsType | undefined,
   selectedForMulti: Exclude<OpsType, "multi">[] = []
@@ -406,7 +429,10 @@ export function metricFor(alert: LogisticsAlert): MetricDef | undefined {
 
 export function stageOf(
   alert: LogisticsAlert,
-  opsType: OpsType | undefined
+  opsType: OpsType | undefined,
+  /** The chain the caller is rendering. Required to resolve a
+   *  multi-activity operator correctly. */
+  chain?: PrimitiveId[]
 ): PrimitiveId | undefined {
   const def = metricFor(alert)
 
@@ -416,11 +442,23 @@ export function stageOf(
     return def.stage[opsType] ?? def.defaultStage
   }
 
-  /* Multi-activity: the per-ops mapping is ambiguous, so use the first
-     stage this metric maps to that is actually in the composed chain. */
-  const mapped = Object.values(def.stage)
+  /* Multi-activity. The comment here used to say it picked the first
+     mapping "that is actually in the composed chain", but it took
+     Object.values(def.stage)[0] without looking at the chain at all. So
+     a temperature reading for an operator running port and warehouse
+     landed on transportRefrigere, a cold-chain stage they do not have,
+     and was dropped from their flow entirely. Check the chain. */
+  if (chain && chain.length > 0) {
+    for (const candidate of Object.values(def.stage)) {
+      if (candidate && chain.includes(candidate)) return candidate
+    }
 
-  return mapped[0] ?? def.defaultStage
+    if (chain.includes(def.defaultStage)) return def.defaultStage
+
+    return undefined
+  }
+
+  return Object.values(def.stage)[0] ?? def.defaultStage
 }
 
 /** The measured value behind an alert.
@@ -564,7 +602,7 @@ export function deriveStages(
   const byStage = new Map<PrimitiveId, LogisticsAlert[]>()
 
   for (const alert of alerts) {
-    const stage = stageOf(alert, opsType)
+    const stage = stageOf(alert, opsType, chain)
 
     if (!stage || !chain.includes(stage)) continue
 
@@ -882,8 +920,10 @@ export function currentReadings(alerts: LogisticsAlert[]): LogisticsAlert[] {
 export function deriveExposure(
   alerts: LogisticsAlert[],
   opsType: OpsType | undefined,
-  rates: CostRates = DEFAULT_COST_RATES
+  rates: CostRates = DEFAULT_COST_RATES,
+  selectedForMulti: Exclude<OpsType, "multi">[] = []
 ): ExposureLine[] {
+  const chain = chainFor(opsType, selectedForMulti)
   const lines: ExposureLine[] = []
 
   for (const alert of currentReadings(alerts)) {
@@ -911,7 +951,7 @@ export function deriveExposure(
 
     if (overrun <= 0) continue
 
-    const stage = stageOf(alert, opsType)
+    const stage = stageOf(alert, opsType, chain)
 
     lines.push({
       equipment: alert.equipment,
@@ -950,8 +990,10 @@ export type QueueLine = {
 /** Everything the backend measured a wait time for, longest first. */
 export function deriveQueues(
   alerts: LogisticsAlert[],
-  opsType: OpsType | undefined
+  opsType: OpsType | undefined,
+  selectedForMulti: Exclude<OpsType, "multi">[] = []
 ): QueueLine[] {
+  const chain = chainFor(opsType, selectedForMulti)
   const lines: QueueLine[] = []
 
   for (const alert of currentReadings(alerts)) {
@@ -963,7 +1005,7 @@ export function deriveQueues(
 
     if (hours === null) continue
 
-    const stage = stageOf(alert, opsType)
+    const stage = stageOf(alert, opsType, chain)
 
     lines.push({
       equipment: alert.equipment,
@@ -1106,8 +1148,10 @@ export type AnticipationLine = {
  *  confirmed it on the same equipment, and measure the gap. */
 export function deriveAnticipation(
   alerts: LogisticsAlert[],
-  opsType: OpsType | undefined
+  opsType: OpsType | undefined,
+  selectedForMulti: Exclude<OpsType, "multi">[] = []
 ): AnticipationLine[] {
+  const chain = chainFor(opsType, selectedForMulti)
   const predictive = alerts.filter(isPredictive)
   const thresholdAlerts = alerts.filter((a) => !isPredictive(a) && metricFor(a))
 
@@ -1127,8 +1171,8 @@ export function deriveAnticipation(
         )[0]
 
       const stage = confirmation
-        ? stageOf(confirmation, opsType)
-        : stageOf(warning, opsType)
+        ? stageOf(confirmation, opsType, chain)
+        : stageOf(warning, opsType, chain)
 
       const leadHours = confirmation
         ? Math.max(

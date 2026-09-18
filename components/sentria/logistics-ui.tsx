@@ -4,7 +4,7 @@ import type { LucideIcon } from "lucide-react"
 import { Upload } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
-  OPS_LABELS,
+  opsLabelFor,
   type OpsType,
   type StageStatus,
 } from "@/lib/logistics-signals"
@@ -43,9 +43,11 @@ export function ViewHeader({
   risk,
   riskLabel = "Risque mesuré",
   icon: Icon,
+  selectedOpsTypes = [],
 }: {
   eyebrow: string
   opsType?: OpsType
+  selectedOpsTypes?: Exclude<OpsType, "multi">[]
   title: string
   lede: string
   risk: number
@@ -62,9 +64,9 @@ export function ViewHeader({
               {eyebrow}
             </span>
 
-            {opsType && (
+            {opsLabelFor(opsType, selectedOpsTypes) && (
               <span className="inline-flex items-center rounded-full border border-sidebar-border bg-sidebar-accent px-3 py-1 text-xs font-medium text-sidebar-foreground/80">
-                {OPS_LABELS[opsType]}
+                {opsLabelFor(opsType, selectedOpsTypes)}
               </span>
             )}
           </div>

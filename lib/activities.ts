@@ -267,3 +267,95 @@ export function normalizeOpsType(
 
   return OPS_TYPE_ALIASES[value]
 }
+
+/* ------------------------------------------------------------------ */
+/*  Logistics: the set of activities an operator actually runs         */
+/* ------------------------------------------------------------------ */
+
+/** A terminal that handles reefers runs port AND cold chain. A 3PL runs
+ *  warehouse, transport and cold chain. The model only allowed one, with
+ *  a "Plusieurs activités" option that composed the union of all five
+ *  and watched twenty stages including ones the customer does not have.
+ *  The set is stored here instead, and the chain is the union of exactly
+ *  what they picked. */
+export const OPS_TYPES_KEY = "sentria_ops_types"
+export const OPS_TYPE_KEY = "sentria_ops_type"
+
+export type SingleOpsType = Exclude<OpsType, "multi">
+
+export const SINGLE_OPS_TYPES: SingleOpsType[] = [
+  "port",
+  "entrepot",
+  "transport",
+  "expedition",
+  "froid",
+]
+
+function isSingleOpsType(value: unknown): value is SingleOpsType {
+  return (
+    typeof value === "string" &&
+    (SINGLE_OPS_TYPES as string[]).includes(value)
+  )
+}
+
+/** The activities this deployment runs, newest storage first.
+ *
+ *  Falls back to the single-value key so anyone onboarded before this
+ *  keeps their configuration, including the old "multi", which meant
+ *  "all of them" and is read that way. */
+export function readOpsTypes(): SingleOpsType[] {
+  if (typeof window === "undefined") return []
+
+  try {
+    const stored = JSON.parse(localStorage.getItem(OPS_TYPES_KEY) || "null")
+
+    if (Array.isArray(stored)) {
+      const valid = SINGLE_OPS_TYPES.filter((t) => stored.includes(t))
+
+      if (valid.length > 0) return valid
+    }
+  } catch {
+    /* fall through to the legacy key */
+  }
+
+  const legacy = normalizeOpsType(localStorage.getItem(OPS_TYPE_KEY))
+
+  if (!legacy) return []
+
+  if (legacy === "multi") return [...SINGLE_OPS_TYPES]
+
+  return [legacy]
+}
+
+/** Store the set, and keep the single-value key in step so the upload
+ *  parameter and anything still reading it stay correct: the one
+ *  activity when there is one, "multi" when there are several. */
+export function writeOpsTypes(types: SingleOpsType[]) {
+  const valid = SINGLE_OPS_TYPES.filter((t) => types.includes(t))
+
+  try {
+    localStorage.setItem(OPS_TYPES_KEY, JSON.stringify(valid))
+
+    if (valid.length === 1) {
+      localStorage.setItem(OPS_TYPE_KEY, valid[0])
+    } else if (valid.length > 1) {
+      localStorage.setItem(OPS_TYPE_KEY, "multi")
+    } else {
+      localStorage.removeItem(OPS_TYPE_KEY)
+    }
+  } catch {
+    /* A blocked localStorage must not break onboarding. */
+  }
+
+  return valid
+}
+
+/** What to pass as opsType given a set: the activity itself when there
+ *  is one, "multi" when the chain is a union. */
+export function opsTypeFor(types: SingleOpsType[]): OpsType | undefined {
+  if (types.length === 0) return undefined
+
+  return types.length === 1 ? types[0] : "multi"
+}
+
+export { isSingleOpsType }

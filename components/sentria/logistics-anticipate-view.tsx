@@ -51,8 +51,8 @@ export function LogisticsAnticipateView({
   selectedOpsTypesForMulti = [],
 }: LogisticsAnticipateViewProps) {
   const lines = useMemo(
-    () => deriveAnticipation(alerts, opsType),
-    [alerts, opsType]
+    () => deriveAnticipation(alerts, opsType, selectedOpsTypesForMulti),
+    [alerts, opsType, selectedOpsTypesForMulti]
   )
 
   const stages = useMemo(
@@ -77,6 +77,7 @@ export function LogisticsAnticipateView({
         <ViewHeader
           eyebrow="Anticipation"
           opsType={opsType}
+        selectedOpsTypes={selectedOpsTypesForMulti}
           title="Aucune alerte préventive enregistrée."
           lede="Cette vue mesure l'avance réelle de SentrIA : le temps entre son alerte préventive et le moment où un seuil a effectivement été franchi. Sans alerte préventive, il n'y a pas d'avance à mesurer."
           risk={0}
@@ -106,6 +107,7 @@ export function LogisticsAnticipateView({
       <ViewHeader
         eyebrow="Anticipation"
         opsType={opsType}
+        selectedOpsTypes={selectedOpsTypesForMulti}
         title={
           bestLead
             ? `Prévenu ${formatHours(

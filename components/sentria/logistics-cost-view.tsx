@@ -114,8 +114,8 @@ export function LogisticsCostView({
   }
 
   const lines = useMemo(
-    () => deriveExposure(alerts, opsType, rates),
-    [alerts, opsType, rates]
+    () => deriveExposure(alerts, opsType, rates, selectedOpsTypesForMulti),
+    [alerts, opsType, rates, selectedOpsTypesForMulti]
   )
 
   const stages = useMemo(
@@ -135,6 +135,7 @@ export function LogisticsCostView({
         <ViewHeader
           eyebrow="Coûts"
           opsType={opsType}
+        selectedOpsTypes={selectedOpsTypesForMulti}
           title="Aucun dépassement facturable mesuré."
           lede="Cette vue ne chiffre que des dépassements réels. Tant qu'aucun relevé ne franchit son seuil, il n'y a rien à chiffrer."
           risk={0}
@@ -175,6 +176,7 @@ export function LogisticsCostView({
       <ViewHeader
         eyebrow="Coûts"
         opsType={opsType}
+        selectedOpsTypes={selectedOpsTypesForMulti}
         title={`${countOf(
           lines.length,
           "dépassement"

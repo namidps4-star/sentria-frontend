@@ -47,6 +47,10 @@ import {
   activitiesFor,
   activityLabel,
   normalizeOpsType,
+  opsTypeFor,
+  readOpsTypes,
+  writeOpsTypes,
+  type SingleOpsType,
 } from "@/lib/activities"
 
 
@@ -958,6 +962,11 @@ export function DashboardView({
      would be sent. Changing it meant editing localStorage by hand. */
   const [uploadActivity, setUploadActivity] = useState<string | null>(null)
 
+  /* Every logistics activity this deployment runs. The flow chain is the
+     union of exactly these, instead of one activity or, for the old
+     "multi", all five. */
+  const [opsTypes, setOpsTypes] = useState<SingleOpsType[]>([])
+
   const [uploading, setUploading] = useState(false)
   const [uploadMsg, setUploadMsg] = useState("")
   const [uploadFailed, setUploadFailed] = useState(false)
@@ -1040,6 +1049,7 @@ export function DashboardView({
     }
 
     setOpsType(localStorage.getItem("sentria_ops_type"))
+    setOpsTypes(readOpsTypes())
     setBusinessType(localStorage.getItem("sentria_business_type"))
     setSelectedLogisticsPriorities(getSavedLogisticsPriorities())
     setSelectedIndustryPriorities(getSavedIndustryPriorities())
@@ -1135,6 +1145,8 @@ export function DashboardView({
       }
 
       setOpsType(localStorage.getItem("sentria_ops_type"))
+
+      setOpsTypes(readOpsTypes())
 
       setBusinessType(localStorage.getItem("sentria_business_type"))
 
@@ -1366,10 +1378,14 @@ export function DashboardView({
    *  same keys onboarding does, so the views pick it up. */
   function applyActivityToDashboard(sector: string, activityId: string) {
     if (sector === "logistics") {
-      const normalized = normalizeOpsType(activityId) ?? activityId
+      const normalized = normalizeOpsType(activityId)
 
-      localStorage.setItem("sentria_ops_type", normalized)
-      setOpsType(normalized)
+      if (normalized && normalized !== "multi") {
+        const stored = writeOpsTypes([normalized])
+
+        setOpsTypes(stored)
+        setOpsType(normalized)
+      }
     } else {
       localStorage.setItem("sentria_business_type", activityId)
       setBusinessType(activityId)
@@ -1867,7 +1883,18 @@ export function DashboardView({
   }
 
   if (filterSector === "logistics") {
-    const normalizedOpsType = normalizeOpsType(opsType)
+    /* Prefer the stored set: it says which activities are actually run,
+       where the single value can only say "multi", which used to mean
+       every chain at once. */
+    const normalizedOpsType =
+      opsTypes.length > 0 ? opsTypeFor(opsTypes) : normalizeOpsType(opsType)
+
+    const opsTypesForChain =
+      opsTypes.length > 0
+        ? opsTypes
+        : normalizeOpsType(opsType) === "multi"
+          ? readOpsTypes()
+          : []
 
     if (logisticsPriority === null) {
       return (
@@ -2011,16 +2038,19 @@ export function DashboardView({
           <LogisticsWaitingView
             alerts={logisticsViewAlerts}
             opsType={normalizedOpsType}
+            selectedOpsTypesForMulti={opsTypesForChain}
           />
         ) : logisticsPriority === "cost" ? (
           <LogisticsCostView
             alerts={logisticsViewAlerts}
             opsType={normalizedOpsType}
+            selectedOpsTypesForMulti={opsTypesForChain}
           />
         ) : logisticsPriority === "anticipate" ? (
           <LogisticsAnticipateView
             alerts={logisticsViewAlerts}
             opsType={normalizedOpsType}
+            selectedOpsTypesForMulti={opsTypesForChain}
           />
         ) : logisticsPriority === "resources" ? (
           <div className="rounded-3xl border border-border bg-card p-6">
@@ -2090,6 +2120,7 @@ export function DashboardView({
           <LogisticsBlockagesView
             alerts={logisticsViewAlerts}
             opsType={normalizedOpsType}
+            selectedOpsTypesForMulti={opsTypesForChain}
           />
         )}
       </div>

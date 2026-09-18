@@ -23,7 +23,13 @@ import {
 import { cn } from "@/lib/utils"
 import { API_BASE } from "@/lib/api"
 import { PRIORITIES_BY_SECTOR } from "@/lib/priorities"
-import { ACTIVITIES_BY_SECTOR, normalizeOpsType } from "@/lib/activities"
+import {
+  ACTIVITIES_BY_SECTOR,
+  normalizeOpsType,
+  opsTypeFor,
+  writeOpsTypes,
+  type SingleOpsType,
+} from "@/lib/activities"
 import {
   chainFor,
   PRIMITIVE_NAMES,
@@ -254,8 +260,14 @@ function BulkSelect({
  *  stages will be watched, so this draws their real chain, in the same
  *  capsule the dashboard uses, in its empty state. Nothing is filled in,
  *  because nothing has been measured yet, and it says so. */
-function ActivityFlowPreview({ opsType }: { opsType?: OpsType }) {
-  const chain = chainFor(opsType)
+function ActivityFlowPreview({
+  opsType,
+  selected = [],
+}: {
+  opsType?: OpsType
+  selected?: Exclude<OpsType, "multi">[]
+}) {
+  const chain = chainFor(opsType, selected)
 
   if (chain.length === 0) return null
 
@@ -325,11 +337,12 @@ function ActivityFlowPreview({ opsType }: { opsType?: OpsType }) {
       </div>
 
       <p className="border-t border-border px-4 py-2.5 text-[11px] leading-5 text-muted-foreground">
-        {opsType === "multi" ? (
+        {selected.length > 1 ? (
           <>
-            Toutes les étapes possibles sont listées : dites-nous
-            lesquelles vous exploitez réellement et la chaîne se
-            réduira à celles-là.
+            Les étapes de vos {selected.length}{" "}activités, fusionnées :
+            celles qu&apos;elles partagent n&apos;apparaissent
+            qu&apos;une fois. En gris parce qu&apos;aucune donnée
+            n&apos;a encore été importée.
           </>
         ) : (
           <>
@@ -361,6 +374,10 @@ export function OnboardingView({
   const [step, setStep] = useState(1)
   const [sector, setSector] = useState<Sector | null>(null)
   const [subType, setSubType] = useState<string | null>(null)
+
+  /** Every activity the customer runs. One entry for every sector except
+   *  logistics, where it is the real set. */
+  const [subTypes2, setSubTypes2] = useState<string[]>([])
   const [selectedEquipment, setSelectedEquipment] =
     useState<string[]>([])
   const [csvUploading, setCsvUploading] = useState(false)
@@ -438,12 +455,42 @@ export function OnboardingView({
     // Important: changing sector invalidates both the
     // previously selected subtype and monitoring priorities.
     setSubType(null)
+    setSubTypes2([])
     setSelectedEquipment([])
   }
 
+  /* Logistics is multi-select: a terminal handling reefers runs port
+     and cold chain, a 3PL runs warehouse, transport and cold chain. The
+     other sectors stay single-select, because a pharmacy is not also a
+     laboratory. subType keeps holding the primary activity so the CSV
+     column hints and the business_type parameter are unchanged. */
   function chooseSubType(id: string) {
-    setSubType(id)
+    if (!isLogistics) {
+      setSubType(id)
+      setSubTypes2([id])
+      return
+    }
+
+    setSubTypes2((current) => {
+      const next = current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id]
+
+      setSubType(next[0] ?? null)
+
+      return next
+    })
   }
+
+  const selectedOpsTypes = useMemo(
+    () =>
+      subTypes2
+        .map((id) => normalizeOpsType(id))
+        .filter(
+          (t): t is SingleOpsType => !!t && t !== "multi"
+        ),
+    [subTypes2]
+  )
 
   function toggleEquipment(id: string) {
     setSelectedEquipment((current) =>
@@ -606,12 +653,10 @@ export function OnboardingView({
       // type ("port"), not on this step's subtype id
       // ("port-conteneurs"), so normalize before storing. Writing the
       // raw id meant a real onboarded port operator got neither the
-      // port chain nor the port checks.
-      if (isLogistics && subType) {
-        localStorage.setItem(
-          "sentria_ops_type",
-          normalizeOpsType(subType) ?? subType
-        )
+      // port chain nor the port checks. writeOpsTypes stores the whole
+      // set and keeps the single-value key in step.
+      if (isLogistics && selectedOpsTypes.length > 0) {
+        writeOpsTypes(selectedOpsTypes)
       }
 
       localStorage.setItem(
@@ -640,7 +685,7 @@ export function OnboardingView({
     step === 1
       ? Boolean(sector)
       : step === subTypeStepNumber
-        ? Boolean(subType)
+        ? subTypes2.length > 0
         : step === equipmentStepNumber
           ? selectedEquipment.length > 0
           : true
@@ -863,10 +908,28 @@ export function OnboardingView({
                   </p>
                 </div>
 
+                {isLogistics && (
+                  <p className="mb-3 text-xs text-muted-foreground">
+                    Sélectionnez toutes les activités que vous exploitez.
+                    Un terminal qui manipule des conteneurs réfrigérés
+                    fait du port et de la chaîne du froid : cochez les
+                    deux et SentrIA suivra les étapes des deux, sans y
+                    ajouter celles que vous n&apos;avez pas.
+                  </p>
+                )}
+
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  {subTypes.map((item) => {
+                  {subTypes
+                    .filter(
+                      (item) =>
+                        /* "Plusieurs activités" was a single card that
+                           composed every chain at once. Ticking several
+                           real activities replaces it exactly. */
+                        item.id !== "plusieurs-activites"
+                    )
+                    .map((item) => {
                     const Icon = item.icon
-                    const active = subType === item.id
+                    const active = subTypes2.includes(item.id)
 
                     return (
                       <button
@@ -939,17 +1002,24 @@ export function OnboardingView({
 
                 <div className="mt-4 flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
                   <span className="text-xs text-muted-foreground">
-                    {subType ? (
+                    {subTypes2.length > 0 ? (
                       <>
-                        Activité retenue :{" "}
+                        {subTypes2.length > 1
+                          ? "Activités retenues : "
+                          : "Activité retenue : "}
+
                         <span className="font-semibold text-foreground">
-                          {
-                            subTypes.find(
-                              (item) => item.id === subType
-                            )?.label
-                          }
+                          {subTypes2
+                            .map(
+                              (id) =>
+                                subTypes.find((item) => item.id === id)
+                                  ?.label ?? id
+                            )
+                            .join(", ")}
                         </span>
                       </>
+                    ) : isLogistics ? (
+                      "Cochez chaque activité que vous exploitez"
                     ) : (
                       "Sélectionnez l'activité la plus proche de la vôtre"
                     )}
@@ -960,9 +1030,10 @@ export function OnboardingView({
                   </span>
                 </div>
 
-                {isLogistics && subType && (
+                {isLogistics && selectedOpsTypes.length > 0 && (
                   <ActivityFlowPreview
-                    opsType={normalizeOpsType(subType)}
+                    opsType={opsTypeFor(selectedOpsTypes)}
+                    selected={selectedOpsTypes}
                   />
                 )}
               </div>
