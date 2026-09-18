@@ -27,6 +27,7 @@ import {
   Zap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { localized, useTx, type Localized, type Tx } from "@/lib/i18n"
 
 type Sector =
   | "industry"
@@ -38,11 +39,16 @@ type Sector =
 
 type SiteStatus = "connected" | "warning" | "offline"
 
+/** When the last sync happened. A marker, not a sentence: storing
+ *  "À l'instant" in state meant a site created in French still said it
+ *  after the operator switched the interface to English. */
+type Freshness = "none" | "now"
+
 type DataSource = {
   type: "csv" | "api" | "iot"
-  name: string
+  name: Localized
   connected: boolean
-  lastSync?: string
+  lastSync?: Freshness
 }
 
 type Site = {
@@ -54,22 +60,30 @@ type Site = {
   assets: number
   critical: number
   warnings: number
-  lastData: string
+  lastData: Freshness
   health: number
   sources: DataSource[]
 }
 
 const SECTORS: {
   key: Sector
-  label: string
+  label: Localized
   icon: any
 }[] = [
-  { key: "industry", label: "Industrie", icon: Cog },
-  { key: "health", label: "Santé", icon: HeartPulse },
-  { key: "agriculture", label: "Agriculture", icon: Wheat },
-  { key: "transportation", label: "Transport", icon: Truck },
-  { key: "logistics", label: "Logistique", icon: Ship },
-  { key: "energy", label: "Énergie", icon: Zap },
+  { key: "industry", label: localized("Industrie", "Industry"), icon: Cog },
+  { key: "health", label: localized("Santé", "Health"), icon: HeartPulse },
+  {
+    key: "agriculture",
+    label: localized("Agriculture", "Agriculture"),
+    icon: Wheat,
+  },
+  {
+    key: "transportation",
+    label: localized("Transport", "Transport"),
+    icon: Truck,
+  },
+  { key: "logistics", label: localized("Logistique", "Logistics"), icon: Ship },
+  { key: "energy", label: localized("Énergie", "Energy"), icon: Zap },
 ]
 
 /*
@@ -83,23 +97,30 @@ const INITIAL_SITES: Site[] = []
 
 const STATUS_META = {
   connected: {
-    label: "Connecté",
+    label: localized("Connecté", "Connected"),
     icon: CheckCircle2,
     className: "bg-accent/20 text-accent-foreground",
     dot: "bg-green-500",
   },
   warning: {
-    label: "Attention",
+    label: localized("Attention", "Attention"),
     icon: AlertTriangle,
     className: "bg-amber-500/15 text-amber-600",
     dot: "bg-amber-500",
   },
   offline: {
-    label: "Hors ligne",
+    label: localized("Hors ligne", "Offline"),
     icon: XCircle,
     className: "bg-destructive/10 text-destructive",
     dot: "bg-destructive",
   },
+}
+
+/** The words for a Freshness marker. */
+function freshnessLabel(value: Freshness, tx: Tx): string {
+  return value === "now"
+    ? tx("À l'instant", "Just now")
+    : tx("Aucune donnée", "No data")
 }
 
 function getSector(sector: Sector) {
@@ -110,6 +131,8 @@ function getSector(sector: Sector) {
 }
 
 function HealthScore({ value }: { value: number }) {
+  const tx = useTx()
+
   return (
     <div className="flex items-center gap-3">
       <div className="relative h-12 w-12">
@@ -153,14 +176,14 @@ function HealthScore({ value }: { value: number }) {
 
       <div>
         <p className="text-xs text-muted-foreground">
-          Santé du site
+          {tx("Santé du site", "Site health")}
         </p>
         <p className="text-sm font-semibold">
           {value >= 80
-            ? "Opérationnel"
+            ? tx("Opérationnel", "Operational")
             : value >= 50
-              ? "À surveiller"
-              : "Action requise"}
+              ? tx("À surveiller", "Worth watching")
+              : tx("Action requise", "Action required")}
         </p>
       </div>
     </div>
@@ -168,6 +191,11 @@ function HealthScore({ value }: { value: number }) {
 }
 
 export function SitesView() {
+  const tx = useTx()
+
+  /** Resolve a module-level pair. */
+  const px = (text: Localized) => tx(text.fr, text.en)
+
   const [sites, setSites] = useState<Site[]>(
     INITIAL_SITES
   )
@@ -205,28 +233,29 @@ export function SitesView() {
       id: `site-${Date.now()}`,
       name: newSiteName.trim(),
       location:
-        newSiteLocation.trim() || "Localisation à définir",
+        newSiteLocation.trim() ||
+        tx("Localisation à définir", "Location to be set"),
       sector: newSiteSector,
       status: "offline",
       assets: 0,
       critical: 0,
       warnings: 0,
-      lastData: "Aucune donnée",
+      lastData: "none",
       health: 0,
       sources: [
         {
           type: "csv",
-          name: "Import CSV",
+          name: localized("Import CSV", "CSV import"),
           connected: false,
         },
         {
           type: "api",
-          name: "API",
+          name: localized("API", "API"),
           connected: false,
         },
         {
           type: "iot",
-          name: "Capteurs IoT",
+          name: localized("Capteurs IoT", "IoT sensors"),
           connected: false,
         },
       ],
@@ -256,12 +285,12 @@ export function SitesView() {
                     ? {
                         ...source,
                         connected: true,
-                        lastSync: "À l'instant",
+                        lastSync: "now",
                       }
                     : source
               ),
               status: "connected",
-              lastData: "À l'instant",
+              lastData: "now",
             }
           : site
       )
@@ -287,7 +316,7 @@ export function SitesView() {
               className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
             >
               <ArrowLeft className="h-4 w-4" />
-              Tous les sites
+              {tx("Tous les sites", "All sites")}
             </button>
 
             <div className="flex items-center gap-3">
@@ -313,7 +342,7 @@ export function SitesView() {
                         status.dot
                       )}
                     />
-                    {status.label}
+                    {px(status.label)}
                   </span>
                 </div>
 
@@ -321,7 +350,7 @@ export function SitesView() {
                   <MapPin className="h-3.5 w-3.5" />
                   {activeSite.location}
                   <span>·</span>
-                  {sector.label}
+                  {px(sector.label)}
                 </p>
               </div>
             </div>
@@ -331,18 +360,18 @@ export function SitesView() {
             className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-muted"
           >
             <Settings2 className="h-4 w-4" />
-            Configurer le site
+            {tx("Configurer le site", "Configure this site")}
           </button>
         </div>
 
         {/* TABS */}
         <div className="flex gap-2 overflow-x-auto border-b border-border pb-2">
           {[
-            "Vue d'ensemble",
-            "Actifs",
-            "Alertes",
-            "Sources de données",
-            "Paramètres",
+            tx("Vue d'ensemble", "Overview"),
+            tx("Actifs", "Assets"),
+            tx("Alertes", "Alerts"),
+            tx("Sources de données", "Data sources"),
+            tx("Paramètres", "Settings"),
           ].map((tab, index) => (
             <button
               key={tab}
@@ -363,7 +392,7 @@ export function SitesView() {
           <div className="rounded-3xl border border-border bg-card p-5">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Activity className="h-4 w-4" />
-              Santé du site
+              {tx("Santé du site", "Site health")}
             </div>
 
             <div className="mt-4">
@@ -374,7 +403,7 @@ export function SitesView() {
           <div className="rounded-3xl border border-border bg-card p-5">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Cpu className="h-4 w-4" />
-              Actifs surveillés
+              {tx("Actifs surveillés", "Assets monitored")}
             </div>
 
             <p className="mt-3 font-heading text-3xl font-bold">
@@ -382,14 +411,17 @@ export function SitesView() {
             </p>
 
             <p className="mt-1 text-xs text-muted-foreground">
-              Machines, équipements ou actifs
+              {tx(
+                "Machines, équipements ou actifs",
+                "Machines, equipment or other assets"
+              )}
             </p>
           </div>
 
           <div className="rounded-3xl border border-border bg-card p-5">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <AlertTriangle className="h-4 w-4" />
-              Alertes critiques
+              {tx("Alertes critiques", "Critical alerts")}
             </div>
 
             <p
@@ -403,14 +435,17 @@ export function SitesView() {
             </p>
 
             <p className="mt-1 text-xs text-muted-foreground">
-              Nécessitent une action immédiate
+              {tx(
+                "Nécessitent une action immédiate",
+                "Need action right away"
+              )}
             </p>
           </div>
 
           <div className="rounded-3xl border border-border bg-card p-5">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <CircleDot className="h-4 w-4" />
-              Warnings
+              {tx("Warnings", "Warnings")}
             </div>
 
             <p className="mt-3 font-heading text-3xl font-bold">
@@ -418,7 +453,7 @@ export function SitesView() {
             </p>
 
             <p className="mt-1 text-xs text-muted-foreground">
-              À surveiller
+              {tx("À surveiller", "Worth watching")}
             </p>
           </div>
         </div>
@@ -429,11 +464,14 @@ export function SitesView() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-heading text-lg font-bold">
-                  Attention requise
+                  {tx("Attention requise", "Needs attention")}
                 </h3>
 
                 <p className="text-sm text-muted-foreground">
-                  Ce qui nécessite votre attention.
+                  {tx(
+                    "Ce qui nécessite votre attention.",
+                    "What needs you to look at it."
+                  )}
                 </p>
               </div>
 
@@ -447,11 +485,14 @@ export function SitesView() {
 
                 <div>
                   <p className="text-sm font-semibold">
-                    Aucun problème détecté
+                    {tx("Aucun problème détecté", "No problem detected")}
                   </p>
 
                   <p className="text-xs text-muted-foreground">
-                    Le site fonctionne normalement.
+                    {tx(
+                      "Le site fonctionne normalement.",
+                      "The site is running normally."
+                    )}
                   </p>
                 </div>
               </div>
@@ -466,18 +507,17 @@ export function SitesView() {
 
                       <div>
                         <p className="text-sm font-semibold">
-                          {activeSite.critical} alerte
+                          {activeSite.critical}{" "}
                           {activeSite.critical > 1
-                            ? "s"
-                            : ""}{" "}
-                          critique
-                          {activeSite.critical > 1
-                            ? "s"
-                            : ""}
+                            ? tx("alertes critiques", "critical alerts")
+                            : tx("alerte critique", "critical alert")}
                         </p>
 
                         <p className="text-xs text-muted-foreground">
-                          Action immédiate recommandée
+                          {tx(
+                            "Action immédiate recommandée",
+                            "Immediate action recommended"
+                          )}
                         </p>
                       </div>
                     </div>
@@ -495,14 +535,17 @@ export function SitesView() {
 
                       <div>
                         <p className="text-sm font-semibold">
-                          {activeSite.warnings} warning
+                          {activeSite.warnings}{" "}
                           {activeSite.warnings > 1
-                            ? "s"
-                            : ""}
+                            ? tx("warnings", "warnings")
+                            : tx("warning", "warning")}
                         </p>
 
                         <p className="text-xs text-muted-foreground">
-                          Surveillance recommandée
+                          {tx(
+                            "Surveillance recommandée",
+                            "Worth keeping an eye on"
+                          )}
                         </p>
                       </div>
                     </div>
@@ -518,11 +561,14 @@ export function SitesView() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-heading text-lg font-bold">
-                  Sources de données
+                  {tx("Sources de données", "Data sources")}
                 </h3>
 
                 <p className="text-sm text-muted-foreground">
-                  Comment SentrIA reçoit les données.
+                  {tx(
+                    "Comment SentrIA reçoit les données.",
+                    "How SentrIA receives the data."
+                  )}
                 </p>
               </div>
 
@@ -548,16 +594,24 @@ export function SitesView() {
 
                     <div>
                       <p className="text-sm font-semibold">
-                        {source.name}
+                        {px(source.name)}
                       </p>
 
                       <p className="text-xs text-muted-foreground">
                         {source.connected
-                          ? `Dernière synchronisation : ${
-                              source.lastSync ??
-                              "récemment"
-                            }`
-                          : "Non connecté"}
+                          ? tx(
+                              `Dernière synchronisation : ${
+                                source.lastSync
+                                  ? freshnessLabel(source.lastSync, tx)
+                                  : tx("récemment", "recently")
+                              }`,
+                              `Last sync: ${
+                                source.lastSync
+                                  ? freshnessLabel(source.lastSync, tx)
+                                  : tx("récemment", "recently")
+                              }`
+                            )
+                          : tx("Non connecté", "Not connected")}
                       </p>
                     </div>
                   </div>
@@ -565,7 +619,7 @@ export function SitesView() {
                   {source.connected ? (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/20 px-2.5 py-1 text-xs font-semibold">
                       <CheckCircle2 className="h-3 w-3" />
-                      Actif
+                      {tx("Actif", "Active")}
                     </span>
                   ) : (
                     <button
@@ -577,7 +631,7 @@ export function SitesView() {
                       }
                       className="rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background"
                     >
-                      Connecter
+                      {tx("Connecter", "Connect")}
                     </button>
                   )}
                 </div>
@@ -591,17 +645,21 @@ export function SitesView() {
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h3 className="font-heading text-lg font-bold">
-                Données du site
+                {tx("Données du site", "Site data")}
               </h3>
 
               <p className="mt-1 text-sm text-muted-foreground">
-                Dernières données reçues par SentrIA.
+                {tx(
+                  "Dernières données reçues par SentrIA.",
+                  "The latest data SentrIA received."
+                )}
               </p>
             </div>
 
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span className="h-2 w-2 rounded-full bg-green-500" />
-              Dernière donnée : {activeSite.lastData}
+              {tx("Dernière donnée :", "Last data:")}{" "}
+              {freshnessLabel(activeSite.lastData, tx)}
             </div>
           </div>
 
@@ -610,13 +668,14 @@ export function SitesView() {
               <Database className="mx-auto h-8 w-8 text-muted-foreground" />
 
               <h4 className="mt-3 font-semibold">
-                Aucune donnée pour le moment
+                {tx("Aucune donnée pour le moment", "No data yet")}
               </h4>
 
               <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-                Connectez une source de données ou importez
-                votre historique CSV pour commencer la
-                surveillance.
+                {tx(
+                  "Connectez une source de données ou importez votre historique CSV pour commencer la surveillance.",
+                  "Connect a data source, or import your CSV history, to start monitoring."
+                )}
               </p>
 
               <div className="mt-5 flex flex-wrap justify-center gap-2">
@@ -627,7 +686,7 @@ export function SitesView() {
                   className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground"
                 >
                   <Upload className="h-4 w-4" />
-                  Importer CSV
+                  {tx("Importer CSV", "Import CSV")}
                 </button>
 
                 <button
@@ -637,7 +696,7 @@ export function SitesView() {
                   className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-semibold"
                 >
                   <Wifi className="h-4 w-4" />
-                  Connecter IoT
+                  {tx("Connecter IoT", "Connect IoT")}
                 </button>
               </div>
             </div>
@@ -645,7 +704,7 @@ export function SitesView() {
             <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="rounded-2xl bg-muted p-4">
                 <p className="text-xs text-muted-foreground">
-                  Actifs
+                  {tx("Actifs", "Assets")}
                 </p>
                 <p className="mt-1 text-2xl font-bold">
                   {activeSite.assets}
@@ -654,7 +713,7 @@ export function SitesView() {
 
               <div className="rounded-2xl bg-muted p-4">
                 <p className="text-xs text-muted-foreground">
-                  Sources actives
+                  {tx("Sources actives", "Active sources")}
                 </p>
                 <p className="mt-1 text-2xl font-bold">
                   {
@@ -667,10 +726,10 @@ export function SitesView() {
 
               <div className="rounded-2xl bg-muted p-4">
                 <p className="text-xs text-muted-foreground">
-                  Dernière donnée
+                  {tx("Dernière donnée", "Last data")}
                 </p>
                 <p className="mt-1 text-lg font-bold">
-                  {activeSite.lastData}
+                  {freshnessLabel(activeSite.lastData, tx)}
                 </p>
               </div>
             </div>
@@ -691,16 +750,21 @@ export function SitesView() {
         <div className="max-w-2xl">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
             <Building2 className="h-3.5 w-3.5" />
-            Infrastructure
+            {tx("Infrastructure", "Infrastructure")}
           </span>
 
           <h2 className="mt-3 font-heading text-2xl font-bold tracking-tight md:text-3xl">
-            Vos opérations, site par site.
+            {tx(
+              "Vos opérations, site par site.",
+              "Your operations, site by site."
+            )}
           </h2>
 
           <p className="mt-2 text-sm leading-relaxed text-background/70">
-            Centralisez vos sites, actifs, sources de données
-            et alertes dans un seul espace.
+            {tx(
+              "Centralisez vos sites, actifs, sources de données et alertes dans un seul espace.",
+              "Your sites, assets, data sources and alerts in one place."
+            )}
           </p>
         </div>
 
@@ -709,7 +773,7 @@ export function SitesView() {
           className="inline-flex items-center gap-2 self-start rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02]"
         >
           <Plus className="h-4 w-4" />
-          Ajouter un site
+          {tx("Ajouter un site", "Add a site")}
         </button>
       </div>
 
@@ -718,7 +782,7 @@ export function SitesView() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="rounded-3xl border border-border bg-card p-5">
             <p className="text-sm text-muted-foreground">
-              Sites
+              {tx("Sites", "Sites")}
             </p>
 
             <p className="mt-2 font-heading text-3xl font-bold">
@@ -728,7 +792,7 @@ export function SitesView() {
 
           <div className="rounded-3xl border border-border bg-card p-5">
             <p className="text-sm text-muted-foreground">
-              Connectés
+              {tx("Connectés", "Connected")}
             </p>
 
             <p className="mt-2 font-heading text-3xl font-bold">
@@ -743,7 +807,7 @@ export function SitesView() {
 
           <div className="rounded-3xl border border-border bg-card p-5">
             <p className="text-sm text-muted-foreground">
-              Alertes critiques
+              {tx("Alertes critiques", "Critical alerts")}
             </p>
 
             <p className="mt-2 font-heading text-3xl font-bold text-destructive">
@@ -765,13 +829,14 @@ export function SitesView() {
           </div>
 
           <h3 className="mt-5 font-heading text-xl font-bold">
-            Aucun site configuré
+            {tx("Aucun site configuré", "No site set up")}
           </h3>
 
           <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-muted-foreground">
-            Commencez par ajouter votre premier site.
-            Vous pourrez ensuite connecter vos données,
-            importer un historique et surveiller vos actifs.
+            {tx(
+              "Commencez par ajouter votre premier site. Vous pourrez ensuite connecter vos données, importer un historique et surveiller vos actifs.",
+              "Start by adding your first site. You can then connect your data, import a history and monitor your assets."
+            )}
           </p>
 
           <button
@@ -779,7 +844,7 @@ export function SitesView() {
             className="mt-6 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-semibold text-background"
           >
             <Plus className="h-4 w-4" />
-            Créer mon premier site
+            {tx("Créer mon premier site", "Create my first site")}
           </button>
         </div>
       )}
@@ -835,18 +900,18 @@ export function SitesView() {
                         status.dot
                       )}
                     />
-                    {status.label}
+                    {px(status.label)}
                   </span>
 
                   <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
-                    {sector.label}
+                    {px(sector.label)}
                   </span>
                 </div>
 
                 <div className="mt-6 grid grid-cols-3 gap-2">
                   <div className="rounded-2xl bg-muted p-3">
                     <p className="text-[11px] text-muted-foreground">
-                      Actifs
+                      {tx("Actifs", "Assets")}
                     </p>
 
                     <p className="mt-1 font-heading text-xl font-bold">
@@ -856,7 +921,7 @@ export function SitesView() {
 
                   <div className="rounded-2xl bg-muted p-3">
                     <p className="text-[11px] text-muted-foreground">
-                      Warnings
+                      {tx("Warnings", "Warnings")}
                     </p>
 
                     <p className="mt-1 font-heading text-xl font-bold">
@@ -866,7 +931,7 @@ export function SitesView() {
 
                   <div className="rounded-2xl bg-muted p-3">
                     <p className="text-[11px] text-muted-foreground">
-                      Critiques
+                      {tx("Critiques", "Critical")}
                     </p>
 
                     <p
@@ -886,11 +951,11 @@ export function SitesView() {
 
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground">
-                      Dernière donnée
+                      {tx("Dernière donnée", "Last data")}
                     </p>
 
                     <p className="mt-1 text-sm font-semibold">
-                      {site.lastData}
+                      {freshnessLabel(site.lastData, tx)}
                     </p>
                   </div>
                 </div>
@@ -907,12 +972,14 @@ export function SitesView() {
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="font-heading text-xl font-bold">
-                  Ajouter un site
+                  {tx("Ajouter un site", "Add a site")}
                 </h3>
 
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Créez le contexte opérationnel de votre
-                  nouveau site.
+                  {tx(
+                    "Créez le contexte opérationnel de votre nouveau site.",
+                    "Set up the operational context for your new site."
+                  )}
                 </p>
               </div>
 
@@ -921,7 +988,7 @@ export function SitesView() {
                   setShowAddSite(false)
                 }
                 className="rounded-full p-2 text-muted-foreground hover:bg-muted"
-                aria-label="Fermer"
+                aria-label={tx("Fermer", "Close")}
               >
                 <XCircle className="h-5 w-5" />
               </button>
@@ -930,7 +997,7 @@ export function SitesView() {
             <div className="mt-6 space-y-5">
               <div>
                 <label className="text-sm font-semibold">
-                  Nom du site
+                  {tx("Nom du site", "Site name")}
                 </label>
 
                 <input
@@ -938,14 +1005,14 @@ export function SitesView() {
                   onChange={(e) =>
                     setNewSiteName(e.target.value)
                   }
-                  placeholder="Ex. Usine Lyon"
+                  placeholder={tx("Ex. Usine Lyon", "e.g. Lyon plant")}
                   className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-foreground"
                 />
               </div>
 
               <div>
                 <label className="text-sm font-semibold">
-                  Localisation
+                  {tx("Localisation", "Location")}
                 </label>
 
                 <input
@@ -953,14 +1020,14 @@ export function SitesView() {
                   onChange={(e) =>
                     setNewSiteLocation(e.target.value)
                   }
-                  placeholder="Ex. Lyon, France"
+                  placeholder={tx("Ex. Lyon, France", "e.g. Lyon, France")}
                   className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-foreground"
                 />
               </div>
 
               <div>
                 <label className="text-sm font-semibold">
-                  Secteur
+                  {tx("Secteur", "Sector")}
                 </label>
 
                 <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-3">
@@ -985,7 +1052,7 @@ export function SitesView() {
                         )}
                       >
                         <Icon className="h-4 w-4" />
-                        {sector.label}
+                        {px(sector.label)}
                       </button>
                     )
                   })}
@@ -998,14 +1065,17 @@ export function SitesView() {
 
                   <div>
                     <p className="text-sm font-semibold">
-                      Vous pourrez connecter les données
-                      ensuite
+                      {tx(
+                        "Vous pourrez connecter les données ensuite",
+                        "You can connect the data afterwards"
+                      )}
                     </p>
 
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                      CSV, API ou capteurs IoT. Le site sera
-                      créé même sans données afin de pouvoir
-                      terminer votre configuration.
+                      {tx(
+                        "CSV, API ou capteurs IoT. Le site sera créé même sans données afin de pouvoir terminer votre configuration.",
+                        "CSV, API or IoT sensors. The site is created even with no data, so you can finish setting up."
+                      )}
                     </p>
                   </div>
                 </div>
@@ -1019,7 +1089,7 @@ export function SitesView() {
                 }
                 className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold"
               >
-                Annuler
+                {tx("Annuler", "Cancel")}
               </button>
 
               <button
@@ -1027,7 +1097,7 @@ export function SitesView() {
                 disabled={!newSiteName.trim()}
                 className="rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-background disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Créer le site
+                {tx("Créer le site", "Create the site")}
               </button>
             </div>
           </div>

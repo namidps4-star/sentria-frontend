@@ -2361,7 +2361,7 @@ export function DashboardView({
               : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
           )}
         >
-          Tous
+          {tx("Tous", "All")}
 
           <span className="ml-1.5 text-[10px] opacity-60">
             {alerts.filter(matchesActivity).length}
@@ -3204,7 +3204,7 @@ export function DashboardView({
 
               <div className="mt-4 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-sidebar-foreground/40">
-                  Message
+                  {tx("Message", "Message")}
                 </p>
 
                 <p className="mt-1 text-sm leading-5 text-sidebar-foreground/90">
@@ -3225,7 +3225,7 @@ export function DashboardView({
 
                 <div>
                   <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
-                    Statut
+                    {tx("Statut", "Status")}
                   </p>
 
                   <span
@@ -3278,7 +3278,7 @@ export function DashboardView({
                 */}
                 <div>
                   <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
-                    Confiance
+                    {tx("Confiance", "Confidence")}
                   </p>
 
                   {expandedRecommendation ? (
@@ -3723,7 +3723,7 @@ export function DashboardView({
                 }
                 className="rounded-full border border-border px-4 py-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
-                Fermer
+                {tx("Fermer", "Close")}
               </button>
 
               <button
@@ -3739,7 +3739,7 @@ export function DashboardView({
                 className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2.5 text-xs font-bold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 <X className="h-3.5 w-3.5" />
-                Ignorer
+                {tx("Ignorer", "Dismiss")}
               </button>
 
               <button

@@ -1032,7 +1032,7 @@ export function OnboardingView({
             <span className="text-sm font-bold tracking-tight">SentrIA</span>
 
             <span className="text-sm text-muted-foreground">
-              Configuration
+              {tx("Configuration", "Setup")}
             </span>
           </div>
         )}
@@ -1988,7 +1988,7 @@ export function OnboardingView({
                     onClick={previousStep}
                     className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold hover:bg-muted"
                   >
-                    Retour
+                    {tx("Retour", "Back")}
                   </button>
                 )}
               </div>
@@ -2000,7 +2000,7 @@ export function OnboardingView({
                   disabled={!canContinue}
                   className="inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3 text-sm font-semibold text-background disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  Continuer
+                  {tx("Continuer", "Continue")}
                   <ChevronRight className="h-4 w-4" />
                 </button>
               ) : (

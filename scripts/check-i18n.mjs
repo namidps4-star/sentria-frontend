@@ -48,6 +48,35 @@ const ALLOWED = [
 
 const SEARCH_DIRS = ["components", "lib", "app"]
 
+/** Props whose value a user reads. A string here is copy however short or
+ *  identifier-shaped it looks, so the exclusions for code identifiers are
+ *  turned off for it. */
+const COPY_PROPS = [
+  "label",
+  "title",
+  "placeholder",
+  "aria-label",
+  "note",
+  "detail",
+  "expected",
+  "lede",
+  "eyebrow",
+  "subtitle",
+  "description",
+  "emptyLabel",
+  "noun",
+  "figureLabel",
+  "figureNote",
+  "riskLabel",
+  "alt",
+  "heading",
+  "caption",
+  "hint",
+  "helperText",
+  "confirmLabel",
+  "cancelLabel",
+]
+
 /** Is this a piece of text a user reads?
  *
  *  Everything excluded here is machinery: Tailwind classes, ids, keys,
@@ -55,8 +84,17 @@ const SEARCH_DIRS = ["components", "lib", "app"]
  *  this list the tool goes quiet about it, so the exclusions stay narrow
  *  and shape-based rather than a list of words.
  */
-function isUserFacing(text) {
+function isUserFacing(text, kind = "literal") {
   const trimmed = text.trim()
+
+  /* Text between JSX tags, or the value of a prop that carries copy, is
+     read by somebody. The identifier rules below must not apply to it.
+     They exist for literals in code ("sentria_sector", "critical"), and
+     applying them everywhere hid every one-word label: "Pays", "Taux",
+     "Date", "Actif" and "Options" all read as identifiers and were
+     silently excluded, so a zero from this tool did not mean what it
+     said. */
+  const isCopyPosition = kind === "jsx" || kind === "prop"
 
   /* A single short token with no space is almost always an id, a key or
      a class fragment. Real UI copy of that length ("OK", "Non") is rare
@@ -74,19 +112,37 @@ function isUserFacing(text) {
   }
 
   /* Tailwind and CSS. */
-  if (/^[a-z0-9-]+(:[a-z0-9-]+)*$/.test(trimmed) && !/ /.test(trimmed)) return false
+  if (
+    !isCopyPosition &&
+    /^[a-z0-9-][a-z0-9.\/-]*(:[a-z0-9.\/-]+)*$/.test(trimmed) &&
+    !/ /.test(trimmed)
+  ) {
+    return false
+  }
   if (/[[\]{}]/.test(trimmed) && /(-|:)/.test(trimmed)) return false
   if (/^(flex|grid|block|inline|hidden|absolute|relative|sticky|fixed)\b/.test(trimmed)) return false
   if (/\b(rounded|border|bg|text|font|shadow|ring|gap|px|py|pt|pb|pl|pr|mx|my|mt|mb|ml|mr|w|h|min|max|space|divide|items|justify|self|overflow|truncate|leading|tracking|opacity|transition|duration|ease|animate|motion|hover|focus|group|peer|dark|sm|md|lg|xl)-/.test(trimmed)) return false
 
   /* Identifiers, dotted keys, urls, formats, codes. */
-  if (/^[a-z0-9_.]+$/i.test(trimmed) && !/ /.test(trimmed)) return false
+  if (
+    !isCopyPosition &&
+    /^[a-z0-9_.]+$/i.test(trimmed) &&
+    !/ /.test(trimmed)
+  ) {
+    return false
+  }
   if (/^https?:\/\//.test(trimmed)) return false
-  if (/^[A-Z][a-z]+([A-Z][a-z]+)+$/.test(trimmed)) return false
+  if (!isCopyPosition && /^[A-Z][a-z]+([A-Z][a-z]+)+$/.test(trimmed)) return false
   if (/^[A-Z0-9_]+$/.test(trimmed)) return false
   if (/^(application|text|image|audio|video)\//.test(trimmed)) return false
+  if (/^\(\s*(?:prefers-|min-|max-|orientation)/.test(trimmed)) return false
   if (/^[\d\s.,:%+\-/()€$₦]+$/.test(trimmed)) return false
   if (/^(fr|en|es|pt|ar|sw|fr-FR|en-US|en-GB|utf-8|UTF-8)$/i.test(trimmed)) return false
+
+  /* The product's own name, which is the same word in every language.
+     One exact string, listed rather than pattern-matched, so it cannot
+     become a way to let real copy through. */
+  if (trimmed === "SentrIA") return false
 
   /* Must contain at least one letter group that reads like a word. */
   return /[A-Za-zÀ-ÿ]{3}/.test(trimmed)
@@ -225,11 +281,34 @@ function findings(file) {
     .replace(/^\s*(?:import|export)\s[^\n]*$/gm, blank)
     .replace(/^\s*["'](?:use client|use server|use strict)["'][^\n]*$/gm, blank)
 
-  /* 1. String literals. */
+  /* 1a. Props whose value is copy by definition. Checked first, and
+         with the identifier rules off, because a one-word label such as
+         label="Pays" is exactly what those rules were hiding. */
+  const propRe = new RegExp(
+    `\\b(?:${COPY_PROPS.join("|")})\\s*=\\s*(["'])((?:\\\\.|(?!\\1)[^\\\\\\n])*)\\1`,
+    "g"
+  )
+  const propSpans = []
+  let prop
+  while ((prop = propRe.exec(code))) {
+    if (inSpans(prop.index, skip)) continue
+
+    propSpans.push([prop.index, prop.index + prop[0].length])
+
+    if (isUserFacing(prop[2], "prop")) {
+      out.push({
+        line: code.slice(0, prop.index).split("\n").length,
+        text: prop[2].slice(0, 70),
+      })
+    }
+  }
+
+  /* 1b. Every other string literal. */
   const strRe = /(["'])((?:\\.|(?!\1)[^\\\n])*)\1/g
   let m
   while ((m = strRe.exec(code))) {
     if (inSpans(m.index, skip)) continue
+    if (inSpans(m.index, propSpans)) continue
     if (isUserFacing(m[2])) {
       out.push({
         line: code.slice(0, m.index).split("\n").length,
@@ -244,7 +323,7 @@ function findings(file) {
         it. */
   const jsxRe = />([^<>{}]{4,200})</g
   while ((m = jsxRe.exec(code))) {
-    if (!isCode(m[1]) && isUserFacing(m[1])) {
+    if (!isCode(m[1]) && isUserFacing(m[1], "jsx")) {
       out.push({
         line: code.slice(0, m.index).split("\n").length,
         text: m[1].trim().replace(/\s+/g, " ").slice(0, 70),

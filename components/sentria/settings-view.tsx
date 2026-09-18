@@ -21,6 +21,16 @@ import {
   writeLanguage,
 } from "@/lib/locale"
 
+/* This screen carries its own catalogue, in six languages, and it is the
+   only place in the app where Spanish, Portuguese, Arabic and Kiswahili
+   exist. lib/i18n has two languages; narrowing this one to match would
+   throw away four real translations, so it stays and the rest of the file
+   is wired to it.
+ *
+ * It is a catalogue, so the unlocalized-text checker must not count its
+ * contents. Everything OUTSIDE the marker is still checked.
+ *
+ * i18n-ignore-start: this map IS the translations */
 const UI: Record<string, Record<string, string>> = {
   fr: {
     title: "Langue & région",
@@ -38,6 +48,14 @@ const UI: Record<string, Record<string, string>> = {
     timezone: "Fuseau horaire",
     cancel: "Annuler",
     save: "Enregistrer",
+    country: "Pays",
+    countryNone: "Non renseigné",
+    countryNote:
+      "Vos montants sont affichés dans cette devise. Aucune conversion n'est faite : ce sont vos propres chiffres.",
+    countryNoneNote:
+      "Sans pays, les montants sont affichés en euros par défaut.",
+    orgPlaceholder: "Ex. Terminal Atlantique SA",
+    savedNotice: "Enregistré.",
   },
   en: {
     title: "Language & region",
@@ -55,6 +73,14 @@ const UI: Record<string, Record<string, string>> = {
     timezone: "Timezone",
     cancel: "Cancel",
     save: "Save",
+    country: "Country",
+    countryNone: "Not set",
+    countryNote:
+      "Your amounts are shown in this currency. Nothing is converted: these are your own figures.",
+    countryNoneNote:
+      "With no country set, amounts default to euros.",
+    orgPlaceholder: "e.g. Atlantic Terminal Ltd",
+    savedNotice: "Saved.",
   },
   es: {
     title: "Idioma & región",
@@ -72,6 +98,14 @@ const UI: Record<string, Record<string, string>> = {
     timezone: "Zona horaria",
     cancel: "Cancelar",
     save: "Guardar",
+    country: "País",
+    countryNone: "Sin especificar",
+    countryNote:
+      "Sus importes se muestran en esta moneda. No se hace ninguna conversión: son sus propias cifras.",
+    countryNoneNote:
+      "Sin país, los importes se muestran en euros por defecto.",
+    orgPlaceholder: "Ej. Terminal Atlántico SA",
+    savedNotice: "Guardado.",
   },
   pt: {
     title: "Idioma & região",
@@ -89,6 +123,14 @@ const UI: Record<string, Record<string, string>> = {
     timezone: "Fuso horário",
     cancel: "Cancelar",
     save: "Guardar",
+    country: "País",
+    countryNone: "Não indicado",
+    countryNote:
+      "Os seus montantes são apresentados nesta moeda. Não é feita nenhuma conversão: são os seus próprios números.",
+    countryNoneNote:
+      "Sem país, os montantes são apresentados em euros por predefinição.",
+    orgPlaceholder: "Ex. Terminal Atlântico SA",
+    savedNotice: "Guardado.",
   },
   ar: {
     title: "اللغة والمنطقة",
@@ -106,6 +148,13 @@ const UI: Record<string, Record<string, string>> = {
     timezone: "المنطقة الزمنية",
     cancel: "إلغاء",
     save: "حفظ",
+    country: "البلد",
+    countryNone: "غير محدد",
+    countryNote:
+      "تُعرض مبالغك بهذه العملة. لا يتم أي تحويل: هذه أرقامك الخاصة.",
+    countryNoneNote: "بدون بلد، تُعرض المبالغ باليورو افتراضياً.",
+    orgPlaceholder: "مثال: محطة الأطلسي",
+    savedNotice: "تم الحفظ.",
   },
   sw: {
     title: "Lugha & eneo",
@@ -123,8 +172,16 @@ const UI: Record<string, Record<string, string>> = {
     timezone: "Eneo la saa",
     cancel: "Ghairi",
     save: "Hifadhi",
+    country: "Nchi",
+    countryNone: "Haijawekwa",
+    countryNote:
+      "Kiasi chako kinaonyeshwa kwa sarafu hii. Hakuna ubadilishaji unaofanyika: hizi ni namba zako mwenyewe.",
+    countryNoneNote: "Bila nchi, kiasi kinaonyeshwa kwa euro kwa chaguo-msingi.",
+    orgPlaceholder: "Mf. Terminal Atlantique SA",
+    savedNotice: "Imehifadhiwa.",
   },
 }
+/* i18n-ignore-end */
 
 function Toggle({
   on,
@@ -418,7 +475,7 @@ export function SettingsView() {
             <input
               value={companyName}
               onChange={(event) => setCompanyName(event.target.value)}
-              placeholder="Ex. Terminal Atlantique SA"
+              placeholder={t.orgPlaceholder}
               autoComplete="organization"
               className="mt-1.5 w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring"
             />
@@ -430,7 +487,7 @@ export function SettingsView() {
               were shown as euros. Choosing a country also fills the
               timezone in, since that is the usual answer. */}
           <label className="block">
-            <span className="text-sm font-medium">Pays</span>
+            <span className="text-sm font-medium">{t.country}</span>
 
             <select
               value={countryCode}
@@ -445,7 +502,7 @@ export function SettingsView() {
               }}
               className="mt-1.5 w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring"
             >
-              <option value="">Non renseigné</option>
+              <option value="">{t.countryNone}</option>
 
               {COUNTRIES.map((country) => (
                 <option key={country.code} value={country.code}>
@@ -455,9 +512,7 @@ export function SettingsView() {
             </select>
 
             <span className="mt-1.5 block text-[10px] leading-4 text-muted-foreground">
-              {countryCode
-                ? "Vos montants sont affichés dans cette devise. Aucune conversion n'est faite : ce sont vos propres chiffres."
-                : "Sans pays, les montants sont affichés en euros par défaut."}
+              {countryCode ? t.countryNote : t.countryNoneNote}
             </span>
           </label>
 
@@ -499,7 +554,7 @@ export function SettingsView() {
 
         {saved && (
           <p role="status" className="mt-3 text-right text-sm font-medium text-green-600">
-            Enregistré.
+            {t.savedNotice}
           </p>
         )}
       </section>
