@@ -63,6 +63,16 @@ function isUserFacing(text) {
      enough to accept the gap. */
   if (trimmed.length < 3) return false
 
+  /* Data, not copy: a stored default such as '["industry"]' or '{}'. */
+  if (/^[[{]/.test(trimmed)) {
+    try {
+      JSON.parse(trimmed)
+      return false
+    } catch {
+      /* Not JSON, so judge it on the rules below. */
+    }
+  }
+
   /* Tailwind and CSS. */
   if (/^[a-z0-9-]+(:[a-z0-9-]+)*$/.test(trimmed) && !/ /.test(trimmed)) return false
   if (/[[\]{}]/.test(trimmed) && /(-|:)/.test(trimmed)) return false
@@ -82,6 +92,24 @@ function isUserFacing(text) {
   return /[A-Za-zÀ-ÿ]{3}/.test(trimmed)
 }
 
+/** Replace a span with spaces, keeping its newlines.
+ *
+ *  Blanking a multi-line comment with plain spaces deleted its newlines
+ *  and every line number reported after it came out too low. The offsets
+ *  were right; the line count was not. */
+function blank(text) {
+  return text.replace(/[^\n]/g, " ")
+}
+
+/** Does this text between a ">" and a "<" read as code rather than copy?
+ *
+ *  Only shapes UI copy never has: an assignment, a statement separator, a
+ *  fat arrow, a quoted string, a hook call. A sentence with an equals
+ *  sign in it would be missed, and that is the trade this makes. */
+function isCode(text) {
+  return /=>|=|;|["'`]|\buseState\b|\bconst\b|\blet\b|\breturn\b/.test(text)
+}
+
 /** Spans that are already translated, so their French half is fine.
  *
  *  Matches the first argument of tx("...", "...") and of
@@ -95,6 +123,15 @@ function translatedSpans(source) {
     /\bfr:\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1/g,
     /\ben:\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1/g,
     /\bt\(\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1/g,
+
+    /* Not copy: a needle matched against data. Translating
+       .includes("froid") would break the match it exists to make. */
+    /\.(?:includes|startsWith|endsWith|indexOf|lastIndexOf|search|split)\(\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1/g,
+
+    /* Not copy: written for whoever opens the console, not for the
+       operator. A translated stack trace helps nobody. */
+    /\bconsole\.(?:log|warn|error|info|debug)\(\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1/g,
+    /\bnew Error\(\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1/g,
   ]
 
   for (const re of patterns) {
@@ -122,12 +159,11 @@ function findings(file) {
        - import and export-from lines, whose strings are module paths
        - "use client" and friends */
   const code = source
-    .replace(/\/\*[\s\S]*?\*\//g, (m) => " ".repeat(m.length))
-    .replace(/(^|[^:])\/\/[^\n]*/g, (m) => " ".repeat(m.length))
-    .replace(/^\s*(?:import|export)\s[^\n]*$/gm, (m) => " ".repeat(m.length))
-    .replace(/^\s*["'](?:use client|use server|use strict)["'][^\n]*$/gm, (m) =>
-      " ".repeat(m.length)
-    )
+    .replace(/\/\*[\s\S]*?\*\//g, blank)
+    .replace(/(^|[^:])\/\/[^\n]*/g, blank)
+    .replace(/^\s*(?:import|export)\s[\s\S]*?from\s*["'][^"'\n]*["']/gm, blank)
+    .replace(/^\s*(?:import|export)\s[^\n]*$/gm, blank)
+    .replace(/^\s*["'](?:use client|use server|use strict)["'][^\n]*$/gm, blank)
 
   /* 1. String literals. */
   const strRe = /(["'])((?:\\.|(?!\1)[^\\\n])*)\1/g
@@ -142,10 +178,13 @@ function findings(file) {
     }
   }
 
-  /* 2. JSX text between tags, which no string-literal scan would see. */
+  /* 2. JSX text between tags, which no string-literal scan would see.
+        A generic argument list puts code between a ">" and a "<", so
+        useState<string[]>([...]) read as copy until isCode() rejected
+        it. */
   const jsxRe = />([^<>{}]{4,200})</g
   while ((m = jsxRe.exec(code))) {
-    if (isUserFacing(m[1])) {
+    if (!isCode(m[1]) && isUserFacing(m[1])) {
       out.push({
         line: code.slice(0, m.index).split("\n").length,
         text: m[1].trim().replace(/\s+/g, " ").slice(0, 70),

@@ -19,7 +19,7 @@ import {
 } from "lucide-react"
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
-import { useTx } from "@/lib/i18n"
+import { localized, useTx, type Localized, type Tx } from "@/lib/i18n"
 import { computeConfidence, confidenceWord } from "@/lib/confidence"
 import { LogisticsBlockagesView } from "./logistics-blockages-view"
 import { LogisticsWaitingView } from "./logistics-waiting-view"
@@ -57,16 +57,16 @@ import {
 
 
 
-const SECTORS = [
-  { key: "all", label: "Tous" },
-  { key: "industry", label: "Industrie" },
-  { key: "health", label: "Santé" },
-  { key: "agriculture", label: "Agriculture" },
-  { key: "transportation", label: "Transport" },
-  { key: "logistics", label: "Logistique" },
-  { key: "energy", label: "Énergie" },
-  { key: "commerce", label: "Commerce" },
-  { key: "eac", label: "EAC" },
+const SECTORS: { key: string; label: Localized }[] = [
+  { key: "all", label: localized("Tous", "All") },
+  { key: "industry", label: localized("Industrie", "Industry") },
+  { key: "health", label: localized("Santé", "Health") },
+  { key: "agriculture", label: localized("Agriculture", "Agriculture") },
+  { key: "transportation", label: localized("Transport", "Transport") },
+  { key: "logistics", label: localized("Logistique", "Logistics") },
+  { key: "energy", label: localized("Énergie", "Energy") },
+  { key: "commerce", label: localized("Commerce", "Retail") },
+  { key: "eac", label: localized("EAC", "EAC") },
 ]
 
 type Alert = {
@@ -161,40 +161,53 @@ function dailySeries(
 
 /** Human label for each onboarded subtype, shown on the dashboard so the
  *  user can see which business the numbers describe. */
-const BUSINESS_TYPE_LABELS: Record<string, string> = {
+const BUSINESS_TYPE_LABELS: Record<string, Localized> = {
   // Industry
-  "usine-production": "Usine de production",
-  "atelier-soustraitance": "Atelier / sous-traitance",
-  "usine-agroalimentaire": "Usine agroalimentaire",
+  "usine-production": localized("Usine de production", "Production plant"),
+  "atelier-soustraitance": localized(
+    "Atelier / sous-traitance", "Workshop / subcontracting"),
+  "usine-agroalimentaire": localized(
+    "Usine agroalimentaire", "Food processing plant"),
   // Health
-  "pharmacie": "Pharmacie",
-  "grossiste-pharma": "Grossiste-répartiteur pharmaceutique",
-  "clinique-hopital": "Clinique / Hôpital",
-  "laboratoire": "Laboratoire",
+  "pharmacie": localized("Pharmacie", "Pharmacy"),
+  "grossiste-pharma": localized(
+    "Grossiste-répartiteur pharmaceutique", "Pharmaceutical wholesaler"),
+  "clinique-hopital": localized("Clinique / Hôpital", "Clinic / Hospital"),
+  "laboratoire": localized("Laboratoire", "Laboratory"),
   // Agriculture
-  "exploitation-agricole": "Exploitation agricole",
-  "cooperative-agricole": "Coopérative agricole",
-  "silo-stockage": "Silo / stockage de récolte",
+  "exploitation-agricole": localized("Exploitation agricole", "Farm"),
+  "cooperative-agricole": localized(
+    "Coopérative agricole", "Agricultural cooperative"),
+  "silo-stockage": localized(
+    "Silo / stockage de récolte", "Silo / harvest storage"),
   // Transportation
-  "transporteur-routier": "Transporteur routier",
-  "flotte-entreprise": "Flotte d'entreprise",
-  "location-vehicules": "Location de véhicules",
+  "transporteur-routier": localized("Transporteur routier", "Road haulier"),
+  "flotte-entreprise": localized("Flotte d'entreprise", "Company fleet"),
+  "location-vehicules": localized("Location de véhicules", "Vehicle rental"),
   // Logistics
-  "port-conteneurs": "Port & conteneurs",
-  "entrepot-manutention": "Entrepôt & manutention",
-  "transport-distribution": "Transport & distribution",
-  "preparation-expedition": "Préparation & expédition",
-  "chaine-froid": "Chaîne du froid",
-  "plusieurs-activites": "Plusieurs activités",
+  "port-conteneurs": localized("Port & conteneurs", "Port & containers"),
+  "entrepot-manutention": localized(
+    "Entrepôt & manutention", "Warehouse & handling"),
+  "transport-distribution": localized(
+    "Transport & distribution", "Transport & distribution"),
+  "preparation-expedition": localized(
+    "Préparation & expédition", "Picking & dispatch"),
+  "chaine-froid": localized("Chaîne du froid", "Cold chain"),
+  "plusieurs-activites": localized("Plusieurs activités", "Several activities"),
   // Energy
-  "centrale-production": "Centrale de production",
-  "generateurs-secours": "Générateurs de secours",
-  "distribution-energetique": "Distribution énergétique",
+  "centrale-production": localized("Centrale de production", "Power plant"),
+  "generateurs-secours": localized(
+    "Générateurs de secours", "Backup generators"),
+  "distribution-energetique": localized(
+    "Distribution énergétique", "Power distribution"),
   // Commerce
-  "grossiste-distributeur": "Grossiste / distributeur",
-  "supermarche-hypermarche": "Supermarché / hypermarché",
-  "chaine-magasins": "Chaîne de magasins",
-  "epicerie-proximite": "Épicerie / commerce de proximité",
+  "grossiste-distributeur": localized(
+    "Grossiste / distributeur", "Wholesaler / distributor"),
+  "supermarche-hypermarche": localized(
+    "Supermarché / hypermarché", "Supermarket / hypermarket"),
+  "chaine-magasins": localized("Chaîne de magasins", "Retail chain"),
+  "epicerie-proximite": localized(
+    "Épicerie / commerce de proximité", "Grocery / convenience store"),
 }
 
 /** Per-subtype label overrides, keyed by business_type.
@@ -204,38 +217,42 @@ const BUSINESS_TYPE_LABELS: Record<string, string> = {
  *  pharmacies. Showing all three "Medicaments concernes" made the
  *  dashboard look like it was built for a pharmacy no matter what was
  *  onboarded. */
-const SUBTYPE_KPI_LABELS: Record<string, string[]> = {
+const SUBTYPE_KPI_LABELS: Record<string, Localized[]> = {
   "laboratoire": [
-    "Analyses bloquées",
-    "Réactifs à commander",
-    "Réactifs concernés",
-    "Alertes péremption",
+    localized("Analyses bloquées", "Tests blocked"),
+    localized("Réactifs à commander", "Reagents to order"),
+    localized("Réactifs concernés", "Reagents affected"),
+    localized("Alertes péremption", "Expiry alerts"),
   ],
   "clinique-hopital": [
-    "Stocks critiques sans alternative",
-    "Stocks à surveiller",
-    "Articles concernés",
-    "Alertes chaîne froid",
+    localized("Stocks critiques sans alternative", "Critical stock, no substitute"),
+    localized("Stocks à surveiller", "Stock to watch"),
+    localized("Articles concernés", "Items affected"),
+    localized("Alertes chaîne froid", "Cold chain alerts"),
   ],
   "grossiste-pharma": [
-    "Ruptures réseau",
-    "Rééquilibrages suggérés",
-    "Produits concernés",
-    "Invendus réseau",
+    localized("Ruptures réseau", "Network stockouts"),
+    localized("Rééquilibrages suggérés", "Suggested transfers"),
+    localized("Produits concernés", "Products affected"),
+    localized("Invendus réseau", "Network deadstock"),
   ],
   "usine-agroalimentaire": [
-    "Arrêts sanitaires imminents",
-    "Écarts de température",
-    "Lignes surveillées",
-    "Total alertes",
+    localized("Arrêts sanitaires imminents", "Imminent hygiene shutdowns"),
+    localized("Écarts de température", "Temperature deviations"),
+    localized("Lignes surveillées", "Lines monitored"),
+    localized("Total alertes", "Total alerts"),
   ],
 }
 
-const SUBTYPE_CHART_TITLES: Record<string, string> = {
-  "laboratoire": "Alertes réactifs · 7 jours",
-  "clinique-hopital": "Alertes stocks critiques · 7 jours",
-  "grossiste-pharma": "Alertes réseau · 7 jours",
-  "usine-agroalimentaire": "Alertes sanitaires · 7 jours",
+const SUBTYPE_CHART_TITLES: Record<string, Localized> = {
+  "laboratoire": localized(
+    "Alertes réactifs · 7 jours", "Reagent alerts · 7 days"),
+  "clinique-hopital": localized(
+    "Alertes stocks critiques · 7 jours", "Critical stock alerts · 7 days"),
+  "grossiste-pharma": localized(
+    "Alertes réseau · 7 jours", "Network alerts · 7 days"),
+  "usine-agroalimentaire": localized(
+    "Alertes sanitaires · 7 jours", "Hygiene alerts · 7 days"),
 }
 
 /** Which activity produced this alert.
@@ -268,41 +285,65 @@ function activityOf(row: {
  *  a family added to the backend later shows up without a frontend
  *  release. That was the flaw in the old approach: the three new health
  *  activities were invisible because nobody updated a hardcoded list. */
-const KEY_FAMILY_LABELS: Record<string, string> = {
+const KEY_FAMILY_LABELS: Record<string, Localized> = {
   // health
-  stock: "Stock", reorder: "Réappro", cold_chain: "Chaîne du froid",
-  expiry: "Péremption", slow_mover: "Rotation faible",
-  deadstock: "Invendus",
+  stock: localized("Stock", "Stock"),
+  reorder: localized("Réappro", "Reorder"),
+  cold_chain: localized("Chaîne du froid", "Cold chain"),
+  expiry: localized("Péremption", "Expiry"),
+  slow_mover: localized("Rotation faible", "Slow movers"),
+  deadstock: localized("Invendus", "Deadstock"),
   // lab
-  tests_remaining: "Analyses", reagent: "Réactifs",
+  tests_remaining: localized("Analyses", "Tests"),
+  reagent: localized("Réactifs", "Reagents"),
   // hospital
-  critical_supply: "Sans alternative",
+  critical_supply: localized("Sans alternative", "No substitute"),
   // wholesaler
-  rebalance: "Transferts",
+  rebalance: localized("Transferts", "Transfers"),
   // industry
-  torque: "Couple", wear: "Usure", failure: "Panne", motor: "Moteurs",
-  temperature: "Température", pressure: "Pression",
-  production: "Production", maintenance: "Maintenance",
-  food_temp: "Température alim.", hygiene: "Hygiène",
+  torque: localized("Couple", "Torque"),
+  wear: localized("Usure", "Wear"),
+  failure: localized("Panne", "Failure"),
+  motor: localized("Moteurs", "Motors"),
+  temperature: localized("Température", "Temperature"),
+  pressure: localized("Pression", "Pressure"),
+  production: localized("Production", "Production"),
+  maintenance: localized("Maintenance", "Maintenance"),
+  food_temp: localized("Température alim.", "Food temp."),
+  hygiene: localized("Hygiène", "Hygiene"),
   // logistics
-  cycles: "Cycles", wait: "Attente", service: "Entretien", risk: "Risque",
+  cycles: localized("Cycles", "Cycles"),
+  wait: localized("Attente", "Waiting"),
+  service: localized("Entretien", "Servicing"),
+  risk: localized("Risque", "Risk"),
   // port: the gate stages. Without these the chart fell back to the raw
   // key family and printed "arrival" and "customs" in English next to
   // French labels.
-  arrival: "Arrivée", customs: "Douane",
+  arrival: localized("Arrivée", "Arrival"),
+  customs: localized("Douane", "Customs"),
   // transport
-  engine: "Moteur", oil: "Huile", fuel: "Carburant",
-  fuel_low: "Carburant bas", tires: "Pneus",
+  engine: localized("Moteur", "Engine"),
+  oil: localized("Huile", "Oil"),
+  fuel: localized("Carburant", "Fuel"),
+  fuel_low: localized("Carburant bas", "Low fuel"),
+  tires: localized("Pneus", "Tyres"),
   // energy
-  coolant: "Refroidissement", load: "Charge", output: "Production",
+  coolant: localized("Refroidissement", "Coolant"),
+  load: localized("Charge", "Load"),
+  output: localized("Production", "Output"),
   // agri
-  storage: "Stockage", temp: "Température",
+  storage: localized("Stockage", "Storage"),
+  temp: localized("Température", "Temperature"),
   // retail
-  pos: "Caisse", sales: "Ventes", shrinkage: "Démarque",
-  staffing: "Personnel",
+  pos: localized("Caisse", "Checkout"),
+  sales: localized("Ventes", "Sales"),
+  shrinkage: localized("Démarque", "Shrinkage"),
+  staffing: localized("Personnel", "Staffing"),
   // supplier
-  delivery: "Livraisons", lead_time: "Délais",
-  fill_rate: "Taux de service", reliability: "Fiabilité",
+  delivery: localized("Livraisons", "Deliveries"),
+  lead_time: localized("Délais", "Lead time"),
+  fill_rate: localized("Taux de service", "Fill rate"),
+  reliability: localized("Fiabilité", "Reliability"),
 }
 
 /** Breakdown of alerts by what they are about, grouped on the alert_key
@@ -318,7 +359,8 @@ const KEY_FAMILY_LABELS: Record<string, string> = {
  *  Rows with no alert_key fall back to a severity split, so legacy data
  *  still charts as something rather than nothing. */
 function alertBreakdown(
-  alerts: Alert[]
+  alerts: Alert[],
+  tx: Tx
 ): { labels: string[]; values: number[] } {
   const counts = new Map<string, number>()
 
@@ -340,7 +382,7 @@ function alertBreakdown(
     }
 
     return {
-      labels: ["Critiques", "Warnings"],
+      labels: [tx("Critiques", "Critical"), tx("Warnings", "Warnings")],
       values: [critical, warning],
     }
   }
@@ -350,9 +392,10 @@ function alertBreakdown(
     .slice(0, 6)
 
   return {
-    labels: top.map(
-      ([family]) => KEY_FAMILY_LABELS[family] ?? family.replace(/_/g, " ")
-    ),
+    labels: top.map(([family]) => {
+      const label = KEY_FAMILY_LABELS[family]
+      return label ? tx(label.fr, label.en) : family.replace(/_/g, " ")
+    }),
     values: top.map(([, count]) => count),
   }
 }
@@ -361,121 +404,121 @@ const SECTOR_META: Record<
   string,
   {
     kpis: (alerts: Alert[]) => {
-      label: string
+      label: Localized
       value: string
-      delta: string
+      delta: Localized
       up: boolean
       /** Optional subset this card counts, so its sparkline tracks the
        *  same alerts as its number. Omitted means every alert in view. */
       match?: (alert: Alert) => boolean
     }[]
-    chartTitle: string
+    chartTitle: Localized
   }
 > = {
   all: {
     kpis: (a) => [
       {
-        label: "Actifs en alerte",
+        label: localized("Actifs en alerte", "Assets in alert"),
         value: String(new Set(a.map((x) => x.equipment)).size),
-        delta: "Live",
+        delta: localized("Live", "Live"),
         up: true,
       },
       {
-        label: "Alertes critiques",
+        label: localized("Alertes critiques", "Critical alerts"),
         value: String(
           a.filter((x) => x.severity === "CRITICAL").length
         ),
         match: (x) => x.severity === "CRITICAL",
         delta:
           a.filter((x) => x.severity === "CRITICAL").length > 0
-            ? "À traiter"
-            : "OK",
+            ? localized("À traiter", "Act now")
+            : localized("OK", "OK"),
         up:
           a.filter((x) => x.severity === "CRITICAL").length === 0,
       },
       {
-        label: "Warnings",
+        label: localized("Warnings", "Warnings"),
         value: String(
           a.filter((x) => x.severity === "WARNING").length
         ),
         match: (x) => x.severity === "WARNING",
-        delta: "Surveillance",
+        delta: localized("Surveillance", "Monitoring"),
         up: true,
       },
       {
-        label: "Total alertes",
+        label: localized("Total alertes", "Total alerts"),
         value: String(a.length),
-        delta: "Toutes sources",
+        delta: localized("Toutes sources", "All sources"),
         up: true,
       },
     ],
-    chartTitle: "Évolution des alertes",
+    chartTitle: localized("Évolution des alertes", "Alert trend"),
   },
 
   industry: {
     kpis: (a) => [
       {
-        label: "Machines en panne imminente",
+        label: localized("Machines en panne imminente", "Machines about to fail"),
         value: String(
           a.filter((x) => x.severity === "CRITICAL").length
         ),
         match: (x) => x.severity === "CRITICAL",
-        delta: "Arrêt immédiat",
+        delta: localized("Arrêt immédiat", "Stop now"),
         up: false,
       },
       {
-        label: "Usure élevée",
+        label: localized("Usure élevée", "High wear"),
         value: String(
           a.filter((x) => x.severity === "WARNING").length
         ),
         match: (x) => x.severity === "WARNING",
-        delta: "Surveiller",
+        delta: localized("Surveiller", "Watch"),
         up: true,
       },
       {
-        label: "Machines surveillées",
+        label: localized("Machines surveillées", "Machines monitored"),
         value: String(new Set(a.map((x) => x.equipment)).size),
-        delta: "Live",
+        delta: localized("Live", "Live"),
         up: true,
       },
       {
-        label: "Total alertes",
+        label: localized("Total alertes", "Total alerts"),
         value: String(a.length),
-        delta: "Session",
+        delta: localized("Session", "Session"),
         up: true,
       },
     ],
-    chartTitle: "Alertes machines · 7 jours",
+    chartTitle: localized("Alertes machines · 7 jours", "Machine alerts · 7 days"),
   },
 
   health: {
     kpis: (a) => [
       {
-        label: "Ruptures critiques",
+        label: localized("Ruptures critiques", "Critical stockouts"),
         value: String(
           a.filter((x) => x.severity === "CRITICAL").length
         ),
         match: (x) => x.severity === "CRITICAL",
-        delta: "Commander maintenant",
+        delta: localized("Commander maintenant", "Order now"),
         up: false,
       },
       {
-        label: "Stocks bas",
+        label: localized("Stocks bas", "Low stock"),
         value: String(
           a.filter((x) => x.severity === "WARNING").length
         ),
         match: (x) => x.severity === "WARNING",
-        delta: "À surveiller",
+        delta: localized("À surveiller", "To watch"),
         up: true,
       },
       {
-        label: "Médicaments concernés",
+        label: localized("Médicaments concernés", "Medicines affected"),
         value: String(new Set(a.map((x) => x.equipment)).size),
-        delta: "Produits",
+        delta: localized("Produits", "Products"),
         up: true,
       },
       {
-        label: "Alertes chaîne froid",
+        label: localized("Alertes chaîne froid", "Cold chain alerts"),
         value: String(
           a.filter(
             (x) =>
@@ -483,26 +526,26 @@ const SECTOR_META: Record<
               x.message.toLowerCase().includes("cold")
           ).length
         ),
-        delta: "Urgence",
+        delta: localized("Urgence", "Urgent"),
         up: false,
       },
     ],
-    chartTitle: "Alertes stocks · 7 jours",
+    chartTitle: localized("Alertes stocks · 7 jours", "Stock alerts · 7 days"),
   },
 
   agriculture: {
     kpis: (a) => [
       {
-        label: "Pertes probables",
+        label: localized("Pertes probables", "Likely losses"),
         value: String(
           a.filter((x) => x.severity === "CRITICAL").length
         ),
         match: (x) => x.severity === "CRITICAL",
-        delta: "Livraison urgente",
+        delta: localized("Livraison urgente", "Urgent delivery"),
         up: false,
       },
       {
-        label: "Retards détectés",
+        label: localized("Retards détectés", "Delays detected"),
         value: String(
           a.filter(
             (x) =>
@@ -510,42 +553,42 @@ const SECTOR_META: Record<
               x.message.toLowerCase().includes("delay")
           ).length
         ),
-        delta: "Camions",
+        delta: localized("Camions", "Trucks"),
         up: false,
       },
       {
-        label: "Produits en risque",
+        label: localized("Produits en risque", "Products at risk"),
         value: String(new Set(a.map((x) => x.equipment)).size),
-        delta: "Actifs",
+        delta: localized("Actifs", "Assets"),
         up: true,
       },
       {
-        label: "Alertes temp.",
+        label: localized("Alertes temp.", "Temp. alerts"),
         value: String(
           a.filter((x) =>
             x.message.toLowerCase().includes("temp")
           ).length
         ),
-        delta: "Stockage",
+        delta: localized("Stockage", "Storage"),
         up: false,
       },
     ],
-    chartTitle: "Alertes récoltes · 7 jours",
+    chartTitle: localized("Alertes récoltes · 7 jours", "Harvest alerts · 7 days"),
   },
 
   transportation: {
     kpis: (a) => [
       {
-        label: "Camions critiques",
+        label: localized("Camions critiques", "Critical trucks"),
         value: String(
           a.filter((x) => x.severity === "CRITICAL").length
         ),
         match: (x) => x.severity === "CRITICAL",
-        delta: "Immobiliser",
+        delta: localized("Immobiliser", "Take off road"),
         up: false,
       },
       {
-        label: "Révisions dues",
+        label: localized("Révisions dues", "Services due"),
         value: String(
           a.filter(
             (x) =>
@@ -553,17 +596,17 @@ const SECTOR_META: Record<
               x.message.toLowerCase().includes("révision")
           ).length
         ),
-        delta: "Planifier",
+        delta: localized("Planifier", "Schedule"),
         up: false,
       },
       {
-        label: "Camions surveillés",
+        label: localized("Camions surveillés", "Trucks monitored"),
         value: String(new Set(a.map((x) => x.equipment)).size),
-        delta: "Flotte",
+        delta: localized("Flotte", "Fleet"),
         up: true,
       },
       {
-        label: "Alertes moteur",
+        label: localized("Alertes moteur", "Engine alerts"),
         value: String(
           a.filter(
             (x) =>
@@ -571,26 +614,26 @@ const SECTOR_META: Record<
               x.message.toLowerCase().includes("engine")
           ).length
         ),
-        delta: "Urgence",
+        delta: localized("Urgence", "Urgent"),
         up: false,
       },
     ],
-    chartTitle: "Alertes flotte · 7 jours",
+    chartTitle: localized("Alertes flotte · 7 jours", "Fleet alerts · 7 days"),
   },
 
   logistics: {
     kpis: (a) => [
       {
-        label: "Équipements bloqués",
+        label: localized("Équipements bloqués", "Equipment blocked"),
         value: String(
           a.filter((x) => x.severity === "CRITICAL").length
         ),
         match: (x) => x.severity === "CRITICAL",
-        delta: "Arrêt immédiat",
+        delta: localized("Arrêt immédiat", "Stop now"),
         up: false,
       },
       {
-        label: "Files d'attente",
+        label: localized("Files d'attente", "Queues"),
         value: String(
           a.filter(
             (x) =>
@@ -598,17 +641,17 @@ const SECTOR_META: Record<
               x.message.toLowerCase().includes("wait")
           ).length
         ),
-        delta: "Conteneurs",
+        delta: localized("Conteneurs", "Containers"),
         up: false,
       },
       {
-        label: "Équipements actifs",
+        label: localized("Équipements actifs", "Equipment active"),
         value: String(new Set(a.map((x) => x.equipment)).size),
-        delta: "Port",
+        delta: localized("Port", "Port"),
         up: true,
       },
       {
-        label: "Alertes pression",
+        label: localized("Alertes pression", "Pressure alerts"),
         value: String(
           a.filter(
             (x) =>
@@ -616,26 +659,26 @@ const SECTOR_META: Record<
               x.message.toLowerCase().includes("pressure")
           ).length
         ),
-        delta: "Hydraulique",
+        delta: localized("Hydraulique", "Hydraulics"),
         up: false,
       },
     ],
-    chartTitle: "Alertes port · 7 jours",
+    chartTitle: localized("Alertes port · 7 jours", "Port alerts · 7 days"),
   },
 
   energy: {
     kpis: (a) => [
       {
-        label: "Générateurs critiques",
+        label: localized("Générateurs critiques", "Critical generators"),
         value: String(
           a.filter((x) => x.severity === "CRITICAL").length
         ),
         match: (x) => x.severity === "CRITICAL",
-        delta: "Intervenir",
+        delta: localized("Intervenir", "Intervene"),
         up: false,
       },
       {
-        label: "Carburant bas",
+        label: localized("Carburant bas", "Low fuel"),
         value: String(
           a.filter(
             (x) =>
@@ -643,17 +686,17 @@ const SECTOR_META: Record<
               x.message.toLowerCase().includes("fuel")
           ).length
         ),
-        delta: "Réapprovisionner",
+        delta: localized("Réapprovisionner", "Refuel"),
         up: false,
       },
       {
-        label: "Générateurs surveillés",
+        label: localized("Générateurs surveillés", "Generators monitored"),
         value: String(new Set(a.map((x) => x.equipment)).size),
-        delta: "Actifs",
+        delta: localized("Actifs", "Assets"),
         up: true,
       },
       {
-        label: "Alertes surchauffe",
+        label: localized("Alertes surchauffe", "Overheating alerts"),
         value: String(
           a.filter(
             (x) =>
@@ -661,78 +704,78 @@ const SECTOR_META: Record<
               x.message.toLowerCase().includes("overheat")
           ).length
         ),
-        delta: "Température",
+        delta: localized("Température", "Temperature"),
         up: false,
       },
     ],
-    chartTitle: "Alertes énergie · 7 jours",
+    chartTitle: localized("Alertes énergie · 7 jours", "Energy alerts · 7 days"),
   },
 
   commerce: {
     kpis: (a) => [
       {
-        label: "Ruptures en rayon",
+        label: localized("Ruptures en rayon", "Out of stock on shelf"),
         value: String(
           a.filter((x) => x.severity === "CRITICAL").length
         ),
         match: (x) => x.severity === "CRITICAL",
-        delta: "Réassort urgent",
+        delta: localized("Réassort urgent", "Urgent replenishment"),
         up: false,
       },
       {
-        label: "Stocks bas",
+        label: localized("Stocks bas", "Low stock"),
         value: String(
           a.filter((x) => x.severity === "WARNING").length
         ),
         match: (x) => x.severity === "WARNING",
-        delta: "À surveiller",
+        delta: localized("À surveiller", "To watch"),
         up: true,
       },
       {
-        label: "Références concernées",
+        label: localized("Références concernées", "SKUs affected"),
         value: String(new Set(a.map((x) => x.equipment)).size),
-        delta: "Produits",
+        delta: localized("Produits", "Products"),
         up: true,
       },
       {
-        label: "Total alertes",
+        label: localized("Total alertes", "Total alerts"),
         value: String(a.length),
-        delta: "Sur la période",
+        delta: localized("Sur la période", "Over the period"),
         up: a.length === 0,
       },
     ],
-    chartTitle: "Alertes stocks · 7 jours",
+    chartTitle: localized("Alertes stocks · 7 jours", "Stock alerts · 7 days"),
   },
 
   eac: {
     kpis: (a) => [
       {
-        label: "Alertes corridor EAC",
+        label: localized("Alertes corridor EAC", "EAC corridor alerts"),
         value: String(a.length),
-        delta: "Régional",
+        delta: localized("Régional", "Regional"),
         up: a.length === 0,
       },
       {
-        label: "Risques critiques",
+        label: localized("Risques critiques", "Critical risks"),
         value: String(
           a.filter((x) => x.severity === "CRITICAL").length
         ),
         match: (x) => x.severity === "CRITICAL",
         delta:
           a.filter((x) => x.severity === "CRITICAL").length > 0
-            ? "À traiter"
-            : "OK",
+            ? localized("À traiter", "Act now")
+            : localized("OK", "OK"),
         up:
           a.filter((x) => x.severity === "CRITICAL").length === 0,
       },
       {
-        label: "Flux surveillés",
+        label: localized("Flux surveillés", "Flows monitored"),
         value: String(new Set(a.map((x) => x.equipment)).size),
-        delta: "Corridors",
+        delta: localized("Corridors", "Corridors"),
         up: true,
       },
       {
-        label: "Alertes conformité",
+        label: localized("Alertes conformité", "Compliance alerts"),
         value: String(
           a.filter((x) => {
             const message = x.message.toLowerCase()
@@ -745,21 +788,21 @@ const SECTOR_META: Record<
             )
           }).length
         ),
-        delta: "Documents",
+        delta: localized("Documents", "Documents"),
         up: false,
       },
     ],
-    chartTitle: "Alertes corridors EAC · 7 jours",
+    chartTitle: localized("Alertes corridors EAC · 7 jours", "EAC corridor alerts · 7 days"),
   },
 }
 
-const OPS_TYPE_LABEL: Record<string, string> = {
-  port: "Port & conteneurs",
-  entrepot: "Entrepôt & manutention",
-  transport: "Transport & distribution",
-  expedition: "Expédition",
-  froid: "Chaîne du froid",
-  multi: "Opérations logistiques",
+const OPS_TYPE_LABEL: Record<string, Localized> = {
+  port: localized("Port & conteneurs", "Port & containers"),
+  entrepot: localized("Entrepôt & manutention", "Warehouse & handling"),
+  transport: localized("Transport & distribution", "Transport & distribution"),
+  expedition: localized("Expédition", "Dispatch"),
+  froid: localized("Chaîne du froid", "Cold chain"),
+  multi: localized("Opérations logistiques", "Logistics operations"),
 }
 
 const LOGISTICS_OPS_META: Record<
@@ -815,37 +858,53 @@ function getSavedIndustryPriorities(): IndustryPriority[] {
   return getSavedPriorities("industry") as IndustryPriority[]
 }
 
-function getSectorLabel(sector?: string | null) {
-  if (!sector) return "Non défini"
+function getSectorLabel(sector: string | null | undefined, tx: Tx) {
+  if (!sector) return tx("Non défini", "Not set")
 
-  return (
-    SECTORS.find((item) => item.key === sector)?.label ??
-    sector
-  )
+  const found = SECTORS.find((item) => item.key === sector)
+
+  return found ? tx(found.label.fr, found.label.en) : sector
 }
 
 function getRecommendationContext(
-  recommendation: Recommendation
+  recommendation: Recommendation,
+  tx: Tx
 ) {
   const sector = recommendation.sector ?? "all"
 
   const contexts: Record<string, string> = {
-    industry:
+    industry: tx(
       "Priorité industrielle : limiter les arrêts de production et intervenir avant la panne.",
-    health:
+      "Industry priority: cut production downtime and act before the breakdown."
+    ),
+    health: tx(
       "Priorité santé : sécuriser les stocks, les médicaments et la chaîne du froid.",
-    agriculture:
+      "Health priority: protect stock, medicines and the cold chain."
+    ),
+    agriculture: tx(
       "Priorité agricole : réduire les pertes, les retards et les risques sur les produits.",
-    transportation:
+      "Agriculture priority: cut losses, delays and risk to the produce."
+    ),
+    transportation: tx(
       "Priorité transport : éviter les immobilisations et sécuriser la disponibilité de la flotte.",
-    logistics:
+      "Transport priority: avoid vehicles off the road and keep the fleet available."
+    ),
+    logistics: tx(
       "Priorité logistique : fluidifier les opérations, réduire les blocages et maîtriser les coûts.",
-    energy:
+      "Logistics priority: keep operations moving, cut blockages and control cost."
+    ),
+    energy: tx(
       "Priorité énergie : maintenir la disponibilité des générateurs et prévenir les arrêts.",
-    eac:
+      "Energy priority: keep the generators available and prevent outages."
+    ),
+    eac: tx(
       "Contexte EAC : sécuriser les flux régionaux, les passages transfrontaliers, la conformité documentaire et la disponibilité des marchandises.",
-    all:
+      "EAC context: protect regional flows, border crossings, document compliance and goods availability."
+    ),
+    all: tx(
       "Recommandation opérationnelle générée à partir des alertes actuellement surveillées.",
+      "An operational recommendation built from the alerts currently being monitored."
+    ),
   }
 
   return contexts[sector] ?? contexts.all
@@ -912,21 +971,35 @@ function trackRecordForCategory(
 
 function reasoningFor(
   rec: Recommendation,
-  recurrence: number
+  recurrence: number,
+  tx: Tx
 ): string {
+  /* The backend writes this one, already rendered in the language it was
+     fired in. Translating it here would mean re-deriving a sentence from
+     text, so it is left as it came: see PASSATION.md, read-time alert
+     translation. */
   if (rec.reasoning) return rec.reasoning
 
   const parts: string[] = []
 
   parts.push(
     rec.severity === "CRITICAL"
-      ? "Classé critique car le signal dépasse le seuil de sécurité attendu pour cet actif."
-      : "Classé en surveillance car le signal s'écarte du comportement habituel de cet actif."
+      ? tx(
+          "Classé critique car le signal dépasse le seuil de sécurité attendu pour cet actif.",
+          "Rated critical because the signal is past the safety threshold expected for this asset."
+        )
+      : tx(
+          "Classé en surveillance car le signal s'écarte du comportement habituel de cet actif.",
+          "Rated watch because the signal is drifting from this asset's usual behaviour."
+        )
   )
 
   if (recurrence > 1) {
     parts.push(
-      `Ce n'est pas un cas isolé : ${recurrence} alertes similaires enregistrées pour cet actif.`
+      tx(
+        `Ce n'est pas un cas isolé : ${recurrence} alertes similaires enregistrées pour cet actif.`,
+        `This is not a one-off: ${recurrence} similar alerts recorded for this asset.`
+      )
     )
   }
 
@@ -944,6 +1017,32 @@ export function DashboardView({
   search?: string
 }) {
   const tx = useTx()
+
+  /** Resolve a module-level fr/en pair into the language on screen.
+   *
+   *  The label catalogues at the top of this file are built outside
+   *  React, so they hold pairs rather than strings. This is the one place
+   *  a pair becomes a single language. */
+  const px = (text: Localized) => tx(text.fr, text.en)
+
+  /** The locale every date and time on this screen is formatted in.
+   *
+   *  Hardcoded "fr-FR" meant an English dashboard still printed
+   *  "18/09/2026 14:30" with French month names in the long formats. It
+   *  goes through tx() like any other string, because the right locale
+   *  is a function of the same choice. */
+  const dateLocale = tx("fr-FR", "en-GB")
+
+  /** The display name of a sector key, or null when the key is unknown.
+   *
+   *  Null rather than the raw key: a caller that wants the key as a
+   *  fallback says so, and the ones that want "this activity" instead
+   *  can have it. */
+  const sectorName = (key: string | null | undefined) => {
+    const found = SECTORS.find((item) => item.key === key)
+
+    return found ? px(found.label) : null
+  }
 
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [recommendations, setRecommendations] = useState<
@@ -1113,7 +1212,7 @@ export function DashboardView({
         ...current,
         [key]: {
           status,
-          at: new Date().toLocaleTimeString("fr-FR", {
+          at: new Date().toLocaleTimeString(dateLocale, {
             hour: "2-digit",
             minute: "2-digit",
           }),
@@ -1253,7 +1352,9 @@ export function DashboardView({
       .catch((err) => {
         console.error("Failed to load alerts:", err)
         setAlertsError(
-          err instanceof Error ? err.message : "réseau"
+          err instanceof Error
+            ? err.message
+            : tx("réseau", "network")
         )
       })
   }, [])
@@ -1446,7 +1547,7 @@ export function DashboardView({
 
       const data = await res.json()
 
-      setUploadMsg(data.message ?? "Fichier traité.")
+      setUploadMsg(data.message ?? tx("Fichier traité.", "File processed."))
 
       await new Promise((r) => setTimeout(r, 1500))
 
@@ -1463,7 +1564,10 @@ export function DashboardView({
       console.error(error)
       setUploadFailed(true)
       setUploadMsg(
-        "Erreur lors de l'upload. Vérifiez la console du navigateur."
+        tx(
+          "Erreur lors de l'upload. Vérifiez la console du navigateur.",
+          "The upload failed. Check the browser console."
+        )
       )
     } finally {
       setUploading(false)
@@ -1668,6 +1772,8 @@ export function DashboardView({
   // the view the dashboard opens on named no activity at all.
   const subtypeName = businessType
     ? BUSINESS_TYPE_LABELS[businessType]
+      ? px(BUSINESS_TYPE_LABELS[businessType])
+      : undefined
     : undefined
 
   // The sector that goes with it. In a sector view that is the filter;
@@ -1680,8 +1786,7 @@ export function DashboardView({
         ? activeSectors[0]
         : null
 
-  const onboardedSectorLabel =
-    SECTORS.find((x) => x.key === onboardedSectorKey)?.label ?? null
+  const onboardedSectorLabel = sectorName(onboardedSectorKey)
 
   // "Santé · Laboratoire". Null only when nothing was onboarded, in
   // which case there is no activity to name.
@@ -1707,14 +1812,16 @@ export function DashboardView({
     .kpis(filteredAlerts)
     .map((k, i) => ({
       ...k,
-      label: subtypeLabels?.[i] ?? k.label,
+      label: px(subtypeLabels?.[i] ?? k.label),
+      delta: px(k.delta),
     }))
 
-  const breakdown = alertBreakdown(filteredAlerts)
+  const breakdown = alertBreakdown(filteredAlerts, tx)
 
-  const chartTitle =
-    (businessType && SUBTYPE_CHART_TITLES[businessType]) ||
-    meta.chartTitle
+  const chartTitle = px(
+    (businessType ? SUBTYPE_CHART_TITLES[businessType] : undefined) ??
+      meta.chartTitle
+  )
 
   // No rows for this sector means nothing has been uploaded for it yet.
   // Showing four zeroes and a flat line reads as "all clear", which is a
@@ -1739,7 +1846,7 @@ export function DashboardView({
               onClick={returnToDashboard}
               className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
             >
-              ← Retour au tableau de bord
+              {tx("← Retour au tableau de bord", "← Back to dashboard")}
             </button>
           </div>
 
@@ -1747,18 +1854,21 @@ export function DashboardView({
             <div className="max-w-2xl">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
                 <Shield className="h-3.5 w-3.5" />
-                Industrie
+                {tx("Industrie", "Industry")}
               </span>
 
               <h2 className="mt-4 font-heading text-2xl font-bold leading-tight md:text-3xl">
-                Vue d'ensemble de votre production.
+                {tx(
+                  "Vue d'ensemble de votre production.",
+                  "An overview of your production."
+                )}
               </h2>
 
               <p className="mt-2 text-sm leading-6 text-sidebar-foreground/70">
-                Retrouvez ici les priorités que vous avez
-                sélectionnées pendant la configuration de SentrIA.
-                Choisissez une priorité pour accéder directement
-                à son espace de pilotage.
+                {tx(
+                  "Retrouvez ici les priorités que vous avez sélectionnées pendant la configuration de SentrIA. Choisissez une priorité pour accéder directement à son espace de pilotage.",
+                  "These are the priorities you picked while setting SentrIA up. Choose one to go straight to its workspace."
+                )}
               </p>
             </div>
           </div>
@@ -1775,7 +1885,10 @@ export function DashboardView({
               onOpen={(id) =>
                 openIndustryPriority(id as IndustryPriority)
               }
-              emptyLabel="Aucune priorité industrielle n'a été sélectionnée."
+              emptyLabel={tx(
+                "Aucune priorité industrielle n'a été sélectionnée.",
+                "No industry priority has been selected."
+              )}
             />
           </div>
 
@@ -1789,14 +1902,15 @@ export function DashboardView({
               </div>
 
               <h3 className="mt-4 font-heading text-lg font-bold">
-                Aucune donnée industrielle
+                {tx("Aucune donnée industrielle", "No industry data")}
                 {subtypeName ? ` · ${subtypeName}` : ""}
               </h3>
 
               <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-                Les priorités ci-dessus sont bien enregistrées, mais
-                aucun fichier n&apos;a encore été importé pour cette
-                activité. Les indicateurs restent vides jusque-là.
+                {tx(
+                  "Les priorités ci-dessus sont bien enregistrées, mais aucun fichier n'a encore été importé pour cette activité. Les indicateurs restent vides jusque-là.",
+                  "The priorities above are saved, but no file has been imported for this activity yet. The figures stay empty until one is."
+                )}
               </p>
             </div>
           ) : (
@@ -1858,7 +1972,7 @@ export function DashboardView({
             }}
             className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
           >
-            ← Retour à l'industrie
+            {tx("← Retour à l'industrie", "← Back to industry")}
           </button>
         </div>
 
@@ -1909,7 +2023,7 @@ export function DashboardView({
               onClick={returnToDashboard}
               className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
             >
-              ← Retour au tableau de bord
+              {tx("← Retour au tableau de bord", "← Back to dashboard")}
             </button>
           </div>
 
@@ -1917,25 +2031,28 @@ export function DashboardView({
             <div className="max-w-2xl">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
                 <Shield className="h-3.5 w-3.5" />
-                Logistique
+                {tx("Logistique", "Logistics")}
               </span>
 
               <h2 className="mt-4 font-heading text-2xl font-bold leading-tight md:text-3xl">
-                Vue d'ensemble de votre logistique.
+                {tx(
+                  "Vue d'ensemble de votre logistique.",
+                  "An overview of your logistics."
+                )}
               </h2>
 
               <p className="mt-2 text-sm leading-6 text-sidebar-foreground/70">
-                Retrouvez ici les priorités que vous avez
-                sélectionnées pendant la configuration de SentrIA.
-                Choisissez une priorité pour accéder directement
-                à son espace de pilotage.
+                {tx(
+                  "Retrouvez ici les priorités que vous avez sélectionnées pendant la configuration de SentrIA. Choisissez une priorité pour accéder directement à son espace de pilotage.",
+                  "These are the priorities you picked while setting SentrIA up. Choose one to go straight to its workspace."
+                )}
               </p>
 
               {normalizedOpsType &&
                 OPS_TYPE_LABEL[normalizedOpsType] && (
                   <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-sidebar-border bg-white/10 px-3 py-1 text-[11px] font-medium text-sidebar-foreground/80">
                     <Shield className="h-3 w-3" />
-                    {OPS_TYPE_LABEL[normalizedOpsType]}
+                    {px(OPS_TYPE_LABEL[normalizedOpsType])}
                   </div>
                 )}
             </div>
@@ -1953,7 +2070,10 @@ export function DashboardView({
               onOpen={(id) =>
                 openLogisticsPriority(id as LogisticsPriority)
               }
-              emptyLabel="Aucune priorité logistique n'a été sélectionnée."
+              emptyLabel={tx(
+                "Aucune priorité logistique n'a été sélectionnée.",
+                "No logistics priority has been selected."
+              )}
             />
           </div>
 
@@ -2014,7 +2134,7 @@ export function DashboardView({
             }}
             className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
           >
-            ← Retour à la logistique
+            {tx("← Retour à la logistique", "← Back to logistics")}
           </button>
         </div>
 
@@ -2029,7 +2149,7 @@ export function DashboardView({
           OPS_TYPE_LABEL[normalizedOpsType] && (
             <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-[11px] font-medium text-muted-foreground">
               <Shield className="h-3 w-3" />
-              {OPS_TYPE_LABEL[normalizedOpsType]}
+              {px(OPS_TYPE_LABEL[normalizedOpsType])}
             </div>
           )}
 
@@ -2069,12 +2189,14 @@ export function DashboardView({
 
               <div>
                 <h2 className="font-heading text-xl font-bold">
-                  Ressources
+                  {tx("Ressources", "Resources")}
                 </h2>
 
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Suivez la disponibilité et l'utilisation de
-                  vos ressources logistiques depuis cet espace.
+                  {tx(
+                    "Suivez la disponibilité et l'utilisation de vos ressources logistiques depuis cet espace.",
+                    "Track the availability and use of your logistics resources from here."
+                  )}
                 </p>
               </div>
             </div>
@@ -2082,7 +2204,7 @@ export function DashboardView({
             <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="rounded-2xl border border-border bg-muted/30 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Équipements
+                  {tx("Équipements", "Equipment")}
                 </p>
 
                 <p className="mt-2 font-heading text-2xl font-bold">
@@ -2098,7 +2220,7 @@ export function DashboardView({
 
               <div className="rounded-2xl border border-border bg-muted/30 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Alertes actives
+                  {tx("Alertes actives", "Active alerts")}
                 </p>
 
                 <p className="mt-2 font-heading text-2xl font-bold">
@@ -2112,14 +2234,14 @@ export function DashboardView({
 
               <div className="rounded-2xl border border-border bg-muted/30 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Opération
+                  {tx("Opération", "Operation")}
                 </p>
 
                 <p className="mt-2 font-heading text-lg font-bold">
                   {normalizedOpsType &&
                   OPS_TYPE_LABEL[normalizedOpsType]
-                    ? OPS_TYPE_LABEL[normalizedOpsType]
-                    : "Logistique"}
+                    ? px(OPS_TYPE_LABEL[normalizedOpsType])
+                    : tx("Logistique", "Logistics")}
                 </p>
               </div>
             </div>
@@ -2213,7 +2335,7 @@ export function DashboardView({
           }
           className="inline-flex items-center gap-2 self-start rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02]"
         >
-          Voir les alertes
+          {tx("Voir les alertes", "See the alerts")}
           <ArrowUpRight className="h-4 w-4" />
         </button>
       </div>
@@ -2277,7 +2399,7 @@ export function DashboardView({
                 : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
             )}
           >
-            {s.label}
+            {px(s.label)}
 
             <span className="ml-1.5 text-[10px] opacity-60">
               {
@@ -2302,7 +2424,7 @@ export function DashboardView({
             <PriorityPills
               sector="logistics"
               ids={selectedLogisticsPriorities}
-              label="Priorités logistique"
+              label={tx("Priorités logistique", "Logistics priorities")}
               onOpen={(id) =>
                 openLogisticsPriority(id as LogisticsPriority)
               }
@@ -2313,7 +2435,7 @@ export function DashboardView({
             <PriorityPills
               sector="industry"
               ids={selectedIndustryPriorities}
-              label="Priorités industrie"
+              label={tx("Priorités industrie", "Industry priorities")}
               onOpen={(id) =>
                 openIndustryPriority(id as IndustryPriority)
               }
@@ -2324,7 +2446,7 @@ export function DashboardView({
         <PriorityPills
           sector={filterSector}
           ids={selectedSectorPriorities}
-          label="Vos priorités"
+          label={tx("Vos priorités", "Your priorities")}
         />
       )}
 
@@ -2333,7 +2455,7 @@ export function DashboardView({
         LOGISTICS_OPS_META[opsType] && (
           <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-[11px] font-medium text-muted-foreground">
             <Shield className="h-3 w-3" aria-hidden="true" />
-            {OPS_TYPE_LABEL[opsType]}
+            {px(OPS_TYPE_LABEL[opsType])}
           </div>
         )}
 
@@ -2344,35 +2466,40 @@ export function DashboardView({
           </div>
 
           <h3 className="mt-4 font-heading text-lg font-bold">
-            Aucune donnée pour{" "}
+            {tx("Aucune donnée pour", "No data for")}{" "}
             {departmentLabel ??
-              SECTORS.find((x) => x.key === filterSector)?.label ??
-              "cette activité"}
+              sectorName(filterSector) ??
+              tx("cette activité", "this activity")}
           </h3>
 
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-            Rien n&apos;a encore été importé pour cette activité. Les
-            indicateurs restent vides jusqu&apos;au premier fichier :
-            afficher des zéros donnerait l&apos;impression que tout va
-            bien, ce qui n&apos;est pas la même chose.
+            {tx(
+              "Rien n'a encore été importé pour cette activité. Les indicateurs restent vides jusqu'au premier fichier : afficher des zéros donnerait l'impression que tout va bien, ce qui n'est pas la même chose.",
+              "Nothing has been imported for this activity yet. The figures stay empty until the first file: showing zeroes would read as all clear, which is a different claim."
+            )}
           </p>
 
           <p className="mt-3 text-xs text-muted-foreground">
-            Chaque activité attend ses propres colonnes. Importez le CSV
-            correspondant à{" "}
+            {tx(
+              "Chaque activité attend ses propres colonnes. Importez le CSV correspondant à",
+              "Each activity expects its own columns. Import the CSV for"
+            )}{" "}
             <span className="font-semibold text-foreground">
               {subtypeName ??
-                SECTORS.find((x) => x.key === filterSector)?.label ??
-                "votre activité"}
+                sectorName(filterSector) ??
+                tx("votre activité", "your activity")}
             </span>{" "}
-            via le bouton Importer CSV ci-dessus.
+            {tx(
+              "via le bouton Importer CSV ci-dessus.",
+              "using the Import CSV button above."
+            )}
           </p>
         </div>
       ) : (
         <>
       {/* Context for the priorities above, not the headline */}
       <p className="text-[11px] font-bold uppercase tracking-[0.13em] text-muted-foreground">
-        Contexte général
+        {tx("Contexte général", "General context")}
       </p>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -2428,14 +2555,14 @@ export function DashboardView({
               </h3>
 
               <p className="text-sm text-muted-foreground">
-                7 derniers jours
+                {tx("7 derniers jours", "Last 7 days")}
               </p>
             </div>
 
             <button
               type="button"
               className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
-              aria-label="Options"
+              aria-label={tx("Options", "Options")}
             >
               <MoreHorizontal className="h-5 w-5" />
             </button>
@@ -2452,7 +2579,7 @@ export function DashboardView({
             <Activity className="h-5 w-5 text-accent-foreground" />
 
             <h3 className="font-heading text-lg font-bold">
-              Répartition
+              {tx("Répartition", "Breakdown")}
             </h3>
           </div>
 
@@ -2471,8 +2598,10 @@ export function DashboardView({
             </>
           ) : (
             <p className="mt-6 text-sm text-muted-foreground">
-              Rien à répartir pour cette activité sur la période
-              sélectionnée.
+              {tx(
+                "Rien à répartir pour cette activité sur la période sélectionnée.",
+                "Nothing to break down for this activity over the selected period."
+              )}
             </p>
           )}
         </div>
@@ -2482,11 +2611,14 @@ export function DashboardView({
 
       <div className="rounded-3xl border border-border bg-card p-6">
         <h3 className="font-heading text-lg font-bold">
-          Importer des données
+          {tx("Importer des données", "Import data")}
         </h3>
 
         <p className="mt-1 text-sm text-muted-foreground">
-          Choisissez un secteur puis importez votre CSV.
+          {tx(
+            "Choisissez un secteur puis importez votre CSV.",
+            "Choose a sector, then import your CSV."
+          )}
         </p>
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -2508,7 +2640,7 @@ export function DashboardView({
                     : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
                 )}
               >
-                {s.label}
+                {px(s.label)}
               </button>
             ))}
           </div>
@@ -2516,7 +2648,9 @@ export function DashboardView({
           <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90 focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
             <Upload className="h-4 w-4" aria-hidden="true" />
 
-            {uploading ? "Traitement..." : "Importer CSV"}
+            {uploading
+              ? tx("Traitement...", "Processing...")
+              : tx("Importer CSV", "Import CSV")}
 
             <input
               type="file"
@@ -2524,7 +2658,7 @@ export function DashboardView({
               className="sr-only"
               onChange={handleUpload}
               disabled={uploading}
-              aria-label="Importer un fichier CSV"
+              aria-label={tx("Importer un fichier CSV", "Import a CSV file")}
             />
           </label>
         </div>
@@ -2548,13 +2682,14 @@ export function DashboardView({
         {activitiesFor(uploadSector).length > 0 && (
           <div className="mt-4 border-t border-border pt-4">
             <p className="text-xs font-semibold">
-              Activité de ce fichier
+              {tx("Activité de ce fichier", "Activity for this file")}
             </p>
 
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Elle décide des contrôles appliqués et de la chaîne
-              affichée. Changez-la ici pour importer un fichier d&apos;une
-              autre activité.
+              {tx(
+                "Elle décide des contrôles appliqués et de la chaîne affichée. Changez-la ici pour importer un fichier d'une autre activité.",
+                "It decides which checks run and which chain is shown. Change it here to import a file for a different activity."
+              )}
             </p>
 
             <div className="mt-2.5 flex flex-wrap gap-2">
@@ -2581,13 +2716,17 @@ export function DashboardView({
               !isConfiguredActivity(uploadSector, uploadActivity) && (
                 <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-brand/40 bg-brand/10 px-3 py-2">
                   <p className="text-xs">
-                    Vous importez une activité différente de celle
-                    configurée
+                    {tx(
+                      "Vous importez une activité différente de celle configurée",
+                      "You are importing an activity other than the configured one"
+                    )}
                     {configuredActivityLabel(uploadSector)
                       ? ` (${configuredActivityLabel(uploadSector)})`
                       : ""}
-                    . Le tableau de bord continue d&apos;afficher
-                    l&apos;activité configurée.
+                    {tx(
+                      ". Le tableau de bord continue d'afficher l'activité configurée.",
+                      ". The dashboard keeps showing the configured activity."
+                    )}
                   </p>
 
                   <button
@@ -2597,7 +2736,10 @@ export function DashboardView({
                     }
                     className="rounded-full border border-foreground bg-foreground px-3 py-1 text-[11px] font-semibold text-background transition-opacity hover:opacity-90"
                   >
-                    Basculer le tableau de bord dessus
+                    {tx(
+                      "Basculer le tableau de bord dessus",
+                      "Switch the dashboard to it"
+                    )}
                   </button>
                 </div>
               )}
@@ -2605,9 +2747,9 @@ export function DashboardView({
         )}
 
         <p className="mt-3 text-xs text-muted-foreground">
-          Envoyé :{" "}
+          {tx("Envoyé :", "Sent:")}{" "}
           <span className="font-semibold text-foreground">
-            {SECTORS.find((s) => s.key === uploadSector)?.label}
+            {sectorName(uploadSector)}
           </span>
 
           {uploadActivity && (
@@ -2631,12 +2773,8 @@ export function DashboardView({
             <Cpu className="h-5 w-5" />
 
             <h3 className="font-heading text-lg font-bold">
-              Alertes ·{" "}
-              {
-                SECTORS.find(
-                  (s) => s.key === filterSector
-                )?.label
-              }
+              {tx("Alertes", "Alerts")} ·{" "}
+              {sectorName(filterSector)}
             </h3>
 
             <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-semibold text-muted-foreground">
@@ -2652,7 +2790,7 @@ export function DashboardView({
             }}
             className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90"
           >
-            Tout voir
+            {tx("Tout voir", "See all")}
             <ArrowUpRight className="h-4 w-4" />
           </button>
         </div>
@@ -2675,9 +2813,11 @@ export function DashboardView({
                 : "border-border"
             )}
           >
-            <option value="all">Tous les statuts</option>
-            <option value="critical">Critiques</option>
-            <option value="warning">Warnings</option>
+            <option value="all">
+              {tx("Tous les statuts", "All statuses")}
+            </option>
+            <option value="critical">{tx("Critiques", "Critical")}</option>
+            <option value="warning">{tx("Warnings", "Warnings")}</option>
           </select>
 
           <select
@@ -2704,11 +2844,13 @@ export function DashboardView({
                 : "border-border"
             )}
           >
-            <option value="all">Toutes les dates</option>
-            <option value="7">7 derniers jours</option>
-            <option value="30">30 derniers jours</option>
-            <option value="90">90 derniers jours</option>
-            <option value="custom">Dates personnalisées</option>
+            <option value="all">{tx("Toutes les dates", "All dates")}</option>
+            <option value="7">{tx("7 derniers jours", "Last 7 days")}</option>
+            <option value="30">{tx("30 derniers jours", "Last 30 days")}</option>
+            <option value="90">{tx("90 derniers jours", "Last 90 days")}</option>
+            <option value="custom">
+              {tx("Dates personnalisées", "Custom dates")}
+            </option>
           </select>
 
           {periodPreset === "custom" && (
@@ -2751,7 +2893,10 @@ export function DashboardView({
               type="text"
               value={alertSearch}
               onChange={(e) => setAlertSearch(e.target.value)}
-              placeholder="Rechercher une alerte..."
+              placeholder={tx(
+                "Rechercher une alerte...",
+                "Search an alert..."
+              )}
               className={cn(
                 "w-52 rounded-full border bg-background py-1.5 pl-9 pr-4 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-colors hover:bg-accent focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
                 alertSearch.trim()
@@ -2768,7 +2913,7 @@ export function DashboardView({
               className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background transition-opacity hover:opacity-90"
             >
               <X className="h-3 w-3" />
-              Effacer les filtres
+              {tx("Effacer les filtres", "Clear filters")}
 
               <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[10px]">
                 {activeFilterCount}
@@ -2780,7 +2925,10 @@ export function DashboardView({
         {periodPreset === "custom" && invalidCustomRange && (
           <div className="border-t border-border px-6 py-2">
             <p className="text-xs font-medium text-destructive">
-              La date de début doit être antérieure ou égale à la date de fin.
+              {tx(
+                "La date de début doit être antérieure ou égale à la date de fin.",
+                "The start date must be on or before the end date."
+              )}
             </p>
           </div>
         )}
@@ -2788,40 +2936,42 @@ export function DashboardView({
         {activeFilterCount > 0 && (
           <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-2.5">
             <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Filtres actifs
+              {tx("Filtres actifs", "Active filters")}
             </span>
 
             {statusFilter !== "all" && (
               <span className="inline-flex items-center gap-1 rounded-full bg-foreground/10 px-2.5 py-1 text-[11px] font-semibold text-foreground">
                 {statusFilter === "critical"
-                  ? "Critiques"
-                  : "Warnings"}
+                  ? tx("Critiques", "Critical")
+                  : tx("Warnings", "Warnings")}
               </span>
             )}
 
             {periodPreset !== "all" && (
               <span className="inline-flex items-center gap-1 rounded-full bg-foreground/10 px-2.5 py-1 text-[11px] font-semibold text-foreground">
                 {periodPreset === "7"
-                  ? "7 derniers jours"
+                  ? tx("7 derniers jours", "Last 7 days")
                   : periodPreset === "30"
-                  ? "30 derniers jours"
+                  ? tx("30 derniers jours", "Last 30 days")
                   : periodPreset === "90"
-                  ? "90 derniers jours"
-                  : `${customFrom || "Début"} → ${
-                      customTo || "Fin"
+                  ? tx("90 derniers jours", "Last 90 days")
+                  : `${customFrom || tx("Début", "Start")} → ${
+                      customTo || tx("Fin", "End")
                     }`}
               </span>
             )}
 
             {alertSearch.trim() && (
               <span className="inline-flex max-w-[220px] items-center gap-1 truncate rounded-full bg-foreground/10 px-2.5 py-1 text-[11px] font-semibold text-foreground">
-                Recherche : {alertSearch}
+                {tx("Recherche :", "Search:")} {alertSearch}
               </span>
             )}
 
             <span className="ml-auto text-[11px] font-medium text-muted-foreground">
-              {tableAlerts.length} alerte
-              {tableAlerts.length !== 1 ? "s" : ""}
+              {tableAlerts.length}{" "}
+              {tableAlerts.length === 1
+                ? tx("alerte", "alert")
+                : tx("alertes", "alerts")}
             </span>
           </div>
         )}
@@ -2840,23 +2990,23 @@ export function DashboardView({
                 <thead className="sticky top-0 z-10 bg-card">
                   <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">
                     <th className="border-b border-border px-4 py-3 font-medium">
-                      Actif
+                      {tx("Actif", "Asset")}
                     </th>
 
                     <th className="border-b border-border px-4 py-3 font-medium">
-                      Message
+                      {tx("Message", "Message")}
                     </th>
 
                     <th className="border-b border-border px-4 py-3 font-medium">
-                      Secteur
+                      {tx("Secteur", "Sector")}
                     </th>
 
                     <th className="border-b border-border px-4 py-3 font-medium">
-                      Sévérité
+                      {tx("Sévérité", "Severity")}
                     </th>
 
                     <th className="border-b border-border px-4 py-3 font-medium">
-                      Date
+                      {tx("Date", "Date")}
                     </th>
                   </tr>
                 </thead>
@@ -2923,7 +3073,7 @@ export function DashboardView({
                               : "border-b border-border text-muted-foreground"
                           )}
                         >
-                          {getSectorLabel(alert.sector)}
+                          {getSectorLabel(alert.sector, tx)}
                         </td>
 
                         <td
@@ -2956,7 +3106,7 @@ export function DashboardView({
                           <div className="flex items-center justify-between gap-2">
                             {new Date(
                               alert.date
-                            ).toLocaleString("fr-FR")}
+                            ).toLocaleString(dateLocale)}
 
                             <ChevronRight
                               className={cn(
@@ -2983,13 +3133,21 @@ export function DashboardView({
                             role="alert"
                             className="text-destructive"
                           >
-                            Impossible de charger les alertes
-                            ({alertsError}). L&apos;API est peut-être
-                            hors service : rechargez la page ou
-                            vérifiez la console du navigateur.
+                            {tx(
+                              "Impossible de charger les alertes",
+                              "Cannot load the alerts"
+                            )}
+                            {` (${alertsError}). `}
+                            {tx(
+                              "L'API est peut-être hors service : rechargez la page ou vérifiez la console du navigateur.",
+                              "The API may be down: reload the page, or check the browser console."
+                            )}
                           </span>
                         ) : (
-                          "Aucune alerte pour ces filtres. Importez un CSV ou élargissez la période."
+                          tx(
+                            "Aucune alerte pour ces filtres. Importez un CSV ou élargissez la période.",
+                            "No alerts match these filters. Import a CSV, or widen the period."
+                          )
                         )}
                       </td>
                     </tr>
@@ -3004,7 +3162,7 @@ export function DashboardView({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-accent">
-                    Détails de l'alerte
+                    {tx("Détails de l'alerte", "Alert detail")}
                   </p>
 
                   <h4 className="mt-1.5 truncate font-heading text-xl font-bold tracking-tight">
@@ -3014,7 +3172,7 @@ export function DashboardView({
                   <p className="mt-0.5 text-xs text-sidebar-foreground/50">
                     {new Date(
                       expandedAlert.date
-                    ).toLocaleString("fr-FR")}
+                    ).toLocaleString(dateLocale)}
                   </p>
                 </div>
 
@@ -3033,7 +3191,7 @@ export function DashboardView({
                   <button
                     type="button"
                     onClick={() => setExpandedAlertKey(null)}
-                    aria-label="Fermer les détails"
+                    aria-label={tx("Fermer les détails", "Close the detail")}
                     className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-sidebar-foreground/60 ring-1 ring-white/10 transition-colors hover:bg-accent hover:text-accent-foreground hover:ring-transparent"
                   >
                     <X className="h-3.5 w-3.5" />
@@ -3054,11 +3212,11 @@ export function DashboardView({
               <div className="mt-3 grid grid-cols-2 gap-2 rounded-2xl bg-white/[0.06] p-4 ring-1 ring-white/10">
                 <div>
                   <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
-                    Secteur
+                    {tx("Secteur", "Sector")}
                   </p>
 
                   <p className="mt-1 text-sm font-semibold capitalize">
-                    {getSectorLabel(expandedAlert.sector)}
+                    {getSectorLabel(expandedAlert.sector, tx)}
                   </p>
                 </div>
 
@@ -3081,7 +3239,7 @@ export function DashboardView({
 
                 <div>
                   <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
-                    Score de risque
+                    {tx("Score de risque", "Risk score")}
                   </p>
 
                   <p
@@ -3093,13 +3251,19 @@ export function DashboardView({
                     )}
                     title={
                       typeof expandedRecommendation?.risk_score === "number"
-                        ? "Gravité du problème lui-même, calculée à partir des mesures brutes"
-                        : "Ce secteur ne calcule pas encore de score de risque pour cette alerte"
+                        ? tx(
+                            "Gravité du problème lui-même, calculée à partir des mesures brutes",
+                            "How severe the problem itself is, computed from the raw measurements"
+                          )
+                        : tx(
+                            "Ce secteur ne calcule pas encore de score de risque pour cette alerte",
+                            "This sector does not compute a risk score for this alert yet"
+                          )
                     }
                   >
                     {typeof expandedRecommendation?.risk_score === "number"
                       ? `${expandedRecommendation.risk_score} / 100`
-                      : "Non calculé"}
+                      : tx("Non calculé", "Not computed")}
                   </p>
                 </div>
 
@@ -3117,7 +3281,10 @@ export function DashboardView({
                   {expandedRecommendation ? (
                     <p
                       className="mt-1 inline-flex items-center gap-1 text-sm font-semibold"
-                      title="À quel point SentrIA est sûr que cette alerte mérite votre attention"
+                      title={tx(
+                        "À quel point SentrIA est sûr que cette alerte mérite votre attention",
+                        "How sure SentrIA is that this alert deserves your attention"
+                      )}
                     >
                       <Gauge className="h-3 w-3 shrink-0 text-sidebar-foreground/50" />
                       {estimateConfidence(
@@ -3136,14 +3303,14 @@ export function DashboardView({
                     </p>
                   ) : (
                     <p className="mt-1 text-sm font-semibold text-sidebar-foreground/40">
-                      Non mesuré
+                      {tx("Non mesuré", "Not measured")}
                     </p>
                   )}
                 </div>
 
                 <div className="min-w-0">
                   <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
-                    Catégorie
+                    {tx("Catégorie", "Category")}
                   </p>
 
                   <p className="mt-1 truncate text-sm font-semibold capitalize">
@@ -3154,19 +3321,22 @@ export function DashboardView({
 
               <div className="mt-3 rounded-2xl border border-accent/20 bg-accent/5 px-4 py-3">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-accent">
-                  Recommandation
+                  {tx("Recommandation", "Recommendation")}
                 </p>
 
                 <p className="mt-1.5 text-sm font-medium leading-5 text-sidebar-foreground/90">
                   {expandedRecommendation?.recommended_action ??
-                    "Analyse en cours, recommandation bientôt disponible."}
+                    tx(
+                      "Analyse en cours, recommandation bientôt disponible.",
+                      "Analysis in progress, a recommendation is coming."
+                    )}
                 </p>
               </div>
 
               {expandedRecommendation && (
                 <div className="mt-3 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
-                    Pourquoi
+                    {tx("Pourquoi", "Why")}
                   </p>
 
                   <p className="mt-1.5 text-xs leading-5 text-sidebar-foreground/70">
@@ -3175,7 +3345,8 @@ export function DashboardView({
                       recurrenceOf(
                         expandedRecommendation.equipment,
                         alerts
-                      )
+                      ),
+                      tx
                     )}
                   </p>
                 </div>
@@ -3183,15 +3354,19 @@ export function DashboardView({
 
               <div className="mt-3 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
-                  Contexte sectoriel
+                  {tx("Contexte sectoriel", "Sector context")}
                 </p>
 
                 <p className="mt-1.5 text-xs leading-5 text-sidebar-foreground/70">
                   {expandedRecommendation
                     ? getRecommendationContext(
-                        expandedRecommendation
+                        expandedRecommendation,
+                        tx
                       )
-                    : "SentrIA analyse cette alerte afin d'identifier l'action opérationnelle la plus pertinente."}
+                    : tx(
+                        "SentrIA analyse cette alerte afin d'identifier l'action opérationnelle la plus pertinente.",
+                        "SentrIA is working out the most useful operational action for this alert."
+                      )}
                 </p>
               </div>
 
@@ -3214,7 +3389,7 @@ export function DashboardView({
                         className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground transition-opacity hover:opacity-90"
                       >
                         <Check className="h-3.5 w-3.5" />
-                        Marquer traité
+                        {tx("Marquer traité", "Mark handled")}
                       </button>
                       <button
                         type="button"
@@ -3225,7 +3400,7 @@ export function DashboardView({
                         className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-sidebar-foreground/70 transition-colors hover:bg-white/5"
                       >
                         <X className="h-3.5 w-3.5" />
-                        Ignorer
+                        {tx("Ignorer", "Dismiss")}
                       </button>
                     </div>
                   ) : (
@@ -3238,12 +3413,18 @@ export function DashboardView({
                       )}
                     >
                       <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-sidebar-foreground/60">
-                        Résultat
+                        {tx("Résultat", "Outcome")}
                       </p>
                       <p className="mt-1 text-[11px] leading-4 text-sidebar-foreground/80">
                         {action.status === "done"
-                          ? `Traité à ${action.at}. SentrIA continue de surveiller cet actif pour confirmer l'effet.`
-                          : `Écarté à ${action.at}. Réapparaîtra si le signal s'aggrave.`}
+                          ? tx(
+                              `Traité à ${action.at}. SentrIA continue de surveiller cet actif pour confirmer l'effet.`,
+                              `Handled at ${action.at}. SentrIA keeps watching this asset to confirm the effect.`
+                            )
+                          : tx(
+                              `Écarté à ${action.at}. Réapparaîtra si le signal s'aggrave.`,
+                              `Dismissed at ${action.at}. It will come back if the signal worsens.`
+                            )}
                       </p>
                     </div>
                   )
@@ -3269,7 +3450,7 @@ export function DashboardView({
                       : "cursor-not-allowed bg-white/10 text-sidebar-foreground/40"
                   )}
                 >
-                  Voir la recommandation
+                  {tx("Voir la recommandation", "See the recommendation")}
                   <ArrowUpRight className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -3296,7 +3477,7 @@ export function DashboardView({
             <div className="flex items-start justify-between gap-4 border-b border-border p-6">
               <div className="min-w-0">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
-                  Recommandation SentrIA
+                  {tx("Recommandation SentrIA", "SentrIA recommendation")}
                 </p>
 
                 <h2
@@ -3309,7 +3490,8 @@ export function DashboardView({
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <span className="rounded-full border border-border bg-muted px-2.5 py-1 text-[10px] font-semibold">
                     {getSectorLabel(
-                      selectedRecommendation.sector
+                      selectedRecommendation.sector,
+                      tx
                     )}
                   </span>
 
@@ -3331,16 +3513,22 @@ export function DashboardView({
                       undefined && (
                       <span
                         className="rounded-full bg-accent/15 px-2.5 py-1 text-[10px] font-semibold text-accent-foreground"
-                        title="Gravité du problème lui-même, calculée à partir des mesures brutes"
+                        title={tx(
+                          "Gravité du problème lui-même, calculée à partir des mesures brutes",
+                          "How severe the problem itself is, computed from the raw measurements"
+                        )}
                       >
-                        Risque :{" "}
+                        {tx("Risque :", "Risk:")}{" "}
                         {selectedRecommendation.risk_score} / 100
                       </span>
                     )}
 
                   <span
                     className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-[10px] font-semibold text-muted-foreground"
-                    title="À quel point SentrIA est sûr de cette analyse"
+                    title={tx(
+                      "À quel point SentrIA est sûr de cette analyse",
+                      "How sure SentrIA is of this analysis"
+                    )}
                   >
                     <Gauge className="h-3 w-3" />
                     {(() => {
@@ -3371,7 +3559,10 @@ export function DashboardView({
                 onClick={() =>
                   setSelectedRecommendation(null)
                 }
-                aria-label="Fermer la recommandation"
+                aria-label={tx(
+                  "Fermer la recommandation",
+                  "Close the recommendation"
+                )}
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 <X className="h-4 w-4" />
@@ -3381,7 +3572,7 @@ export function DashboardView({
             <div className="space-y-4 p-6">
               <div className="rounded-2xl border border-border bg-muted/30 p-4">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  Alerte détectée
+                  {tx("Alerte détectée", "Alert detected")}
                 </p>
 
                 <p className="mt-2 text-sm leading-6 text-foreground">
@@ -3391,7 +3582,7 @@ export function DashboardView({
 
               <div className="rounded-2xl border border-accent/30 bg-accent/10 p-5">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-accent-foreground">
-                  Action recommandée
+                  {tx("Action recommandée", "Recommended action")}
                 </p>
 
                 <p className="mt-2 text-base font-semibold leading-7 text-foreground">
@@ -3402,31 +3593,31 @@ export function DashboardView({
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-border bg-background p-4">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    Catégorie
+                    {tx("Catégorie", "Category")}
                   </p>
 
                   <p className="mt-1.5 text-sm font-semibold capitalize">
                     {selectedRecommendation.action_category ||
-                      "Opérationnelle"}
+                      tx("Opérationnelle", "Operational")}
                   </p>
                 </div>
 
                 <div className="rounded-2xl border border-border bg-background p-4">
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    Date de détection
+                    {tx("Date de détection", "Detected on")}
                   </p>
 
                   <p className="mt-1.5 text-sm font-semibold">
                     {new Date(
                       selectedRecommendation.date
-                    ).toLocaleString("fr-FR")}
+                    ).toLocaleString(dateLocale)}
                   </p>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-border bg-muted/30 p-4">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  Pourquoi
+                  {tx("Pourquoi", "Why")}
                 </p>
 
                 <p className="mt-1.5 text-sm leading-6 text-foreground/80">
@@ -3435,7 +3626,8 @@ export function DashboardView({
                     recurrenceOf(
                       selectedRecommendation.equipment,
                       alerts
-                    )
+                    ),
+                    tx
                   )}
                 </p>
               </div>
@@ -3448,12 +3640,16 @@ export function DashboardView({
 
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-accent">
-                      Impact si personne n&apos;agit
+                      {tx(
+                        "Impact si personne n'agit",
+                        "Impact if nobody acts"
+                      )}
                     </p>
 
                     <p className="mt-1.5 text-sm leading-6 text-sidebar-foreground/75">
                       {getRecommendationContext(
-                        selectedRecommendation
+                        selectedRecommendation,
+                        tx
                       )}
                     </p>
                   </div>
@@ -3463,16 +3659,14 @@ export function DashboardView({
               {selectedRecommendation.sector === "eac" && (
                 <div className="rounded-2xl border border-accent/20 bg-accent/5 p-5">
                   <p className="text-[10px] font-semibold uppercase tracking-widest text-accent-foreground">
-                    Contexte EAC
+                    {tx("Contexte EAC", "EAC context")}
                   </p>
 
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    Cette recommandation doit être interprétée
-                    dans le contexte des flux régionaux de
-                    l'Afrique de l'Est : transit transfrontalier,
-                    formalités douanières, disponibilité des
-                    marchandises, coordination portuaire et
-                    continuité des corridors.
+                    {tx(
+                      "Cette recommandation doit être interprétée dans le contexte des flux régionaux de l'Afrique de l'Est : transit transfrontalier, formalités douanières, disponibilité des marchandises, coordination portuaire et continuité des corridors.",
+                      "Read this recommendation in the context of East African regional flows: cross-border transit, customs formalities, goods availability, port coordination and corridor continuity."
+                    )}
                   </p>
                 </div>
               )}
@@ -3505,7 +3699,7 @@ export function DashboardView({
                           : "text-muted-foreground"
                       )}
                     >
-                      Résultat
+                      {tx("Résultat", "Outcome")}
                     </p>
 
                     <p className="mt-1.5 text-sm leading-6 text-foreground/80">
@@ -3558,7 +3752,7 @@ export function DashboardView({
                 className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-xs font-bold text-accent-foreground transition-transform hover:scale-[1.02]"
               >
                 <Check className="h-3.5 w-3.5" />
-                Marquer traité
+                {tx("Marquer traité", "Mark handled")}
               </button>
             </div>
           </div>
