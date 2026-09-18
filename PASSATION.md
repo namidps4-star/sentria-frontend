@@ -1,304 +1,314 @@
-# Passation SentrIA
+# SentrIA handover
 
-> Rédigée le 2026-09-17. Trois dépôts, tous poussés, rien en attente
-> localement.
+> Written 2026-09-18, in English by request. This replaces the French
+> 2026-09-17 version, whose content is preserved in git history at
+> `da131b6`.
 >
-> | Dépôt | Branche | HEAD | État |
+> | Repo | Branch | HEAD | State |
 > |---|---|---|---|
-> | `namidps4-star/Sentria` | `main` | `e7f58ac` | déployé sur Render |
-> | `namidps4-star/sentria-landing-page` | `main` | `a3d8a8a` | mergé |
-> | `namidps4-star/sentria-frontend` | `feature/onboarding-view` | `880d08d` | **jamais mergé, aucune branche `main` n'existe** |
+> | `namidps4-star/sentria-frontend` | `feature/onboarding-view` | `de76bb1` | pushed, never merged |
+> | `namidps4-star/Sentria` | `feature/contractors-crm` | `bb5a183` | **pushed, NOT merged, so nothing is live** |
+> | `namidps4-star/sentria-landing-page` | `main` | `a3d8a8a` | untouched this session |
+>
+> Nothing is waiting locally. The backend working tree is clean except
+> for `__pycache__`, still tracked in git by mistake.
 
 ---
 
-## 1. L'objectif
+## 1. The objective
 
-Rendre SentrIA utilisable sur quatre fronts menés en parallèle.
+Two things were asked for, in this order.
 
-**a. Couvrir les quatre métiers de la santé.** L'onboarding proposait
-Pharmacie, Grossiste-répartiteur, Clinique/Hôpital et Laboratoire. Le
-backend n'implémentait que les contrôles d'une officine et appliquait les
-mêmes aux trois autres.
+**a. A contractor CRM.** The priorities board could already assign a task
+to somebody. It kept the assignment in the administrator's own browser,
+so the contractor never saw it. The ask was to make an assignment a fact
+about the operation rather than a fact about one laptop.
 
-**b. Réparer Ask AI**, qui ne répondait plus du tout.
+**b. Internationalisation.** Ask the operator's country and language at
+onboarding, use the country for currency, and put the product in their
+language. The bar was stated plainly and it is the right bar:
 
-**c. Rendre le tableau de bord honnête.** Qu'il reflète l'activité choisie
-à l'onboarding et les données réellement importées, au lieu de panneaux
-figés remplis de chiffres inventés.
+> "selecting english must make literally everything in english no
+> exception whatso ever"
 
-**d. Rendre la landing page premium, vivante et intuitive.**
-
-Puis, sur demande : audit accessibilité, alignement de la palette, et
-installation de plusieurs packs de compétences de design.
-
----
-
-## 2. La problématique qu'on essaye de résoudre
-
-Un seul fil conducteur : **l'interface affirmait des choses que les
-données ne soutenaient pas.** Cinq formes, par ordre de gravité.
-
-### Les alertes n'étaient pas séparées par métier
-
-`save_alert()` n'enregistrait que `sector`. Pharmacie, grossiste, hôpital
-et laboratoire écrivaient tous `sector: "health"` et tombaient dans le
-même panier. Un laboratoire voyait les alertes d'une pharmacie.
-
-C'est la cause racine que j'ai d'abord manquée : mon premier correctif
-n'avait renommé que les libellés des cartes. Cosmétique. Les lignes
-restaient indistinguables.
-
-### Zéro ne se distinguait pas de « aucune donnée »
-
-Quatre cartes à `0` et une courbe plate se lisent « tout va bien ». C'est
-une affirmation très différente de « rien n'a été importé ». Sans données,
-le tableau de bord rassurait à tort.
-
-### Les graphiques mentaient, dans les deux langues
-
-Chaque carte KPI portait un tableau `spark` codé en dur, 32 au total,
-dessiné comme sept jours d'historique. Et le graphique de répartition
-comptait les alertes en cherchant des mots **français** dans le message
-(`rupture`, `bas`, `froid`, `expir`).
-
-Mesuré : un laboratoire et un grossiste n'emploient aucun de ces mots,
-leur graphique était donc toujours vide. Et en anglais, trois colonnes sur
-quatre tombaient à zéro même pour une pharmacie, puisque ces mots
-n'existent que dans les traductions françaises. Le graphique comparait des
-traductions.
-
-### Un échec ressemblait à un succès
-
-Côté Ask AI, toute erreur renvoyait HTTP 200 avec la même phrase et le
-`catch` du frontend ne journalisait rien : trois causes indiscernables.
-Côté import CSV, un échec s'affichait **en vert**.
-
-### Le thème sombre n'avait jamais reçu la marque
-
-La palette claire avait été personnalisée au vert lime et au crème. La
-sombre était restée en neutres shadcn d'origine. Mesuré au navigateur :
-`--ring` sombre était un gris moyen et `--chart-1` à `--chart-5` avaient
-tous une chroma nulle. Conséquence : **tous les anneaux de focus étaient
-quasi invisibles sur fond sombre**, et les graphiques rendaient en
-monochrome. Aucun token ne portait le lime, ce qui explique pourquoi trois
-appels avaient écrit `#a3e635` à la main.
+**That second objective is not met.** The rest of this document is mostly
+about why, and what the next person needs to know to finish it.
 
 ---
 
-## 3. Les fichiers importants sur lesquels il bosse
+## 2. The problem we are trying to solve
 
-### Backend : `namidps4-star/Sentria`, branche `main`
+The thread running through this branch has not changed: **the interface
+asserted things the data did not support.** This session added two new
+instances of it, one of them mine.
 
-| Fichier | Rôle |
+### The board's assignments never left the browser
+
+`localStorage` under `sentria_recommendation_tasks_v2`. An administrator
+assigned GRUE-02 to a crane operator and the crane operator saw nothing,
+ever. The UI showed an assignment; no assignment existed.
+
+### Every amount claimed euros
+
+`pipeline/alerts.py:683` has always read a currency per row from the CSV.
+The frontend hardcoded the euro anyway: `formatEuros`, `"€ / h au-delà de
+8 h"`, a euro sign beside every exposure figure.
+
+The figures in the cost view are rates **the operator types in
+themselves**, so the currency is a label on their own numbers. A Lagos
+terminal entering 45000 for immobilisation means naira. Stamping a euro
+sign on it was simply false, and it was false for every non-eurozone
+customer from the day that view shipped.
+
+### The language picker was decorative
+
+`settings-view.tsx` offered six languages from a `useState("fr")` that
+was never written down and never read by another screen. Six languages,
+none stored, exactly like the timezone select before it.
+
+### And then I did the same thing, in a new place
+
+This is the failure that matters most, so it gets its own section below.
+I marked English as a language the interface exists in, and it did not.
+The picker promised English because I typed `true`, not because anything
+had been translated.
+
+---
+
+## 3. The important files
+
+### Frontend: `namidps4-star/sentria-frontend`, branch `feature/onboarding-view`
+
+| File | Role |
 |---|---|
-| `pipeline/alerts.py` | Cœur du système, ~2000 lignes. Routeur `check_health()`, les quatre contrôles métier, `save_alert()`, le `ContextVar` qui étiquette les alertes |
-| `pipeline/lab_panels.py` | **Nouveau.** `TEST_PANELS` : quels réactifs chaque analyse consomme. C'est ici qu'on configure un nouveau laboratoire |
-| `pipeline/critical_supplies.py` | **Nouveau.** Catégories sans alternative en pharmacie (oxygène, sang, perfusion, antivenin, urgence, vaccin), synonymes FR/EN |
-| `pipeline/i18n.py` | Messages fr + en. 25 clés ajoutées cette session |
-| `pipeline/action_map.py` | Action recommandée par clé. 25 entrées ajoutées |
-| `api/main.py` | FastAPI. CORS, `/health`, `/ask`, `/upload`, `/alerts` |
-| `pipeline/demo_supplier.py` | **Le garde-fou.** Sa sortie doit rester identique au caractère près après toute modification |
-| `pipeline/demo_laboratory.py`<br>`pipeline/demo_hospital.py`<br>`pipeline/demo_wholesaler.py` | **Nouveaux.** Démos avec assertions |
+| `lib/i18n/fr.ts` | The message catalogue, **53 keys**, source of truth. Chrome only: nav, view titles, the repeated buttons |
+| `lib/i18n/en.ts` | Typed `Record<keyof typeof fr, string>`. **This is the mechanism.** A missing key is a build error, verified by deleting one |
+| `lib/i18n/index.ts` | `useT()` for the catalogue, `useTx()` / `tx(fr, en)` for bulk, `Localized` + `pick()` for module-level catalogues that cannot call a hook |
+| `scripts/check-i18n.mjs` | **Start here for the i18n work.** Counts unlocalized user-facing text. `--strict` exits 1 while any remains. `--file <path>` lists them with line numbers |
+| `lib/locale.ts` | Language and country. `uiReady` is `"full"` / `"partial"` / `"none"`, `uiLanguage()` narrows a choice to a language the UI has, `COUNTRIES` carries the currency, `formatMoney()` |
+| `lib/crm.ts` | The contractor CRM client. Every call returns `{ ok, data }` or `{ ok: false, code, detail }`, because these endpoints answer HTTP 200 on failure |
+| `components/sentria/contractors-view.tsx` | New "Intervenants" screen. Availability is declared, workload is counted, and the two are never merged |
+| `components/sentria/recommendations-board-view.tsx` | The priorities board. Restyled on the supplied reference, and now saves through the API with rollback on a rejected save |
+| `components/sentria/onboarding-modal.tsx` | Eight successive steps: language, country, timezone, company, sector, activity, priorities, data. Cards rather than selects |
+| `components/sentria/dashboard-view.tsx` | **243 unlocalized strings, the single biggest obstacle to English.** Only the hero is done |
 
-### Frontend : `namidps4-star/sentria-frontend`, branche `feature/onboarding-view`
+### Backend: `namidps4-star/Sentria`, branch `feature/contractors-crm`
 
-| Fichier | Rôle |
+| File | Role |
 |---|---|
-| `app/globals.css` | Tokens de thème. Contient désormais `--brand`, la règle globale de focus en `:where()`, et le bloc `prefers-reduced-motion` |
-| `components/sentria/dashboard-view.tsx` | ~2400 lignes, le plus modifié. `SECTOR_META`, `dailySeries()`, `alertBreakdown()`, `activityOf()`, filtrage par activité, états vides |
-| `components/sentria/onboarding-modal.tsx` | Badges de maturité, `CSV_COLUMNS`, panneau d'import CSV |
-| `components/sentria/ask-view.tsx` | Chat. Indicateur de rédaction, région live, gestion d'erreurs |
-| `components/sentria/app-shell.tsx` | Récupère le compte d'alertes critiques pour la cloche |
-| `components/sentria/topbar.tsx` | Pastille de notification pilotée par `unreadCount` |
-| `lib/api.ts` | **Nouveau.** `API_BASE`, source unique de l'URL backend |
-| `.claude/skills/` | 41 compétences installées, ~13 Mo |
-
-### Landing page : `namidps4-star/sentria-landing-page`, branche `main`
-
-| Fichier | Rôle |
-|---|---|
-| `index.html` | Fichier unique, 4569 lignes. CSS et JS ajoutés **en fin de bloc** pour ne pas toucher au parallaxe du hero ni au sélecteur de langue existants |
+| `migrations/001_contractors_and_assignments.sql` | **Must be run in the Supabase SQL editor or the whole CRM returns `crm_query_failed`.** Two tables. RLS deliberately off, with a commented starting point |
+| `pipeline/crm.py` | Contractors and assignments. Validation before the database is consulted, because there is nothing else in front of these writes |
+| `pipeline/demo_crm.py` | Proof, stubbing only Supabase. **Its STEP 0 proves the fake client filters before asserting anything else** |
+| `pipeline/i18n.py` | **92 keys in `fr`, 92 in `en`, zero gaps.** The operational alert messages are already bilingual. `translate(key, lang)` exists |
+| `pipeline/alerts.py` | `fire()` passes the message key to `save_alert` on line 98, so **every stored alert row carries its `alert_key`** |
+| `pipeline/demo_supplier.py` | The guard rail. Output must stay byte identical. md5 `6a65a141cfcf16f954031a5c259aad2a` |
 
 ---
 
-## 4. Ce qu'il a essayé et qui a raté
+## 4. What was tried and failed
 
-Les erreurs réelles. C'est la section la plus utile du document.
+The useful section. Read it before trusting anything I reported.
 
-### Le correctif cosmétique du tableau de bord
+### I shipped the exact bug this branch exists to remove
 
-J'ai renommé les libellés des cartes par activité et annoncé que les
-métiers étaient séparés. **C'était faux.** Les alertes partageaient
-toujours `sector: "health"`. L'utilisateur l'a vu immédiatement : « je vois
-encore des trucs de pharmacie avec clinique, lab ». Il a fallu remonter
-jusqu'à `save_alert()`.
+I set `uiReady: true` for English in `lib/locale.ts`. `uiLanguage()`
+returned `"en"` correctly, and then **nothing read it**: zero call sites.
+The only translation map in the app was 15 strings local to the Settings
+screen. The picker told the operator English was available because of a
+boolean I typed.
 
-**Leçon :** renommer un affichage ne sépare pas des données.
+The user found it by opening the app, which is the worst way for it to be
+found. I had spent the whole session removing invented claims from this
+codebase and then added one.
 
-### Le diagnostic CORS abandonné à tort
+It is now `"partial"`, and the picker says *"Navigation en English ·
+contenu encore en français"*.
 
-J'avais correctement identifié que la liste blanche CORS bloquait leur
-origine. Puis je me suis rétracté, en raisonnant que « si le tableau de
-bord marche, CORS va bien ». Le test a montré que leur origine réelle
-(`sentria-dashboard-git-...`) était bel et bien bloquée : HTTP 400
-`Disallowed CORS origin`, exactement 22 octets.
+### I never did the step I had just proposed
 
-**Leçon :** j'ai déduit au lieu de demander l'URL. Une question aurait
-tranché en une minute.
+I laid out a plan whose step 1 was "set English to `uiReady: false`
+today", then went straight to step 2 and left the flag on. When the user
+asked why the dashboard was still French, the honest answer was that I
+had skipped my own first step.
 
-### L'URL cherchée dans un seul fichier
+### I said I would not turn English on, and then left it on
 
-J'ai lu `ask-view.tsx`, trouvé une URL Railway morte, et bâti une théorie
-autour. Sans chercher ailleurs. Elle était déclarée **deux fois**, et seule
-la copie du tableau de bord avait été mise à jour au passage à Render. Un
-`grep` global l'aurait montré tout de suite.
+Having argued that a mixed screen is worse than a French one, I shipped a
+mixed screen. I do now think leaving it on is the better call, and the
+third `"partial"` state is how it says so honestly, but I changed
+position mid-task and should have said so at the time rather than in a
+commit message.
 
-### Un bug inventé, mis à l'ordre du jour
+### Two numbers I reported were wrong
 
-J'ai proposé de « corriger l'avertissement d'hydratation » en citant une
-erreur **React #418 que je n'avais jamais observée**. L'utilisateur l'a
-choisie dans une liste de tâches. Vérification faite : les quatre
-initialiseurs `useState` qui lisent `localStorage` ont tous leur garde
-`typeof window`, et un test navigateur avec `localStorage` pré-rempli
-différemment du rendu serveur produit **zéro** erreur d'hydratation.
+- **"186 keys" in `pipeline/i18n.py`.** It is 92 keys per language. I had
+  counted lines across both blocks.
+- **"746 untranslated strings".** The real figure is **1119**. My first
+  detector only looked for French, so it undercounted by a third.
 
-**Leçon :** ne jamais proposer un correctif pour un bug non mesuré.
+Both were stated confidently enough to plan around. Re-measure before
+trusting a number in a handover, including this one.
 
-### Un défaut introduit par mon propre correctif
+### My first detector asked the wrong question
 
-J'ai construit la règle globale de focus sur `--ring`. Or `--ring` était
-un gris en thème sombre. Tous les anneaux que je venais d'ajouter étaient
-donc quasi invisibles sur fond sombre. Trouvé seulement en mesurant la
-palette au tour suivant.
+`scripts/check-i18n.mjs` originally looked for French: diacritics and
+French function words. It was wrong twice over.
 
-### La garde de panneau trop permissive
+- It **missed "Mensuel" and "Annuel"**, which carry neither.
+- It could **never** have caught the three plan descriptions in the
+  subscription view that existed in **English only**, where a French
+  operator was reading English.
 
-Pour les laboratoires, j'incluais un panel dès qu'**un** de ses réactifs
-apparaissait. La solution de calibration étant partagée, importer un seul
-réactif faisait remonter des analyses que le labo ne pratique pas, en
-CRITIQUE à « 0 test possible ». Corrigé en exigeant que **tous** les
-réactifs du panel soient présents. Trouvé en passant de vrais CSV, pas en
-relisant le code.
+Rewritten to flag any user-facing text not wrapped in a translation call,
+in any language. That is the real invariant. It over-reports on purpose.
 
-### Deux outils de mesure qui ont produit de faux résultats
+### My own tests produced two false failures
 
-Mon script de détection des boutons sans libellé a signalé **cinq faux
-positifs** : tous avaient du texte via une expression JSX (`{t.cancel}`,
-`{tab}`) que ma regex supprimait, et l'un était déjà un `role="switch"`
-correct. J'ai lu les cinq au lieu de corriger en masse.
+Both times the instrument was wrong, and both times I checked before
+touching working code.
 
-Mon premier script de contraste lisait des valeurs `lab()` en les traitant
-comme du RGB : tous les ratios étaient faux. Refait via lecture de pixels
-sur canvas.
+- A step-3 assertion for `"Déduit de votre pays"` failed. The hint is
+  CSS-uppercased, so `innerText` returns `DÉDUIT DE VOTRE PAYS` and a
+  case-sensitive check missed it. The code was correct.
+- The localStorage migration test reported a re-migration. Playwright's
+  `addInitScript` re-runs on reload, which reseeded the legacy key and
+  emptied the fake server: a legitimate migration, not a bug. Retested by
+  remounting instead of reloading.
 
-### Une assertion de démo écrite à l'envers
+### Three wrong guesses about whitespace in one file
 
-J'ai affirmé que 15 analyses restantes déclenchaient un CRITIQUE. Le seuil
-est à 10. Le code avait raison, mon test avait tort.
+Patching `pricing-view.tsx` I asserted on indentation three times and was
+wrong three times, burning three round trips. Reading the actual
+occurrences first would have cost one. When a replacement count is
+surprising, look at the file rather than guessing again.
 
-### La régression du lien d'évitement
+### Bugs found in existing code, not fixed
 
-En ajoutant « Skip to content » sur la landing page, je l'ai fait pointer
-vers `#main` alors que `<main>` n'avait pas d'`id`. J'ai introduit un lien
-mort en corrigeant des liens morts. Rattrapé par la vérification des
-ancres.
+Named here because each one is a live defect and none was in scope.
 
-### Une fausse alerte visuelle
+- **`pipeline/alerts.py:18`** calls `create_client()` at import with no
+  guard, so importing `api/main.py` without `SUPABASE_URL` kills the
+  process. That makes `api/main.py`'s careful "the app still boots and
+  `/health` says which key is missing" comment false today.
+- **`industry-view.tsx:167`** returns a flat `2800` or `900` as a
+  downtime cost, with its own comment admitting it is a placeholder. Same
+  class of invention as the report's old `MOCK_DATA`.
+- **`hsl(var(--token))`** in arbitrary Tailwind values resolves to
+  nothing, because the design tokens are `oklch()` values. The board's
+  drag shadow never existed. Verified in the browser
+  (`backgroundImage` read `none`). Fixed in the board; **worth grepping
+  for elsewhere.**
+- **`__pycache__`** is still tracked in the backend, which is why
+  `git status` is never clean there.
 
-Sur une capture de la landing page, le titre semblait coupé à gauche.
-Mesure au navigateur : boîte correcte, 130 à 630, aucun débordement.
-Artefact d'affichage de l'image. J'ai failli « corriger » une mise en page
-intacte.
+### The structural limit is unchanged
 
-### Limite structurelle de la session
-
-**Je n'ai jamais pu atteindre le site en ligne.** Le proxy du bac à sable
-bloque Render et Vercel (403 sur CONNECT).
-
-Ce qui a vraiment changé les choses, tardivement : **installer les
-dépendances** du frontend (`pnpm install`). À partir de là, `tsc` avec leur
-propre `tsconfig.json`, `next build`, le serveur de dev et les tests
-clavier au navigateur ont tous été possibles. Les deux derniers tours sont
-mesurés, pas raisonnés.
-
-**À faire tôt la prochaine fois.** Deux bugs sur trois ont d'abord été
-trouvés par l'utilisateur en regardant son écran.
+**The deployed site is unreachable from the sandbox.** The proxy returns
+403 on CONNECT for Render and Vercel. Everything this session was
+verified against a local dev server with stubbed endpoints. Nothing has
+been confirmed against production.
 
 ---
 
-## 5. Ce qu'il compte faire ensuite
+## 5. What comes next
 
-### Bloquant, côté utilisateur
+### Blocking, and it is on the user's side
 
-**1. Exécuter la migration SQL.** Sans elle, la séparation par métier
-reste approximative.
+**1. Run the SQL migration.** `migrations/001_contractors_and_assignments.sql`
+on the backend branch, in the Supabase SQL editor. Until it runs, every
+CRM call returns `crm_query_failed` and the board shows its failure
+banners doing their job.
 
-```sql
-alter table alerts add column if not exists business_type text;
-create index if not exists alerts_business_type_idx
-  on alerts (sector, business_type);
-```
+**2. Merge the backend branch.** Render deploys `main`. `feature/contractors-crm`
+is pushed and unmerged, so **the CRM does not exist in production.** I did
+not merge it: it is a deployed branch and that is your call.
 
-Rien ne casse si elle n'est pas faite : `save_alert()` retombe sur un
-enregistrement sans étiquette plutôt que de perdre l'alerte, ce chemin est
-testé. Mais un hôpital réutilise la clé partagée `health.stock.low` pour
-ses articles non critiques, et ces lignes continueront d'apparaître sous
-Pharmacie tant que la colonne n'existe pas.
+**3. Upload the 8 test CSVs** from `test-data/`. Still never done, so no
+view has ever rendered real data.
 
-**2. Confirmer que Ask AI répond.** `/health` renvoie déjà
-`model: gemini-3.5-flash-lite`, clés Gemini et Supabase prêtes. Il reste à
-envoyer un message. En cas d'échec, la console nomme la cause.
+**4. Decide the frontend branch.** `origin/main` is `ae6eca9`, 39 files,
+and shares **no common ancestor** with `feature/onboarding-view` (517+
+files, 90 commits). `git merge-base` returns nothing. Merging needs
+`--allow-unrelated-histories`, or `main` gets reset, or `main` is
+deleted. One of those discards a branch, so it is not a quiet cleanup.
 
-**3. Valider les quatre CSV d'essai.** Deux points : le labo doit désigner
-**Réactif A** comme réactif limitant (16 unités) et non la solution de
-calibration (9 unités mais 0,5 par test) ; et l'oxygène doit sortir en
-CRITIQUE alors que les compresses, au même ratio de 60 % du minimum,
-restent un simple avertissement.
+### Finishing English, which is the open commitment
 
-**4. Décider du merge frontend.** 18 commits sur
-`feature/onboarding-view`, et **ce dépôt n'a aucune branche `main`**. Tout
-le travail vit sur cette seule branche, sans version stable de repli.
+The bar is "no exception whatsoever". The method is in place; the volume
+is not done.
 
-### Travail restant identifié
+**1119 unlocalized strings in 32 files.** Run
+`node scripts/check-i18n.mjs` for the current list.
 
-| Sujet | Détail |
+| File | Strings |
 |---|---|
-| 48 hexadécimaux bruts dans `pricing-view.tsx` | Laissés **à la demande explicite**. Cette vue porte une palette claire délibérée ; la convertir change son apparence. Décision visuelle, pas correction d'accessibilité |
-| Pas de token `--warning` | La pastille WARNING utilise `bg-amber-500/15 text-amber-600`, palette Tailwind brute. L'ambre rend correctement sur fond clair comme sombre, donc rien n'est cassé, mais un token serait plus propre |
-| Contraste 1,24 du lime sur fond clair | Faible. Non corrigé sciemment : le tableau affiche la sévérité **en texte** dans sa propre cellule, donc le sens ne dépend jamais de la couleur. Relever ce contraste changerait la marque |
-| Anciennes alertes non étiquetées | Impossible à rétro-remplir : rien dans ces lignes n'indique le métier. Elles disparaîtront à mesure que des données étiquetées arrivent. Les supprimer est sans risque |
-| API sans authentification | CORS ne protège que les navigateurs. N'importe quel appel serveur peut consommer le quota Gemini via `/ask`. À traiter avant une vraie mise en production |
-| `Procfile.txt` | Render ne le lit pas : il attend `Procfile` ou un `render.yaml`, et utilise la commande de son tableau de bord. Le contenu est correct, à vérifier côté Render |
-| Pastille de notification | Pilotée par un vrai `unreadCount`, mais alimentée par un `fetch` dédié dans `app-shell`. Si l'état des alertes est un jour remonté, brancher dessus plutôt que refetcher |
+| `dashboard-view.tsx` | 243 |
+| `onboarding-modal.tsx` | 97 |
+| `lib/priorities.ts` | 68 |
+| `settings-view.tsx` | 66 |
+| `sites-view.tsx` | 63 |
+| `industry-view.tsx` | 59 |
+| `lib/activities.ts` | 56 |
+| `lib/logistics-signals.ts` | 56 |
+| 24 more files | 411 |
 
-### Sur la landing page
+How to do it, in order:
 
-Mergée et vérifiée dans un vrai navigateur : 50 éléments `reveal`, 3
-visibles en haut puis 31 au milieu puis 50 en bas, spotlight suivant le
-curseur, aucune erreur JS. Le logo « S » est remplacé par la balise beacon
-fournie, en SVG inline, favicon assorti.
+1. Use **`tx("Français", "English")`** for view prose. One edit per
+   string, and the signature makes a missing translation unwriteable.
+2. Use **`Localized` pairs + `pick()`** for the `lib/` catalogues
+   (`priorities.ts`, `activities.ts`, `logistics-signals.ts`). They are
+   built at module level and cannot call a hook. `pricing-view.tsx` is
+   the worked example.
+3. Expect **`tsc` to flag every render site** when a catalogue field
+   changes to `Localized`. That is the mechanism working; follow the
+   errors.
+4. Then the **22 hardcoded `"fr-FR"`** formatting calls, driven off the
+   locale.
+5. Then the **backend read-time translation**. Note the real constraint:
+   `save_alert` stores the rendered message, not the template parameters,
+   so an existing row cannot be re-rendered in English. It has the key
+   but not the numbers. Add a `params jsonb` column and render on read;
+   existing rows stay French under any option.
+6. Flip English to **`uiReady: "full"`** only when
+   `node scripts/check-i18n.mjs --strict` exits 0.
 
-Deux pistes non prises, faute de mandat clair :
+**Never translate** equipment names, the company name, contractor names,
+CSV-derived values or `task_key`. They are data. Translating an
+identifier is how you get two rows for one crane.
 
-- Les sections alternent `section-light` / `section-dark`. Rythme
-  éditorial défendable, mais l'audit signale les ruptures de fond comme un
-  motif à surveiller. À trancher à l'œil.
-- Aucune image de fond. Plusieurs sections sont du texte sur fond uni.
-  L'audit recommande des fonds photographiques discrets pour donner de la
-  présence. C'est ce qui manque au « cinématique ».
+### Carried over, still open
+
+| Item | State |
+|---|---|
+| **API has no authentication** | Worse now than it was. The CRM will hold contractors' names, phone numbers and assignments behind an API any server-side caller can read. CORS only protects browsers. `company_name` partitions the data; it is **not** access control, and nothing in the code claims it is |
+| Arabic RTL | Recorded as `rtl: true` in `lib/locale.ts`, acted on nowhere. Product-wide right-to-left is a layout pass on every panel, flow track and chart axis, not a string pass |
+| No `--warning` token | 24 raw `amber-` usages. Nothing broken, a token would be cleaner |
+| 48 raw hex in `pricing-view.tsx` | Left alone at the user's explicit request. That view carries a deliberate light palette |
+| `Procfile.txt` | Render does not read it. The dashboard command is what runs |
 
 ---
 
-## Conventions à garder
+## Conventions to keep
 
-- **Jamais de tirets cadratins** dans les réponses. Demande explicite.
-- **Résumés en format « ADHD friendly »** : titres scannables, listes
-  courtes, gras sur l'essentiel, tableaux plutôt que paragraphes, mauvaises
-  nouvelles marquées.
-- **Messages de commit en anglais normal**, jamais compressés.
-- **Relancer `pipeline/demo_supplier.py` après toute modification du
-  backend.** Sortie identique au caractère près : c'est la preuve que le
-  comportement pharmacie n'a pas bougé.
-- **Installer les dépendances du frontend en début de session**
-  (`pnpm install`). C'est ce qui permet `tsc`, `next build` et les tests
-  navigateur, donc de vérifier au lieu de supposer.
+- **Never use em dashes** in replies. Explicit request.
+- **ADHD-friendly summaries**: scannable headings, short lists, bold on
+  what matters, tables over paragraphs, **bad news marked as bad news**.
+- **Explain what changed in plain language after every task.**
+- **Always work on `feature/onboarding-view`** in the frontend. Ask
+  before pushing anywhere else. The backend is on
+  `feature/contractors-crm`; `main` is deployed.
+- **Commit messages in plain English**, never compressed.
+- **Re-run `pipeline/demo_supplier.py` after any backend change.** Byte
+  identical output is the proof pharmacy behaviour did not move.
+  `PYTHONPATH=. python3 pipeline/demo_supplier.py`
+- **Run `pnpm install` at the start of a frontend session**, and
+  `python3 -m pip install --ignore-installed PyJWT -r requirements.txt`
+  for the backend. The plain pip install fails on a Debian-owned PyJWT.
+- **Verify in a browser, do not reason about it.** Chromium and
+  Playwright are at `/opt/node22/lib/node_modules/playwright`, browsers
+  at `/opt/pw-browsers`. Stub `window.fetch` in `addInitScript`; the
+  deployed API is unreachable.
+- **When a measurement is surprising, suspect the instrument first.** It
+  was the instrument twice this session, and wrong numbers made it into
+  the previous handover.
