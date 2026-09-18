@@ -13,8 +13,36 @@
  * the priorities already say that in a form the pipeline can read.
  */
 
+import { useEffect, useState } from "react"
+
 export const COMPANY_NAME_KEY = "sentria_company_name"
 export const TIMEZONE_KEY = "sentria_timezone"
+
+/** Announced whenever the name or the zone changes. The top bar is
+ *  mounted for the whole session, so without this it would keep showing
+ *  the name the page was loaded with after Settings saved a new one. */
+export const COMPANY_UPDATED_EVENT = "sentria_company_updated"
+
+function announce() {
+  try {
+    window.dispatchEvent(new Event(COMPANY_UPDATED_EVENT))
+  } catch {
+    /* Not a browser, or events are blocked. Nothing to announce to. */
+  }
+}
+
+/** A company's initials, so an avatar is not stamped with the initials
+ *  of a person who does not exist. Two words at most: "Groupe Sahel
+ *  Logistique" reads better as GS than GSL. */
+export function initialsOf(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0].toUpperCase())
+    .join("")
+}
 
 export type TimezoneOption = {
   id: string
@@ -54,6 +82,8 @@ export function writeCompanyName(name: string) {
   } catch {
     /* A blocked localStorage must not break the form. */
   }
+
+  announce()
 }
 
 /** The stored zone id, defaulting to whatever the browser reports so a
@@ -90,6 +120,8 @@ export function writeTimezoneId(id: string) {
   } catch {
     /* ignore */
   }
+
+  announce()
 }
 
 export function timezoneFor(id: string): TimezoneOption {
@@ -115,4 +147,35 @@ export function formatInCompanyZone(
   } catch {
     return date.toLocaleString("fr-FR")
   }
+}
+
+/** The company identity for a client view.
+ *
+ *  Reading localStorage during the first render desynchronises the
+ *  server and client markup, which is how the hydration mismatches
+ *  earlier in this branch happened, so both values are read after mount
+ *  and every view that shows them goes through here rather than keeping
+ *  its own copy of the pattern.
+ */
+export function useCompanyIdentity(): { name: string; timezoneId: string } {
+  const [identity, setIdentity] = useState({ name: "", timezoneId: "" })
+
+  useEffect(() => {
+    const sync = () =>
+      setIdentity({ name: readCompanyName(), timezoneId: readTimezoneId() })
+
+    sync()
+
+    /* The custom event covers a save in this tab, "storage" covers a
+       save in another one. */
+    window.addEventListener(COMPANY_UPDATED_EVENT, sync)
+    window.addEventListener("storage", sync)
+
+    return () => {
+      window.removeEventListener(COMPANY_UPDATED_EVENT, sync)
+      window.removeEventListener("storage", sync)
+    }
+  }, [])
+
+  return identity
 }

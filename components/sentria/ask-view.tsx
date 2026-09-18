@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import { Sparkles, ArrowUp, Globe2, Lightbulb, MapPin, User } from "lucide-react"
 import ReactMarkdown from "react-markdown"
@@ -9,9 +9,9 @@ import remarkGfm from "remark-gfm"
 import { cn } from "@/lib/utils"
 import { API_BASE as API } from "@/lib/api"
 import {
-  readCompanyName,
-  readTimezoneId,
+  initialsOf,
   timezoneFor,
+  useCompanyIdentity,
 } from "@/lib/company"
 
 const SUGGESTIONS = [
@@ -34,19 +34,6 @@ type Msg = {
   text: string
 }
 
-/** The company's initials, so a bubble is not stamped with the initials
- *  of a person who does not exist. Two words at most: "Groupe Sahel
- *  Logistique" reads better as GS than GSL. */
-function initialsOf(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0].toUpperCase())
-    .join("")
-}
-
 export function AskView() {
   const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState("")
@@ -55,15 +42,9 @@ export function AskView() {
   /* The greeting used to say "Bonjour Aïcha", a person nobody had ever
      entered: she was a mock persona, like the old MOCK_DATA in the
      report. The only identity the product actually holds is the company
-     name captured at onboarding. Reading localStorage during the first
-     render would desynchronise the server and client markup, so it is
-     read after mount and the greeting is derived at render time rather
-     than stored in the thread. */
-  const [companyName, setCompanyName] = useState("")
-
-  useEffect(() => {
-    setCompanyName(readCompanyName())
-  }, [])
+     name captured at onboarding, and the greeting is derived at render
+     time rather than stored in the thread so a rename takes effect. */
+  const { name: companyName, timezoneId } = useCompanyIdentity()
 
   const greeting =
     (companyName ? `Bonjour ${companyName}.` : "Bonjour.") +
@@ -94,9 +75,9 @@ export function AskView() {
           /* Who is asking and on which clock. Without these the model
              had nothing to call the customer but "votre entreprise",
              and read every hour in the alerts against UTC. */
-          company_name: readCompanyName(),
-          timezone: timezoneFor(readTimezoneId()).zone,
-          timezone_label: timezoneFor(readTimezoneId()).label,
+          company_name: companyName,
+          timezone: timezoneFor(timezoneId).zone,
+          timezone_label: timezoneFor(timezoneId).label,
         }),
       })
 

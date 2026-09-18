@@ -33,6 +33,26 @@ export type Sector =
   | "energy"
   | "commerce"
 
+/** The sector names, in one place. They were written out again in the
+ *  onboarding modal, the dashboard, the sites view, the recommendations
+ *  panel and the profile page, which is how the profile page ended up
+ *  listing six sectors nobody had selected. */
+export const SECTOR_LABELS: Record<Sector, string> = {
+  industry: "Industrie",
+  health: "Santé",
+  agriculture: "Agriculture",
+  transportation: "Transport",
+  logistics: "Logistique",
+  energy: "Énergie",
+  commerce: "Commerce",
+}
+
+export function sectorLabel(sector: string | null | undefined): string {
+  if (!sector) return ""
+
+  return SECTOR_LABELS[sector as Sector] ?? sector
+}
+
 /** One monitoring priority a user can pick during onboarding.
  *
  *  This catalog is the only place priorities are named. It used to live

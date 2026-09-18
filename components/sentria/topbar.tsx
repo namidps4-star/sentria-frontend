@@ -1,6 +1,8 @@
 "use client"
 
-import { Search, Bell, Menu, ChevronDown, X } from "lucide-react"
+import { Search, Bell, Menu, ChevronDown, X, User } from "lucide-react"
+
+import { initialsOf, useCompanyIdentity } from "@/lib/company"
 
 const FOCUS_RING =
   " focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -24,6 +26,13 @@ export function Topbar({
   unreadCount?: number
 }) {
   const hasUnread = unreadCount > 0
+
+  /* This button used to read "Jean K.", a person nobody had entered, on
+     every page of the product. The account it stands for is the company
+     from onboarding, so that is what it names, and it says nothing at
+     all when there is no name rather than inventing one. */
+  const { name: companyName } = useCompanyIdentity()
+
   return (
     <header className="sticky top-0 z-20 flex items-center gap-4 border-b border-border bg-background/80 px-4 py-3.5 backdrop-blur-md lg:px-8">
       <button
@@ -89,14 +98,24 @@ export function Topbar({
 
       <button
         type="button"
-        aria-label="Compte de Jean K."
+        aria-label={companyName ? `Compte de ${companyName}` : "Compte"}
         aria-haspopup="menu"
         className={"flex items-center gap-2 rounded-xl border border-border bg-card py-1.5 pl-1.5 pr-2.5 transition-colors hover:bg-muted" + FOCUS_RING}
       >
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-foreground text-xs font-bold text-background">
-          JK
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-foreground text-xs font-bold text-background">
+          {companyName ? (
+            initialsOf(companyName)
+          ) : (
+            <User className="h-3.5 w-3.5" aria-hidden="true" />
+          )}
         </span>
-        <span className="hidden text-sm font-medium sm:block">Jean K.</span>
+
+        {companyName && (
+          <span className="hidden max-w-[12rem] truncate text-sm font-medium sm:block">
+            {companyName}
+          </span>
+        )}
+
         <ChevronDown
           className="hidden h-4 w-4 text-muted-foreground sm:block"
           aria-hidden="true"

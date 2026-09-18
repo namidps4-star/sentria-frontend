@@ -140,7 +140,7 @@ export function AppShell() {
             {view === "sites" && <SitesView />}
             {view === "ask" && <AskView />}
             {view === "pricing" && <PricingView />}
-            {view === "profile" && <ProfileView />}
+            {view === "profile" && <ProfileView onNavigate={setView} />}
             {view === "settings" && <SettingsView />}
             {view === "report" && <ReportView />}
           </main>
