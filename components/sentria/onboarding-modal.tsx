@@ -195,6 +195,21 @@ const CSV_COLUMNS: Record<string, string[]> = {
 /* LOGISTICS PREVIEW                                                          */
 /* -------------------------------------------------------------------------- */
 
+/** Class for a card in a two-column grid, so an odd count never leaves
+ *  an orphan in a half-width slot.
+ *
+ *  Five of the seven sectors offer an odd number of activities, so the
+ *  last card sat alone next to empty space. It spans both columns
+ *  instead and its content spreads out, which reads as a deliberate
+ *  closing row rather than a gap. */
+function isWideCard(index: number, total: number) {
+  return total % 2 === 1 && index === total - 1
+}
+
+function gridSpan(index: number, total: number) {
+  return isWideCard(index, total) ? "md:col-span-2" : undefined
+}
+
 /** Bulk selection for a multi-select step. One component so the
  *  priorities step and the data-sources step offer the same control in
  *  the same place, with a live count. */
@@ -378,6 +393,30 @@ export function OnboardingView({
   /** Every activity the customer runs. One entry for every sector except
    *  logistics, where it is the real set. */
   const [subTypes2, setSubTypes2] = useState<string[]>([])
+
+  /* A second sector, for the rare group that really has one. Onboarding
+     only ever stored [sector], so the dashboard's multi-sector support
+     (the filter chips, the per-sector upload) was unreachable: you could
+     not say you run a factory and a warehouse. It stays behind an
+     opt-in, because one sector is the normal case and putting six
+     checkboxes in front of everyone to serve the exception is how an
+     onboarding gets abandoned. */
+  const [multiSector, setMultiSector] = useState(false)
+
+  const [extraSectors, setExtraSectors] = useState<Sector[]>([])
+
+  const allSectors = useMemo(
+    () => (sector ? [sector, ...extraSectors] : []),
+    [sector, extraSectors]
+  )
+
+  function toggleExtraSector(id: Sector) {
+    setExtraSectors((current) =>
+      current.includes(id)
+        ? current.filter((item) => item !== id)
+        : [...current, id]
+    )
+  }
   const [selectedEquipment, setSelectedEquipment] =
     useState<string[]>([])
   const [csvUploading, setCsvUploading] = useState(false)
@@ -456,6 +495,7 @@ export function OnboardingView({
     // previously selected subtype and monitoring priorities.
     setSubType(null)
     setSubTypes2([])
+    setExtraSectors((current) => current.filter((item) => item !== id))
     setSelectedEquipment([])
   }
 
@@ -481,6 +521,13 @@ export function OnboardingView({
       return next
     })
   }
+
+  /* "Plusieurs activités" was a single card that composed every chain
+     at once. Ticking several real activities replaces it exactly. */
+  const shownSubTypes = useMemo(
+    () => subTypes.filter((item) => item.id !== "plusieurs-activites"),
+    [subTypes]
+  )
 
   const selectedOpsTypes = useMemo(
     () =>
@@ -626,10 +673,10 @@ export function OnboardingView({
       if (sector) {
         localStorage.setItem("sentria_sector", sector)
 
-        localStorage.setItem(
-          "sentria_sectors",
-          JSON.stringify([sector])
-        )
+        /* Every sector the customer runs, primary first. This used to
+           be hardcoded to [sector], so the dashboard's sector chips
+           could never show more than one. */
+        localStorage.setItem("sentria_sectors", JSON.stringify(allSectors))
       }
 
       if (subType) {
@@ -830,20 +877,29 @@ export function OnboardingView({
                 {SECTORS.map((item) => {
                   const Icon = item.icon
                   const active = sector === item.id
+                  const secondary = extraSectors.includes(item.id)
 
                   return (
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => chooseSector(item.id)}
+                      onClick={() =>
+                        multiSector && sector && sector !== item.id
+                          ? toggleExtraSector(item.id)
+                          : chooseSector(item.id)
+                      }
+                      aria-pressed={active || secondary}
                       className={cn(
                         "relative flex w-[calc(50%-6px)] flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all sm:w-[calc(33.333%-8px)] lg:w-[calc(25%-9px)]",
                         item.recommended &&
                           !active &&
+                          !secondary &&
                           "border-accent/50 ring-1 ring-accent/30",
                         active
                           ? "border-foreground bg-foreground text-background"
-                          : "border-border hover:border-accent/60 hover:bg-accent/10"
+                          : secondary
+                            ? "border-foreground bg-muted"
+                            : "border-border hover:border-accent/60 hover:bg-accent/10"
                       )}
                     >
                       {item.maturity && (
@@ -866,7 +922,7 @@ export function OnboardingView({
                       <div className="flex w-full items-center justify-between">
                         <Icon className="h-5 w-5" />
 
-                        {active && (
+                        {(active || secondary) && (
                           <Check className="h-4 w-4" />
                         )}
                       </div>
@@ -885,9 +941,66 @@ export function OnboardingView({
                       >
                         {item.description}
                       </span>
+
+                      {secondary && (
+                        <span className="mt-1.5 rounded-full bg-foreground px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-background">
+                          Secteur secondaire
+                        </span>
+                      )}
                     </button>
                   )
                 })}
+              </div>
+            )}
+
+            {step === 1 && (
+              <div className="rounded-2xl border border-border bg-background p-4">
+                <label className="flex cursor-pointer items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={multiSector}
+                    onChange={(event) => {
+                      setMultiSector(event.target.checked)
+
+                      if (!event.target.checked) setExtraSectors([])
+                    }}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-foreground"
+                  />
+
+                  <span>
+                    <span className="block text-sm font-semibold">
+                      Mon entreprise couvre plusieurs secteurs
+                    </span>
+
+                    <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
+                      Par exemple une usine avec son propre entrepôt.
+                      Le secteur choisi ci-dessus reste le principal,
+                      et les autres s&apos;ajoutent au tableau de bord.
+                    </span>
+                  </span>
+                </label>
+
+                {multiSector && (
+                  <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">
+                    {extraSectors.length > 0 ? (
+                      <>
+                        Secteurs :{" "}
+                        <span className="font-semibold text-foreground">
+                          {allSectors
+                            .map(
+                              (id) =>
+                                SECTORS.find((x) => x.id === id)?.label ?? id
+                            )
+                            .join(", ")}
+                        </span>
+                      </>
+                    ) : sector ? (
+                      "Touchez un autre secteur pour l'ajouter. Le premier reste le principal."
+                    ) : (
+                      "Choisissez d'abord votre secteur principal."
+                    )}
+                  </p>
+                )}
               </div>
             )}
 
@@ -919,17 +1032,10 @@ export function OnboardingView({
                 )}
 
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  {subTypes
-                    .filter(
-                      (item) =>
-                        /* "Plusieurs activités" was a single card that
-                           composed every chain at once. Ticking several
-                           real activities replaces it exactly. */
-                        item.id !== "plusieurs-activites"
-                    )
-                    .map((item) => {
+                  {shownSubTypes.map((item, index) => {
                     const Icon = item.icon
                     const active = subTypes2.includes(item.id)
+                    const wide = isWideCard(index, shownSubTypes.length)
 
                     return (
                       <button
@@ -938,6 +1044,7 @@ export function OnboardingView({
                         onClick={() => chooseSubType(item.id)}
                         className={cn(
                           "flex items-start gap-3 rounded-2xl border p-4 text-left transition-all",
+                          gridSpan(index, shownSubTypes.length),
                           active
                             ? "border-foreground bg-foreground text-background"
                             : "border-border hover:border-accent/60 hover:bg-accent/10"
@@ -954,7 +1061,13 @@ export function OnboardingView({
                           <Icon className="h-4.5 w-4.5" />
                         </div>
 
-                        <div className="min-w-0 flex-1">
+                        <div
+                          className={cn(
+                            "min-w-0 flex-1",
+                            wide &&
+                              "md:flex md:items-center md:justify-between md:gap-6"
+                          )}
+                        >
                           <div className="flex items-center justify-between gap-2">
                             <div className="flex min-w-0 items-center gap-2">
                               <span className="truncate text-sm font-semibold">
@@ -987,6 +1100,7 @@ export function OnboardingView({
                           <span
                             className={cn(
                               "mt-0.5 block text-xs leading-5",
+                              wide && "md:mt-0 md:shrink-0 md:text-right",
                               active
                                 ? "text-background/70"
                                 : "text-muted-foreground"
@@ -1076,7 +1190,7 @@ export function OnboardingView({
                 />
 
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  {equipment.map((item) => {
+                  {equipment.map((item, index) => {
                     const Icon = item.icon
                     const active =
                       selectedEquipment.includes(item.id)
@@ -1093,6 +1207,7 @@ export function OnboardingView({
                         disabled={disabled}
                         className={cn(
                           "relative flex flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all",
+                          gridSpan(index, equipment.length),
                           disabled
                             ? "cursor-not-allowed border-border bg-background opacity-60"
                             : active
