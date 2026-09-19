@@ -265,30 +265,30 @@ export function ContractorsView({
             </p>
           </div>
 
-          <div className="flex shrink-0 items-start gap-6 lg:gap-8">
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+          <div className="grid shrink-0 grid-cols-3 gap-3">
+            <div className="flex min-w-[100px] flex-col items-center justify-center rounded-2xl bg-accent p-4 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-accent-foreground/70">
                 {tx("Enregistrés", "On file")}
               </p>
-              <p className="mt-1 font-heading text-3xl font-bold tabular-nums">
+              <p className="mt-1 font-heading text-3xl font-black leading-none tabular-nums text-accent-foreground">
                 {loaded ? contractors.length : "—"}
               </p>
             </div>
 
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            <div className="flex min-w-[100px] flex-col items-center justify-center rounded-2xl bg-primary p-4 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-primary-foreground/50">
                 {tx("Se disent dispo", "Say they are free")}
               </p>
-              <p className="mt-1 font-heading text-3xl font-bold tabular-nums">
+              <p className="mt-1 font-heading text-3xl font-black leading-none tabular-nums text-primary-foreground">
                 {loaded ? declaredAvailable : "—"}
               </p>
             </div>
 
-            <div>
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            <div className="flex min-w-[100px] flex-col items-center justify-center rounded-2xl bg-primary p-4 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-primary-foreground/50">
                 {tx("Avec du travail", "Carrying work")}
               </p>
-              <p className="mt-1 font-heading text-3xl font-bold tabular-nums">
+              <p className="mt-1 font-heading text-3xl font-black leading-none tabular-nums text-primary-foreground">
                 {loaded ? carryingWork : "—"}
               </p>
             </div>

@@ -162,6 +162,43 @@ const PRIORITY_LABEL: Record<Priority, Localized> = {
   critical: localized("Critique", "Critical"),
 }
 
+/** One hue per category and per priority, so the chip row reads at a
+ *  glance instead of as a wall of identical grey pills.
+ *
+ *  Same formula as TONE above: a low-opacity tint plus a solid dot carry
+ *  the colour, the text stays --foreground. That keeps every combination
+ *  at the same contrast as plain foreground-on-card regardless of which
+ *  hue is picked, and avoids the dark: variant pitfall noted above (a
+ *  flat class with no theme branch, so "system" theme cannot desync it).
+ */
+const CATEGORY_TONE: Record<string, { pill: string; dot: string }> = {
+  maintenance: { pill: "bg-blue-500/12 text-foreground", dot: "bg-blue-500" },
+  fuel: { pill: "bg-orange-500/12 text-foreground", dot: "bg-orange-500" },
+  delay: { pill: "bg-amber-500/12 text-foreground", dot: "bg-amber-500" },
+  stock: { pill: "bg-purple-500/12 text-foreground", dot: "bg-purple-500" },
+  cold_chain: { pill: "bg-cyan-500/12 text-foreground", dot: "bg-cyan-500" },
+  expiry: { pill: "bg-rose-500/12 text-foreground", dot: "bg-rose-500" },
+  capacity: { pill: "bg-indigo-500/12 text-foreground", dot: "bg-indigo-500" },
+  predictive: {
+    pill: "bg-fuchsia-500/12 text-foreground",
+    dot: "bg-fuchsia-500",
+  },
+  other: { pill: "bg-muted text-muted-foreground", dot: "bg-muted-foreground" },
+}
+
+const PRIORITY_TONE: Record<Priority, { pill: string; dot: string }> = {
+  critical: { pill: "bg-destructive/12 text-foreground", dot: "bg-destructive" },
+  high: { pill: "bg-orange-500/12 text-foreground", dot: "bg-orange-500" },
+  medium: { pill: "bg-warning/15 text-foreground", dot: "bg-warning" },
+  low: { pill: "bg-muted text-muted-foreground", dot: "bg-muted-foreground" },
+}
+
+const COLUMN_TONE: Record<Status, { pill: string; dot: string }> = {
+  todo: { pill: "bg-warning/15 text-foreground", dot: "bg-warning" },
+  in_progress: { pill: "bg-brand/20 text-foreground", dot: "bg-brand" },
+  done: { pill: "bg-emerald-500/12 text-foreground", dot: "bg-emerald-500" },
+}
+
 /** Triage order inside a column. Without it the operator can set a card
  *  to critical and watch it stay eighth in the list, which makes the
  *  control look broken. */
@@ -379,21 +416,35 @@ function riskOf(rec: Recommendation): number | null {
 function Chip({
   icon: Icon,
   tone = "neutral",
+  pillClassName,
+  dotClassName,
   children,
 }: {
   icon?: LucideIcon
   tone?: "neutral" | "brand"
+  /** Overrides the neutral/brand tone above with a specific hue, e.g.
+   *  from CATEGORY_TONE or PRIORITY_TONE. */
+  pillClassName?: string
+  /** Adds a small solid dot before the label, in the same hue. */
+  dotClassName?: string
   children: React.ReactNode
 }) {
   return (
     <span
       className={cn(
         "inline-flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1 text-[11px] font-medium",
-        tone === "brand"
-          ? "bg-brand/20 text-foreground"
-          : "bg-muted text-muted-foreground"
+        pillClassName ??
+          (tone === "brand"
+            ? "bg-brand/20 text-foreground"
+            : "bg-muted text-muted-foreground")
       )}
     >
+      {dotClassName && (
+        <span
+          className={cn("h-1.5 w-1.5 shrink-0 rounded-full", dotClassName)}
+          aria-hidden="true"
+        />
+      )}
       {Icon && <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />}
       <span className="min-w-0 truncate">{children}</span>
     </span>
@@ -601,7 +652,17 @@ function DetailDialog({
           )}
 
           <div className="flex flex-wrap items-center gap-1.5">
-            <Chip icon={Icon}>
+            <Chip
+              icon={Icon}
+              pillClassName={
+                (CATEGORY_TONE[rec.action_category] ?? CATEGORY_TONE.other)
+                  .pill
+              }
+              dotClassName={
+                (CATEGORY_TONE[rec.action_category] ?? CATEGORY_TONE.other)
+                  .dot
+              }
+            >
               {px(
                 CATEGORY_LABEL[rec.action_category] ?? CATEGORY_LABEL.other
               )}
@@ -1321,7 +1382,19 @@ export function RecommendationsBoard({
               {/* Column head: the name, how many, and what it is worth. */}
               <div className="mb-2.5 flex items-center justify-between gap-2 px-2 pt-1.5">
                 <div className="flex min-w-0 items-center gap-2">
-                  <h4 className="truncate text-[13px] font-semibold">
+                  <h4
+                    className={cn(
+                      "inline-flex min-w-0 items-center gap-1.5 truncate rounded-full px-2.5 py-1 text-[12px] font-semibold",
+                      COLUMN_TONE[column.id].pill
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "h-1.5 w-1.5 shrink-0 rounded-full",
+                        COLUMN_TONE[column.id].dot
+                      )}
+                      aria-hidden="true"
+                    />
                     {px(column.label)}
                   </h4>
 
@@ -1455,14 +1528,41 @@ export function RecommendationsBoard({
                           before, which turned the busiest cards into a wall
                           of grey boxes and hid the one chip that mattered. */}
                       <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                        <Chip icon={Icon}>
+                        <Chip
+                          icon={Icon}
+                          pillClassName={
+                            (
+                              CATEGORY_TONE[rec.action_category] ??
+                              CATEGORY_TONE.other
+                            ).pill
+                          }
+                          dotClassName={
+                            (
+                              CATEGORY_TONE[rec.action_category] ??
+                              CATEGORY_TONE.other
+                            ).dot
+                          }
+                        >
                           {px(
                             CATEGORY_LABEL[rec.action_category] ??
                               CATEGORY_LABEL.other
                           )}
                         </Chip>
 
-                        <Chip>
+                        <Chip
+                          pillClassName={
+                            (
+                              PRIORITY_TONE[task.priority] ??
+                              PRIORITY_TONE.medium
+                            ).pill
+                          }
+                          dotClassName={
+                            (
+                              PRIORITY_TONE[task.priority] ??
+                              PRIORITY_TONE.medium
+                            ).dot
+                          }
+                        >
                           {px(
                             PRIORITY_LABEL[task.priority] ??
                               PRIORITY_LABEL.medium
