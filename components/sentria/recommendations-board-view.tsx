@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   CalendarDays,
   Check,
@@ -9,14 +9,18 @@ import {
   Clock3,
   Cpu,
   Fuel,
+  Inbox,
   MoreHorizontal,
   Package,
   Radar,
+  Search,
   Sparkles,
   UserRound,
+  Waypoints,
   Wrench,
   X,
 } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useCompanyIdentity } from "@/lib/company"
 import {
@@ -27,7 +31,7 @@ import {
   type Assignment,
   type Contractor,
 } from "@/lib/crm"
-import { formatMoney, useLocale } from "@/lib/locale"
+import { formatMoney, useLocale, type Currency } from "@/lib/locale"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
 
 type Recommendation = {
@@ -66,6 +70,12 @@ type TaskMeta = {
   priority: Priority
 }
 
+type Card = {
+  id: string
+  rec: Recommendation
+  task: TaskMeta
+}
+
 type RecommendationsBoardProps = {
   recommendations: Recommendation[]
   opsType?: string | null
@@ -79,25 +89,36 @@ type Filter = "all" | "critical" | "unassigned"
 const COLUMNS: {
   id: Status
   label: Localized
-  hint: Localized
+  /** Shown in the column's empty state rather than permanently under the
+   *  heading. Three standing subtitles on a board whose headings already
+   *  read "To do / In progress / Resolved" is decoration; the same
+   *  sentence is worth reading once, in the space where there is
+   *  otherwise nothing to look at. */
+  empty: Localized
 }[] = [
   {
     id: "todo",
     label: localized("À traiter", "To do"),
-    hint: localized(
-      "Détecté, pas encore pris en charge",
-      "Detected, nobody on it yet"
+    empty: localized(
+      "Rien de détecté qui ne soit déjà pris en charge.",
+      "Nothing detected that is not already being handled."
     ),
   },
   {
     id: "in_progress",
     label: localized("En cours", "In progress"),
-    hint: localized("Quelqu'un s'en occupe", "Somebody is on it"),
+    empty: localized(
+      "Personne n'a encore pris de priorité en main.",
+      "Nobody has picked up a priority yet."
+    ),
   },
   {
     id: "done",
     label: localized("Résolu", "Resolved"),
-    hint: localized("Situation traitée", "The situation is handled"),
+    empty: localized(
+      "Aucune situation traitée pour l'instant.",
+      "No situation has been handled yet."
+    ),
   },
 ]
 
@@ -110,7 +131,7 @@ const OPS_TYPE_LABEL: Record<string, Localized> = {
   multi: localized("Opérations logistiques", "Logistics operations"),
 }
 
-const CATEGORY_ICON: Record<string, typeof Wrench> = {
+const CATEGORY_ICON: Record<string, LucideIcon> = {
   maintenance: Wrench,
   fuel: Fuel,
   delay: Clock3,
@@ -139,6 +160,16 @@ const PRIORITY_LABEL: Record<Priority, Localized> = {
   medium: localized("Moyenne", "Medium"),
   high: localized("Haute", "High"),
   critical: localized("Critique", "Critical"),
+}
+
+/** Triage order inside a column. Without it the operator can set a card
+ *  to critical and watch it stay eighth in the list, which makes the
+ *  control look broken. */
+const PRIORITY_RANK: Record<Priority, number> = {
+  critical: 3,
+  high: 2,
+  medium: 1,
+  low: 0,
 }
 
 /* Where the board used to keep its assignments.
@@ -289,24 +320,34 @@ function getDefaultPriority(rec: Recommendation): Priority {
 /* --------------------------------------------------------------------------
  * The severity palette.
  *
- * The reference board tints each card by the group it belongs to. Here the
- * group is the severity the backend assigned, and the tint never carries
- * the meaning on its own: the card also states the severity in words, so
- * the board reads correctly in greyscale and to a screen reader.
+ * One tinted pill per card and nothing else. The board used to wash the
+ * whole card in the severity colour, which meant twelve competing
+ * backgrounds, no neutral surface left to rest on, and a "critical" that
+ * stopped reading as critical because everything around it was shouting
+ * too. Colour is now spent where it carries a decision.
+ *
+ * Both tones are tokens, never Tailwind's palette: the `dark:` variant
+ * keys off the .dark class, and THEME_INIT_SCRIPT leaves that class off
+ * when the theme is "system", so a `dark:text-amber-400` would stay
+ * light-mode bronze for anyone following their OS.
+ *
+ * The ink is --foreground, not the tone colour. `text-destructive` on
+ * `bg-destructive/10` measures 4.01:1 in light and 4.13:1 in dark, and
+ * this label is 11px semibold, so it is not large text and 4.5:1 applies.
+ * Tint plus a full-saturation dot puts the hue where it cannot fail a
+ * contrast check, and the word says the severity regardless.
  * -------------------------------------------------------------------------- */
 
 const TONE = {
   critical: {
-    card: "border-destructive/25 bg-destructive/[0.06]",
-    fill: "bg-destructive",
-    pill: "bg-destructive/10 text-destructive",
-    word: "Critique",
+    pill: "bg-destructive/12 text-foreground",
+    dot: "bg-destructive",
+    word: localized("Critique", "Critical"),
   },
   warning: {
-    card: "border-amber-500/25 bg-amber-500/[0.07]",
-    fill: "bg-amber-500",
-    pill: "bg-amber-500/15 text-amber-600",
-    word: "Attention",
+    pill: "bg-warning/15 text-foreground",
+    dot: "bg-warning",
+    word: localized("Attention", "Warning"),
   },
 } as const
 
@@ -314,47 +355,439 @@ function toneOf(rec: Recommendation) {
   return rec.severity === "CRITICAL" ? TONE.critical : TONE.warning
 }
 
-/** The segmented risk rule from the reference, driven by the backend's
- *  own 0-100 score.
- *
- *  It renders nothing at all when the row carries no score. A bar with no
- *  number behind it is exactly the kind of invented progress this product
- *  keeps removing, and an empty rule would still read as "low risk". */
-function RiskRule({ rec }: { rec: Recommendation }) {
-  const tx = useTx()
-
+function riskOf(rec: Recommendation): number | null {
   const score = rec.risk_score
 
   if (score === null || score === undefined || !Number.isFinite(score)) {
     return null
   }
 
-  const filled = Math.max(0, Math.min(10, Math.round(score / 10)))
-  const tone = toneOf(rec)
+  return Math.round(score)
+}
 
-  const srRisk = tx(
-    `Risque ${Math.round(score)} sur 100`,
-    `Risk ${Math.round(score)} out of 100`
+/* --------------------------------------------------------------------------
+ * Small shared pieces.
+ * -------------------------------------------------------------------------- */
+
+/** A metadata chip.
+ *
+ *  `whitespace-nowrap` on the chip with `min-w-0 truncate` on the label
+ *  is the pair that keeps a compact label on one line: the chip never
+ *  breaks mid-phrase, and an unusually long category shortens instead of
+ *  wrapping the row to a second line.
+ */
+function Chip({
+  icon: Icon,
+  tone = "neutral",
+  children,
+}: {
+  icon?: LucideIcon
+  tone?: "neutral" | "brand"
+  children: React.ReactNode
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1 text-[11px] font-medium",
+        tone === "brand"
+          ? "bg-brand/20 text-foreground"
+          : "bg-muted text-muted-foreground"
+      )}
+    >
+      {Icon && <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />}
+      <span className="min-w-0 truncate">{children}</span>
+    </span>
   )
+}
+
+/** The assignee cluster: a real person or an honest gap.
+ *
+ *  The reference board puts a stack of faces here. This one puts the one
+ *  contractor who owns the job, and when there is nobody it says so
+ *  rather than showing a placeholder face — an avatar nobody is behind is
+ *  the single most misleading thing a board can draw. */
+function Owner({
+  assignee,
+  tx,
+}: {
+  assignee: Contractor | undefined
+  tx: Tx
+}) {
+  if (!assignee) {
+    return (
+      <>
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-foreground/25 text-muted-foreground">
+          <UserRound className="h-3 w-3" aria-hidden="true" />
+        </span>
+
+        <span className="truncate text-xs text-muted-foreground">
+          {tx("Assigner", "Assign")}
+        </span>
+      </>
+    )
+  }
 
   return (
-    <div className="mt-3">
-      <div className="flex items-center gap-[3px]" aria-hidden="true">
-        {Array.from({ length: 10 }, (_, index) => (
-          <span
-            key={index}
-            className={cn(
-              "h-1 flex-1 rounded-full transition-colors",
-              index < filled ? tone.fill : "bg-foreground/10"
-            )}
-          />
-        ))}
-      </div>
+    <>
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-foreground text-[10px] font-bold text-background">
+        {getInitials(assignee.name)}
+      </span>
 
-      <span className="sr-only">{srRisk}</span>
+      <span className="truncate text-xs font-medium">{assignee.name}</span>
+    </>
+  )
+}
+
+/* --------------------------------------------------------------------------
+ * The detail dialog.
+ *
+ * This used to be a panel positioned `absolute inset-x-2 bottom-2` inside
+ * the card, so it covered the card it was describing, clipped against the
+ * column on a short card, and had room for controls but not for the
+ * evidence. Everything the backend computed — the finding, the reasoning
+ * behind the score, the exposure — was carried in the props and never
+ * drawn anywhere.
+ *
+ * As a dialog it has the room, and it doubles as the pointer-free way to
+ * move a card between columns, which WCAG 2.2 requires of any board whose
+ * other route is dragging.
+ * -------------------------------------------------------------------------- */
+
+function DetailDialog({
+  card,
+  contractors,
+  contractorsLoaded,
+  currency,
+  onPatch,
+  onClose,
+}: {
+  card: Card
+  contractors: Contractor[]
+  contractorsLoaded: boolean
+  currency: Currency
+  onPatch: (patch: Partial<TaskMeta>) => void
+  onClose: () => void
+}) {
+  const tx = useTx()
+  const px = (text: Localized | undefined) => resolve(text, tx)
+
+  const closeRef = useRef<HTMLButtonElement>(null)
+  const returnFocusRef = useRef<Element | null>(null)
+
+  const { rec, task } = card
+  const tone = toneOf(rec)
+  const risk = riskOf(rec)
+  const Icon = CATEGORY_ICON[rec.action_category] ?? Sparkles
+
+  useEffect(() => {
+    returnFocusRef.current = document.activeElement
+
+    closeRef.current?.focus()
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.stopPropagation()
+        onClose()
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown)
+
+    return () => {
+      document.removeEventListener("keydown", onKeyDown)
+      document.body.style.overflow = previousOverflow
+
+      const target = returnFocusRef.current
+
+      if (target instanceof HTMLElement) target.focus()
+    }
+  }, [onClose])
+
+  const fieldClass =
+    "w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none transition-colors focus:border-ring"
+
+  const labelClass =
+    "mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground"
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="priority-detail-title"
+        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-border bg-card shadow-2xl sm:rounded-3xl"
+      >
+        {/* Header ------------------------------------------------------- */}
+        <div className="flex items-start justify-between gap-4 border-b border-border p-5 sm:p-6">
+          <div className="min-w-0">
+            <span
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[11px] font-semibold",
+                tone.pill
+              )}
+            >
+              <span
+                className={cn("h-1.5 w-1.5 rounded-full", tone.dot)}
+                aria-hidden="true"
+              />
+              {px(tone.word)}
+              {risk !== null && (
+                <span className="tabular-nums opacity-70">
+                  {tx(`· risque ${risk}`, `· risk ${risk}`)}
+                </span>
+              )}
+            </span>
+
+            <h2
+              id="priority-detail-title"
+              className="mt-2.5 font-heading text-xl font-bold leading-tight tracking-tight"
+            >
+              {rec.equipment}
+            </h2>
+
+            {rec.stageName && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                {rec.stageName}
+              </p>
+            )}
+          </div>
+
+          <button
+            ref={closeRef}
+            type="button"
+            onClick={onClose}
+            aria-label={tx("Fermer", "Close")}
+            className="-mr-1 -mt-1 shrink-0 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* What the backend computed ------------------------------------ */}
+        <div className="space-y-5 border-b border-border p-5 sm:p-6">
+          <div>
+            <p className={labelClass}>
+              {tx("Action recommandée", "Recommended action")}
+            </p>
+            <p className="text-sm leading-6">{rec.recommended_action}</p>
+          </div>
+
+          {rec.message && (
+            <div>
+              <p className={labelClass}>{tx("Constat", "Finding")}</p>
+              <p className="text-sm leading-6 text-muted-foreground">
+                {rec.message}
+              </p>
+            </div>
+          )}
+
+          {rec.reasoning && (
+            <div>
+              <p className={labelClass}>
+                {tx("Pourquoi ce rang", "Why it ranks here")}
+              </p>
+              <p className="text-sm leading-6 text-muted-foreground">
+                {rec.reasoning}
+              </p>
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Chip icon={Icon}>
+              {px(
+                CATEGORY_LABEL[rec.action_category] ?? CATEGORY_LABEL.other
+              )}
+            </Chip>
+
+            {(rec.alertCount ?? 0) > 1 && (
+              <Chip>
+                {tx(
+                  `${rec.alertCount} signaux`,
+                  `${rec.alertCount} signals`
+                )}
+              </Chip>
+            )}
+
+            {(rec.downstream ?? 0) > 0 && (
+              <Chip icon={Waypoints} tone="brand">
+                {/* Singular when there is one. "1 stages downstream" is
+                    the kind of wrong that makes a product feel machine
+                    written. */}
+                {rec.downstream === 1
+                  ? tx("1 étape en aval", "1 stage downstream")
+                  : tx(
+                      `${rec.downstream} étapes en aval`,
+                      `${rec.downstream} stages downstream`
+                    )}
+              </Chip>
+            )}
+
+            {(rec.exposureEUR ?? 0) > 0 && (
+              <Chip>
+                {tx(
+                  `${formatMoney(rec.exposureEUR!, currency, tx)} exposés`,
+                  `${formatMoney(rec.exposureEUR!, currency, tx)} exposed`
+                )}
+              </Chip>
+            )}
+          </div>
+        </div>
+
+        {/* What the operator decides ------------------------------------ */}
+        <div className="space-y-4 p-5 sm:p-6">
+          <div>
+            <p className={labelClass}>{tx("Statut", "Status")}</p>
+
+            {/* The pointer-free route between columns. Dragging is the
+                fast one; this is the one that works with a keyboard, a
+                screen reader, or a finger on a phone. */}
+            <div
+              role="group"
+              aria-label={tx("Statut", "Status")}
+              className="flex items-center gap-1 rounded-xl bg-muted p-1"
+            >
+              {COLUMNS.map((column) => {
+                const active = task.status === column.id
+
+                return (
+                  <button
+                    key={column.id}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => onPatch({ status: column.id })}
+                    className={cn(
+                      "flex-1 rounded-lg px-2 py-2 text-xs font-semibold transition-colors",
+                      active
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {px(column.label)}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="priority-detail-owner" className={labelClass}>
+              {tx("Responsable", "Owner")}
+            </label>
+
+            {/* Each option carries what the person said about themselves
+                and how much they are already holding, because "available"
+                next to "4 open" is the case worth seeing before handing
+                them a fifth. */}
+            <select
+              id="priority-detail-owner"
+              value={task.contractor_id ?? ""}
+              onChange={(event) =>
+                onPatch({ contractor_id: event.target.value || null })
+              }
+              className={fieldClass}
+            >
+              <option value="">{tx("Non assigné", "Unassigned")}</option>
+
+              {contractors.map((person) => (
+                <option key={person.id} value={person.id}>
+                  {person.name}
+                  {" · "}
+                  {px(AVAILABILITY_LABEL[person.availability]) ||
+                    person.availability}
+                  {person.open_assignments > 0 &&
+                    tx(
+                      ` · ${person.open_assignments} en cours`,
+                      ` · ${person.open_assignments} open`
+                    )}
+                </option>
+              ))}
+            </select>
+
+            {contractors.length === 0 && (
+              <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
+                {contractorsLoaded
+                  ? tx(
+                      "Aucun intervenant enregistré. Ajoutez-les depuis Intervenants.",
+                      "No contractor on file. Add them from Contractors."
+                    )
+                  : tx(
+                      "Chargement des intervenants…",
+                      "Loading contractors…"
+                    )}
+              </p>
+            )}
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="priority-detail-deadline"
+                className={labelClass}
+              >
+                {tx("Échéance", "Due date")}
+              </label>
+
+              <input
+                id="priority-detail-deadline"
+                type="date"
+                value={task.deadline ?? ""}
+                onChange={(event) =>
+                  onPatch({ deadline: event.target.value || null })
+                }
+                className={fieldClass}
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="priority-detail-priority"
+                className={labelClass}
+              >
+                {tx("Priorité", "Priority")}
+              </label>
+
+              <select
+                id="priority-detail-priority"
+                value={task.priority}
+                onChange={(event) =>
+                  onPatch({ priority: asPriority(event.target.value) })
+                }
+                className={fieldClass}
+              >
+                {PRIORITIES.map((value) => (
+                  <option key={value} value={value}>
+                    {px(PRIORITY_LABEL[value])}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-brand-foreground transition-colors hover:bg-brand/90"
+          >
+            <Check className="h-4 w-4" />
+            {tx("Terminé", "Done")}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
+
+/* --------------------------------------------------------------------------
+ * The board.
+ * -------------------------------------------------------------------------- */
 
 export function RecommendationsBoard({
   recommendations,
@@ -448,8 +881,8 @@ export function RecommendationsBoard({
 
         for (const key of pushed) {
           map[key] = {
-            status: (legacy[key].status ?? "todo") as Status,
-            priority: (legacy[key].priority ?? "medium") as Priority,
+            status: asStatus(legacy[key].status),
+            priority: asPriority(legacy[key].priority),
             deadline: legacy[key].deadline ?? null,
             contractor_id: null,
           }
@@ -484,8 +917,9 @@ export function RecommendationsBoard({
   const [dragOverColumn, setDragOverColumn] = useState<Status | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>("all")
+  const [query, setQuery] = useState("")
 
-  const cards = useMemo(() => {
+  const cards: Card[] = useMemo(() => {
     return recommendations.map((rec) => {
       const id = getRecommendationId(rec)
       const stored = taskMap[id]
@@ -511,17 +945,46 @@ export function RecommendationsBoard({
     0
   )
 
+  /** Everything on the card that a person might type to find it again:
+   *  the asset, where it sits in the chain, what to do about it, and who
+   *  is holding it. Built in the reader's language, because the category
+   *  they would search for is the one they can see. */
+  function haystack(card: Card): string {
+    const assignee = contractors.find(
+      (person) => person.id === card.task.contractor_id
+    )
+
+    return [
+      card.rec.equipment,
+      card.rec.stageName ?? "",
+      card.rec.recommended_action,
+      card.rec.message,
+      px(CATEGORY_LABEL[card.rec.action_category] ?? CATEGORY_LABEL.other),
+      px(PRIORITY_LABEL[card.task.priority]),
+      assignee?.name ?? "",
+    ]
+      .join(" ")
+      .toLowerCase()
+  }
+
+  const trimmedQuery = query.trim().toLowerCase()
+
   const visible = useMemo(() => {
+    let out = cards
+
     if (filter === "critical") {
-      return cards.filter((card) => card.rec.severity === "CRITICAL")
+      out = out.filter((card) => card.rec.severity === "CRITICAL")
+    } else if (filter === "unassigned") {
+      out = out.filter((card) => !card.task.contractor_id)
     }
 
-    if (filter === "unassigned") {
-      return cards.filter((card) => !card.task.contractor_id)
+    if (trimmedQuery) {
+      out = out.filter((card) => haystack(card).includes(trimmedQuery))
     }
 
-    return cards
-  }, [cards, filter])
+    return out
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cards, filter, trimmedQuery, contractors, tx])
 
   const FILTERS: { id: Filter; label: string; count: number }[] = [
     { id: "all", label: tx("Toutes", "All"), count: cards.length },
@@ -595,7 +1058,7 @@ export function RecommendationsBoard({
     updateTask(id, { status })
   }
 
-  function handleDragStart(e: React.DragEvent<HTMLDivElement>, id: string) {
+  function handleDragStart(e: React.DragEvent<HTMLElement>, id: string) {
     e.stopPropagation()
 
     e.dataTransfer.setData("text/plain", id)
@@ -604,7 +1067,7 @@ export function RecommendationsBoard({
     setDraggingId(id)
   }
 
-  function handleDrop(e: React.DragEvent<HTMLDivElement>, status: Status) {
+  function handleDrop(e: React.DragEvent<HTMLElement>, status: Status) {
     e.preventDefault()
     e.stopPropagation()
 
@@ -632,10 +1095,23 @@ export function RecommendationsBoard({
   const opsMeta = opsType ? OPS_TYPE_LABEL[opsType] : undefined
   const opsLabel = opsMeta ? px(opsMeta) : undefined
 
+  const editingCard = editingId
+    ? cards.find((card) => card.id === editingId)
+    : undefined
+
+  /* The dialog is mounted from the board, not from inside a card. Rendered
+     in the card it covered the card, and a short card clipped it against
+     the column. */
+  useEffect(() => {
+    if (editingId && !cards.some((card) => card.id === editingId)) {
+      setEditingId(null)
+    }
+  }, [editingId, cards])
+
   if (recommendations.length === 0) {
     return (
       <div className="flex items-center gap-3 rounded-3xl border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
-        <Sparkles className="h-4 w-4 shrink-0 text-accent-foreground" />
+        <Sparkles className="h-4 w-4 shrink-0 text-brand-foreground" />
         {tx(
           "Aucune priorité urgente pour ce secteur pour le moment. Tout est sous contrôle ici.",
           "No urgent priority for this sector right now. Everything here is under control."
@@ -644,97 +1120,132 @@ export function RecommendationsBoard({
     )
   }
 
+  const stats: { label: string; value: string }[] = [
+    { label: tx("Priorités", "Priorities"), value: String(cards.length) },
+    { label: tx("Critiques", "Critical"), value: String(criticalCount) },
+  ]
+
+  if (totalExposure > 0) {
+    stats.push({
+      label: tx("Exposition", "Exposure"),
+      value: formatMoney(totalExposure, currency, tx),
+    })
+  }
+
   return (
-    <div className="rounded-3xl border border-border bg-card p-5 shadow-sm md:p-6">
+    <div className="overflow-hidden rounded-3xl border border-border bg-card">
       {/* ------------------------------------------------------------------
-          Header strip: eyebrow, title, filter pills, and the three counts.
+          Title band: what this is, and the three numbers that describe it.
           ------------------------------------------------------------------ */}
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+      <div className="flex flex-col gap-5 p-5 md:flex-row md:items-end md:justify-between md:p-6">
         <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             {opsLabel ?? tx("Opérations", "Operations")}
           </p>
 
-          <h3 className="mt-1 font-heading text-2xl font-bold tracking-tight">
+          <h3 className="mt-1.5 font-heading text-2xl font-bold tracking-tight">
             {tx("Priorités du moment", "What matters now")}
           </h3>
-
-          {/* The pill row from the reference. Dark active pill, brand count
-              badge, every number counted from the cards on screen. */}
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            {FILTERS.map((item) => {
-              const active = filter === item.id
-
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setFilter(item.id)}
-                  aria-pressed={active}
-                  className={cn(
-                    "flex items-center gap-2 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                    active
-                      ? "bg-foreground text-background"
-                      : "border border-border bg-background text-muted-foreground hover:bg-muted"
-                  )}
-                >
-                  {item.label}
-
-                  <span
-                    className={cn(
-                      "rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
-                      active
-                        ? "bg-accent text-accent-foreground"
-                        : "bg-muted text-muted-foreground"
-                    )}
-                  >
-                    {item.count}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
         </div>
 
-        <dl className="flex shrink-0 items-start gap-6 lg:gap-8">
-          <div>
-            <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              {tx("Priorités", "Priorities")}
-            </dt>
-            <dd className="mt-1 font-heading text-3xl font-bold tabular-nums">
-              {cards.length}
-            </dd>
-          </div>
-
-          <div>
-            <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              {tx("Critiques", "Critical")}
-            </dt>
-            <dd className="mt-1 font-heading text-3xl font-bold tabular-nums">
-              {criticalCount}
-            </dd>
-          </div>
-
-          {totalExposure > 0 && (
-            <div>
-              <dt className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                {tx("Exposition", "Exposure")}
+        <dl className="flex shrink-0 items-end gap-5 sm:gap-7">
+          {stats.map((stat, index) => (
+            <div
+              key={stat.label}
+              className={cn(
+                index > 0 && "border-l border-border pl-5 sm:pl-7"
+              )}
+            >
+              <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                {stat.label}
               </dt>
-              <dd className="mt-1 font-heading text-3xl font-bold tabular-nums">
-                {formatMoney(totalExposure, currency, tx)}
+              <dd className="mt-1 font-heading text-2xl font-bold leading-none tabular-nums">
+                {stat.value}
               </dd>
             </div>
-          )}
+          ))}
         </dl>
       </div>
 
-      {/* Nothing here is silent. A board that cannot read its
-          assignments and a board that has none look identical, and a
-          change that did not reach the server must not sit on screen
-          looking saved. */}
+      {/* ------------------------------------------------------------------
+          Toolbar: find a card, then narrow the board.
+          ------------------------------------------------------------------ */}
+      <div className="flex flex-col gap-3 border-t border-border px-5 py-3.5 md:flex-row md:items-center md:justify-between md:px-6">
+        <div className="relative min-w-0 md:max-w-xs md:flex-1">
+          <label htmlFor="board-search" className="sr-only">
+            {tx("Rechercher une priorité", "Search a priority")}
+          </label>
+
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            aria-hidden="true"
+          />
+
+          <input
+            id="board-search"
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={tx(
+              "Équipement, action, responsable…",
+              "Asset, action, owner…"
+            )}
+            className="h-9 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
+          />
+        </div>
+
+        {/* Dark active pill, brand count badge, every number counted from
+            the cards on screen. */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {FILTERS.map((item) => {
+            const active = filter === item.id
+
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setFilter(item.id)}
+                aria-pressed={active}
+                className={cn(
+                  "flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors",
+                  active
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                {item.label}
+
+                <span
+                  className={cn(
+                    "rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
+                    active
+                      ? "bg-brand text-brand-foreground"
+                      : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {item.count}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* One atomic sentence rather than four competing live regions, so a
+          screen reader hears what the board holds instead of a bare number
+          every time a card moves. */}
+      <p className="sr-only" role="status" aria-live="polite">
+        {tx(
+          `${visible.length} priorité(s) affichée(s) sur ${cards.length}, dont ${criticalCount} critique(s) et ${unassignedCount} non assignée(s).`,
+          `${visible.length} of ${cards.length} priorities shown, ${criticalCount} critical, ${unassignedCount} unassigned.`
+        )}
+      </p>
+
+      {/* Nothing here is silent. A board that cannot read its assignments
+          and a board that has none look identical, and a change that did
+          not reach the server must not sit on screen looking saved. */}
       {loadError && (
-        <p className="mt-5 rounded-2xl border border-dashed border-border bg-background px-4 py-3 text-xs leading-5 text-muted-foreground">
+        <p className="mx-5 mb-1 rounded-2xl border border-dashed border-border bg-background px-4 py-3 text-xs leading-5 text-muted-foreground md:mx-6">
           <span className="font-semibold text-foreground">
             {tx("Assignations non chargées.", "Assignments not loaded.")}
           </span>{" "}
@@ -749,7 +1260,7 @@ export function RecommendationsBoard({
       {saveError && (
         <p
           role="alert"
-          className="mt-5 rounded-2xl border border-destructive/30 bg-destructive/[0.06] px-4 py-3 text-xs leading-5"
+          className="mx-5 mb-1 rounded-2xl border border-destructive/30 bg-destructive/[0.06] px-4 py-3 text-xs leading-5 md:mx-6"
         >
           <span className="font-semibold text-destructive">
             {tx("Modification non enregistrée.", "Change not saved.")}
@@ -763,19 +1274,33 @@ export function RecommendationsBoard({
       )}
 
       {/* ------------------------------------------------------------------
-          The columns.
+          The columns, in a recessed trough.
+
+          --background is darker than --card in light mode and darker again
+          in dark mode, so the trough reads as inset and the white cards lift
+          out of it under either theme. A trough tinted with --muted would
+          have inverted in the dark.
           ------------------------------------------------------------------ */}
-      <div className="mt-7 grid grid-cols-1 gap-x-5 gap-y-6 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 border-t border-border bg-background p-3 md:grid-cols-3 md:gap-4 md:p-4">
         {COLUMNS.map((column, columnIndex) => {
-          const columnCards = visible.filter(
-            (card) => card.task.status === column.id
+          const columnCards = visible
+            .filter((card) => card.task.status === column.id)
+            .sort(
+              (a, b) =>
+                PRIORITY_RANK[b.task.priority] - PRIORITY_RANK[a.task.priority]
+            )
+
+          const columnExposure = columnCards.reduce(
+            (sum, card) => sum + (card.rec.exposureEUR ?? 0),
+            0
           )
 
           const isDropTarget = dragOverColumn === column.id
 
           return (
-            <div
+            <section
               key={column.id}
+              aria-label={px(column.label)}
               onDragOver={(e) => {
                 e.preventDefault()
                 e.dataTransfer.dropEffect = "move"
@@ -786,70 +1311,62 @@ export function RecommendationsBoard({
                 setDragOverColumn(column.id)
               }}
               onDrop={(e) => handleDrop(e, column.id)}
-              className="flex min-h-[260px] flex-col"
+              className={cn(
+                "flex min-h-[280px] flex-col rounded-2xl p-1.5 transition-colors",
+                isDropTarget && draggingId
+                  ? "bg-brand/10 ring-2 ring-brand"
+                  : "ring-1 ring-transparent"
+              )}
             >
-              {/* The segmented rule from the reference: one segment per
-                  card in this column, coloured by that card's severity, so
-                  the shape of the column is readable before the cards are. */}
-              <div
-                className="flex items-center gap-1 pb-3"
-                aria-hidden="true"
-              >
-                {columnCards.length === 0 ? (
-                  <span className="h-[3px] flex-1 rounded-full bg-foreground/10" />
-                ) : (
-                  columnCards.map((card) => (
-                    <span
-                      key={card.id}
-                      className={cn(
-                        "h-[3px] flex-1 rounded-full",
-                        toneOf(card.rec).fill
-                      )}
-                    />
-                  ))
+              {/* Column head: the name, how many, and what it is worth. */}
+              <div className="mb-2.5 flex items-center justify-between gap-2 px-2 pt-1.5">
+                <div className="flex min-w-0 items-center gap-2">
+                  <h4 className="truncate text-[13px] font-semibold">
+                    {px(column.label)}
+                  </h4>
+
+                  <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
+                    {columnCards.length}
+                  </span>
+                </div>
+
+                {columnExposure > 0 && (
+                  <span className="shrink-0 text-[11px] font-medium tabular-nums text-muted-foreground">
+                    {formatMoney(columnExposure, currency, tx)}
+                  </span>
                 )}
               </div>
 
-              <div className="mb-3 flex items-baseline justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="text-sm font-bold">{px(column.label)}</p>
-                  <p className="mt-0.5 text-[10px] text-muted-foreground">
-                    {px(column.hint)}
-                  </p>
-                </div>
-
-                <span className="shrink-0 text-sm font-bold tabular-nums text-muted-foreground">
-                  {columnCards.length}
-                </span>
-              </div>
-
-              <div className="flex flex-1 flex-col gap-3">
+              <div className="flex flex-1 flex-col gap-2.5">
                 {columnCards.length === 0 && (
                   <div
-                    style={{
-                      /* The hatched drop slot from the reference. Written
-                         as a style rather than an arbitrary class because
-                         the tokens are oklch() values: hsl(var(--token))
-                         is invalid and the browser drops the whole rule. */
-                      backgroundImage:
-                        "repeating-linear-gradient(135deg, transparent, transparent 6px, color-mix(in oklab, var(--foreground) 4%, transparent) 6px, color-mix(in oklab, var(--foreground) 4%, transparent) 12px)",
-                    }}
                     className={cn(
-                      "flex flex-1 items-center justify-center rounded-2xl border border-dashed py-10 text-[11px] transition-colors",
-                      isDropTarget
-                        ? "border-accent text-accent-foreground"
-                        : "border-border text-muted-foreground"
+                      "flex flex-1 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed px-4 py-10 text-center transition-colors",
+                      isDropTarget && draggingId
+                        ? "border-brand bg-card"
+                        : "border-border"
                     )}
                   >
-                    {filter === "all"
-                      ? tx("Déposez une priorité ici", "Drop a priority here")
-                      : tx("Rien dans ce filtre", "Nothing in this filter")}
+                    <Inbox
+                      className="h-4 w-4 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+
+                    <p className="text-[11px] leading-4 text-muted-foreground">
+                      {trimmedQuery || filter !== "all"
+                        ? tx(
+                            "Rien ne correspond dans cette colonne.",
+                            "Nothing matches in this column."
+                          )
+                        : px(column.empty)}
+                    </p>
                   </div>
                 )}
 
                 {columnCards.map(({ id, rec, task }) => {
                   const Icon = CATEGORY_ICON[rec.action_category] ?? Sparkles
                   const tone = toneOf(rec)
+                  const risk = riskOf(rec)
                   const isDragging = draggingId === id
                   const overdue = isDeadlineOverdue(task.deadline)
 
@@ -857,166 +1374,120 @@ export function RecommendationsBoard({
                     (person) => person.id === task.contractor_id
                   )
 
+                  const signals = rec.alertCount ?? 0
+
+                  const subtitle = [
+                    rec.stageName,
+                    signals > 1
+                      ? tx(`${signals} signaux`, `${signals} signals`)
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")
+
                   return (
-                    <div
+                    <article
                       key={id}
                       draggable
                       onDragStart={(e) => handleDragStart(e, id)}
                       onDragEnd={handleDragEnd}
+                      aria-labelledby={`board-card-${id}`}
                       className={cn(
-                        "group relative rounded-2xl border px-4 pb-3.5 pt-4",
-                        "cursor-grab transition-all duration-200",
-                        "hover:-translate-y-0.5 hover:shadow-md",
-                        "active:cursor-grabbing",
-                        tone.card,
+                        "group relative cursor-grab rounded-2xl border border-border bg-card p-3.5 shadow-sm",
+                        "transition-[box-shadow,border-color,transform] duration-200 ease-out",
+                        "hover:border-foreground/15 hover:shadow-md active:cursor-grabbing",
                         isDragging &&
-                          "z-50 scale-[1.03] opacity-90 shadow-xl ring-2 ring-accent"
+                          "scale-[1.02] opacity-95 shadow-xl ring-2 ring-brand"
                       )}
                     >
-                      {/* Title block, two lines like the reference. */}
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="min-w-0 text-sm font-bold leading-snug">
-                          {rec.equipment}
-
-                          {rec.stageName && (
-                            <span className="block font-medium text-muted-foreground">
-                              {rec.stageName}
-                            </span>
-                          )}
-                        </p>
-
+                      {/* Row 1 — who owns it, and how bad it is. */}
+                      <div className="flex items-center justify-between gap-2">
                         <button
                           type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setEditingId(id)
-                          }}
-                          aria-label={`Détails de la priorité ${rec.equipment}`}
-                          className="-mr-1 -mt-1 shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-foreground/5 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          onClick={() => setEditingId(id)}
+                          className="flex min-w-0 items-center gap-2 rounded-full text-left transition-opacity hover:opacity-70"
                         >
-                          <MoreHorizontal className="h-4 w-4" />
+                          <Owner assignee={assignee} tx={tx} />
                         </button>
-                      </div>
 
-                      <RiskRule rec={rec} />
-
-                      <p className="mt-3 line-clamp-2 text-xs leading-5 text-muted-foreground">
-                        {rec.recommended_action}
-                      </p>
-
-                      {(rec.exposureEUR ?? 0) > 0 && (
-                        <p className="mt-2 text-xs font-bold tabular-nums">
-                          {tx(
-                            `${formatMoney(
-                              rec.exposureEUR!,
-                              currency,
-                              tx
-                            )} exposés`,
-                            `${formatMoney(
-                              rec.exposureEUR!,
-                              currency,
-                              tx
-                            )} exposed`
-                          )}
-                        </p>
-                      )}
-
-                      {/* Severity in words, so the tint is never the only
-                          thing carrying it. */}
-                      <div className="mt-3 flex flex-wrap items-center gap-1.5">
                         <span
                           className={cn(
-                            "rounded-md px-2 py-1 text-[9px] font-semibold uppercase tracking-wider",
+                            "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1 text-[11px] font-semibold",
                             tone.pill
                           )}
                         >
-                          {tone.word}
+                          <span
+                            className={cn(
+                              "h-1.5 w-1.5 rounded-full",
+                              tone.dot
+                            )}
+                            aria-hidden="true"
+                          />
+                          {px(tone.word)}
+                          {risk !== null && (
+                            <span className="tabular-nums opacity-70">
+                              {risk}
+                            </span>
+                          )}
                         </span>
+                      </div>
 
-                        <span className="inline-flex items-center gap-1 rounded-md border border-border bg-background/60 px-2 py-1 text-[9px] font-medium text-muted-foreground">
-                          <Icon className="h-3 w-3" aria-hidden="true" />
+                      {/* Row 2 — the asset, and where it sits in the chain. */}
+                      <h5
+                        id={`board-card-${id}`}
+                        className="mt-3 text-[15px] font-semibold leading-tight tracking-tight"
+                      >
+                        {rec.equipment}
+                      </h5>
+
+                      {subtitle && (
+                        <p className="mt-1 truncate text-xs text-muted-foreground">
+                          {subtitle}
+                        </p>
+                      )}
+
+                      {/* Row 3 — what to do about it. */}
+                      <p className="mt-2.5 line-clamp-2 text-[13px] leading-5 text-muted-foreground">
+                        {rec.recommended_action}
+                      </p>
+
+                      {/* Row 4 — three chips at most. The board carried five
+                          before, which turned the busiest cards into a wall
+                          of grey boxes and hid the one chip that mattered. */}
+                      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                        <Chip icon={Icon}>
                           {px(
                             CATEGORY_LABEL[rec.action_category] ??
                               CATEGORY_LABEL.other
                           )}
-                        </span>
+                        </Chip>
 
-                        {(rec.downstream ?? 0) > 0 && (
-                          <span className="rounded-md border border-brand/40 bg-brand/10 px-2 py-1 text-[9px] font-semibold">
-                            {tx(
-                              `${rec.downstream} en aval`,
-                              `${rec.downstream} downstream`
-                            )}
-                          </span>
-                        )}
-
-                        {(rec.alertCount ?? 0) > 1 && (
-                          <span className="rounded-md border border-border bg-background/60 px-2 py-1 text-[9px] font-medium text-muted-foreground">
-                            {tx(
-                              `${rec.alertCount} signaux`,
-                              `${rec.alertCount} signals`
-                            )}
-                          </span>
-                        )}
-
-                        <span className="rounded-md border border-border bg-background/60 px-2 py-1 text-[9px] font-medium text-muted-foreground">
+                        <Chip>
                           {px(
                             PRIORITY_LABEL[task.priority] ??
                               PRIORITY_LABEL.medium
                           )}
-                        </span>
+                        </Chip>
+
+                        {(rec.downstream ?? 0) > 0 && (
+                          <Chip icon={Waypoints} tone="brand">
+                            {tx(
+                              `${rec.downstream} en aval`,
+                              `${rec.downstream} downstream`
+                            )}
+                          </Chip>
+                        )}
                       </div>
 
-                      {/* Footer: who is on it, and by when. In the reference
-                          this row carries a photo and a name; here it carries
-                          the assigned contractor, and says plainly that there
-                          is nobody rather than showing a placeholder face. */}
-                      <div className="mt-3 flex items-center justify-between gap-2 border-t border-foreground/10 pt-2.5">
+                      {/* Row 5 — by when, and for how much. */}
+                      <div className="mt-3.5 flex items-center justify-between gap-2 border-t border-border pt-3">
                         <button
                           type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setEditingId(id)
-                          }}
-                          className="flex min-w-0 items-center gap-2 rounded-lg py-1 pr-1 text-left transition-colors hover:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        >
-                          {assignee ? (
-                            <>
-                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-foreground text-[9px] font-bold text-background">
-                                {getInitials(assignee.name)}
-                              </span>
-
-                              <span className="max-w-[110px] truncate text-[11px] font-semibold">
-                                {assignee.name}
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-dashed border-foreground/25 text-muted-foreground">
-                                <UserRound
-                                  className="h-3.5 w-3.5"
-                                  aria-hidden="true"
-                                />
-                              </span>
-
-                              <span className="text-[11px] text-muted-foreground">
-                                {tx("Assigner", "Assign")}
-                              </span>
-                            </>
-                          )}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setEditingId(id)
-                          }}
+                          onClick={() => setEditingId(id)}
                           className={cn(
-                            "flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 text-[11px] transition-colors hover:bg-foreground/5",
-                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            "-ml-1 flex shrink-0 items-center gap-1.5 rounded-lg px-1 py-0.5 text-[11px] transition-colors hover:bg-muted",
                             overdue
-                              ? "font-bold text-destructive"
+                              ? "font-semibold text-destructive"
                               : "text-muted-foreground"
                           )}
                         >
@@ -1029,9 +1500,32 @@ export function RecommendationsBoard({
                             ? formatDeadline(task.deadline, tx)
                             : tx("Échéance", "Due date")}
                         </button>
+
+                        {(rec.exposureEUR ?? 0) > 0 && (
+                          <span className="truncate text-[11px] font-semibold tabular-nums">
+                            {tx(
+                              `${formatMoney(
+                                rec.exposureEUR!,
+                                currency,
+                                tx
+                              )} exposés`,
+                              `${formatMoney(
+                                rec.exposureEUR!,
+                                currency,
+                                tx
+                              )} exposed`
+                            )}
+                          </span>
+                        )}
                       </div>
 
-                      <div className="pointer-events-none absolute bottom-1.5 right-2 flex items-center gap-0.5 opacity-0 transition-opacity focus-within:pointer-events-auto focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
+                      {/* The card's controls, floating on its top edge so
+                          they never sit on top of the content the way the
+                          old bottom-right pair did. Hidden until hover or
+                          focus; a pointer-free route to all three lives in
+                          the detail dialog, which the owner row and the due
+                          date both open. */}
+                      <div className="pointer-events-none absolute -top-2.5 right-3 flex items-center gap-0.5 rounded-full border border-border bg-card p-0.5 opacity-0 shadow-md transition-opacity focus-within:pointer-events-auto focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
                         <button
                           type="button"
                           aria-label={tx(
@@ -1039,14 +1533,12 @@ export function RecommendationsBoard({
                             "Move to the previous column"
                           )}
                           disabled={columnIndex === 0}
-                          onClick={(e) => {
-                            e.stopPropagation()
-
+                          onClick={() => {
                             if (columnIndex > 0) {
                               moveTo(id, COLUMNS[columnIndex - 1].id)
                             }
                           }}
-                          className="rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-20"
+                          className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-25"
                         >
                           <ChevronLeft className="h-3.5 w-3.5" />
                         </button>
@@ -1058,158 +1550,52 @@ export function RecommendationsBoard({
                             "Move to the next column"
                           )}
                           disabled={columnIndex === COLUMNS.length - 1}
-                          onClick={(e) => {
-                            e.stopPropagation()
-
+                          onClick={() => {
                             if (columnIndex < COLUMNS.length - 1) {
                               moveTo(id, COLUMNS[columnIndex + 1].id)
                             }
                           }}
-                          className="rounded-md bg-background/80 p-1 text-muted-foreground shadow-sm hover:bg-muted disabled:cursor-not-allowed disabled:opacity-20"
+                          className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-25"
                         >
                           <ChevronRight className="h-3.5 w-3.5" />
                         </button>
-                      </div>
 
-                      {editingId === id && (
-                        <div
-                          className="absolute inset-x-2 bottom-2 z-20 rounded-xl border border-border bg-card p-3 shadow-xl"
-                          onClick={(e) => e.stopPropagation()}
-                          onMouseDown={(e) => e.stopPropagation()}
-                        >
-                          <div className="mb-3 flex items-center justify-between">
-                            <p className="text-xs font-semibold">
-                              {tx(
-                                "Détails de la priorité",
-                                "Priority detail"
-                              )}
-                            </p>
+                        <span
+                          className="mx-0.5 h-3.5 w-px bg-border"
+                          aria-hidden="true"
+                        />
 
-                            <button
-                              type="button"
-                              onClick={() => setEditingId(null)}
-                              aria-label={tx("Fermer", "Close")}
-                              className="rounded-md p-1 text-muted-foreground hover:bg-muted"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-
-                          <label className="mb-1 block text-[10px] font-medium text-muted-foreground">
-                            {tx("Responsable", "Owner")}
-                          </label>
-
-                          {/* Each option carries what the person said
-                              about themselves and how much they are
-                              already holding, because "disponible" next
-                              to "4 en cours" is the case worth seeing
-                              before handing them a fifth. */}
-                          <select
-                            value={task.contractor_id ?? ""}
-                            onChange={(e) =>
-                              updateTask(id, {
-                                contractor_id: e.target.value || null,
-                              })
-                            }
-                            className="mb-1 w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs outline-none focus:border-accent"
-                          >
-                            <option value="">
-                              {tx("Non assigné", "Unassigned")}
-                            </option>
-
-                            {contractors.map((person) => (
-                              <option key={person.id} value={person.id}>
-                                {person.name}
-                                {" · "}
-                                {px(AVAILABILITY_LABEL[person.availability]) ||
-                                  person.availability}
-                                {person.open_assignments > 0 &&
-                                  tx(
-                                    ` · ${person.open_assignments} en cours`,
-                                    ` · ${person.open_assignments} open`
-                                  )}
-                              </option>
-                            ))}
-                          </select>
-
-                          {contractors.length === 0 && (
-                            <p className="mb-3 text-[10px] leading-4 text-muted-foreground">
-                              {loaded
-                                ? tx(
-                                    "Aucun intervenant enregistré. Ajoutez-les depuis Intervenants.",
-                                    "No contractor on file. Add them from Contractors."
-                                  )
-                                : tx(
-                                    "Chargement des intervenants…",
-                                    "Loading contractors…"
-                                  )}
-                            </p>
+                        <button
+                          type="button"
+                          onClick={() => setEditingId(id)}
+                          aria-label={tx(
+                            `Détails de la priorité ${rec.equipment}`,
+                            `Priority detail for ${rec.equipment}`
                           )}
-
-                          <label className="mb-1 mt-2 block text-[10px] font-medium text-muted-foreground">
-                            {tx("Échéance", "Due date")}
-                          </label>
-
-                          <div className="relative mb-3">
-                            <CalendarDays className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-
-                            <input
-                              type="date"
-                              value={task.deadline ?? ""}
-                              onChange={(e) =>
-                                updateTask(id, {
-                                  deadline: e.target.value || null,
-                                })
-                              }
-                              className="w-full rounded-lg border border-border bg-background py-2 pl-8 pr-2 text-xs outline-none focus:border-accent"
-                            />
-                          </div>
-
-                          <label className="mb-1 block text-[10px] font-medium text-muted-foreground">
-                            {tx("Priorité", "Priority")}
-                          </label>
-
-                          <select
-                            value={task.priority}
-                            onChange={(e) =>
-                              updateTask(id, {
-                                priority: e.target.value as Priority,
-                              })
-                            }
-                            className="w-full rounded-lg border border-border bg-background px-2.5 py-2 text-xs outline-none focus:border-accent"
-                          >
-                            <option value="low">
-                              {px(PRIORITY_LABEL.low)}
-                            </option>
-                            <option value="medium">
-                              {px(PRIORITY_LABEL.medium)}
-                            </option>
-                            <option value="high">
-                              {px(PRIORITY_LABEL.high)}
-                            </option>
-                            <option value="critical">
-                              {px(PRIORITY_LABEL.critical)}
-                            </option>
-                          </select>
-
-                          <button
-                            type="button"
-                            onClick={() => setEditingId(null)}
-                            className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground transition-colors hover:bg-accent/90"
-                          >
-                            <Check className="h-3.5 w-3.5" />
-                            {tx("Enregistrer", "Save")}
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                          className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        >
+                          <MoreHorizontal className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </article>
                   )
                 })}
               </div>
-            </div>
+            </section>
           )
         })}
       </div>
+
+      {editingCard && (
+        <DetailDialog
+          card={editingCard}
+          contractors={contractors}
+          contractorsLoaded={loaded}
+          currency={currency}
+          onPatch={(patch) => updateTask(editingCard.id, patch)}
+          onClose={() => setEditingId(null)}
+        />
+      )}
     </div>
   )
 }

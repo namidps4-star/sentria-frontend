@@ -30,7 +30,25 @@
  * Needs Playwright. The API is stubbed, so it runs with no backend.
  */
 
-import { chromium } from "playwright"
+/* Playwright may be a devDependency here or installed globally. Resolve
+   either, and say which is missing rather than throwing a module error at
+   whoever runs this. */
+let chromium
+try {
+  ;({ chromium } = await import("playwright"))
+} catch {
+  try {
+    ;({ chromium } = await import(
+      "/opt/node22/lib/node_modules/playwright/index.mjs"
+    ))
+  } catch {
+    console.error(
+      "Playwright not found. Install it with `npm i -D playwright`,\n" +
+        "or run this where a global playwright is on the module path."
+    )
+    process.exit(2)
+  }
+}
 const PORT = process.argv[2] || "3270"
 
 const SECTORS = {

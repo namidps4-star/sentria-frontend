@@ -42,6 +42,7 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-warning: var(--warning);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -82,6 +83,14 @@
   --accent: oklch(0.88 0.205 124);
   --accent-foreground: oklch(0.22 0.04 124);
   --destructive: oklch(0.577 0.245 27.325);
+  /* The "watch this" tone, sitting between --brand and --destructive.
+     It is a token rather than Tailwind's amber-500 because the `dark:`
+     variant keys off the .dark class, which THEME_INIT_SCRIPT does not
+     set when the theme is "system" — so every dark: colour silently
+     stayed light for anyone following their OS. A token flips with the
+     media query too, which is the only way all three theme states agree.
+     Both values are picked to clear 4.5:1 on their own theme's card. */
+  --warning: oklch(0.52 0.135 68);
   --border: oklch(0.91 0.003 110);
   --input: oklch(0.91 0.003 110);
   /* The brand lime, available in both themes. Deliberately separate
@@ -130,6 +139,9 @@
   --accent: oklch(0.85 0.195 124);
   --accent-foreground: oklch(0.2 0.04 124);
   --destructive: oklch(0.704 0.191 22.216);
+  /* Lifted, so it clears 4.5:1 on a near-black card instead of sinking
+     into it the way the light-mode bronze would. */
+  --warning: oklch(0.8 0.145 78);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   /* Brand lime, very slightly tempered so it does not glare
@@ -181,6 +193,9 @@
     --accent: oklch(0.85 0.195 124);
     --accent-foreground: oklch(0.2 0.04 124);
     --destructive: oklch(0.704 0.191 22.216);
+  /* Lifted, so it clears 4.5:1 on a near-black card instead of sinking
+     into it the way the light-mode bronze would. */
+  --warning: oklch(0.8 0.145 78);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
     /* Brand lime, very slightly tempered so it does not glare

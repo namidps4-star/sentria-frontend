@@ -1560,9 +1560,17 @@ export function deriveRecommendations(
         message: findings,
         risk_score: risk,
         alert_key: lead.alert_key ?? null,
+        /* The fallback is the sentence an operator reads on the board
+           when the alert carries no advice of its own, so it goes
+           through tx() like every other one. It was a bare template
+           literal, which check-i18n cannot see inside, and it put
+           French on an English card. */
         recommended_action:
           sentenceCase(advice) ||
-          `Traiter ${equipment} sur ${stage.name.toLowerCase()}.`,
+          tx(
+            `Traiter ${equipment} sur ${stage.name.toLowerCase()}.`,
+            `Handle ${equipment} at ${stage.name.toLowerCase()}.`
+          ),
         action_category: (def && KIND_CATEGORY[def.kind]) || "other",
         stage: stage.id,
         stageName: stage.name,
