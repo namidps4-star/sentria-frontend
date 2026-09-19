@@ -438,7 +438,7 @@ export function RecommendationsPanel({
             {/* 1 · EVIDENCE + CONFIDENCE */}
             <div className="mt-4">
               <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-muted-foreground">
-                1 · Preuve &amp; confiance
+                {tx("1 · Preuve & confiance", "1 · Evidence & confidence")}
               </p>
 
               {topRiskPct !== null ? (

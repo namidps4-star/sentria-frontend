@@ -463,6 +463,41 @@ function ActivityFlowPreview({
  * Defined once so the four steps cannot drift apart.
  * -------------------------------------------------------------------------- */
 
+/** One alert per sector, in the vocabulary of the people who work in
+ *  it. The wizard shows it while it is still being filled in, so the
+ *  thing the product actually does is visible during setup rather than
+ *  only after it. */
+const SAMPLE_ALERTS: Record<Sector, Localized> = {
+  industry: localized(
+    "Ligne 2 : 3 arrêts en 4 h, au-dessus de votre seuil.",
+    "Line 2: 3 stoppages in 4 h, above your threshold."
+  ),
+  health: localized(
+    "Bloc 1 : 2 h d'attente, au-dessus de votre seuil.",
+    "Theatre 1: a 2 h wait, above your threshold."
+  ),
+  agriculture: localized(
+    "Silo B : humidité à 16 %, au-dessus de votre seuil.",
+    "Silo B: moisture at 16%, above your threshold."
+  ),
+  transportation: localized(
+    "Tournée 14 : 90 min de retard cumulé.",
+    "Route 14: 90 min behind in total."
+  ),
+  logistics: localized(
+    "Quai 3 : 12 conteneurs en attente depuis 6 h.",
+    "Dock 3: 12 containers waiting for 6 h."
+  ),
+  energy: localized(
+    "Poste Nord : tension hors plage depuis 25 min.",
+    "North substation: voltage out of range for 25 min."
+  ),
+  commerce: localized(
+    "Rayon frais : rupture sur 7 références.",
+    "Chilled aisle: 7 lines out of stock."
+  ),
+}
+
 const CHOICE_CARD = [
   "group relative w-full rounded-2xl border border-border bg-background p-4 text-left",
   "transition-all duration-200 hover:-translate-y-0.5 hover:border-ring hover:shadow-sm",
@@ -479,6 +514,227 @@ function CardTick() {
     <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground">
       <Check className="h-3.5 w-3.5" aria-hidden="true" />
     </span>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/* THE SETUP PANEL                                                     */
+/*                                                                     */
+/* The wizard used to be eight questions stacked on a page, and the    */
+/* only sign that any of them mattered arrived after the last one. An  */
+/* operator answering "Bénin" had no way to know the euro had just     */
+/* become a CFA franc, so the questions read as paperwork.             */
+/*                                                                     */
+/* This panel is the other half of the split: every answer lands in it */
+/* the moment it is given, and from the sector step on it shows the    */
+/* actual thing being configured - an alert, in their words, with      */
+/* their company's name on it. The value the product promises is       */
+/* visible inside setup instead of after it.                           */
+/* ------------------------------------------------------------------ */
+
+type Fact = {
+  id: string
+  label: Localized
+  value: string | null
+}
+
+/** One answered-or-waiting line. The dot is decoration; the state is
+ *  carried by the value's own weight and colour, so it survives a
+ *  viewer who cannot separate lime from grey. */
+function FactRow({ fact, tx }: { fact: Fact; tx: Tx }) {
+  const answered = Boolean(fact.value)
+
+  return (
+    <li className="flex items-baseline justify-between gap-4 border-b border-background/10 py-2.5 last:border-0">
+      <span className="flex shrink-0 items-center gap-2.5 text-xs text-background/70">
+        <span
+          aria-hidden="true"
+          className={cn(
+            "h-1.5 w-1.5 shrink-0 rounded-full transition-colors duration-500",
+            answered ? "bg-brand" : "bg-background/35"
+          )}
+        />
+        {resolve(fact.label, tx)}
+      </span>
+
+      <span
+        className={cn(
+          "min-w-0 truncate text-right text-sm transition-colors duration-500",
+          answered
+            ? "font-semibold text-background"
+            : "text-background/45"
+        )}
+      >
+        {fact.value ?? tx("À venir", "Not yet")}
+      </span>
+    </li>
+  )
+}
+
+/** What SentrIA will actually send, rendered in the operator's own
+ *  words before they have finished setting it up. */
+function AlertPreview({
+  tx,
+  company,
+  sectorLabel,
+  headline,
+  className,
+}: {
+  tx: Tx
+  company: string
+  sectorLabel: string | null
+  headline: string | null
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-2xl border border-background/15 bg-background/10 p-4 backdrop-blur-md",
+        className
+      )}
+    >
+      <div className="flex items-center gap-2">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand text-brand-foreground">
+          <Activity className="h-3.5 w-3.5" aria-hidden="true" />
+        </span>
+
+        <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-background/70">
+          {tx("Exemple d'alerte", "Sample alert")}
+        </span>
+      </div>
+
+      <p className="mt-3 text-sm font-semibold leading-snug text-background">
+        {headline ??
+          tx(
+            "Choisissez un secteur pour voir une alerte.",
+            "Pick a sector to see an alert."
+          )}
+      </p>
+
+      <p className="mt-2 text-[11px] leading-5 text-background/70">
+        {company
+          ? tx(
+              `Envoyée à ${company}${sectorLabel ? `, ${sectorLabel}` : ""}.`,
+              `Sent to ${company}${sectorLabel ? `, ${sectorLabel}` : ""}.`
+            )
+          : tx(
+              "Votre nom d'entreprise apparaîtra ici.",
+              "Your company name will appear here."
+            )}
+      </p>
+    </div>
+  )
+}
+
+/** The right-hand half of the wizard.
+ *
+ *  An <aside> on purpose. It is complementary to the form rather than
+ *  part of it, and the onboarding smoke test walks the wizard by
+ *  clicking buttons, skipping anything inside an aside - so a panel
+ *  that reflects the form must never be mistaken for the form. */
+function SetupPanel({
+  tx,
+  facts,
+  answered,
+  company,
+  sectorLabel,
+  alertHeadline,
+  first,
+}: {
+  tx: Tx
+  facts: Fact[]
+  answered: number
+  company: string
+  sectorLabel: string | null
+  alertHeadline: string | null
+  /** True on the opening step, where the panel welcomes rather than
+   *  reports. A 200px welcome banner above all eight questions pushes
+   *  every question below the fold; the same words on the panel that is
+   *  already there cost no vertical space at all. */
+  first: boolean
+}) {
+  return (
+    <aside className="relative hidden w-[42%] shrink-0 overflow-hidden bg-foreground text-background lg:block">
+      {/* Depth, not decoration for its own sake: two soft lime pools
+          and a faint rule grid, so the panel reads as a lit surface
+          rather than a flat block of colour. Static - a panel that
+          breathes behind a form the operator is reading is the first
+          thing to feel cheap. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(75% 50% at 82% 4%, color-mix(in oklab, var(--brand) 40%, transparent) 0%, transparent 60%), radial-gradient(65% 45% at 4% 96%, color-mix(in oklab, var(--brand) 18%, transparent) 0%, transparent 70%)",
+        }}
+      />
+
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-[0.06]"
+        style={{
+          backgroundImage:
+            "linear-gradient(var(--color-background) 1px, transparent 1px), linear-gradient(90deg, var(--color-background) 1px, transparent 1px)",
+          backgroundSize: "48px 48px",
+        }}
+      />
+
+      <div className="relative flex h-full flex-col justify-between gap-8 overflow-y-auto p-8 xl:p-10">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-background/60">
+            {first
+              ? tx("Bienvenue sur SentrIA", "Welcome to SentrIA")
+              : tx("Aperçu", "Preview")}
+          </p>
+
+          <h2 className="mt-3 max-w-[16ch] text-balance font-heading text-2xl font-bold leading-tight tracking-tight xl:text-3xl">
+            {first
+              ? tx(
+                  "Configurez votre surveillance opérationnelle.",
+                  "Set up your operational monitoring."
+                )
+              : tx(
+                  "Votre SentrIA prend forme.",
+                  "Your SentrIA is taking shape."
+                )}
+          </h2>
+
+          <p className="mt-3 max-w-[34ch] text-sm leading-6 text-background/70">
+            {first
+              ? tx(
+                  "Huit questions. Elles connectent vos données, décrivent votre activité, et SentrIA commence à repérer ce qui compte.",
+                  "Eight questions. They connect your data, describe your operation, and SentrIA starts catching what matters."
+                )
+              : tx(
+                  "Chaque réponse arrive ici. Rien n'est envoyé tant que vous n'avez pas terminé.",
+                  "Every answer lands here. Nothing is sent until you are done."
+                )}
+          </p>
+        </div>
+
+        <ul className="min-w-0">
+          {facts.map((fact) => (
+            <FactRow key={fact.id} fact={fact} tx={tx} />
+          ))}
+        </ul>
+
+        <div>
+          <AlertPreview
+            tx={tx}
+            company={company}
+            sectorLabel={sectorLabel}
+            headline={alertHeadline}
+          />
+
+          <p className="mt-4 text-[11px] leading-5 text-background/60">
+            {tx(
+              `${answered} réponse${answered === 1 ? "" : "s"} sur ${facts.length} enregistrée${answered === 1 ? "" : "s"}.`,
+              `${answered} of ${facts.length} answer${answered === 1 ? "" : "s"} recorded.`
+            )}
+          </p>
+        </div>
+      </div>
+    </aside>
   )
 }
 
@@ -611,6 +867,11 @@ export function OnboardingView({
   const selectedSector = useMemo(
     () => SECTORS.find((item) => item.id === sector),
     [sector]
+  )
+
+  const selectedCountry = useMemo(
+    () => countryFor(countryCode),
+    [countryCode]
   )
 
   const selectedSubType = useMemo(
@@ -985,6 +1246,43 @@ export function OnboardingView({
     onComplete?.()
   }
 
+  /* aria-modal tells a screen reader to ignore everything behind this
+     panel. Tab has never read aria-modal, so without this the keyboard
+     walked straight out of the wizard and down the app sidebar
+     underneath it - a promise the markup made and the keyboard broke.
+     There is no close button to reach, so the wrap is unconditional. */
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const node = dialogRef.current
+
+      if (event.key !== "Tab" || !node) return
+
+      const focusable = Array.from(
+        node.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      )
+
+      if (focusable.length === 0) return
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      const active = document.activeElement
+      const outside = !node.contains(active)
+
+      if (event.shiftKey ? active === first || outside : active === last || outside) {
+        event.preventDefault()
+        ;(event.shiftKey ? last : first).focus()
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown, true)
+
+    return () => document.removeEventListener("keydown", onKeyDown, true)
+  }, [])
+
   /* The country list carries an explicit "Autre pays (euro)", so there
      is always a truthful answer and requiring one costs nobody an exit.
      The language and the zone are pre-selected, so their steps are
@@ -1002,124 +1300,205 @@ export function OnboardingView({
               ? selectedEquipment.length > 0
               : true
 
+  /* Everything answered so far, in the order it was asked, for the
+     panel beside the form. A null value is a question still ahead of
+     the operator, not one they skipped. */
+  const facts: Fact[] = [
+    {
+      id: "language",
+      label: localized("Langue", "Language"),
+      value: LANGUAGES.find((item) => item.code === language)?.label ?? null,
+    },
+    {
+      id: "country",
+      label: localized("Pays", "Country"),
+      value: selectedCountry
+        ? `${px(selectedCountry.name)} \u00b7 ${selectedCountry.currency.code}`
+        : null,
+    },
+    {
+      id: "zone",
+      label: localized("Fuseau", "Time zone"),
+      value: TIMEZONES.find((zone) => zone.id === timezoneId)?.label ?? null,
+    },
+    {
+      id: "company",
+      label: localized("Entreprise", "Company"),
+      value: companyName.trim() || null,
+    },
+    {
+      id: "sector",
+      label: localized("Secteur", "Sector"),
+      value: selectedSector ? px(selectedSector.label) : null,
+    },
+    {
+      id: "activity",
+      label: localized("Activité", "Activity"),
+      value:
+        subTypes2.length > 0
+          ? subTypes2
+              .map((id) => {
+                const found = subTypes.find((item) => item.id === id)
+
+                return found ? px(found.label) : id
+              })
+              .join(", ")
+          : null,
+    },
+    {
+      id: "watch",
+      label: localized("Surveillé", "Monitored"),
+      value:
+        selectedEquipment.length > 0
+          ? tx(
+              `${selectedEquipment.length} élément${selectedEquipment.length === 1 ? "" : "s"}`,
+              `${selectedEquipment.length} item${selectedEquipment.length === 1 ? "" : "s"}`
+            )
+          : null,
+    },
+    {
+      id: "sources",
+      label: localized("Données", "Data"),
+      value: configureLater
+        ? tx("Plus tard", "Later")
+        : selectedSources.length > 0
+          ? tx(
+              `${selectedSources.length} source${selectedSources.length === 1 ? "" : "s"}`,
+              `${selectedSources.length} source${selectedSources.length === 1 ? "" : "s"}`
+            )
+          : null,
+    },
+  ]
+
+  const answeredFacts = facts.filter((fact) => Boolean(fact.value)).length
+
+  const alertHeadline = sector ? resolve(SAMPLE_ALERTS[sector], tx) : null
+
+  /* Which answer Continue is waiting on. A greyed-out button with no
+     reason beside it reads as a broken page rather than an unfinished
+     one, and the missing answer is not always on screen. */
+  const blockedReason = canContinue
+    ? null
+    : step === countryStepNumber
+      ? tx("Choisissez un pays.", "Pick a country.")
+      : step === companyStepNumber
+        ? tx(
+            "Entrez le nom de votre entreprise.",
+            "Enter your company name."
+          )
+        : step === sectorStepNumber
+          ? tx("Choisissez un secteur.", "Pick a sector.")
+          : step === subTypeStepNumber
+            ? tx(
+                "Choisissez au moins une activité.",
+                "Pick at least one activity."
+              )
+            : step === equipmentStepNumber
+              ? tx(
+                  "Sélectionnez au moins un élément.",
+                  "Select at least one item."
+                )
+              : null
+
   return (
-    <div className="fixed inset-0 z-[100] animate-in fade-in zoom-in-[0.98] overflow-y-auto bg-background duration-200 ease-out motion-reduce:animate-none">
-      <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 md:px-8 md:py-12">
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={tx("Configuration de SentrIA", "SentrIA setup")}
+      className="fixed inset-0 z-[100] flex animate-in fade-in bg-background duration-200 ease-out motion-reduce:animate-none"
+    >
+      {/* THE FORM
+          Its own column, with the header and the action bar pinned and
+          only the question scrolling between them. The step a person is
+          on and the way forward were both scrolling off the top and the
+          bottom of a step with twelve cards on it. */}
+      <div className="flex min-w-0 flex-1 flex-col">
 
-        {/* HERO
-            Shown once. Repeating a 200px welcome banner above every one
-            of eight questions pushes the actual question below the fold
-            and makes the flow feel like a brochure. After step one it
-            collapses to a single line. */}
-        {step === 1 ? (
-        <div className="rounded-3xl bg-foreground p-6 text-background md:p-10">
-          <div className="max-w-3xl">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
-              <Zap className="h-3.5 w-3.5" />
-              {tx("Bienvenue sur SentrIA", "Welcome to SentrIA")}
-            </span>
+        {/* HEADER: who is asking, and how far in */}
+        <header className="shrink-0 border-b border-border bg-card/85 px-5 pb-4 pt-5 backdrop-blur-sm md:px-8 md:pt-6">
+          <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand"
+                  aria-hidden="true"
+                >
+                  <Zap className="h-3.5 w-3.5 text-brand-foreground" />
+                </span>
 
-            <h1 className="mt-4 font-heading text-3xl font-bold tracking-tight md:text-5xl">
-              {tx(
-                "Configurez votre surveillance opérationnelle.",
-                "Set up your operational monitoring."
-              )}
-            </h1>
+                <span className="font-heading text-sm font-bold tracking-tight">
+                  SentrIA
+                </span>
 
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-background/70 md:text-base">
-              {tx(
-                "Quelques étapes suffisent pour connecter vos données, configurer votre activité et commencer à détecter les situations critiques.",
-                "A few steps connect your data, describe your operation, and start catching the situations that matter."
-              )}
-            </p>
-          </div>
-        </div>
-        ) : (
-          <div className="flex items-center gap-2.5 px-1">
-            <span
-              className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent"
-              aria-hidden="true"
-            >
-              <Zap className="h-3.5 w-3.5 text-accent-foreground" />
-            </span>
+                <span className="truncate text-sm text-muted-foreground">
+                  {tx("Configuration", "Setup")}
+                </span>
+              </div>
 
-            <span className="text-sm font-bold tracking-tight">SentrIA</span>
-
-            <span className="text-sm text-muted-foreground">
-              {tx("Configuration", "Setup")}
-            </span>
-          </div>
-        )}
-
-        {/* PROGRESS
-            One segment per step rather than eight pill cards: at four
-            steps the cards read as a map, at eight they read as a wall,
-            and the operator only needs to know where they are and how
-            much is left. The completed segments stay clickable, which
-            is what the cards were for. */}
-        <div className="rounded-3xl border border-border bg-card p-5 md:p-6">
-          <div className="flex items-end justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              {/* Visible, not sr-only. "Step 4 of 8" is the single thing
+                  that tells someone whether to keep going or come back
+                  later, and it costs one line. */}
+              <p className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
                 {tx(
                   `Étape ${step} sur ${totalSteps}`,
                   `Step ${step} of ${totalSteps}`
                 )}
               </p>
-
-              <p className="mt-1 truncate font-heading text-lg font-bold tracking-tight">
-                {currentMeta.title}
-              </p>
             </div>
 
-            <p className="shrink-0 font-heading text-2xl font-bold tabular-nums">
-              {Math.round((step / totalSteps) * 100)}
-              <span className="text-sm">%</span>
+            {/* PROGRESS
+                One segment per step. Completed segments stay clickable,
+                so going back three answers is one click rather than
+                three. They carry no text, only a label, which keeps the
+                rail out of the way of anything reading the page for
+                buttons to press. */}
+            <ol className="flex items-center gap-1.5">
+              {STEP_META.map((meta, index) => {
+                const stepNumber = index + 1
+                const done = stepNumber < step
+                const active = stepNumber === step
+                const reachable = stepNumber <= step
+
+                return (
+                  <li key={meta.title} className="flex-1">
+                    <button
+                      type="button"
+                      onClick={() => goToStep(stepNumber)}
+                      disabled={!reachable}
+                      aria-current={active ? "step" : undefined}
+                      aria-label={tx(
+                        `Étape ${stepNumber}, ${meta.title}`,
+                        `Step ${stepNumber}, ${meta.title}`
+                      )}
+                      className={cn(
+                        "block h-1.5 w-full rounded-full transition-all duration-500",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                        done && "bg-brand",
+                        active && "bg-foreground",
+                        !done && !active && "bg-muted",
+                        reachable ? "cursor-pointer" : "cursor-not-allowed"
+                      )}
+                    />
+                  </li>
+                )
+              })}
+            </ol>
+
+            {/* Heard as well as seen. Polite, and separate from the
+                heading, so it does not fight the focus move. */}
+            <p className="sr-only" role="status" aria-live="polite">
+              {tx(
+                `Étape ${step} sur ${totalSteps} : ${currentMeta.title}`,
+                `Step ${step} of ${totalSteps}: ${currentMeta.title}`
+              )}
             </p>
           </div>
+        </header>
 
-          <ol className="mt-4 flex items-center gap-1.5">
-            {STEP_META.map((meta, index) => {
-              const stepNumber = index + 1
-              const done = stepNumber < step
-              const active = stepNumber === step
-              const reachable = stepNumber <= step
-
-              return (
-                <li key={meta.title} className="flex-1">
-                  <button
-                    type="button"
-                    onClick={() => goToStep(stepNumber)}
-                    disabled={!reachable}
-                    aria-current={active ? "step" : undefined}
-                    aria-label={`Étape ${stepNumber}, ${meta.title}`}
-                    className={cn(
-                      "block h-1.5 w-full rounded-full transition-colors duration-300",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                      done && "bg-accent",
-                      active && "bg-foreground",
-                      !done && !active && "bg-muted",
-                      reachable ? "cursor-pointer" : "cursor-not-allowed"
-                    )}
-                  />
-                </li>
-              )
-            })}
-          </ol>
-
-          {/* Heard as well as seen. Polite, and separate from the
-              heading, so it does not fight the focus move. */}
-          <p className="sr-only" role="status" aria-live="polite">
-            {tx(
-              `Étape ${step} sur ${totalSteps} : ${currentMeta.title}`,
-              `Step ${step} of ${totalSteps}: ${currentMeta.title}`
-            )}
-          </p>
-        </div>
-
-        {/* CURRENT STEP */}
-        <div className="rounded-3xl border border-border bg-card p-6 md:p-8">
-          <div className="flex flex-col gap-8">
+        {/* THE QUESTION */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-7 md:px-8 md:py-10">
+          <div className="mx-auto flex w-full max-w-3xl flex-col gap-7">
 
             {/* STEP HEADER
                 The question itself, and the one element that moves when
@@ -1131,24 +1510,27 @@ export function OnboardingView({
               key={step}
               className="flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out motion-reduce:animate-none"
             >
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent/20 text-accent-foreground">
-                <CurrentStepIcon className="h-7 w-7" aria-hidden="true" />
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand/20 text-foreground md:h-14 md:w-14">
+                <CurrentStepIcon
+                  className="h-6 w-6 md:h-7 md:w-7"
+                  aria-hidden="true"
+                />
               </div>
 
               <div className="min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
                   {tx(`Étape ${step}`, `Step ${step}`)}
                 </p>
 
                 <h2
                   ref={headingRef}
                   tabIndex={-1}
-                  className="mt-1 max-w-[24ch] text-balance font-heading text-2xl font-bold tracking-tight outline-none md:text-3xl"
+                  className="mt-1.5 max-w-[24ch] text-balance font-heading text-2xl font-bold tracking-tight outline-none md:text-[2rem] md:leading-[1.15]"
                 >
                   {currentMeta.title}
                 </h2>
 
-                <p className="mt-2 max-w-[52ch] text-sm leading-6 text-muted-foreground">
+                <p className="mt-2.5 max-w-[52ch] text-sm leading-6 text-muted-foreground">
                   {currentMeta.description}
                 </p>
               </div>
@@ -1538,18 +1920,19 @@ export function OnboardingView({
                   </div>
 
                   <p className="text-xs leading-5 text-muted-foreground">
-                    Cette précision adapte les seuils d&apos;alerte
-                    à votre métier
+                    {tx(
+                      "Cette précision adapte les seuils d'alerte à votre métier",
+                      "This detail tunes the alert thresholds to your trade"
+                    )}
                   </p>
                 </div>
 
                 {isLogistics && (
                   <p className="mb-3 text-xs text-muted-foreground">
-                    Sélectionnez toutes les activités que vous exploitez.
-                    Un terminal qui manipule des conteneurs réfrigérés
-                    fait du port et de la chaîne du froid : cochez les
-                    deux et SentrIA suivra les étapes des deux, sans y
-                    ajouter celles que vous n&apos;avez pas.
+                    {tx(
+                      "Sélectionnez toutes les activités que vous exploitez. Un terminal qui manipule des conteneurs réfrigérés fait du port et de la chaîne du froid : cochez les deux et SentrIA suivra les étapes des deux, sans y ajouter celles que vous n'avez pas.",
+                      "Select every activity you run. A terminal handling refrigerated containers does both port work and cold chain: tick both and SentrIA follows the stages of both, without adding the ones you do not have."
+                    )}
                   </p>
                 )}
 
@@ -1988,13 +2371,17 @@ export function OnboardingView({
 
                     <div>
                       <p className="text-xs font-semibold text-foreground">
-                        Aucune connexion n&apos;est requise maintenant
+                        {tx(
+                          "Aucune connexion n'est requise maintenant",
+                          "No connection is needed right now"
+                        )}
                       </p>
 
                       <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
-                        SentrIA pourra être configuré avec votre ERP,
-                        vos capteurs ou vos fichiers CSV / Excel depuis
-                        votre espace, à tout moment.
+                        {tx(
+                          "SentrIA pourra être configuré avec votre ERP, vos capteurs ou vos fichiers CSV / Excel depuis votre espace, à tout moment.",
+                          "SentrIA can be connected to your ERP, your sensors or your CSV and Excel files from your own workspace, at any time."
+                        )}
                       </p>
                     </div>
                   </div>
@@ -2002,44 +2389,85 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* ACTIONS */}
-            <div className="flex flex-wrap justify-between gap-3">
-              <div>
-                {step > 1 && (
-                  <button
-                    type="button"
-                    onClick={previousStep}
-                    className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold hover:bg-muted"
-                  >
-                    {tx("Retour", "Back")}
-                  </button>
-                )}
+            {/* The same alert preview the side panel carries, for the
+                widths where there is no side panel. It only appears once
+                there is a sector to build one from. */}
+            {step >= sectorStepNumber && (
+              <div className="rounded-3xl bg-foreground p-4 text-background xl:hidden">
+                <AlertPreview
+                  tx={tx}
+                  company={companyName.trim()}
+                  sectorLabel={selectedSector ? px(selectedSector.label) : null}
+                  headline={alertHeadline}
+                />
               </div>
+            )}
+          </div>
+        </div>
 
-              {step < totalSteps ? (
+        {/* ACTION BAR
+            Pinned to the bottom of the column rather than sitting after
+            the last card. On the priorities step there are twelve cards,
+            and "Continue" was below all of them. */}
+        <footer className="shrink-0 border-t border-border bg-card/85 px-5 py-4 backdrop-blur-sm md:px-8">
+          <div className="mx-auto w-full max-w-3xl">
+            {/* A greyed-out button with no reason beside it reads as a
+                broken page. This says which answer is missing, on its
+                own line so a phone does not have to fit it between two
+                buttons. */}
+            {!canContinue && blockedReason && (
+              <p className="mb-3 text-xs leading-5 text-muted-foreground">
+                {blockedReason}
+              </p>
+            )}
+
+            <div className="flex items-center justify-between gap-4">
+              {step > 1 ? (
                 <button
                   type="button"
-                  onClick={nextStep}
-                  disabled={!canContinue}
-                  className="inline-flex items-center gap-2 rounded-full bg-foreground px-6 py-3 text-sm font-semibold text-background disabled:cursor-not-allowed disabled:opacity-40"
+                  onClick={previousStep}
+                  className="shrink-0 rounded-full border border-border px-5 py-3 text-sm font-semibold transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  {tx("Continuer", "Continue")}
-                  <ChevronRight className="h-4 w-4" />
+                  {tx("Retour", "Back")}
                 </button>
               ) : (
-                <button
-                  type="button"
-                  onClick={finish}
-                  className="inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-semibold text-accent-foreground"
-                >
-                  {tx("Ouvrir mon dashboard", "Open my dashboard")}
-                  <ArrowUpRight className="h-4 w-4" />
-                </button>
+                <span />
+              )}
+
+              {step < totalSteps ? (
+              <button
+                type="button"
+                onClick={nextStep}
+                disabled={!canContinue}
+                className="inline-flex shrink-0 items-center gap-2 rounded-full bg-foreground px-6 py-3 text-sm font-semibold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {tx("Continuer", "Continue")}
+                <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={finish}
+                className="inline-flex shrink-0 items-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                {tx("Ouvrir mon dashboard", "Open my dashboard")}
+                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              </button>
               )}
             </div>
           </div>
-        </div>
+        </footer>
       </div>
+
+      <SetupPanel
+        tx={tx}
+        facts={facts}
+        answered={answeredFacts}
+        company={companyName.trim()}
+        sectorLabel={selectedSector ? px(selectedSector.label) : null}
+        alertHeadline={alertHeadline}
+        first={step === 1}
+      />
     </div>
   )
 }

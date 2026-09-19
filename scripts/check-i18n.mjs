@@ -170,12 +170,34 @@ function blank(text) {
   return text.replace(/[^\n]/g, " ")
 }
 
+/** HTML entities, turned back into the characters they stand for.
+ *
+ *  JSX cannot carry a bare apostrophe, so every French contraction in
+ *  the markup is written "d&apos;alerte". isCode() rejects anything
+ *  holding a ";" or a "'", and an entity carries both, so a whole class
+ *  of French prose - the most common class, since "l'", "d'" and "n'"
+ *  open half the sentences in the language - was read as code and never
+ *  reported. The checker said zero while the screen said otherwise.
+ *
+ *  Decoding to the typographic forms rather than the ASCII ones is
+ *  deliberate: a "'" would trip isCode() again. */
+function decodeEntities(text) {
+  return text
+    .replace(/&(?:apos|#39|#x27|rsquo|lsquo);/gi, "\u2019")
+    .replace(/&(?:quot|#34|ldquo|rdquo);/gi, "\u201d")
+    .replace(/&(?:nbsp|#160);/gi, " ")
+    .replace(/&(?:hellip|#8230);/gi, "\u2026")
+    .replace(/&(?:mdash|ndash);/gi, "\u2013")
+    .replace(/&(?:amp|#38);/gi, "&")
+}
+
 /** Does this text between a ">" and a "<" read as code rather than copy?
  *
  *  Only shapes UI copy never has: an assignment, a statement separator, a
  *  fat arrow, a quoted string, a hook call. A sentence with an equals
  *  sign in it would be missed, and that is the trade this makes. */
-function isCode(text) {
+function isCode(raw) {
+  const text = decodeEntities(raw)
   const trimmed = text.trim()
 
   return (
@@ -371,8 +393,16 @@ function findings(file) {
 
         The first version only matched ">...<" with no braces inside, so
         that whole line was invisible and the onboarding step counter
-        stayed French in an English wizard. */
-  const jsxRe = /[>}]([^<>{}]{4,200})[<{]/g
+        stayed French in an English wizard.
+
+        The ceiling was 200 characters, which sounds generous until the
+        run includes the indentation of every wrapped line: a four-line
+        paragraph in a nested component spends more than half its budget
+        on leading spaces, overflows, and is never reported. A match can
+        never cross a tag, because "<" and ">" end it, so there is no
+        run to protect against - the cap was guarding nothing and
+        hiding the longest strings in the app. */
+  const jsxRe = /[>}]([^<>{}]{4,2000})[<{]/g
   while (hasJsx && (m = jsxRe.exec(code))) {
     if (inSpans(m.index, skip)) {
       jsxRe.lastIndex -= 1
