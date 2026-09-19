@@ -56,6 +56,7 @@ export const fr = {
   /* ---------------------------------------------------------------- */
 
   "nav.dashboard": "Dashboard",
+  "nav.calendar": "Calendrier",
   "nav.sites": "Sites",
   "nav.contractors": "Intervenants",
   "nav.ask": "Ask SentrIA",
@@ -89,6 +90,9 @@ export const fr = {
 
   "view.dashboard.title": "Dashboard",
   "view.dashboard.subtitle": "Vue globale des opérations",
+
+  "view.calendar.title": "Calendrier",
+  "view.calendar.subtitle": "Échéances, seuils critiques et incidents à venir",
 
   "view.sites.title": "Sites",
   "view.sites.subtitle": "Gérez vos usines, ateliers et clients",

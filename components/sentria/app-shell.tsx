@@ -9,6 +9,7 @@ import { Sidebar } from "./sidebar"
 import type { ViewKey } from "./types"
 import { Topbar } from "./topbar"
 import { DashboardView } from "./dashboard-view"
+import { CalendarView } from "./calendar-view"
 import { SitesView } from "./sites-view"
 import { AskView } from "./ask-view"
 import { PricingView } from "./pricing-view"
@@ -24,6 +25,10 @@ const META: Record<ViewKey, { title: MessageKey; subtitle: MessageKey }> = {
   dashboard: {
     title: "view.dashboard.title",
     subtitle: "view.dashboard.subtitle",
+  },
+  calendar: {
+    title: "view.calendar.title",
+    subtitle: "view.calendar.subtitle",
   },
   sites: {
     title: "view.sites.title",
@@ -152,6 +157,7 @@ export function AppShell() {
 
           <main className="flex-1 overflow-y-auto p-4 lg:p-8">
             {view === "dashboard" && <DashboardView search={search} />}
+            {view === "calendar" && <CalendarView />}
             {view === "sites" && <SitesView />}
             {view === "ask" && <AskView />}
             {view === "pricing" && <PricingView />}

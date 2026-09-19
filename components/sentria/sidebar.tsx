@@ -4,6 +4,7 @@ import type { ViewKey } from "./types"
 import { useT, type MessageKey } from "@/lib/i18n"
 import {
   LayoutDashboard,
+  CalendarDays,
   Factory,
   Sparkles,
   FileBarChart,
@@ -45,6 +46,11 @@ const sections: {
         id: "dashboard",
         label: "nav.dashboard",
         icon: LayoutDashboard,
+      },
+      {
+        id: "calendar",
+        label: "nav.calendar",
+        icon: CalendarDays,
       },
       {
         id: "sites",

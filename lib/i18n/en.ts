@@ -35,6 +35,7 @@ export const en: Record<keyof typeof fr, string> = {
   /* ---------------------------------------------------------------- */
 
   "nav.dashboard": "Dashboard",
+  "nav.calendar": "Calendar",
   "nav.sites": "Sites",
   /* Not "Contractors" alone: the list holds anyone who can be sent out,
      staff included. "Field team" says that and stays short in a rail. */
@@ -67,6 +68,9 @@ export const en: Record<keyof typeof fr, string> = {
 
   "view.dashboard.title": "Dashboard",
   "view.dashboard.subtitle": "Your operations at a glance",
+
+  "view.calendar.title": "Calendar",
+  "view.calendar.subtitle": "Upcoming deadlines, critical thresholds and incidents",
 
   "view.sites.title": "Sites",
   "view.sites.subtitle": "Manage your plants, depots and customers",
