@@ -41,7 +41,7 @@ import {
   type OpsType,
   type PrimitiveId,
 } from "@/lib/logistics-signals"
-import { useTx } from "@/lib/i18n"
+import { resolve, useTx } from "@/lib/i18n"
 
 /* --------------------------------------------------------------------------
  * "Éviter les blocages".
@@ -368,10 +368,7 @@ export function LogisticsBlockagesView({
                 TONE_CHIP[selected.status]
               )}
             >
-              {tx(
-                STATUS_WORDS[selected.status].fr,
-                STATUS_WORDS[selected.status].en
-              )}
+              {resolve(STATUS_WORDS[selected.status], tx, selected.status)}
             </span>
           </div>
 

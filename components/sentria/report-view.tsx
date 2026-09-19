@@ -21,7 +21,7 @@ import { readCompanyName, readTimezoneId } from "@/lib/company"
 import { buildReport } from "@/lib/report"
 import type { LogisticsAlert } from "@/lib/logistics-signals"
 import { cn } from "@/lib/utils"
-import { localized, useTx, type Localized } from "@/lib/i18n"
+import { localized, resolve, useTx, type Localized } from "@/lib/i18n"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -444,9 +444,10 @@ function AlertsTable({ alerts }: { alerts: AlertRow[] }) {
                           SEVERITY_DOT[alert.severity]
                         )}
                       />
-                      {tx(
-                        SEVERITY_LABEL[alert.severity].fr,
-                        SEVERITY_LABEL[alert.severity].en
+                      {resolve(
+                        SEVERITY_LABEL[alert.severity],
+                        tx,
+                        alert.severity
                       )}
                     </span>
                   </td>

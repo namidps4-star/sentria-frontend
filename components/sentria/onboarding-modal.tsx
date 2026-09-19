@@ -24,7 +24,7 @@ import {
   Store,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { localized, useTx, type Localized, type Tx } from "@/lib/i18n"
+import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
 import { API_BASE } from "@/lib/api"
 import {
   detectTimezoneId,
@@ -424,7 +424,7 @@ function ActivityFlowPreview({
               )}
             >
               <p className="w-14 shrink-0 px-0.5 text-center text-[10px] font-semibold leading-tight">
-                {tx(PRIMITIVE_NAMES[id].fr, PRIMITIVE_NAMES[id].en)}
+                {resolve(PRIMITIVE_NAMES[id], tx, id)}
               </p>
 
               {index < chain.length - 1 && (
@@ -499,7 +499,7 @@ export function OnboardingView({
 
   /** Resolve a module-level fr/en pair. The sector, priority and source
    *  catalogues are built outside React, so they hold pairs. */
-  const px = (text: Localized) => tx(text.fr, text.en)
+  const px = (text: Localized | undefined) => resolve(text, tx)
 
   /** A sector's display name, falling back to its id so a stale id saved
    *  by an older build still renders as something. */

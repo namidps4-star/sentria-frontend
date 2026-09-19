@@ -28,7 +28,7 @@ import {
   type Contractor,
 } from "@/lib/crm"
 import { formatMoney, useLocale } from "@/lib/locale"
-import { localized, useTx, type Localized, type Tx } from "@/lib/i18n"
+import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
 
 type Recommendation = {
   id: string
@@ -206,6 +206,26 @@ function defaultTask(rec: Recommendation): TaskMeta {
   }
 }
 
+const STATUSES: Status[] = ["todo", "in_progress", "done"]
+const PRIORITIES: Priority[] = ["low", "medium", "high", "critical"]
+
+/** Narrow a value that came from the server or from an older build's
+ *  localStorage, rather than asserting it.
+ *
+ *  `(row.status ?? "todo") as Status` was a lie: any other string passed
+ *  straight through and every catalogue lookup keyed on it then missed.
+ *  That used to render as nothing; once the catalogues held fr/en pairs it
+ *  threw on the missing pair and took the board down. */
+function asStatus(value: unknown): Status {
+  return STATUSES.includes(value as Status) ? (value as Status) : "todo"
+}
+
+function asPriority(value: unknown): Priority {
+  return PRIORITIES.includes(value as Priority)
+    ? (value as Priority)
+    : "medium"
+}
+
 function taskMapFrom(rows: Assignment[]): Record<string, TaskMeta> {
   const map: Record<string, TaskMeta> = {}
 
@@ -213,10 +233,10 @@ function taskMapFrom(rows: Assignment[]): Record<string, TaskMeta> {
     if (!row?.task_key) continue
 
     map[row.task_key] = {
-      status: (row.status ?? "todo") as Status,
+      status: asStatus(row.status),
       contractor_id: row.contractor_id ?? null,
       deadline: row.deadline ?? null,
-      priority: (row.priority ?? "medium") as Priority,
+      priority: asPriority(row.priority),
     }
   }
 
@@ -343,7 +363,7 @@ export function RecommendationsBoard({
   const tx = useTx()
 
   /** Resolve a module-level pair. */
-  const px = (text: Localized) => tx(text.fr, text.en)
+  const px = (text: Localized | undefined) => resolve(text, tx)
 
   /* The company name is the partition these rows live under. It is read
      after mount, like every other stored value in the app, so the first
@@ -407,8 +427,8 @@ export function RecommendationsBoard({
 
           const result = await saveAssignment(companyName, {
             task_key: key,
-            status: (task.status ?? "todo") as Status,
-            priority: (task.priority ?? "medium") as Priority,
+            status: asStatus(task.status),
+            priority: asPriority(task.priority),
             deadline: task.deadline ?? null,
             /* The old shape called this "assignee" and its values were
                never real contractor ids, so they cannot be carried over
@@ -929,7 +949,10 @@ export function RecommendationsBoard({
                         )}
 
                         <span className="rounded-md border border-border bg-background/60 px-2 py-1 text-[9px] font-medium text-muted-foreground">
-                          {px(PRIORITY_LABEL[task.priority])}
+                          {px(
+                            PRIORITY_LABEL[task.priority] ??
+                              PRIORITY_LABEL.medium
+                          )}
                         </span>
                       </div>
 
@@ -1087,7 +1110,8 @@ export function RecommendationsBoard({
                               <option key={person.id} value={person.id}>
                                 {person.name}
                                 {" · "}
-                                {px(AVAILABILITY_LABEL[person.availability])}
+                                {px(AVAILABILITY_LABEL[person.availability]) ||
+                                  person.availability}
                                 {person.open_assignments > 0 &&
                                   tx(
                                     ` · ${person.open_assignments} en cours`,

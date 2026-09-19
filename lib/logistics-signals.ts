@@ -13,7 +13,7 @@
  * rate and the arithmetic is shown to the user rather than baked in.
  */
 
-import { localized, type Localized, type Tx } from "@/lib/i18n"
+import { localized, resolve, type Localized, type Tx } from "@/lib/i18n"
 
 export type OpsType =
   | "port"
@@ -114,7 +114,7 @@ export function opsLabelFor(
   tx: Tx,
   selected: Exclude<OpsType, "multi">[] = []
 ): string | undefined {
-  const name = (type: OpsType) => tx(OPS_LABELS[type].fr, OPS_LABELS[type].en)
+  const name = (type: OpsType) => resolve(OPS_LABELS[type], tx, type)
 
   if (!opsType) return undefined
 
@@ -615,17 +615,19 @@ export function hoursSince(iso: string): number | null {
 /** Resolve a catalogue pair. The stage names, metric labels, units,
  *  rate labels and status words are module constants, so they hold pairs
  *  and every derivation below takes the translator that resolves them. */
-function px(text: Localized, tx: Tx): string {
-  return tx(text.fr, text.en)
+function px(text: Localized | undefined, tx: Tx, fallback = ""): string {
+  return resolve(text, tx, fallback)
 }
 
 /** A stage's name, or the words for a reading that sits on no stage of
  *  this chain. Written once because three derivations needed it and each
  *  had its own copy of "Hors chaîne". */
 function stageName(stage: PrimitiveId | undefined, tx: Tx): string {
-  return stage
-    ? px(PRIMITIVE_NAMES[stage], tx)
-    : tx("Hors chaîne", "Off the chain")
+  if (!stage) return tx("Hors chaîne", "Off the chain")
+
+  /* Falls back to the raw stage id rather than to blank: an unnamed stage
+     is a gap in PRIMITIVE_NAMES worth seeing, not worth hiding. */
+  return px(PRIMITIVE_NAMES[stage], tx, stage)
 }
 
 export function severityRank(severity: string): number {
@@ -730,7 +732,7 @@ export function deriveStages(
 
     return {
       id,
-      name: px(PRIMITIVE_NAMES[id], tx),
+      name: px(PRIMITIVE_NAMES[id], tx, id),
       status,
       alerts: stageAlerts,
       risk: stageAlerts.length > 0 ? Math.max(...stageAlerts.map(riskOf)) : 0,

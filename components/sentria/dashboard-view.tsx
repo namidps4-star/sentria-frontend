@@ -19,7 +19,7 @@ import {
 } from "lucide-react"
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
-import { localized, useTx, type Localized, type Tx } from "@/lib/i18n"
+import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
 import { computeConfidence, confidenceWord } from "@/lib/confidence"
 import { LogisticsBlockagesView } from "./logistics-blockages-view"
 import { LogisticsWaitingView } from "./logistics-waiting-view"
@@ -1023,7 +1023,7 @@ export function DashboardView({
    *  The label catalogues at the top of this file are built outside
    *  React, so they hold pairs rather than strings. This is the one place
    *  a pair becomes a single language. */
-  const px = (text: Localized) => tx(text.fr, text.en)
+  const px = (text: Localized | undefined) => resolve(text, tx)
 
   /** The locale every date and time on this screen is formatted in.
    *

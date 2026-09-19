@@ -31,7 +31,7 @@ import {
   type LogisticsAlert,
   type OpsType,
 } from "@/lib/logistics-signals"
-import { useTx } from "@/lib/i18n"
+import { resolve, useTx } from "@/lib/i18n"
 import { formatMoney, useLocale } from "@/lib/locale"
 
 /* --------------------------------------------------------------------------
@@ -360,7 +360,7 @@ export function LogisticsCostView({
                 className="rounded-2xl border border-border bg-muted/30 p-3"
               >
                 <span className="block text-xs font-semibold">
-                  {tx(RATE_LABELS[key].fr, RATE_LABELS[key].en)}
+                  {resolve(RATE_LABELS[key], tx, key)}
                 </span>
 
                 <span className="mt-0.5 block text-[11px] text-muted-foreground">
@@ -486,10 +486,7 @@ export function LogisticsCostView({
             <div key={entry.kind}>
               <div className="flex items-baseline justify-between gap-3">
                 <p className="text-sm font-semibold">
-                  {tx(
-                    RATE_LABELS[entry.kind].fr,
-                    RATE_LABELS[entry.kind].en
-                  )}
+                  {resolve(RATE_LABELS[entry.kind], tx, entry.kind)}
 
                   <span className="ml-2 text-xs font-normal text-muted-foreground">
                     {tx(

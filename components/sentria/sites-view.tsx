@@ -27,7 +27,7 @@ import {
   Zap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { localized, useTx, type Localized, type Tx } from "@/lib/i18n"
+import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
 
 type Sector =
   | "industry"
@@ -194,7 +194,7 @@ export function SitesView() {
   const tx = useTx()
 
   /** Resolve a module-level pair. */
-  const px = (text: Localized) => tx(text.fr, text.en)
+  const px = (text: Localized | undefined) => resolve(text, tx)
 
   const [sites, setSites] = useState<Site[]>(
     INITIAL_SITES

@@ -19,7 +19,7 @@ import {
   Warehouse,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { useTx } from "@/lib/i18n"
+import { resolve, useTx } from "@/lib/i18n"
 import {
   STATUS_WORDS,
   type PrimitiveId,
@@ -100,7 +100,7 @@ export function FlowTrack({
   const statusWord = (status: StageStatus, blocking: boolean) =>
     blocking
       ? tx("Bloquante", "Blocking")
-      : tx(STATUS_WORDS[status].fr, STATUS_WORDS[status].en)
+      : resolve(STATUS_WORDS[status], tx, status)
 
   return (
     <div className={cn("w-full", className)}>

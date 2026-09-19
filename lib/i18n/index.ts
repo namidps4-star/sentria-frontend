@@ -20,12 +20,12 @@
 import { en } from "./en"
 import { fr } from "./fr"
 import { useLocale, type LanguageCode } from "@/lib/locale"
-import { localized, type Localized, type Tx } from "./pair"
+import { localized, resolve, type Localized, type Tx } from "./pair"
 
 /* Re-exported so every caller keeps one import for the whole thing. They
    live in ./pair because lib/locale.ts holds catalogues of pairs and
    importing them from here would be a cycle. */
-export { localized, type Localized, type Tx }
+export { localized, resolve, type Localized, type Tx }
 
 export type MessageKey = keyof typeof fr
 

@@ -21,7 +21,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { computeConfidence, confidenceWord } from "@/lib/confidence"
-import { localized, useTx, type Localized, type Tx } from "@/lib/i18n"
+import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
 
 type Alert = {
   equipment: string
@@ -253,7 +253,7 @@ export function RecommendationsPanel({
   const tx = useTx()
 
   /** Resolve a module-level pair. */
-  const px = (text: Localized) => tx(text.fr, text.en)
+  const px = (text: Localized | undefined) => resolve(text, tx)
 
   /*
    * Closing the decision loop: once someone acts on a priority, SentrIA

@@ -24,7 +24,7 @@ import {
   type Contractor,
 } from "@/lib/crm"
 import { cn } from "@/lib/utils"
-import { useTx, type Localized } from "@/lib/i18n"
+import { useTx, type Localized, resolve } from "@/lib/i18n"
 import type { ViewKey } from "./types"
 
 /* --------------------------------------------------------------------------
@@ -71,7 +71,7 @@ export function ContractorsView({
   const tx = useTx()
 
   /** Resolve a module-level pair. */
-  const px = (text: Localized) => tx(text.fr, text.en)
+  const px = (text: Localized | undefined) => resolve(text, tx)
 
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -537,7 +537,7 @@ export function ContractorsView({
                             : "text-muted-foreground hover:bg-muted"
                         )}
                       >
-                        {px(AVAILABILITY_LABEL[value])}
+                        {px(AVAILABILITY_LABEL[value]) || value}
                       </button>
                     )
                   })}
