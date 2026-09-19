@@ -517,60 +517,6 @@ function CardTick() {
   )
 }
 
-/* ------------------------------------------------------------------ */
-/* THE SETUP PANEL                                                     */
-/*                                                                     */
-/* The wizard used to be eight questions stacked on a page, and the    */
-/* only sign that any of them mattered arrived after the last one. An  */
-/* operator answering "Bénin" had no way to know the euro had just     */
-/* become a CFA franc, so the questions read as paperwork.             */
-/*                                                                     */
-/* This panel is the other half of the split: every answer lands in it */
-/* the moment it is given, and from the sector step on it shows the    */
-/* actual thing being configured - an alert, in their words, with      */
-/* their company's name on it. The value the product promises is       */
-/* visible inside setup instead of after it.                           */
-/* ------------------------------------------------------------------ */
-
-type Fact = {
-  id: string
-  label: Localized
-  value: string | null
-}
-
-/** One answered-or-waiting line. The dot is decoration; the state is
- *  carried by the value's own weight and colour, so it survives a
- *  viewer who cannot separate lime from grey. */
-function FactRow({ fact, tx }: { fact: Fact; tx: Tx }) {
-  const answered = Boolean(fact.value)
-
-  return (
-    <li className="flex items-baseline justify-between gap-4 border-b border-background/10 py-2.5 last:border-0">
-      <span className="flex shrink-0 items-center gap-2.5 text-xs text-background/70">
-        <span
-          aria-hidden="true"
-          className={cn(
-            "h-1.5 w-1.5 shrink-0 rounded-full transition-colors duration-500",
-            answered ? "bg-brand" : "bg-background/35"
-          )}
-        />
-        {resolve(fact.label, tx)}
-      </span>
-
-      <span
-        className={cn(
-          "min-w-0 truncate text-right text-sm transition-colors duration-500",
-          answered
-            ? "font-semibold text-background"
-            : "text-background/45"
-        )}
-      >
-        {fact.value ?? tx("À venir", "Not yet")}
-      </span>
-    </li>
-  )
-}
-
 /** What SentrIA will actually send, rendered in the operator's own
  *  words before they have finished setting it up. */
 function AlertPreview({
@@ -626,117 +572,6 @@ function AlertPreview({
   )
 }
 
-/** The right-hand half of the wizard.
- *
- *  An <aside> on purpose. It is complementary to the form rather than
- *  part of it, and the onboarding smoke test walks the wizard by
- *  clicking buttons, skipping anything inside an aside - so a panel
- *  that reflects the form must never be mistaken for the form. */
-function SetupPanel({
-  tx,
-  facts,
-  answered,
-  company,
-  sectorLabel,
-  alertHeadline,
-  first,
-}: {
-  tx: Tx
-  facts: Fact[]
-  answered: number
-  company: string
-  sectorLabel: string | null
-  alertHeadline: string | null
-  /** True on the opening step, where the panel welcomes rather than
-   *  reports. A 200px welcome banner above all eight questions pushes
-   *  every question below the fold; the same words on the panel that is
-   *  already there cost no vertical space at all. */
-  first: boolean
-}) {
-  return (
-    <aside className="relative hidden w-[42%] shrink-0 overflow-hidden bg-foreground text-background lg:block">
-      {/* Depth, not decoration for its own sake: two soft lime pools
-          and a faint rule grid, so the panel reads as a lit surface
-          rather than a flat block of colour. Static - a panel that
-          breathes behind a form the operator is reading is the first
-          thing to feel cheap. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(75% 50% at 82% 4%, color-mix(in oklab, var(--brand) 40%, transparent) 0%, transparent 60%), radial-gradient(65% 45% at 4% 96%, color-mix(in oklab, var(--brand) 18%, transparent) 0%, transparent 70%)",
-        }}
-      />
-
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.06]"
-        style={{
-          backgroundImage:
-            "linear-gradient(var(--color-background) 1px, transparent 1px), linear-gradient(90deg, var(--color-background) 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
-        }}
-      />
-
-      <div className="relative flex h-full flex-col justify-between gap-8 overflow-y-auto p-8 xl:p-10">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-background/60">
-            {first
-              ? tx("Bienvenue sur SentrIA", "Welcome to SentrIA")
-              : tx("Aperçu", "Preview")}
-          </p>
-
-          <h2 className="mt-3 max-w-[16ch] text-balance font-heading text-2xl font-bold leading-tight tracking-tight xl:text-3xl">
-            {first
-              ? tx(
-                  "Configurez votre surveillance opérationnelle.",
-                  "Set up your operational monitoring."
-                )
-              : tx(
-                  "Votre SentrIA prend forme.",
-                  "Your SentrIA is taking shape."
-                )}
-          </h2>
-
-          <p className="mt-3 max-w-[34ch] text-sm leading-6 text-background/70">
-            {first
-              ? tx(
-                  "Huit questions. Elles connectent vos données, décrivent votre activité, et SentrIA commence à repérer ce qui compte.",
-                  "Eight questions. They connect your data, describe your operation, and SentrIA starts catching what matters."
-                )
-              : tx(
-                  "Chaque réponse arrive ici. Rien n'est envoyé tant que vous n'avez pas terminé.",
-                  "Every answer lands here. Nothing is sent until you are done."
-                )}
-          </p>
-        </div>
-
-        <ul className="min-w-0">
-          {facts.map((fact) => (
-            <FactRow key={fact.id} fact={fact} tx={tx} />
-          ))}
-        </ul>
-
-        <div>
-          <AlertPreview
-            tx={tx}
-            company={company}
-            sectorLabel={sectorLabel}
-            headline={alertHeadline}
-          />
-
-          <p className="mt-4 text-[11px] leading-5 text-background/60">
-            {tx(
-              `${answered} réponse${answered === 1 ? "" : "s"} sur ${facts.length} enregistrée${answered === 1 ? "" : "s"}.`,
-              `${answered} of ${facts.length} answer${answered === 1 ? "" : "s"} recorded.`
-            )}
-          </p>
-        </div>
-      </div>
-    </aside>
-  )
-}
 
 export function OnboardingView({
   onComplete,
@@ -1300,78 +1135,6 @@ export function OnboardingView({
               ? selectedEquipment.length > 0
               : true
 
-  /* Everything answered so far, in the order it was asked, for the
-     panel beside the form. A null value is a question still ahead of
-     the operator, not one they skipped. */
-  const facts: Fact[] = [
-    {
-      id: "language",
-      label: localized("Langue", "Language"),
-      value: LANGUAGES.find((item) => item.code === language)?.label ?? null,
-    },
-    {
-      id: "country",
-      label: localized("Pays", "Country"),
-      value: selectedCountry
-        ? `${px(selectedCountry.name)} \u00b7 ${selectedCountry.currency.code}`
-        : null,
-    },
-    {
-      id: "zone",
-      label: localized("Fuseau", "Time zone"),
-      value: TIMEZONES.find((zone) => zone.id === timezoneId)?.label ?? null,
-    },
-    {
-      id: "company",
-      label: localized("Entreprise", "Company"),
-      value: companyName.trim() || null,
-    },
-    {
-      id: "sector",
-      label: localized("Secteur", "Sector"),
-      value: selectedSector ? px(selectedSector.label) : null,
-    },
-    {
-      id: "activity",
-      label: localized("Activité", "Activity"),
-      value:
-        subTypes2.length > 0
-          ? subTypes2
-              .map((id) => {
-                const found = subTypes.find((item) => item.id === id)
-
-                return found ? px(found.label) : id
-              })
-              .join(", ")
-          : null,
-    },
-    {
-      id: "watch",
-      label: localized("Surveillé", "Monitored"),
-      value:
-        selectedEquipment.length > 0
-          ? tx(
-              `${selectedEquipment.length} élément${selectedEquipment.length === 1 ? "" : "s"}`,
-              `${selectedEquipment.length} item${selectedEquipment.length === 1 ? "" : "s"}`
-            )
-          : null,
-    },
-    {
-      id: "sources",
-      label: localized("Données", "Data"),
-      value: configureLater
-        ? tx("Plus tard", "Later")
-        : selectedSources.length > 0
-          ? tx(
-              `${selectedSources.length} source${selectedSources.length === 1 ? "" : "s"}`,
-              `${selectedSources.length} source${selectedSources.length === 1 ? "" : "s"}`
-            )
-          : null,
-    },
-  ]
-
-  const answeredFacts = facts.filter((fact) => Boolean(fact.value)).length
-
   const alertHeadline = sector ? resolve(SAMPLE_ALERTS[sector], tx) : null
 
   /* Which answer Continue is waiting on. A greyed-out button with no
@@ -1784,7 +1547,7 @@ export function OnboardingView({
                       }
                       aria-pressed={active || secondary}
                       className={cn(
-                        "relative flex w-[calc(50%-6px)] flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all sm:w-[calc(33.333%-8px)] lg:w-[calc(25%-9px)]",
+                        "relative flex w-[calc(50%-6px)] flex-col items-start gap-1 rounded-3xl border p-5 text-left shadow-sm transition-all sm:w-[calc(33.333%-8px)] lg:w-[calc(25%-9px)]",
                         item.recommended &&
                           !active &&
                           !secondary &&
@@ -1813,15 +1576,31 @@ export function OnboardingView({
                         </span>
                       )}
 
-                      <div className="flex w-full items-center justify-between">
-                        <Icon className="h-5 w-5" />
+                      {/* Selection badge: a filled circle overlapping the
+                          card's corner, the way a checked choice-card
+                          reads in the reference model, instead of an
+                          inline check next to the icon. */}
+                      {(active || secondary) && (
+                        <span
+                          className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-accent-foreground ring-2 ring-background"
+                          aria-hidden="true"
+                        >
+                          <Check className="h-3 w-3" strokeWidth={3} />
+                        </span>
+                      )}
 
-                        {(active || secondary) && (
-                          <Check className="h-4 w-4" />
+                      <span
+                        className={cn(
+                          "flex h-9 w-9 items-center justify-center rounded-xl",
+                          active
+                            ? "bg-background/15"
+                            : "bg-accent/15 text-accent-foreground"
                         )}
-                      </div>
+                      >
+                        <Icon className="h-4.5 w-4.5" />
+                      </span>
 
-                      <span className="mt-2 text-sm font-semibold">
+                      <span className="mt-2.5 text-sm font-semibold">
                         {px(item.label)}
                       </span>
 
@@ -2439,7 +2218,7 @@ export function OnboardingView({
                 type="button"
                 onClick={nextStep}
                 disabled={!canContinue}
-                className="inline-flex shrink-0 items-center gap-2 rounded-full bg-foreground px-6 py-3 text-sm font-semibold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex shrink-0 items-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {tx("Continuer", "Continue")}
                 <ChevronRight className="h-4 w-4" aria-hidden="true" />
@@ -2459,15 +2238,6 @@ export function OnboardingView({
         </footer>
       </div>
 
-      <SetupPanel
-        tx={tx}
-        facts={facts}
-        answered={answeredFacts}
-        company={companyName.trim()}
-        sectorLabel={selectedSector ? px(selectedSector.label) : null}
-        alertHeadline={alertHeadline}
-        first={step === 1}
-      />
     </div>
   )
 }
