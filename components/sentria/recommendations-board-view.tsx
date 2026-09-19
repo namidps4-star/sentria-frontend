@@ -702,7 +702,7 @@ export function RecommendationsBoard({
                 {tx("Exposition", "Exposure")}
               </dt>
               <dd className="mt-1 font-heading text-3xl font-bold tabular-nums">
-                {formatMoney(totalExposure, currency)}
+                {formatMoney(totalExposure, currency, tx)}
               </dd>
             </div>
           )}
@@ -886,7 +886,7 @@ export function RecommendationsBoard({
 
                       {(rec.exposureEUR ?? 0) > 0 && (
                         <p className="mt-2 text-xs font-bold tabular-nums">
-                          {formatMoney(rec.exposureEUR!, currency)} exposés
+                          {formatMoney(rec.exposureEUR!, currency, tx)} exposés
                         </p>
                       )}
 

@@ -21,6 +21,7 @@ import { readCompanyName, readTimezoneId } from "@/lib/company"
 import { buildReport } from "@/lib/report"
 import type { LogisticsAlert } from "@/lib/logistics-signals"
 import { cn } from "@/lib/utils"
+import { localized, useTx, type Localized } from "@/lib/i18n"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -80,21 +81,44 @@ interface ReportData {
 
 const MONITORING_META: Record<
   MonitoringKey,
-  { label: string; icon: React.ElementType; unit?: string }
+  { label: Localized; icon: React.ElementType; unit?: string }
 > = {
-  equipment: { label: "Machines & équipements", icon: Settings2 },
-  fleet: { label: "Flottes & véhicules", icon: Truck },
-  inventory: { label: "Stocks & inventaires", icon: Boxes },
-  energy: { label: "Énergie & consommation", icon: BatteryCharging, unit: "kWh" },
-  conditions: { label: "Température & conditions", icon: Thermometer, unit: "°C" },
-  maintenance: { label: "Maintenance", icon: Wrench },
-  risks: { label: "Risques & anomalies", icon: ShieldAlert },
+  equipment: {
+    label: localized("Machines & équipements", "Machines & equipment"),
+    icon: Settings2,
+  },
+  fleet: {
+    label: localized("Flottes & véhicules", "Fleets & vehicles"),
+    icon: Truck,
+  },
+  inventory: {
+    label: localized("Stocks & inventaires", "Stock & inventory"),
+    icon: Boxes,
+  },
+  energy: {
+    label: localized("Énergie & consommation", "Energy & consumption"),
+    icon: BatteryCharging,
+    unit: "kWh",
+  },
+  conditions: {
+    label: localized("Température & conditions", "Temperature & conditions"),
+    icon: Thermometer,
+    unit: "°C",
+  },
+  maintenance: {
+    label: localized("Maintenance", "Maintenance"),
+    icon: Wrench,
+  },
+  risks: {
+    label: localized("Risques & anomalies", "Risks & anomalies"),
+    icon: ShieldAlert,
+  },
 }
 
-const SEVERITY_LABEL: Record<Severity, string> = {
-  critical: "Critique",
-  warning: "Attention",
-  info: "Info",
+const SEVERITY_LABEL: Record<Severity, Localized> = {
+  critical: localized("Critique", "Critical"),
+  warning: localized("Attention", "Attention"),
+  info: localized("Info", "Info"),
 }
 
 const SEVERITY_DOT: Record<Severity, string> = {
@@ -131,11 +155,13 @@ function DeltaBadge({
   unit?: string
   higherIsBetter?: boolean
 }) {
+  const tx = useTx()
+
   if (delta === 0) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
         <Minus className="h-3 w-3" aria-hidden="true" />
-        stable
+        {tx("stable", "steady")}
       </span>
     )
   }
@@ -263,6 +289,8 @@ function TrendCard({
   monitoringKey: MonitoringKey
   data: TrendPoint[]
 }) {
+  const tx = useTx()
+
   const meta = MONITORING_META[monitoringKey]
   const Icon = meta.icon
   const last = data[data.length - 1]?.value ?? 0
@@ -281,7 +309,9 @@ function TrendCard({
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10 text-accent">
             <Icon className="h-4 w-4" />
           </div>
-          <p className="text-sm font-semibold">{meta.label}</p>
+          <p className="text-sm font-semibold">
+            {tx(meta.label.fr, meta.label.en)}
+          </p>
         </div>
         <DeltaBadge delta={delta} higherIsBetter={false} />
       </div>
@@ -317,19 +347,21 @@ function TrendCard({
 // ---------------------------------------------------------------------------
 
 function AlertsTable({ alerts }: { alerts: AlertRow[] }) {
+  const tx = useTx()
+
   const [filter, setFilter] = useState<"all" | AlertStatus>("all")
   const visible = alerts.filter((a) => filter === "all" || a.status === filter)
 
   const filters: { key: "all" | AlertStatus; label: string }[] = [
-    { key: "all", label: "Toutes" },
-    { key: "open", label: "Ouvertes" },
-    { key: "resolved", label: "Résolues" },
+    { key: "all", label: tx("Toutes", "All") },
+    { key: "open", label: tx("Ouvertes", "Open") },
+    { key: "resolved", label: tx("Résolues", "Resolved") },
   ]
 
   return (
     <div className="rounded-2xl border border-border bg-card">
       <div className="flex items-center justify-between px-5 py-4">
-        <SectionLabel>Alertes & anomalies</SectionLabel>
+        <SectionLabel>{tx("Alertes & anomalies", "Alerts & anomalies")}</SectionLabel>
 
         <div className="flex gap-4 print:hidden">
           {filters.map((f) => (
@@ -355,22 +387,22 @@ function AlertsTable({ alerts }: { alerts: AlertRow[] }) {
           <thead>
             <tr className="border-b border-border text-left">
               <th className="whitespace-nowrap px-5 py-2.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Horodatage
+                {tx("Horodatage", "Timestamp")}
               </th>
               <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Site
+                {tx("Site", "Site")}
               </th>
               <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Catégorie
+                {tx("Catégorie", "Category")}
               </th>
               <th className="px-3 py-2.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Description
+                {tx("Description", "Description")}
               </th>
               <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Gravité
+                {tx("Gravité", "Severity")}
               </th>
               <th className="whitespace-nowrap px-5 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Statut
+                {tx("Statut", "Status")}
               </th>
             </tr>
           </thead>
@@ -381,7 +413,7 @@ function AlertsTable({ alerts }: { alerts: AlertRow[] }) {
                   colSpan={6}
                   className="px-5 py-8 text-center text-sm text-muted-foreground"
                 >
-                  Aucune alerte pour ce filtre.
+                  {tx("Aucune alerte pour ce filtre.", "No alert matches this filter.")}
                 </td>
               </tr>
             )}
@@ -401,7 +433,7 @@ function AlertsTable({ alerts }: { alerts: AlertRow[] }) {
                     {alert.site}
                   </td>
                   <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">
-                    {meta.label}
+                    {tx(meta.label.fr, meta.label.en)}
                   </td>
                   <td className="px-3 py-3">{alert.message}</td>
                   <td className="whitespace-nowrap px-3 py-3">
@@ -412,7 +444,10 @@ function AlertsTable({ alerts }: { alerts: AlertRow[] }) {
                           SEVERITY_DOT[alert.severity]
                         )}
                       />
-                      {SEVERITY_LABEL[alert.severity]}
+                      {tx(
+                        SEVERITY_LABEL[alert.severity].fr,
+                        SEVERITY_LABEL[alert.severity].en
+                      )}
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-5 py-3 text-right">
@@ -424,7 +459,9 @@ function AlertsTable({ alerts }: { alerts: AlertRow[] }) {
                           : "text-emerald-600"
                       )}
                     >
-                      {alert.status === "open" ? "Ouverte" : "Résolue"}
+                      {alert.status === "open"
+                        ? tx("Ouverte", "Open")
+                        : tx("Résolue", "Resolved")}
                     </span>
                   </td>
                 </tr>
@@ -442,6 +479,8 @@ function AlertsTable({ alerts }: { alerts: AlertRow[] }) {
 // ---------------------------------------------------------------------------
 
 export function ReportView({ data }: { data?: ReportData }) {
+  const tx = useTx()
+
   /* This defaulted to a MOCK_DATA constant and app-shell rendered the
      view with no props, so every customer saw "Clinique Nord, Site
      principal" with a stock level of 82 percent and a cold chain at 98.6
@@ -468,8 +507,8 @@ export function ReportView({ data }: { data?: ReportData }) {
   }, [])
 
   const built = useMemo(
-    () => buildReport(alerts, companyName, timezoneId),
-    [alerts, companyName, timezoneId]
+    () => buildReport(alerts, companyName, timezoneId, tx),
+    [alerts, companyName, timezoneId, tx]
   )
 
   const resolved: ReportData = useMemo(
@@ -483,7 +522,7 @@ export function ReportView({ data }: { data?: ReportData }) {
           Object.entries(built.kpis).map(([key, kpi]) => [
             key,
             {
-              label: kpi!.label,
+              label: tx(kpi!.label.fr, kpi!.label.en),
               value: kpi!.value,
               delta: kpi!.delta,
               deltaUnit: "",
@@ -510,19 +549,21 @@ export function ReportView({ data }: { data?: ReportData }) {
         </div>
 
         <h2 className="mt-4 font-heading text-lg font-bold">
-          Aucun rapport à produire
+          {tx("Aucun rapport à produire", "No report to produce")}
         </h2>
 
         <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-          Le rapport est construit à partir de vos alertes. Tant
-          qu&apos;aucun fichier n&apos;a été importé, il n&apos;y a rien à
-          rapporter, et remplir la page de chiffres inventés ne vous
-          aiderait pas.
+          {tx(
+            "Le rapport est construit à partir de vos alertes. Tant qu'aucun fichier n'a été importé, il n'y a rien à rapporter, et remplir la page de chiffres inventés ne vous aiderait pas.",
+            "The report is built from your alerts. Until a file has been imported there is nothing to report, and filling the page with invented figures would not help you."
+          )}
         </p>
 
         <p className="mt-3 text-xs text-muted-foreground">
-          Importez un CSV depuis le tableau de bord pour générer votre
-          premier rapport.
+          {tx(
+            "Importez un CSV depuis le tableau de bord pour générer votre premier rapport.",
+            "Import a CSV from the dashboard to produce your first report."
+          )}
         </p>
       </div>
     )
@@ -540,6 +581,8 @@ function ReportBody({
   data: ReportData
   timezoneLabel?: string
 }) {
+  const tx = useTx()
+
   const openAlerts = data.alerts.filter((a) => a.status === "open").length
   const resolvedAlerts = data.alerts.filter((a) => a.status === "resolved").length
 
@@ -588,7 +631,7 @@ function ReportBody({
         <div className="rounded-2xl border border-border bg-card p-6 print:rounded-none print:border-0 print:p-0">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <SectionLabel>Rapport</SectionLabel>
+              <SectionLabel>{tx("Rapport", "Report")}</SectionLabel>
               <h1 className="mt-1.5 font-heading text-2xl font-bold tracking-tight">
                 {data.siteName}
               </h1>
@@ -598,7 +641,8 @@ function ReportBody({
 
                 {timezoneLabel && (
                   <span className="text-xs">
-                    {" · "}heures en {timezoneLabel}
+                    {" · "}
+                    {tx("heures en", "times in")} {timezoneLabel}
                   </span>
                 )}
               </p>
@@ -610,14 +654,14 @@ function ReportBody({
               className="inline-flex h-10 items-center gap-2 rounded-xl bg-foreground px-4 text-sm font-semibold text-background transition-opacity hover:opacity-90 print:hidden"
             >
               <FileDown className="h-4 w-4" />
-              Exporter en PDF
+              {tx("Exporter en PDF", "Export as PDF")}
             </button>
           </div>
         </div>
 
         {/* KPI summary */}
         <div>
-          <SectionLabel>Indicateurs clés</SectionLabel>
+          <SectionLabel>{tx("Indicateurs clés", "Key figures")}</SectionLabel>
           <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4 print:grid-cols-4">
             {kpiEntries.map((point) => (
               <KpiCard key={point.label} point={point} />
@@ -628,7 +672,7 @@ function ReportBody({
         {/* Trends */}
         {trendEntries.length > 0 && (
           <div>
-            <SectionLabel>Tendances</SectionLabel>
+            <SectionLabel>{tx("Tendances", "Trends")}</SectionLabel>
             <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 print:grid-cols-2">
               {trendEntries.map(({ key, points }) => (
                 <TrendCard key={key} monitoringKey={key} data={points} />
@@ -646,9 +690,16 @@ function ReportBody({
             <AlertTriangle className="h-4 w-4" />
           </div>
           <p className="pt-1.5">
-            {openAlerts} alerte{openAlerts > 1 ? "s" : ""} ouverte
-            {openAlerts > 1 ? "s" : ""}, {resolvedAlerts} résolue
-            {resolvedAlerts > 1 ? "s" : ""} sur la période sélectionnée.
+            {tx(
+              `${openAlerts} alerte${
+                openAlerts > 1 ? "s" : ""
+              } ouverte${openAlerts > 1 ? "s" : ""}, ${resolvedAlerts} résolue${
+                resolvedAlerts > 1 ? "s" : ""
+              } sur la période sélectionnée.`,
+              `${openAlerts} alert${
+                openAlerts > 1 ? "s" : ""
+              } open, ${resolvedAlerts} resolved over the selected period.`
+            )}
           </p>
         </div>
       </div>

@@ -121,7 +121,7 @@ function isUserFacing(text, kind = "literal") {
   }
   if (/[[\]{}]/.test(trimmed) && /(-|:)/.test(trimmed)) return false
   if (/^(flex|grid|block|inline|hidden|absolute|relative|sticky|fixed)\b/.test(trimmed)) return false
-  if (/\b(rounded|border|bg|text|font|shadow|ring|gap|px|py|pt|pb|pl|pr|mx|my|mt|mb|ml|mr|w|h|min|max|space|divide|items|justify|self|overflow|truncate|leading|tracking|opacity|transition|duration|ease|animate|motion|hover|focus|group|peer|dark|sm|md|lg|xl)-/.test(trimmed)) return false
+  if (/\b(rounded|border|bg|text|font|shadow|ring|gap|px|py|pt|pb|pl|pr|mx|my|mt|mb|ml|mr|w|h|min|max|space|divide|items|justify|self|overflow|truncate|leading|tracking|opacity|transition|duration|ease|animate|motion|hover|focus|group|peer|dark|sm|md|lg|xl|left|right|top|bottom|inset|translate|scale|rotate|skew|origin|z|col|row|order|basis|grow|shrink|flex|aspect|object|cursor|select|resize|outline|stroke|fill|backdrop|blur|snap|touch|scroll|place|content|whitespace|break|list|decoration|underline|indent|align|caret|accent|appearance|will|delay|repeat|fade|slide|zoom|from|via|to)-/.test(trimmed)) return false
 
   /* A CSS value. */
   if (
@@ -148,6 +148,7 @@ function isUserFacing(text, kind = "literal") {
   if (/^[A-Z0-9_]+$/.test(trimmed)) return false
   if (/^(application|text|image|audio|video)\//.test(trimmed)) return false
   if (/^\(\s*(?:prefers-|min-|max-|orientation)/.test(trimmed)) return false
+  if (/^(?:light|dark)(?: (?:light|dark))?$/.test(trimmed)) return false
   if (/^[\d\s.,:%+\-/()€$₦]+$/.test(trimmed)) return false
   if (/^(fr|en|es|pt|ar|sw|fr-FR|en-US|en-GB|utf-8|UTF-8)$/i.test(trimmed)) return false
 
@@ -177,7 +178,8 @@ function blank(text) {
 function isCode(text) {
   return (
     /=>|=|;|["'`]|\buseState\b|\bconst\b|\blet\b|\breturn\b/.test(text) ||
-    /\.\w+\(|\(\s*\)|\bnew\s+\w+\(/.test(text)
+    /\w\(|\(\s*\)|\bnew\s+\w+\(/.test(text) ||
+    /^\s*\w+\??\s*:\s*[A-Z]\w*\s*$/.test(text)
   )
 }
 
@@ -239,7 +241,7 @@ function translatedSpans(source) {
 
     /* Not copy: a needle matched against data. Translating
        .includes("froid") would break the match it exists to make. */
-    /\.(?:includes|startsWith|endsWith|indexOf|lastIndexOf|search|split)\(\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1/g,
+    /\.(?:includes|startsWith|endsWith|indexOf|lastIndexOf|search|split|querySelector|querySelectorAll|matches|closest|getAttribute|setAttribute|getElementById|getItem|setItem|removeItem)\(\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1/g,
 
     /* Not copy: written for whoever opens the console, not for the
        operator. A translated stack trace helps nobody. */

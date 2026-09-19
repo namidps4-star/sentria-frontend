@@ -5,6 +5,7 @@ import {
   type LogisticsAlert,
 } from "@/lib/logistics-signals"
 import { formatInCompanyZone, timezoneFor } from "@/lib/company"
+import { localized, type Localized, type Tx } from "@/lib/i18n/pair"
 
 /**
  * Turns the alerts the backend produced into the report.
@@ -34,7 +35,7 @@ export type ReportMonitoringKey =
   | "risks"
 
 export type ReportKpi = {
-  label: string
+  label: Localized
   value: string
   delta: number
 }
@@ -96,14 +97,14 @@ function categoryOf(alert: LogisticsAlert): ReportMonitoringKey {
   }
 }
 
-const CATEGORY_KPI_LABEL: Record<ReportMonitoringKey, string> = {
-  equipment: "Alertes équipements",
-  fleet: "Alertes flotte",
-  inventory: "Alertes stocks",
-  energy: "Alertes énergie",
-  conditions: "Alertes conditions",
-  maintenance: "Alertes maintenance",
-  risks: "Alertes risques",
+const CATEGORY_KPI_LABEL: Record<ReportMonitoringKey, Localized> = {
+  equipment: localized("Alertes équipements", "Equipment alerts"),
+  fleet: localized("Alertes flotte", "Fleet alerts"),
+  inventory: localized("Alertes stocks", "Stock alerts"),
+  energy: localized("Alertes énergie", "Energy alerts"),
+  conditions: localized("Alertes conditions", "Condition alerts"),
+  maintenance: localized("Alertes maintenance", "Maintenance alerts"),
+  risks: localized("Alertes risques", "Risk alerts"),
 }
 
 function severityOf(alert: LogisticsAlert): ReportSeverity {
@@ -111,7 +112,7 @@ function severityOf(alert: LogisticsAlert): ReportSeverity {
 }
 
 /** Day labels for the trend axis, in the company's zone. */
-function dayLabels(days: number, zone: string): string[] {
+function dayLabels(days: number, zone: string, tx: Tx): string[] {
   const out: string[] = []
 
   for (let i = days - 1; i >= 0; i -= 1) {
@@ -119,14 +120,14 @@ function dayLabels(days: number, zone: string): string[] {
 
     try {
       out.push(
-        new Intl.DateTimeFormat("fr-FR", {
+        new Intl.DateTimeFormat(tx("fr-FR", "en-GB"), {
           day: "numeric",
           month: "short",
           timeZone: zone,
         }).format(date)
       )
     } catch {
-      out.push(date.toLocaleDateString("fr-FR"))
+      out.push(date.toLocaleDateString(tx("fr-FR", "en-GB")))
     }
   }
 
@@ -137,10 +138,12 @@ export function buildReport(
   alerts: LogisticsAlert[],
   companyName: string,
   timezoneId: string,
+  tx: Tx,
   days = 7
 ): BuiltReport {
   const zone = timezoneFor(timezoneId)
-  const name = companyName.trim() || "Votre entreprise"
+  const name =
+    companyName.trim() || tx("Votre entreprise", "Your company")
 
   if (alerts.length === 0) {
     return {
@@ -177,7 +180,7 @@ export function buildReport(
   const monitoring = [...byCategory.keys()]
   const kpis: Partial<Record<ReportMonitoringKey, ReportKpi>> = {}
   const trends: Partial<Record<ReportMonitoringKey, ReportTrendPoint[]>> = {}
-  const labels = dayLabels(days, zone.zone)
+  const labels = dayLabels(days, zone.zone, tx)
 
   for (const [key, list] of byCategory) {
     const counts = dailyCounts(
@@ -210,7 +213,7 @@ export function buildReport(
     .slice(0, 40)
     .map((alert, index) => ({
       id: `${alert.equipment}-${index}`,
-      timestamp: formatInCompanyZone(alert.date, timezoneId),
+      timestamp: formatInCompanyZone(alert.date, tx, timezoneId),
       site: alert.equipment,
       category: categoryOf(alert),
       severity: severityOf(alert),
@@ -223,10 +226,12 @@ export function buildReport(
 
   return {
     siteName: name,
-    dateRange: `${formatInCompanyZone(first.date, timezoneId)} au ${formatInCompanyZone(
-      last.date,
-      timezoneId
-    )}`,
+    dateRange: (() => {
+      const from = formatInCompanyZone(first.date, tx, timezoneId)
+      const to = formatInCompanyZone(last.date, tx, timezoneId)
+
+      return tx(`${from} au ${to}`, `${from} to ${to}`)
+    })(),
     timezoneLabel: zone.label,
     monitoring,
     kpis,

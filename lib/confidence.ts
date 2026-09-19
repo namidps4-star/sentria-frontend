@@ -1,3 +1,5 @@
+import type { Tx } from "@/lib/i18n/pair"
+
 /**
  * SentrIA's confidence score — the "how sure are we?" step of the
  * decision loop (evidence → confidence → impact → reasoning →
@@ -110,8 +112,8 @@ export function computeConfidence(input: ConfidenceInput): number {
 }
 
 /** How to say a confidence score in plain words, not just a number. */
-export function confidenceWord(pct: number): string {
-  if (pct >= 85) return "Élevée"
-  if (pct >= 65) return "Bonne"
-  return "Modérée"
+export function confidenceWord(pct: number, tx: Tx): string {
+  if (pct >= 85) return tx("Élevée", "High")
+  if (pct >= 65) return tx("Bonne", "Good")
+  return tx("Modérée", "Moderate")
 }

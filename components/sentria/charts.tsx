@@ -2,6 +2,8 @@
 
 /* Lightweight, dependency-free SVG charts tuned for the SentrIA aesthetic. */
 
+import { useTx } from "@/lib/i18n"
+
 export function AreaChart({
   data,
   height = 200,
@@ -15,6 +17,8 @@ export function AreaChart({
   const h = height
   const pad = 8
   const max = Math.max(...data) * 1.15
+  const tx = useTx()
+
   const min = Math.min(...data) * 0.85
   const stepX = (w - pad * 2) / (data.length - 1)
   const y = (v: number) =>
@@ -31,7 +35,7 @@ export function AreaChart({
       className={className}
       preserveAspectRatio="none"
       role="img"
-      aria-label="Graphique d'évolution"
+      aria-label={tx("Graphique d'évolution", "Trend chart")}
     >
       <defs>
         <linearGradient id="sentria-area" x1="0" y1="0" x2="0" y2="1">
@@ -79,11 +83,13 @@ export function BarChart({
   const pad = 8
   const max = Math.max(...data) * 1.1
   const gap = 14
+  const tx = useTx()
+
   const barW = (w - pad * 2 - gap * (data.length - 1)) / data.length
 
   return (
     <div className={className}>
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full" role="img" aria-label="Histogramme">
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full" role="img" aria-label={tx("Histogramme", "Bar chart")}>
         {data.map((v, i) => {
           const bh = (v / max) * (h - pad * 2)
           const x = pad + i * (barW + gap)

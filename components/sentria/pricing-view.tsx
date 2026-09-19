@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Check, Sparkles, TrendingUp, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useLocale } from "@/lib/locale"
-import { pick, useTx, type Localized } from "@/lib/i18n"
+import { localized, pick, useTx, type Localized } from "@/lib/i18n"
 
 /* Built at module level, outside any render, so the copy is stored as
    { fr, en } pairs and resolved with pick(). `name` stays a plain string:
@@ -20,7 +20,7 @@ type Tier = {
   missing?: Localized[]
   highlight?: {
     icon: typeof TrendingUp
-    label: string
+    label: Localized
     features: Localized[]
   }
 }
@@ -56,7 +56,7 @@ const TIERS: Tier[] = [
     ],
     highlight: {
       icon: TrendingUp,
-      label: "SentrIA Intelligence",
+      label: localized("SentrIA Intelligence", "SentrIA Intelligence"),
       features: [
         { fr: "Comparaison avec les tendances du secteur", en: "Benchmarked against sector trends" },
         { fr: "Benchmarks anonymisés", en: "Anonymised benchmarks" },
@@ -291,7 +291,7 @@ export function PricingView() {
                       <t.highlight.icon className="h-3.5 w-3.5 text-[#1d1d1b]" />
 
                       <span className="text-[11px] font-bold text-[#1d1d1b]">
-                        {t.highlight.label}
+                        {p(t.highlight.label)}
                       </span>
                     </div>
 

@@ -285,7 +285,7 @@ export function RecommendationsPanel({
         ...current,
         [key]: {
           status,
-          at: new Date().toLocaleTimeString("fr-FR", {
+          at: new Date().toLocaleTimeString(tx("fr-FR", "en-GB"), {
             hour: "2-digit",
             minute: "2-digit",
           }),
@@ -470,7 +470,7 @@ export function RecommendationsPanel({
               >
                 <Gauge className="h-3 w-3" />
                 {tx("Confiance", "Confidence")}{" "}
-                {confidenceWord(topConfidence)} · {topConfidence}%
+                {confidenceWord(topConfidence, tx)} · {topConfidence}%
               </div>
             </div>
 

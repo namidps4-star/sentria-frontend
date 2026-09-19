@@ -292,7 +292,7 @@ export function LogisticsBlockagesView({
               </p>
 
               <p className="text-xs text-muted-foreground">
-                {confidenceWord(confidence)}
+                {confidenceWord(confidence, tx)}
               </p>
             </div>
           ) : undefined

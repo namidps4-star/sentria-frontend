@@ -434,7 +434,7 @@ export function ProfileView({
           <ul className="mt-5 divide-y divide-border">
             {recent.map((alert, index) => {
               const critical = alert.severity === "CRITICAL"
-              const when = formatInCompanyZone(alert.date, timezoneId)
+              const when = formatInCompanyZone(alert.date, tx, timezoneId)
 
               return (
                 <li

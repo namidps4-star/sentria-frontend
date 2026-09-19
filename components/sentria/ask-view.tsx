@@ -14,19 +14,32 @@ import {
   useCompanyIdentity,
 } from "@/lib/company"
 import { useLocale } from "@/lib/locale"
+import { localized, useTx, type Localized } from "@/lib/i18n"
 
-const SUGGESTIONS = [
+/* Starter questions. They are sent to the model as typed, so each one is
+   a pair: asking in English and getting a French question back in the
+   thread would be the same defect as a French interface. */
+const SUGGESTIONS: { icon: typeof MapPin; text: Localized }[] = [
   {
     icon: MapPin,
-    text: "Quels systèmes présentent un risque opérationnel croissant ?",
+    text: localized(
+      "Quels systèmes présentent un risque opérationnel croissant ?",
+      "Which systems are showing a rising operational risk?"
+    ),
   },
   {
     icon: Lightbulb,
-    text: "Compare les signaux entre la Ligne Alpha et le Groupe Froid B.",
+    text: localized(
+      "Compare les signaux entre la Ligne Alpha et le Groupe Froid B.",
+      "Compare the signals between Line Alpha and Cold Unit B."
+    ),
   },
   {
     icon: Globe2,
-    text: "Résume les alertes critiques des 7 derniers jours.",
+    text: localized(
+      "Résume les alertes critiques des 7 derniers jours.",
+      "Summarise the critical alerts of the last 7 days."
+    ),
   },
 ]
 
@@ -54,10 +67,17 @@ export function AskView() {
      and `ui` are two different fields. */
   const { language } = useLocale()
 
-  const greeting =
-    (companyName ? `Bonjour ${companyName}.` : "Bonjour.") +
-    " Je suis SentrIA. Posez-moi une question sur vos systèmes ou" +
-    " opérations. Je m'appuie sur vos signaux en temps réel."
+  const tx = useTx()
+
+  const greeting = companyName
+    ? tx(
+        `Bonjour ${companyName}. Je suis SentrIA. Posez-moi une question sur vos systèmes ou opérations. Je m'appuie sur vos signaux en temps réel.`,
+        `Hello ${companyName}. I am SentrIA. Ask me anything about your systems or your operations. I work from your live signals.`
+      )
+    : tx(
+        "Bonjour. Je suis SentrIA. Posez-moi une question sur vos systèmes ou opérations. Je m'appuie sur vos signaux en temps réel.",
+        "Hello. I am SentrIA. Ask me anything about your systems or your operations. I work from your live signals."
+      )
 
   const thread: Msg[] = [{ role: "ai", text: greeting }, ...messages]
 
@@ -127,7 +147,7 @@ export function AskView() {
         ...m,
         {
           role: "ai",
-          text: answer || "Réponse reçue.",
+          text: answer || tx("Réponse reçue.", "Answer received."),
         },
       ])
     } catch (err) {
@@ -145,10 +165,10 @@ export function AskView() {
         ...m,
         {
           role: "ai",
-          text:
-            "Impossible de joindre l'API SentrIA : la requête n'a reçu aucune réponse. " +
-            "Causes probables : origine bloquée par CORS, ou API hors service. " +
-            "Ouvrez la console du navigateur pour le détail.",
+          text: tx(
+            "Impossible de joindre l'API SentrIA : la requête n'a reçu aucune réponse. Causes probables : origine bloquée par CORS, ou API hors service. Ouvrez la console du navigateur pour le détail.",
+            "Could not reach the SentrIA API: the request got no response at all. Usually either CORS blocked the origin, or the API is down. Open the browser console for the detail."
+          ),
         },
       ])
     } finally {
@@ -165,7 +185,10 @@ export function AskView() {
         aria-live="polite"
         aria-relevant="additions"
         aria-busy={loading}
-        aria-label="Conversation avec SentrIA"
+        aria-label={tx(
+          "Conversation avec SentrIA",
+          "Conversation with SentrIA"
+        )}
       >
         {messages.length === 0 && (
           <div className="rounded-3xl border border-border bg-card p-6">
@@ -174,29 +197,33 @@ export function AskView() {
             </div>
 
             <h2 className="mt-4 font-heading text-xl font-bold">
-              Demandez à SentrIA
+              {tx("Demandez à SentrIA", "Ask SentrIA")}
             </h2>
 
             <p className="mt-1 text-sm text-muted-foreground">
-              Une intelligence opérationnelle pour vos systèmes critiques.
+              {tx(
+                "Une intelligence opérationnelle pour vos systèmes critiques.",
+                "Operational intelligence for the systems you cannot afford to lose."
+              )}
             </p>
 
             <div className="mt-5 grid gap-2.5">
               {SUGGESTIONS.map((s) => {
                 const Icon = s.icon
+                const question = tx(s.text.fr, s.text.en)
 
                 return (
                   <button
-                    key={s.text}
+                    key={question}
                     type="button"
-                    onClick={() => send(s.text)}
+                    onClick={() => send(question)}
                     className="flex items-center gap-3 rounded-2xl border border-border bg-background p-3.5 text-left text-sm transition-colors hover:border-ring hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted">
                       <Icon className="h-4 w-4" />
                     </span>
 
-                    {s.text}
+                    {question}
                   </button>
                 )
               })}
@@ -257,7 +284,9 @@ export function AskView() {
             </div>
 
             <div className="rounded-3xl rounded-tl-md border border-border bg-card px-4 py-3">
-              <span className="sr-only">SentrIA rédige une réponse</span>
+              <span className="sr-only">
+                {tx("SentrIA rédige une réponse", "SentrIA is writing a reply")}
+              </span>
 
               <span className="flex items-center gap-1" aria-hidden="true">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-muted-foreground [animation-delay:0ms]" />
@@ -288,8 +317,11 @@ export function AskView() {
               }
             }}
             rows={1}
-            placeholder="Posez votre question à SentrIA…"
-            aria-label="Votre question"
+            placeholder={tx(
+              "Posez votre question à SentrIA…",
+              "Ask SentrIA your question…"
+            )}
+            aria-label={tx("Votre question", "Your question")}
             disabled={loading}
             className="max-h-32 flex-1 resize-none bg-transparent px-3 py-2.5 text-sm outline-none placeholder:text-muted-foreground disabled:opacity-60"
           />
@@ -298,7 +330,7 @@ export function AskView() {
             type="submit"
             disabled={!input.trim() || loading}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-accent text-accent-foreground transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-40"
-            aria-label="Envoyer"
+            aria-label={tx("Envoyer", "Send")}
           >
             <ArrowUp className="h-5 w-5" />
           </button>

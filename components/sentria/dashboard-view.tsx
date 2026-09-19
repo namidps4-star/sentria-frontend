@@ -3549,7 +3549,7 @@ export function DashboardView({
                       )
                       return (
                         <>
-                          Confiance {confidenceWord(pct)} · {pct}%
+                          Confiance {confidenceWord(pct, tx)} · {pct}%
                         </>
                       )
                     })()}

@@ -112,7 +112,11 @@ export const LANGUAGES: Language[] = [
     code: "en",
     label: "English",
     region: localized("Global", "Global"),
-    uiReady: "partial",
+    /* "full" as of the pass that took the tree from 1119 unlocalized
+       strings to 0, verified by `node scripts/check-i18n.mjs --strict`
+       rather than by clicking around. It was "partial" before that, and
+       "true" before THAT, when nothing read it at all. */
+    uiReady: "full",
   },
   {
     code: "es",
@@ -367,10 +371,17 @@ export function currencyFor(code: string | null | undefined): Currency {
  *  accuracy. The symbol trails the number, which reads correctly for
  *  "1 240 F CFA" and acceptably for "1 240 €".
  */
-export function formatMoney(value: number, currency: Currency): string {
+export function formatMoney(
+  value: number,
+  currency: Currency,
+  tx: Tx
+): string {
   const rounded = Math.round(value)
 
-  return `${rounded.toLocaleString("fr-FR")} ${currency.symbol}`
+  /* The grouping convention follows the reader, not the money: an English
+     reader expects "1,240", a French one "1 240", and both are looking at
+     the same figure in the same currency. */
+  return `${rounded.toLocaleString(tx("fr-FR", "en-GB"))} ${currency.symbol}`
 }
 
 /* ------------------------------------------------------------------ */

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 
 import { API_BASE } from "@/lib/api"
 import { useT, type MessageKey } from "@/lib/i18n"
+import { DocumentLanguage } from "./document-language"
 import { Sidebar } from "./sidebar"
 import type { ViewKey } from "./types"
 import { Topbar } from "./topbar"
@@ -110,6 +111,10 @@ export function AppShell() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background text-foreground">
+      {/* Corrects the tab title and <html lang> once the operator's
+          language is known. Renders nothing. */}
+      <DocumentLanguage />
+
       {showOnboarding && (
         <OnboardingView onComplete={() => setShowOnboarding(false)} />
       )}

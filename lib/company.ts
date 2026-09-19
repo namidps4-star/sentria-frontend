@@ -15,6 +15,8 @@
 
 import { useEffect, useState } from "react"
 
+import type { Tx } from "@/lib/i18n/pair"
+
 export const COMPANY_NAME_KEY = "sentria_company_name"
 export const TIMEZONE_KEY = "sentria_timezone"
 
@@ -55,6 +57,11 @@ export type TimezoneOption = {
  *  identifier rather than an abbreviation, because "WAT" cannot be
  *  handed to Intl.DateTimeFormat and an abbreviation alone would leave
  *  the setting decorative, which is what it was. */
+/* Zone abbreviations, city names and IANA identifiers. The same
+   characters in every language: "GMT (Cotonou, Dakar, Abidjan)" does not
+   translate, and "Africa/Abidjan" must not.
+ *
+ * i18n-ignore-start: zone abbreviations, city names and IANA ids */
 export const TIMEZONES: TimezoneOption[] = [
   { id: "gmt", label: "GMT (Cotonou, Dakar, Abidjan)", zone: "Africa/Abidjan" },
   { id: "wat", label: "WAT (Lagos, Kinshasa)", zone: "Africa/Lagos" },
@@ -62,6 +69,7 @@ export const TIMEZONES: TimezoneOption[] = [
   { id: "eat", label: "EAT (Nairobi)", zone: "Africa/Nairobi" },
   { id: "brt", label: "BRT (São Paulo)", zone: "America/Sao_Paulo" },
 ]
+/* i18n-ignore-end */
 
 export function readCompanyName(): string {
   if (typeof window === "undefined") return ""
@@ -132,20 +140,23 @@ export function timezoneFor(id: string): TimezoneOption {
  *  and the date next to it agree with the operator's own clock. */
 export function formatInCompanyZone(
   iso: string,
+  tx: Tx,
   id: string = readTimezoneId()
 ): string {
   const date = new Date(iso)
 
   if (!Number.isFinite(date.getTime())) return ""
 
+  const locale = tx("fr-FR", "en-GB")
+
   try {
-    return new Intl.DateTimeFormat("fr-FR", {
+    return new Intl.DateTimeFormat(locale, {
       dateStyle: "short",
       timeStyle: "short",
       timeZone: timezoneFor(id).zone,
     }).format(date)
   } catch {
-    return date.toLocaleString("fr-FR")
+    return date.toLocaleString(locale)
   }
 }
 

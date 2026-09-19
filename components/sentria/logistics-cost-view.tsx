@@ -222,7 +222,7 @@ export function LogisticsCostView({
           "Exposition estimée, tous dépassements",
           "Estimated exposure, all overruns"
         )}
-        figure={formatMoney(totalExposure, currency)}
+        figure={formatMoney(totalExposure, currency, tx)}
         figureNote={tx(
           "Estimation, pas un montant facturé : dépassement mesuré multiplié par vos taux, détaillés ci-dessous.",
           "An estimate, not an invoiced amount: the measured overrun times your own rates, set out below."
@@ -235,7 +235,7 @@ export function LogisticsCostView({
             </p>
 
             <p className="mt-1 font-heading text-2xl font-bold tabular-nums">
-              {formatMoney(criticalExposure, currency)}
+              {formatMoney(criticalExposure, currency, tx)}
             </p>
 
             <p className="text-xs text-muted-foreground">
@@ -273,7 +273,7 @@ export function LogisticsCostView({
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile
           label={tx("Exposition totale", "Total exposure")}
-          value={formatMoney(totalExposure, currency)}
+          value={formatMoney(totalExposure, currency, tx)}
           note={tx(
             "Estimation à partir de vos taux",
             "Estimated from your own rates"
@@ -291,14 +291,14 @@ export function LogisticsCostView({
 
         <StatTile
           label={tx("Poste le plus lourd", "Heaviest item")}
-          value={formatMoney(worst.exposure, currency)}
+          value={formatMoney(worst.exposure, currency, tx)}
           note={`${worst.equipment} · ${worst.kindLabel.toLowerCase()}`}
           tone="risk"
         />
 
         <StatTile
           label={tx("Part critique", "Critical share")}
-          value={formatMoney(criticalExposure, currency)}
+          value={formatMoney(criticalExposure, currency, tx)}
           note={tx(
             "Portée par des alertes CRITICAL",
             "Carried by CRITICAL alerts"
@@ -445,7 +445,7 @@ export function LogisticsCostView({
                   </td>
 
                   <td className="py-2.5 text-right font-bold tabular-nums">
-                    {formatMoney(line.exposure, currency)}
+                    {formatMoney(line.exposure, currency, tx)}
                   </td>
                 </tr>
               ))}
@@ -466,7 +466,7 @@ export function LogisticsCostView({
                 </td>
 
                 <td className="pt-3 text-right font-heading text-lg font-bold tabular-nums">
-                  {formatMoney(totalExposure, currency)}
+                  {formatMoney(totalExposure, currency, tx)}
                 </td>
               </tr>
             </tfoot>
@@ -504,7 +504,7 @@ export function LogisticsCostView({
                 </p>
 
                 <p className="shrink-0 text-sm font-bold tabular-nums">
-                  {formatMoney(entry.exposure, currency)}
+                  {formatMoney(entry.exposure, currency, tx)}
                 </p>
               </div>
 

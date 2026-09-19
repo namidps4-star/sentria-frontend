@@ -15,10 +15,18 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 })
 
+/* The first-paint default, and what a crawler sees. It cannot depend on
+   the operator's language: this is evaluated when the page is built and
+   the choice lives in localStorage, read after mount.
+   components/sentria/document-language.tsx corrects both of these, and
+   the <html lang> below, once the choice is known.
+
+   i18n-ignore-start: static build-time metadata, corrected at runtime */
 export const metadata: Metadata = {
   title: 'SentrIA | Intelligence opérationnelle',
   description:
     'SentrIA : surveillance et intelligence prédictive des systèmes, équipements et opérations critiques.',
+  /* i18n-ignore-end */
   generator: 'v0.app',
   icons: {
     icon: [
@@ -60,6 +68,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
+      /* The default. DocumentLanguage sets the real one after mount. */
       lang="fr"
       className={`${geistSans.variable} ${geistMono.variable} bg-background`}
       suppressHydrationWarning
