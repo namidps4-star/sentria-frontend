@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import {
   AlertTriangle,
+  ArrowUpRight,
   Check,
   Loader2,
   Mail,
@@ -11,6 +12,7 @@ import {
   Trash2,
   UserPlus,
   UserRound,
+  Zap,
 } from "lucide-react"
 
 import { useCompanyIdentity } from "@/lib/company"
@@ -245,6 +247,40 @@ export function ContractorsView({
 
   return (
     <div className="space-y-6">
+      {/* BANNER — same bg-sidebar / accent-pill / accent-CTA treatment as
+          the Dashboard hero, for a consistent look across views. */}
+      <div className="flex flex-col gap-4 rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
+        <div className="max-w-xl">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+            <Zap className="h-3.5 w-3.5" />
+            {tx("Temps réel", "Live")}
+          </span>
+
+          <h2 className="mt-3 text-balance font-heading text-2xl font-bold leading-tight md:text-3xl">
+            {tx(
+              "Qui peut être envoyé maintenant ?",
+              "Who can be sent out right now?"
+            )}
+          </h2>
+
+          <p className="mt-2 text-pretty text-sm text-sidebar-foreground/70">
+            {tx(
+              "La disponibilité déclarée et la charge réelle de chacun, avant d'assigner une nouvelle tâche.",
+              "Everyone's declared availability and real workload, before you hand out a new task."
+            )}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="inline-flex items-center gap-2 self-start rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02]"
+        >
+          {tx("Ajouter un intervenant", "Add a contractor")}
+          <ArrowUpRight className="h-4 w-4" />
+        </button>
+      </div>
+
       {/* HEADER */}
       <div className="rounded-3xl border border-border bg-card p-5 shadow-sm md:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
+  ArrowUpRight,
   CalendarDays,
   Check,
   ChevronLeft,
@@ -19,6 +20,7 @@ import {
   Waypoints,
   Wrench,
   X,
+  Zap,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -1194,7 +1196,49 @@ export function RecommendationsBoard({
   }
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-border bg-card">
+    <div className="flex flex-col gap-6">
+      {/* BANNER — same bg-sidebar / accent-pill / accent-CTA treatment as
+          the Dashboard hero, for a consistent look across views. */}
+      <div className="flex flex-col gap-4 rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
+        <div className="max-w-xl">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+            <Zap className="h-3.5 w-3.5" />
+            {tx("Temps réel", "Live")}
+          </span>
+
+          <h2 className="mt-3 text-balance font-heading text-2xl font-bold leading-tight md:text-3xl">
+            {tx(
+              "Que faut-il traiter maintenant ?",
+              "What needs handling right now?"
+            )}
+          </h2>
+
+          <p className="mt-2 text-pretty text-sm text-sidebar-foreground/70">
+            {tx(
+              "Chaque priorité montre sa preuve, sa confiance et son impact.",
+              "Every priority shows its evidence, its confidence and its impact."
+            )}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() =>
+            document
+              .getElementById("priorities-board")
+              ?.scrollIntoView({ behavior: "smooth" })
+          }
+          className="inline-flex items-center gap-2 self-start rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02]"
+        >
+          {tx("Voir les priorités", "See the priorities")}
+          <ArrowUpRight className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div
+        id="priorities-board"
+        className="overflow-hidden rounded-3xl border border-border bg-card"
+      >
       {/* ------------------------------------------------------------------
           Title band: what this is, and the three numbers that describe it.
           ------------------------------------------------------------------ */}
@@ -1684,6 +1728,7 @@ export function RecommendationsBoard({
             </section>
           )
         })}
+      </div>
       </div>
 
       {editingCard && (

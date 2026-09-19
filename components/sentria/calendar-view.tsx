@@ -3,6 +3,7 @@
 import { useState } from "react"
 import {
   AlertTriangle,
+  ArrowUpRight,
   CalendarClock,
   CheckCircle2,
   ChevronLeft,
@@ -12,6 +13,7 @@ import {
   Timer,
   UserRound,
   X,
+  Zap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { localized, resolve, useTx, type Localized } from "@/lib/i18n"
@@ -343,7 +345,47 @@ export function CalendarView() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
+      {/* BANNER — same treatment as the Dashboard hero (bg-sidebar, the
+          accent "Live" pill, a bold headline and an accent CTA), so the
+          calendar opens with the same visual signature as the rest of
+          the app instead of its own look. */}
+      <div className="flex flex-col gap-4 rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
+        <div className="max-w-xl">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+            <Zap className="h-3.5 w-3.5" />
+            {tx("Temps réel", "Live")}
+          </span>
+
+          <h2 className="mt-3 text-balance font-heading text-2xl font-bold leading-tight md:text-3xl">
+            {tx(
+              "Qu'est-ce qui arrive cette semaine ?",
+              "What's coming up this week?"
+            )}
+          </h2>
+
+          <p className="mt-2 text-pretty text-sm text-sidebar-foreground/70">
+            {tx(
+              "Échéances, seuils critiques et incidents, réunis en un coup d'œil.",
+              "Deadlines, critical thresholds and incidents, brought together at a glance."
+            )}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() =>
+            document
+              .getElementById("calendar-grid")
+              ?.scrollIntoView({ behavior: "smooth" })
+          }
+          className="inline-flex items-center gap-2 self-start rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02]"
+        >
+          {tx("Voir le calendrier", "View calendar")}
+          <ArrowUpRight className="h-4 w-4" />
+        </button>
+      </div>
+
       {/* HEADER */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -512,7 +554,10 @@ export function CalendarView() {
       )}
 
       {/* CALENDAR GRID */}
-      <div className="overflow-x-auto rounded-3xl border border-border bg-gradient-to-b from-accent/15 via-accent/5 to-transparent p-4 shadow-sm">
+      <div
+        id="calendar-grid"
+        className="overflow-x-auto rounded-3xl border border-border bg-gradient-to-b from-accent/15 via-accent/5 to-transparent p-4 shadow-sm"
+      >
         <div
           className="grid min-w-[720px]"
           style={{
