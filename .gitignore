@@ -21,3 +21,6 @@ __pycache__/
 
 # TypeScript incremental build cache
 *.tsbuildinfo
+
+# Handover notes, local only, never committed
+HANDOVER.md
