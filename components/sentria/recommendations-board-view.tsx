@@ -1253,23 +1253,33 @@ export function RecommendationsBoard({
           </h3>
         </div>
 
-        <dl className="flex shrink-0 items-end gap-5 sm:gap-7">
+        <div className="grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-3">
           {stats.map((stat, index) => (
             <div
               key={stat.label}
               className={cn(
-                index > 0 && "border-l border-border pl-5 sm:pl-7"
+                "min-w-[110px] rounded-2xl p-3.5 text-center",
+                index === 0
+                  ? "bg-accent text-accent-foreground"
+                  : "bg-primary text-primary-foreground"
               )}
             >
-              <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              <p
+                className={cn(
+                  "text-[10px] font-bold uppercase tracking-wider",
+                  index === 0
+                    ? "text-accent-foreground/70"
+                    : "text-primary-foreground/50"
+                )}
+              >
                 {stat.label}
-              </dt>
-              <dd className="mt-1 font-heading text-2xl font-bold leading-none tabular-nums">
+              </p>
+              <p className="mt-1 font-heading text-2xl font-black leading-none tabular-nums">
                 {stat.value}
-              </dd>
+              </p>
             </div>
           ))}
-        </dl>
+        </div>
       </div>
 
       {/* ------------------------------------------------------------------
