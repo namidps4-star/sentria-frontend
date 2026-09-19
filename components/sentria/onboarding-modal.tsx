@@ -436,20 +436,15 @@ function ActivityFlowPreview({
       </div>
 
       <p className="border-t border-border px-4 py-2.5 text-[11px] leading-5 text-muted-foreground">
-        {selected.length > 1 ? (
-          <>
-            Les étapes de vos {selected.length}{" "}activités, fusionnées :
-            celles qu&apos;elles partagent n&apos;apparaissent
-            qu&apos;une fois. En gris parce qu&apos;aucune donnée
-            n&apos;a encore été importée.
-          </>
-        ) : (
-          <>
-            En gris parce qu&apos;aucune donnée n&apos;a encore été
-            importée. SentrIA n&apos;invente rien avant votre premier
-            fichier.
-          </>
-        )}
+        {selected.length > 1
+          ? tx(
+              `Les étapes de vos ${selected.length} activités, fusionnées : celles qu'elles partagent n'apparaissent qu'une fois. En gris parce qu'aucune donnée n'a encore été importée.`,
+              `The stages of your ${selected.length} activities, merged: the ones they share appear only once. Grey because no data has been imported yet.`
+            )
+          : tx(
+              "En gris parce qu'aucune donnée n'a encore été importée. SentrIA n'invente rien avant votre premier fichier.",
+              "Grey because no data has been imported yet. SentrIA invents nothing before your first file."
+            )}
       </p>
     </div>
   )
@@ -551,9 +546,28 @@ export function OnboardingView({
 
   const [language, setLanguage] = useState("fr")
 
+  /** Pick the language, and APPLY it, not just remember it.
+   *
+   *  This used to be a bare setLanguage(): the wizard kept the choice in
+   *  React state and only persisted it in finish(). useTx() reads the
+   *  stored value, so choosing a language on step 1 changed nothing on
+   *  screen and the operator then read seven more steps in whatever the
+   *  browser had been detected as. Writing it here is what makes step 1
+   *  mean anything, and it is the same thing the settings screen does. */
+  function chooseLanguage(code: string) {
+    setLanguage(code)
+    writeLanguage(code)
+  }
+
   useEffect(() => {
     setTimezoneId(detectTimezoneId())
-    setLanguage(detectLanguage())
+    /* Write the detected default as well as holding it. readLanguage()
+       already falls back to detection, so this only makes the stored
+       value agree with what is on screen from the first frame. */
+    const detected = detectLanguage()
+
+    setLanguage(detected)
+    writeLanguage(detected)
   }, [])
 
   const [multiSector, setMultiSector] = useState(false)
@@ -1047,7 +1061,10 @@ export function OnboardingView({
           <div className="flex items-end justify-between gap-4">
             <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                Étape {step} sur {totalSteps}
+                {tx(
+                  `Étape ${step} sur ${totalSteps}`,
+                  `Step ${step} of ${totalSteps}`
+                )}
               </p>
 
               <p className="mt-1 truncate font-heading text-lg font-bold tracking-tight">
@@ -1093,7 +1110,10 @@ export function OnboardingView({
           {/* Heard as well as seen. Polite, and separate from the
               heading, so it does not fight the focus move. */}
           <p className="sr-only" role="status" aria-live="polite">
-            Étape {step} sur {totalSteps} : {currentMeta.title}
+            {tx(
+              `Étape ${step} sur ${totalSteps} : ${currentMeta.title}`,
+              `Step ${step} of ${totalSteps}: ${currentMeta.title}`
+            )}
           </p>
         </div>
 
@@ -1117,7 +1137,7 @@ export function OnboardingView({
 
               <div className="min-w-0">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Étape {step}
+                  {tx(`Étape ${step}`, `Step ${step}`)}
                 </p>
 
                 <h2
@@ -1147,7 +1167,7 @@ export function OnboardingView({
                     <button
                       key={item.code}
                       type="button"
-                      onClick={() => setLanguage(item.code)}
+                      onClick={() => chooseLanguage(item.code)}
                       aria-pressed={active}
                       className={cn(CHOICE_CARD, active && CHOICE_ACTIVE)}
                     >
@@ -1246,10 +1266,15 @@ export function OnboardingView({
 
             {step === countryStepNumber && (
               <p className="rounded-2xl border border-dashed border-border bg-background px-4 py-3 text-xs leading-5 text-muted-foreground">
-                La devise sert à étiqueter vos propres montants, ceux que vous
-                saisissez dans la vue Coûts.{" "}
+                {tx(
+                  "La devise sert à étiqueter vos propres montants, ceux que vous saisissez dans la vue Coûts.",
+                  "The currency labels your own figures, the ones you type into the Cost view."
+                )}{" "}
                 <span className="font-semibold text-foreground">
-                  Aucune conversion n&apos;est faite.
+                  {tx(
+                    "Aucune conversion n'est faite.",
+                    "Nothing is converted."
+                  )}
                 </span>
               </p>
             )}
@@ -1672,11 +1697,9 @@ export function OnboardingView({
                         /
                       </span>
 
-                      {
-                        subTypes.find(
-                          (item) => item.id === subType
-                        )?.label
-                      }
+                      {px(
+                        subTypes.find((item) => item.id === subType)?.label
+                      )}
                     </>
                   )}
                 </div>
@@ -1952,7 +1975,7 @@ export function OnboardingView({
                   )}
                 >
                   <Clock3 className="h-4 w-4" />
-                  Configurer plus tard
+                  {tx("Configurer plus tard", "Set this up later")}
 
                   {configureLater && (
                     <Check className="h-4 w-4" />

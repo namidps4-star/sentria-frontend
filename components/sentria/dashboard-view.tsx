@@ -3547,10 +3547,9 @@ export function DashboardView({
                           actionsLog
                         )
                       )
-                      return (
-                        <>
-                          Confiance {confidenceWord(pct, tx)} · {pct}%
-                        </>
+                      return tx(
+                        `Confiance ${confidenceWord(pct, tx)} · ${pct}%`,
+                        `Confidence ${confidenceWord(pct, tx)} · ${pct}%`
                       )
                     })()}
                   </span>

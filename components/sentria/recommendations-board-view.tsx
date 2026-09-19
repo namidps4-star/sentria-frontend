@@ -906,7 +906,18 @@ export function RecommendationsBoard({
 
                       {(rec.exposureEUR ?? 0) > 0 && (
                         <p className="mt-2 text-xs font-bold tabular-nums">
-                          {formatMoney(rec.exposureEUR!, currency, tx)} exposés
+                          {tx(
+                            `${formatMoney(
+                              rec.exposureEUR!,
+                              currency,
+                              tx
+                            )} exposés`,
+                            `${formatMoney(
+                              rec.exposureEUR!,
+                              currency,
+                              tx
+                            )} exposed`
+                          )}
                         </p>
                       )}
 

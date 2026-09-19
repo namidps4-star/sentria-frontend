@@ -326,7 +326,9 @@ function TrendCard({
             the temperature were one degree. These series count alerts
             per day, and that is what the label says. */}
         <span className="text-sm text-muted-foreground">
-          {last > 1 ? "alertes" : "alerte"} le dernier jour
+          {last > 1
+            ? tx("alertes le dernier jour", "alerts on the last day")
+            : tx("alerte le dernier jour", "alert on the last day")}
         </span>
       </div>
 

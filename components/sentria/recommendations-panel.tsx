@@ -358,12 +358,17 @@ export function RecommendationsPanel({
 
           <div>
             <h3 className="font-heading text-lg font-bold">
-              Qu&apos;est-ce qui a besoin de votre attention maintenant ?
+              {tx(
+                "Qu'est-ce qui a besoin de votre attention maintenant ?",
+                "What needs your attention right now?"
+              )}
             </h3>
 
             <p className="mt-0.5 text-sm text-muted-foreground">
-              {recommendations.length} situations classées par urgence · preuve,
-              confiance et action pour chacune.
+              {tx(
+                `${recommendations.length} situations classées par urgence · preuve, confiance et action pour chacune.`,
+                `${recommendations.length} situations ranked by urgency · evidence, confidence and an action for each.`
+              )}
             </p>
 
             {opsLabel && (
@@ -610,7 +615,10 @@ export function RecommendationsPanel({
                   {recurrence > 1 && (
                     <div className="mt-2 inline-flex w-fit items-center gap-1 rounded-full bg-destructive/10 px-1.5 py-0.5 text-[9px] font-semibold text-destructive">
                       <TrendingUp className="h-2.5 w-2.5" />
-                      {recurrence}x cette semaine
+                      {tx(
+                        `${recurrence}x cette semaine`,
+                        `${recurrence}x this week`
+                      )}
                     </div>
                   )}
 

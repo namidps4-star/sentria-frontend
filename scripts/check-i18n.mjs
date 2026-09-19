@@ -176,10 +176,27 @@ function blank(text) {
  *  fat arrow, a quoted string, a hook call. A sentence with an equals
  *  sign in it would be missed, and that is the trade this makes. */
 function isCode(text) {
+  const trimmed = text.trim()
+
   return (
     /=>|=|;|["'`]|\buseState\b|\bconst\b|\blet\b|\breturn\b/.test(text) ||
     /\w\(|\(\s*\)|\bnew\s+\w+\(/.test(text) ||
-    /^\s*\w+\??\s*:\s*[A-Z]\w*\s*$/.test(text)
+    /^\s*\w+\??\s*:\s*[A-Z]\w*\s*$/.test(text) ||
+    /* Opens with punctuation only code opens with: ", size:", ") if". */
+    /^[,;:)\]}.?&|+*/<>=$]/.test(trimmed) ||
+    /* JS operators, which prose does not contain. */
+    /\?\?|\?\.|&&|\|\|/.test(text) ||
+    /* A template hole, or a paren: JSX copy in this repo goes through
+       tx(), so prose with a bracket in it is not expected here. */
+    /[()$]/.test(text) ||
+    /* Statement keywords. */
+    /\b(if|else|try|catch|finally|typeof|await|import|export|function|case|switch|break|continue|delete|instanceof|interface|type|enum|implements|extends)\b/.test(
+      text
+    ) ||
+    /* A CSS selector or at-rule, which a <style jsx> block is full of. */
+    /^[#.@][\w-]/.test(trimmed) ||
+    /* A bare comma or bracket run left over from an object or array. */
+    /^[[\]{},]|[[\]{},]$/.test(trimmed)
   )
 }
 
@@ -342,18 +359,36 @@ function findings(file) {
     }
   }
 
-  /* 2. JSX text between tags, which no string-literal scan would see.
+  /* 2. JSX text, which no string-literal scan would see.
         A generic argument list puts code between a ">" and a "<", so
         useState<string[]>([...]) read as copy until isCode() rejected
-        it. */
-  const jsxRe = />([^<>{}]{4,200})</g
+        it.
+
+        The run also ends at a "{" and can start after a "}", because copy
+        is routinely interleaved with expressions:
+
+          <p>Étape {step} sur {totalSteps}</p>
+
+        The first version only matched ">...<" with no braces inside, so
+        that whole line was invisible and the onboarding step counter
+        stayed French in an English wizard. */
+  const jsxRe = /[>}]([^<>{}]{4,200})[<{]/g
   while (hasJsx && (m = jsxRe.exec(code))) {
+    if (inSpans(m.index, skip)) {
+      jsxRe.lastIndex -= 1
+      continue
+    }
+
     if (!isCode(m[1]) && isUserFacing(m[1], "jsx")) {
       out.push({
         line: code.slice(0, m.index).split("\n").length,
         text: m[1].trim().replace(/\s+/g, " ").slice(0, 70),
       })
     }
+
+    /* Step back one, so "} text {" runs are not skipped when two of them
+       share a brace. */
+    jsxRe.lastIndex -= 1
   }
 
   return out.sort((a, b) => a.line - b.line)
