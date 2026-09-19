@@ -20,6 +20,12 @@
 import { en } from "./en"
 import { fr } from "./fr"
 import { useLocale, type LanguageCode } from "@/lib/locale"
+import { localized, type Localized, type Tx } from "./pair"
+
+/* Re-exported so every caller keeps one import for the whole thing. They
+   live in ./pair because lib/locale.ts holds catalogues of pairs and
+   importing them from here would be a cycle. */
+export { localized, type Localized, type Tx }
 
 export type MessageKey = keyof typeof fr
 
@@ -103,21 +109,10 @@ export function useT(): Translate {
  * instead of holding a key in their head across two files.
  * -------------------------------------------------------------------------- */
 
-/** A string that exists in both languages. For module-level catalogues
- *  (priorities, activities, the metric definitions) that are built
- *  outside a React render and so cannot call a hook. */
-export type Localized = { fr: string; en: string }
-
-export function localized(fr: string, en: string): Localized {
-  return { fr, en }
-}
-
 /** Resolve a Localized outside React. */
 export function pick(text: Localized, ui: LanguageCode): string {
   return ui === "en" ? text.en : text.fr
 }
-
-export type Tx = (fr: string, en: string) => string
 
 /** Resolve a pair outside React, when the language is already known. */
 export function txFor(ui: LanguageCode): Tx {

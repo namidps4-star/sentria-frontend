@@ -20,6 +20,7 @@ import {
   writeCountryCode,
   writeLanguage,
 } from "@/lib/locale"
+import { useTx } from "@/lib/i18n"
 
 /* This screen carries its own catalogue, in six languages, and it is the
    only place in the app where Spanish, Portuguese, Arabic and Kiswahili
@@ -296,6 +297,10 @@ export function SettingsView() {
   }
 
   const t = UI[lang] ?? UI.fr
+
+  /* The two-language translator, for the few strings that come from
+     lib/locale.ts rather than the six-language map above. */
+  const tx = useTx()
   const isRTL = lang === "ar"
 
   return (
@@ -353,7 +358,7 @@ export function SettingsView() {
                         : "text-muted-foreground"
                     )}
                   >
-                    {language.region}
+                    {tx(language.region.fr, language.region.en)}
                   </p>
 
                   {/* The honest part. Six languages are offered and they
@@ -367,7 +372,7 @@ export function SettingsView() {
                       active ? "text-background/60" : "text-muted-foreground"
                     )}
                   >
-                    {languagePromise(language)}
+                    {languagePromise(language, tx)}
                   </p>
                 </div>
 
@@ -506,7 +511,8 @@ export function SettingsView() {
 
               {COUNTRIES.map((country) => (
                 <option key={country.code} value={country.code}>
-                  {country.name} · {country.currency.symbol}
+                  {tx(country.name.fr, country.name.en)} ·{" "}
+                  {country.currency.symbol}
                 </option>
               ))}
             </select>

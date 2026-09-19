@@ -1165,7 +1165,7 @@ export function OnboardingView({
                                 : "text-muted-foreground"
                             )}
                           >
-                            {item.region}
+                            {px(item.region)}
                           </p>
                         </div>
 
@@ -1181,7 +1181,7 @@ export function OnboardingView({
                           active ? "text-background/70" : "text-muted-foreground"
                         )}
                       >
-                        {languagePromise(item)}
+                        {languagePromise(item, tx)}
                       </p>
                     </button>
                   )
@@ -1215,7 +1215,7 @@ export function OnboardingView({
                     >
                       <div className="flex items-start justify-between gap-2">
                         <p className="min-w-0 font-heading text-sm font-bold leading-snug">
-                          {item.name}
+                          {px(item.name)}
                         </p>
 
                         {active && <CardTick />}

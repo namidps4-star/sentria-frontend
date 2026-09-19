@@ -51,6 +51,8 @@
 
 import { useEffect, useState } from "react"
 
+import { localized, type Localized, type Tx } from "@/lib/i18n/pair"
+
 /* ------------------------------------------------------------------ */
 /*  Storage                                                            */
 /* ------------------------------------------------------------------ */
@@ -82,33 +84,64 @@ export type UiCoverage = "full" | "partial" | "none"
 
 export type Language = {
   code: LanguageCode
+  /** The language's own name for itself. Never translated: an English
+   *  speaker scanning the picker for their language looks for "Français",
+   *  not for "French". */
   label: string
-  region: string
+  region: Localized
   uiReady: UiCoverage
   /** Right to left. Arabic needs a layout pass, not a string pass, so
    *  this is recorded rather than acted on globally. */
   rtl?: boolean
 }
 
+/* Each `label` is the language's own name for itself, which is never
+   translated: an English speaker scanning this picker looks for
+   "Français", not for "French". The regions beside them ARE translated,
+   and they are pairs.
+ *
+ * i18n-ignore-start: language endonyms, never translated */
 export const LANGUAGES: Language[] = [
-  { code: "fr", label: "Français", region: "France · Afrique", uiReady: "full" },
-  { code: "en", label: "English", region: "Global", uiReady: "partial" },
-  { code: "es", label: "Español", region: "Amériques", uiReady: "none" },
-  { code: "pt", label: "Português", region: "Brésil · Angola", uiReady: "none" },
+  {
+    code: "fr",
+    label: "Français",
+    region: localized("France · Afrique", "France · Africa"),
+    uiReady: "full",
+  },
+  {
+    code: "en",
+    label: "English",
+    region: localized("Global", "Global"),
+    uiReady: "partial",
+  },
+  {
+    code: "es",
+    label: "Español",
+    region: localized("Amériques", "Americas"),
+    uiReady: "none",
+  },
+  {
+    code: "pt",
+    label: "Português",
+    region: localized("Brésil · Angola", "Brazil · Angola"),
+    uiReady: "none",
+  },
   {
     code: "ar",
     label: "العربية",
-    region: "Maghreb",
+    region: localized("Maghreb", "Maghreb"),
     uiReady: "none",
     rtl: true,
   },
   {
     code: "sw",
     label: "Kiswahili",
-    region: "Afrique de l'Est",
+    region: localized("Afrique de l'Est", "East Africa"),
     uiReady: "none",
   },
 ]
+
+/* i18n-ignore-end */
 
 export const DEFAULT_LANGUAGE: LanguageCode = "fr"
 
@@ -135,16 +168,25 @@ export function uiLanguage(code: string | null | undefined): LanguageCode {
 }
 
 /** What the picker should say each option actually gives you. */
-export function languagePromise(language: Language): string {
+export function languagePromise(language: Language, tx: Tx): string {
   if (language.uiReady === "full") {
-    return "Interface et réponses SentrIA"
+    return tx(
+      "Interface et réponses SentrIA",
+      "Interface and SentrIA's answers"
+    )
   }
 
   if (language.uiReady === "partial") {
-    return `Navigation en ${language.label} · contenu encore en français`
+    return tx(
+      `Navigation en ${language.label} · contenu encore en français`,
+      `Navigation in ${language.label} · content still in French`
+    )
   }
 
-  return `SentrIA répond en ${language.label} · interface en français`
+  return tx(
+    `SentrIA répond en ${language.label} · interface en français`,
+    `SentrIA answers in ${language.label} · interface in French`
+  )
 }
 
 export function readLanguage(): LanguageCode {
@@ -205,7 +247,7 @@ export type Currency = {
 
 export type Country = {
   code: string
-  name: string
+  name: Localized
   currency: Currency
   /** The zone id from lib/company.ts to default the timezone to, so a
    *  country choice fills the clock in rather than leaving it on
@@ -213,6 +255,10 @@ export type Country = {
   timezoneId: string
 }
 
+/* Currency codes and symbols, which are the same characters in every
+   language.
+ *
+ * i18n-ignore-start: ISO codes and currency symbols */
 const XOF: Currency = { code: "XOF", symbol: "F CFA" }
 const XAF: Currency = { code: "XAF", symbol: "FCFA" }
 const EUR: Currency = { code: "EUR", symbol: "€" }
@@ -221,59 +267,61 @@ const EUR: Currency = { code: "EUR", symbol: "€" }
  *  explicit fallback. Not a world list: an option nobody can serve is
  *  the same defect as a language nobody translated. */
 export const COUNTRIES: Country[] = [
-  { code: "BJ", name: "Bénin", currency: XOF, timezoneId: "gmt" },
-  { code: "CI", name: "Côte d'Ivoire", currency: XOF, timezoneId: "gmt" },
-  { code: "SN", name: "Sénégal", currency: XOF, timezoneId: "gmt" },
-  { code: "TG", name: "Togo", currency: XOF, timezoneId: "gmt" },
+  { code: "BJ", name: localized("Bénin", "Benin"), currency: XOF, timezoneId: "gmt" },
+  { code: "CI", name: localized("Côte d'Ivoire", "Côte d'Ivoire"), currency: XOF, timezoneId: "gmt" },
+  { code: "SN", name: localized("Sénégal", "Senegal"), currency: XOF, timezoneId: "gmt" },
+  { code: "TG", name: localized("Togo", "Togo"), currency: XOF, timezoneId: "gmt" },
   {
     code: "GH",
-    name: "Ghana",
+    name: localized("Ghana", "Ghana"),
     currency: { code: "GHS", symbol: "₵" },
     timezoneId: "gmt",
   },
   {
     code: "NG",
-    name: "Nigeria",
+    name: localized("Nigeria", "Nigeria"),
     currency: { code: "NGN", symbol: "₦" },
     timezoneId: "wat",
   },
-  { code: "CM", name: "Cameroun", currency: XAF, timezoneId: "wat" },
+  { code: "CM", name: localized("Cameroun", "Cameroon"), currency: XAF, timezoneId: "wat" },
   {
     code: "CD",
-    name: "RD Congo",
+    name: localized("RD Congo", "DR Congo"),
     currency: { code: "CDF", symbol: "FC" },
     timezoneId: "wat",
   },
   {
     code: "KE",
-    name: "Kenya",
+    name: localized("Kenya", "Kenya"),
     currency: { code: "KES", symbol: "KSh" },
     timezoneId: "eat",
   },
   {
     code: "TZ",
-    name: "Tanzanie",
+    name: localized("Tanzanie", "Tanzania"),
     currency: { code: "TZS", symbol: "TSh" },
     timezoneId: "eat",
   },
   {
     code: "MA",
-    name: "Maroc",
+    name: localized("Maroc", "Morocco"),
     currency: { code: "MAD", symbol: "DH" },
     timezoneId: "cet",
   },
-  { code: "FR", name: "France", currency: EUR, timezoneId: "cet" },
+  { code: "FR", name: localized("France", "France"), currency: EUR, timezoneId: "cet" },
   {
     code: "BR",
-    name: "Brésil",
+    name: localized("Brésil", "Brazil"),
     currency: { code: "BRL", symbol: "R$" },
     timezoneId: "brt",
   },
   /* Named rather than silent. Somebody outside this list still gets a
      working product, and the euro is stated as the assumption it is
      instead of appearing as a fact. */
-  { code: "XX", name: "Autre pays (euro)", currency: EUR, timezoneId: "gmt" },
+  { code: "XX", name: localized("Autre pays (euro)", "Another country (euro)"), currency: EUR, timezoneId: "gmt" },
 ]
+
+/* i18n-ignore-end */
 
 export function countryFor(code: string | null | undefined): Country | undefined {
   return COUNTRIES.find((country) => country.code === code)
