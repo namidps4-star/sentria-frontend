@@ -95,6 +95,94 @@ General retail checks only. No expiry, no cash-locked. The files carry
 no money columns, on purpose: they show what the default path does with
 the minimum a shop can supply.
 
+## Fields per activity
+
+Derived by ablation, not by reading: for each activity, each field was
+removed from a row that fired everything, and the alerts that
+disappeared were recorded.
+
+Totals: supermarket 12 alert keys, convenience store 10, chain stores 9,
+wholesaler 9. Thirteen distinct keys across all four.
+
+### The floor, for all four
+
+| Column | Enables |
+|---|---|
+| `product_name` or `sku` | The name on the alert. Without it every alert says "Unknown". |
+| `stock_qty` | Everything. Stock-out, overstock, reorder, and both money layers hang off it. |
+| `min_stock` | `stock.critical_low`, `stock.low` |
+
+Three columns, and a shop gets the stock-out pair. That is the honest
+minimum.
+
+### Supermarket / hypermarket, `supermarche-hypermarche`
+
+| Column | Enables | Have it? |
+|---|---|---|
+| `stock_qty` | everything below | inventory export |
+| `min_stock` | `stock.critical_low`, `stock.low` | set once, per product |
+| `unit_cost` | `expiry.expired_value`, `expiry.warning_value` | inventory export |
+| `expiry_date` | both expiry alerts, and `slow_mover.expiry_risk` | delivery note, per batch |
+| `last_sale_date` | `slow_mover.expiry_risk` | sales log |
+| `sales_last_30_days` | `stock.reorder_risk`, `stock.overstock` | sales log |
+| `sales_last_7_days` + `sales_previous_7_days` | `sales.drop` | sales log |
+| `shrinkage_rate` | `shrinkage.critical`, `shrinkage.warning` | stock count |
+| `pos_downtime_minutes` | `pos.downtime` | POS admin log, shop-level |
+| `foot_traffic` + `staff_count` | `staffing.understaffed` | door counter and rota, shop-level |
+
+Minimum worth uploading: `product_name, stock_qty, min_stock,
+unit_cost, expiry_date`. Five columns and the money alerts work.
+
+### Convenience store, `epicerie-proximite`
+
+Same as above, except `expiry_date` buys nothing and `last_sale_date`
+does something different.
+
+| Column | Enables |
+|---|---|
+| `unit_cost` | `deadstock.cash_locked` |
+| `last_sale_date` | `deadstock.cash_locked` |
+| `expiry_date` | nothing. This activity has no expiry layer. |
+
+Minimum: `product_name, stock_qty, min_stock, unit_cost,
+last_sale_date`.
+
+### Chain stores, `chaine-magasins`, and wholesaler, `grossiste-distributeur`
+
+Identical field requirements. General checks only, so **`unit_cost`,
+`currency`, `expiry_date` and `last_sale_date` do nothing at all** on
+these two. There is no money layer to spend them on.
+
+| Column | Enables |
+|---|---|
+| `stock_qty`, `min_stock` | `stock.critical_low`, `stock.low` |
+| `sales_last_30_days` | `stock.reorder_risk`, `stock.overstock` |
+| `target_days_of_inventory` | tunes `stock.overstock` |
+| `shrinkage_rate` | `shrinkage.critical`, `shrinkage.warning` |
+| `pos_downtime_minutes` | `pos.downtime` |
+| `foot_traffic` + `staff_count` | `staffing.understaffed` |
+| `sales_last_7_days` + `sales_previous_7_days` | `sales.drop` |
+
+Minimum: `product_name, stock_qty, min_stock`, and
+`sales_last_30_days` if reorder risk matters, which for a wholesaler it
+usually does.
+
+### Thresholds, which are not requirements
+
+These are read by every activity but all carry a default, so leaving
+them out never silences an alert. It only moves the line.
+
+| Column | Default |
+|---|---|
+| `supplier_lead_days` | `7` |
+| `target_days_of_inventory` | `30` |
+| `max_shrinkage_rate` | `2.0` |
+| `max_pos_downtime_minutes` | `15` |
+| `max_customers_per_staff` | `30` |
+| `currency` | `€` |
+
+They belong in Settings, asked once, not repeated on every product row.
+
 ## What fires, and why
 
 ### `retail-supermarche.csv`
