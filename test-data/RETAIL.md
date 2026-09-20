@@ -51,7 +51,19 @@ All four run `check_general_retail()`. Two of them add a layer on top.
 | `sales_last_7_days` | — | Week-on-week drop |
 | `sales_previous_7_days` | — | Week-on-week drop |
 
-`category` is carried in these files for readability. Nothing reads it.
+`category` and `store` are carried for readability. Nothing reads them.
+
+**`store_id` is deliberately absent.** The entity on an alert is
+`row.get("store_id", row.get("product_name", row.get("sku")))`, so a
+column called `store_id` wins over the product name and every alert in
+the file comes out labelled with the shop: "MAG-COTONOU-01 - Stock-out
+imminent: 4 units left", with no way to tell which product ran out. The
+shop is in a `store` column here instead, which nothing reads, and the
+one row that genuinely IS a shop-level thing carries the shop in its
+own name ("Caisse 4 - MAG-COTONOU-03").
+
+There is no second entity to put a shop in. One row produces alerts
+about one named thing.
 
 ### Supermarket adds the expiry-in-money layer
 
@@ -94,7 +106,7 @@ the minimum a shop can supply.
 | Sauce tomate bio 400g | Idle 87 days, expires in 86, 126 000 F CFA recoverable |
 | Riz parfumé 5kg | Stock-out imminent, and will run out before delivery |
 | Whisky import 70cl | Critical shrinkage 7.4% |
-| Caisse 4 | Checkout down 64 min, and 400 customers per staff member |
+| Caisse 4 - MAG-COTONOU-03 | Checkout down 64 min, and 400 customers per staff member |
 | Boisson gazeuse 1.5L | Sales down 47.1% week on week |
 | Savon de Marseille | OK |
 
@@ -128,6 +140,24 @@ the minimum a shop can supply.
 | Palette riz 25kg | 87 days of cover |
 | Carton huile 12x1L | Reorder risk, shrinkage 4.6%, 70 customers per staff |
 | Carton lait poudre | Reorder risk, sales down 48.3% |
+
+## Shop-level columns repeat on every row, and so do their alerts
+
+`foot_traffic`, `staff_count` and `pos_downtime_minutes` describe the
+shop, not the product, but they are read off the same per-product row.
+Put a real checkout outage on a 400-line inventory file and it fires
+400 times:
+
+```
+Riz 5kg    -> Checkout down for 64 min : sales are blocked
+Lait 1L    -> Checkout down for 64 min : sales are blocked
+Savon      -> Checkout down for 64 min : sales are blocked
+```
+
+These files avoid that by carrying the shop-level numbers on one
+dedicated row and leaving the thresholds high enough elsewhere that
+nothing trips. That is a workaround for test data, not a fix. A real
+shop needs those four signals somewhere other than the product file.
 
 ## The dates are fixed, and they will age
 
