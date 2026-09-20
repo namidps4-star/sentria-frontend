@@ -1,0 +1,241 @@
+sku,product_name,category,stock_qty,min_stock,sales_last_30_days,sales_last_7_days,sales_previous_7_days,supplier_lead_days,unit_cost,currency,last_sale_date
+EPI-0001,Seau 20L,Maison,66,8,40,11,10,21,3500,F CFA,2026-09-19
+EPI-0002,Jus local 1.5L Sahel,Liquides,105,25,107,24,23,3,2300,F CFA,2026-09-19
+EPI-0003,Carte SIM Mono,Divers,174,46,169,56,116,5,1500,F CFA,2026-09-18
+EPI-0004,Cigarettes paquet Kara,Tabac,60,19,49,13,12,14,4200,F CFA,2026-09-19
+EPI-0005,Balai Volta,Maison,83,65,170,36,38,14,3500,F CFA,2026-09-18
+EPI-0006,Balai,Maison,83,24,95,25,24,14,4200,F CFA,2026-09-17
+EPI-0007,Boisson gazeuse x12,Liquides,137,39,99,22,22,21,2300,F CFA,2026-09-19
+EPI-0008,Savon x12 Mono,Hygiène,140,12,89,21,21,21,6500,F CFA,2026-09-18
+EPI-0009,Huile 1L Bénin,Épicerie,59,15,51,12,11,7,2300,F CFA,2026-09-20
+EPI-0010,Jus local x24,Liquides,252,62,359,90,85,10,3500,F CFA,2026-09-18
+EPI-0011,Pain de mie,Frais,156,30,116,28,29,21,800,F CFA,2026-09-20
+EPI-0012,Yaourt 500g Bonjour,Frais,18,4,16,4,4,5,800,F CFA,2026-09-19
+EPI-0013,Serviette hygiénique Ouémé,Hygiène,101,42,155,37,39,3,4200,F CFA,2026-09-19
+EPI-0014,Ampoule LED,Divers,55,20,55,13,12,7,800,F CFA,2026-09-17
+EPI-0015,Bière locale x12 Mono,Liquides,255,54,189,43,45,21,1100,F CFA,2026-09-18
+EPI-0016,Cigarettes paquet,Tabac,52,13,36,9,8,5,800,F CFA,2026-09-18
+EPI-0017,Balai Ouémé,Maison,180,67,192,45,43,10,50,F CFA,2026-09-18
+EPI-0018,Seau 20L Volta,Maison,35,14,38,9,9,14,100,F CFA,2026-09-18
+EPI-0019,Œufs x6 Bénin,Frais,29,8,51,14,13,3,250,F CFA,2026-09-18
+EPI-0020,Yaourt 500g,Frais,327,68,507,122,119,10,150,F CFA,2026-09-20
+EPI-0021,Tomate concentrée 500g Lomé,Épicerie,109,53,196,49,46,7,4200,F CFA,2026-09-20
+EPI-0022,Huile moteur x24,Divers,92,39,129,31,28,5,25,F CFA,2026-09-17
+EPI-0023,Savon,Hygiène,51,7,42,9,10,21,800,F CFA,2026-09-17
+EPI-0024,Lait en poudre x12,Épicerie,33,5,30,7,7,14,150,F CFA,2026-09-19
+EPI-0025,Spaghetti x12 Bénin,Épicerie,106,46,135,37,35,3,350,F CFA,2026-09-17
+EPI-0026,Assiette plastique Niger,Maison,124,15,79,18,18,21,150,F CFA,2026-09-19
+EPI-0027,Cigarettes paquet Zou,Tabac,8,3,16,4,4,3,150,F CFA,2026-09-20
+EPI-0028,Savon x6 Mono,Hygiène,90,29,93,25,23,3,800,F CFA,2026-09-20
+EPI-0029,Sachet d'eau 50cl,Liquides,71,26,72,16,16,3,12000,F CFA,2026-09-17
+EPI-0030,Briquet Bonjour,Tabac,29,13,47,11,12,3,500,F CFA,2026-09-17
+EPI-0031,Assiette plastique Mono,Maison,27,6,27,8,7,3,1500,F CFA,2026-09-17
+EPI-0032,Bassine plastique,Maison,598,110,363,86,81,21,4200,F CFA,2026-09-17
+EPI-0033,Briquet Zou,Tabac,175,44,280,71,65,10,350,F CFA,2026-09-20
+EPI-0034,Balai Lomé,Maison,46,15,63,15,14,10,100,F CFA,2026-09-18
+EPI-0035,Ampoule LED Lomé,Divers,41,8,26,7,7,21,350,F CFA,2026-09-17
+EPI-0036,Recharge téléphone x12,Divers,190,61,429,98,98,7,50,F CFA,2026-09-19
+EPI-0037,Recharge téléphone x6 Bonjour,Divers,14,9,75,19,18,3,350,F CFA,2026-09-20
+EPI-0038,Spaghetti x12 Ouémé,Épicerie,200,28,133,32,31,21,50,F CFA,2026-09-17
+EPI-0039,Jus local x12 Bénin,Liquides,94,21,0,0,0,3,100,F CFA,2026-03-08
+EPI-0040,Dentifrice Sahel,Hygiène,198,46,280,72,67,10,250,F CFA,2026-09-17
+EPI-0041,Spaghetti 1kg Zou,Épicerie,164,14,101,24,23,21,800,F CFA,2026-09-20
+EPI-0042,Huile moteur,Divers,83,19,53,12,12,7,4200,F CFA,2026-09-17
+EPI-0043,Piles LR20,Divers,18,5,25,6,6,10,150,F CFA,2026-09-19
+EPI-0044,Briquet Dogbo,Tabac,213,62,173,47,44,3,100,F CFA,2026-09-20
+EPI-0045,Briquet Kara,Tabac,166,62,170,35,37,14,6500,F CFA,2026-09-17
+EPI-0046,Tomate concentrée 5kg,Épicerie,145,22,0,0,0,14,250,F CFA,2026-03-23
+EPI-0047,Recharge téléphone x6,Divers,22,6,18,4,4,14,3500,F CFA,2026-09-18
+EPI-0048,Ampoule LED Bénin,Divers,14,5,32,8,8,5,2300,F CFA,2026-09-18
+EPI-0049,Œufs x6 Kara,Frais,55,13,55,13,13,10,4200,F CFA,2026-09-20
+EPI-0050,Bière locale x6,Liquides,98,34,102,27,25,14,650,F CFA,2026-09-19
+EPI-0051,Dentifrice x12 Bonjour,Hygiène,236,59,199,48,49,21,650,F CFA,2026-09-19
+EPI-0052,Sucre 500g,Épicerie,121,29,99,25,24,10,12000,F CFA,2026-09-19
+EPI-0053,Seau 20L Lomé,Maison,77,15,48,10,11,21,50,F CFA,2026-09-20
+EPI-0054,Lait concentré 500g,Frais,155,35,129,35,32,3,3500,F CFA,2026-09-18
+EPI-0055,Bouillon cube 5kg Volta,Épicerie,95,19,101,28,26,14,150,F CFA,2026-09-18
+EPI-0056,Spaghetti x6 Volta,Épicerie,74,26,69,19,17,14,250,F CFA,2026-09-19
+EPI-0057,Briquet Atlantique,Tabac,33,12,73,20,19,5,350,F CFA,2026-09-17
+EPI-0058,Assiette plastique,Maison,184,79,346,88,88,3,50,F CFA,2026-09-17
+EPI-0059,Piles LR20 Kara,Divers,28,5,25,7,6,14,12000,F CFA,2026-09-18
+EPI-0060,Papier toilette x6 Lomé,Hygiène,19,8,22,6,6,14,150,F CFA,2026-09-19
+EPI-0061,Recharge téléphone,Divers,201,23,123,29,28,21,500,F CFA,2026-09-17
+EPI-0062,Sachet d'eau 50cl Zou,Liquides,32,14,49,12,12,7,800,F CFA,2026-09-18
+EPI-0063,Papier toilette x6,Hygiène,619,154,417,103,96,5,1500,F CFA,2026-09-17
+EPI-0064,Serviette hygiénique,Hygiène,61,20,82,19,18,5,50,F CFA,2026-09-18
+EPI-0065,Œufs x6 Mono,Frais,121,30,102,25,25,21,150,F CFA,2026-09-17
+EPI-0066,Jus local x24 Bonjour,Liquides,17,5,31,9,8,7,3500,F CFA,2026-09-17
+EPI-0067,Briquet,Tabac,415,75,383,99,94,14,3500,F CFA,2026-09-19
+EPI-0068,Bouillon cube 500g Volta,Épicerie,117,16,86,20,21,21,350,F CFA,2026-09-20
+EPI-0069,Pain de mie Mono,Frais,17,5,22,5,5,5,25,F CFA,2026-09-17
+EPI-0070,Œufs x6,Frais,924,240,727,172,169,10,4200,F CFA,2026-09-18
+EPI-0071,Assiette plastique Dogbo,Maison,106,18,106,27,26,14,50,F CFA,2026-09-19
+EPI-0072,Yaourt x24 Mono,Frais,24,7,27,6,6,7,50,F CFA,2026-09-20
+EPI-0073,Papier toilette,Hygiène,48,13,38,9,9,3,350,F CFA,2026-09-17
+EPI-0074,Savon Bénin,Hygiène,24,4,16,4,4,21,650,F CFA,2026-09-17
+EPI-0075,Yaourt Mono,Frais,101,36,131,35,32,3,650,F CFA,2026-09-18
+EPI-0076,Ampoule LED x24,Divers,32,15,43,9,10,7,800,F CFA,2026-09-19
+EPI-0077,Sachet d'eau 50cl Bonjour,Liquides,6,2,16,4,4,5,150,F CFA,2026-09-19
+EPI-0078,Lait concentré x12 Mono,Frais,360,144,414,111,106,14,4200,F CFA,2026-09-19
+EPI-0079,Bière locale x12,Liquides,31,7,45,12,11,7,6500,F CFA,2026-09-19
+EPI-0080,Seau 20L Zou,Maison,445,100,278,73,67,21,1100,F CFA,2026-09-19
+EPI-0081,Jus local 5L,Liquides,166,40,147,40,36,14,350,F CFA,2026-09-17
+EPI-0082,Riz 1kg,Épicerie,39,12,46,11,10,10,3500,F CFA,2026-09-20
+EPI-0083,Boisson gazeuse 1.5L Bonjour,Liquides,307,53,238,59,56,21,150,F CFA,2026-09-19
+EPI-0084,Serviette hygiénique x24 Niger,Hygiène,340,77,265,56,59,21,3500,F CFA,2026-09-18
+EPI-0085,Sucre 500g Dogbo,Épicerie,31,8,35,9,9,7,3500,F CFA,2026-09-17
+EPI-0086,Papier toilette x12 Dogbo,Hygiène,658,202,786,199,185,14,350,F CFA,2026-09-18
+EPI-0087,Sardines boîte x12 Sahel,Épicerie,175,70,179,44,45,14,6500,F CFA,2026-09-20
+EPI-0088,Briquet Niger,Tabac,75,24,68,19,17,10,6500,F CFA,2026-09-19
+EPI-0089,Huile moteur x12,Divers,66,20,71,18,16,3,4200,F CFA,2026-09-17
+EPI-0090,Pain de mie x12 Sahel,Frais,135,37,103,24,24,7,1100,F CFA,2026-09-18
+EPI-0091,Papier toilette x12 Volta,Hygiène,253,39,197,52,49,21,100,F CFA,2026-09-19
+EPI-0092,Ampoule LED x12 Bonjour,Divers,40,14,59,15,14,3,25,F CFA,2026-09-19
+EPI-0093,Cigarettes paquet Bonjour,Tabac,112,28,123,30,31,3,50,F CFA,2026-09-17
+EPI-0094,Dentifrice x6,Hygiène,172,48,201,45,46,5,4200,F CFA,2026-09-19
+EPI-0095,Dentifrice Niger,Hygiène,40,11,44,12,11,14,1100,F CFA,2026-09-18
+EPI-0096,Serviette hygiénique Lomé,Hygiène,136,31,94,24,23,5,250,F CFA,2026-09-20
+EPI-0097,Briquet Ouémé,Tabac,163,41,169,45,41,10,250,F CFA,2026-09-18
+EPI-0098,Sardines boîte x12 Dogbo,Épicerie,55,14,47,10,10,14,500,F CFA,2026-09-20
+EPI-0099,Sucre 500g Bénin,Épicerie,109,21,69,16,17,21,150,F CFA,2026-09-17
+EPI-0100,Spaghetti 25kg,Épicerie,100,36,118,29,29,5,250,F CFA,2026-09-17
+EPI-0101,Lait concentré Niger,Frais,464,131,590,143,129,7,6500,F CFA,2026-09-19
+EPI-0102,Pain de mie x24,Frais,28,10,70,18,17,5,25,F CFA,2026-09-17
+EPI-0103,Recharge téléphone x24 Dogbo,Divers,22,16,56,14,13,10,250,F CFA,2026-09-17
+EPI-0104,Cigarettes paquet Mono,Tabac,104,21,64,16,15,21,25,F CFA,2026-09-17
+EPI-0105,Papier toilette Ouémé,Hygiène,1691,578,2150,518,479,10,150,F CFA,2026-09-18
+EPI-0106,Cigarettes paquet Volta,Tabac,43,19,84,18,19,3,350,F CFA,2026-09-17
+EPI-0107,Ampoule LED x6,Divers,161,22,112,28,27,21,100,F CFA,2026-09-18
+EPI-0108,Bière locale 1L Lomé,Liquides,55,22,56,15,14,7,1100,F CFA,2026-09-18
+EPI-0109,Tomate concentrée 1kg,Épicerie,7,21,79,20,20,5,500,F CFA,2026-09-20
+EPI-0110,Lait en poudre x6 Atlantique,Épicerie,104,28,153,37,37,5,3500,F CFA,2026-09-17
+EPI-0111,Bière locale 33cl Bénin,Liquides,44,10,45,11,11,10,350,F CFA,2026-09-18
+EPI-0112,Huile 1L Ouémé,Épicerie,46,21,238,55,58,5,500,F CFA,2026-09-17
+EPI-0113,Bière locale 5L Dogbo,Liquides,68,17,44,12,11,5,800,F CFA,2026-09-18
+EPI-0114,Yaourt x24 Zou,Frais,110,31,88,21,19,21,12000,F CFA,2026-09-17
+EPI-0115,Recharge téléphone x12 Volta,Divers,113,29,82,19,20,10,25,F CFA,2026-09-19
+EPI-0116,Carte SIM x6,Divers,76,25,82,17,18,3,12000,F CFA,2026-09-20
+EPI-0117,Sachet d'eau 50cl Dogbo,Liquides,74,32,81,19,18,10,12000,F CFA,2026-09-18
+EPI-0118,Bassine plastique Atlantique,Maison,52,12,58,15,15,10,1500,F CFA,2026-09-17
+EPI-0119,Yaourt x6 Niger,Frais,11,3,8,2,2,10,3500,F CFA,2026-09-17
+EPI-0120,Spaghetti 1kg,Épicerie,8,2,17,4,4,7,100,F CFA,2026-09-17
+EPI-0121,Boisson gazeuse x6 Mono,Liquides,65,17,52,13,13,5,25,F CFA,2026-09-19
+EPI-0122,Sachet d'eau 50cl Lomé,Liquides,211,54,161,42,40,14,150,F CFA,2026-09-17
+EPI-0123,Seau 20L Kara,Maison,48,11,54,14,13,5,12000,F CFA,2026-09-19
+EPI-0124,Lait concentré,Frais,23,7,19,5,5,7,4200,F CFA,2026-09-17
+EPI-0125,Huile 1L,Épicerie,6,2,8,2,2,14,1100,F CFA,2026-09-17
+EPI-0126,Bassine plastique Sahel,Maison,15,4,16,4,4,3,50,F CFA,2026-09-17
+EPI-0127,Lait concentré Bonjour,Frais,362,118,468,115,119,5,150,F CFA,2026-09-17
+EPI-0128,Savon Volta,Hygiène,128,30,112,27,26,10,500,F CFA,2026-09-20
+EPI-0129,Bouillon cube 25kg Ouémé,Épicerie,43,12,35,8,8,14,650,F CFA,2026-09-19
+EPI-0130,Lait concentré x12 Volta,Frais,82,16,55,13,12,21,6500,F CFA,2026-09-18
+EPI-0131,Carte SIM,Divers,261,61,186,42,44,5,50,F CFA,2026-09-18
+EPI-0132,Boisson gazeuse 75cl,Liquides,45,11,30,8,8,10,6500,F CFA,2026-09-19
+EPI-0133,Carte SIM Zou,Divers,58,23,113,29,28,5,6500,F CFA,2026-09-20
+EPI-0134,Bouillon cube x24,Épicerie,33,10,33,8,8,7,1500,F CFA,2026-09-17
+EPI-0135,Balai Atlantique,Maison,53,12,33,9,8,21,2300,F CFA,2026-09-18
+EPI-0136,Sucre 500g Volta,Épicerie,59,24,61,15,14,14,250,F CFA,2026-09-20
+EPI-0137,Jus local x24 Ouémé,Liquides,88,19,107,29,27,14,150,F CFA,2026-09-19
+EPI-0138,Cigarettes paquet Bénin,Tabac,41,11,28,8,7,21,150,F CFA,2026-09-20
+EPI-0139,Pain de mie x24 Kara,Frais,91,28,120,28,29,7,6500,F CFA,2026-09-19
+EPI-0140,Papier toilette Dogbo,Hygiène,22,9,63,14,14,3,1500,F CFA,2026-09-19
+EPI-0141,Jus local 50cl,Liquides,105,24,71,15,16,14,250,F CFA,2026-09-19
+EPI-0142,Tomate concentrée 5kg Zou,Épicerie,67,19,49,13,12,3,650,F CFA,2026-09-19
+EPI-0143,Dentifrice Atlantique,Hygiène,15,5,29,7,7,3,1500,F CFA,2026-09-19
+EPI-0144,Bière locale 50cl Bonjour,Liquides,55,21,62,15,14,14,4200,F CFA,2026-09-17
+EPI-0145,Yaourt 25kg Niger,Frais,30,11,67,15,15,3,250,F CFA,2026-09-20
+EPI-0146,Lait concentré 250g Atlantique,Frais,206,60,156,40,37,21,1500,F CFA,2026-09-20
+EPI-0147,Pain de mie x6 Dogbo,Frais,32,12,67,19,17,7,1100,F CFA,2026-09-17
+EPI-0148,Bière locale 33cl Ouémé,Liquides,336,86,298,79,74,5,150,F CFA,2026-09-17
+EPI-0149,Assiette plastique Lomé,Maison,249,67,186,49,46,7,150,F CFA,2026-09-18
+EPI-0150,Jus local 5L Atlantique,Liquides,7,2,11,3,3,5,500,F CFA,2026-09-19
+EPI-0151,Yaourt 5kg,Frais,10,3,11,3,3,14,50,F CFA,2026-09-20
+EPI-0152,Bouillon cube x12,Épicerie,71,18,67,14,15,14,100,F CFA,2026-09-20
+EPI-0153,Sachet d'eau 50cl Volta,Liquides,23,12,64,18,16,3,12000,F CFA,2026-09-17
+EPI-0154,Sardines boîte x6 Sahel,Épicerie,94,24,93,24,24,10,6500,F CFA,2026-09-18
+EPI-0155,Bassine plastique Zou,Maison,37,12,43,9,9,7,12000,F CFA,2026-09-20
+EPI-0156,Yaourt,Frais,41,14,85,16,41,7,150,F CFA,2026-09-19
+EPI-0157,Ampoule LED Ouémé,Divers,128,30,125,28,27,5,250,F CFA,2026-09-17
+EPI-0158,Bière locale x6 Bénin,Liquides,59,15,79,18,18,5,2300,F CFA,2026-09-19
+EPI-0159,Assiette plastique Bénin,Maison,303,103,318,83,78,10,2300,F CFA,2026-09-17
+EPI-0160,Cigarettes paquet Sahel,Tabac,156,48,158,36,36,5,1500,F CFA,2026-09-18
+EPI-0161,Yaourt x12 Niger,Frais,206,58,182,45,43,10,1500,F CFA,2026-09-19
+EPI-0162,Briquet Mono,Tabac,83,21,78,18,19,14,2300,F CFA,2026-09-18
+EPI-0163,Dentifrice Ouémé,Hygiène,31,7,29,6,6,3,3500,F CFA,2026-09-19
+EPI-0164,Serviette hygiénique x6,Hygiène,66,13,52,12,12,21,800,F CFA,2026-09-18
+EPI-0165,Pain de mie Bénin,Frais,218,55,150,37,34,5,12000,F CFA,2026-09-20
+EPI-0166,Briquet Sahel,Tabac,125,15,80,17,18,21,3500,F CFA,2026-09-18
+EPI-0167,Bière locale x12 Niger,Liquides,19,5,15,4,4,21,500,F CFA,2026-09-18
+EPI-0168,Serviette hygiénique x6 Kara,Hygiène,57,16,72,16,16,14,25,F CFA,2026-09-18
+EPI-0169,Yaourt x6 Ouémé,Frais,28,7,20,5,5,5,1500,F CFA,2026-09-20
+EPI-0170,Serviette hygiénique x12 Dogbo,Hygiène,160,44,138,29,30,5,2300,F CFA,2026-09-19
+EPI-0171,Cigarettes paquet Dogbo,Tabac,38,9,54,12,12,7,50,F CFA,2026-09-19
+EPI-0172,Cigarettes paquet Ouémé,Tabac,32,9,65,15,15,7,350,F CFA,2026-09-20
+EPI-0173,Papier toilette Kara,Hygiène,66,17,52,14,13,3,1500,F CFA,2026-09-18
+EPI-0174,Œufs x6 Dogbo,Frais,47,11,43,11,10,14,1500,F CFA,2026-09-20
+EPI-0175,Piles LR20 Mono,Divers,13,6,28,6,6,3,1100,F CFA,2026-09-17
+EPI-0176,Pain de mie x12,Frais,69,38,171,43,39,10,3500,F CFA,2026-09-20
+EPI-0177,Sachet d'eau 50cl Atlantique,Liquides,462,83,276,66,68,21,250,F CFA,2026-09-18
+EPI-0178,Sachet d'eau 50cl Sahel,Liquides,18,7,33,7,7,3,250,F CFA,2026-09-17
+EPI-0179,Yaourt x12,Frais,62,16,43,12,11,3,4200,F CFA,2026-09-19
+EPI-0180,Pain de mie x6 Volta,Frais,18,4,25,5,5,10,1100,F CFA,2026-09-17
+EPI-0181,Recharge téléphone Ouémé,Divers,43,13,38,9,8,5,12000,F CFA,2026-09-20
+EPI-0182,Ampoule LED x24 Niger,Divers,104,33,105,22,23,3,150,F CFA,2026-09-18
+EPI-0183,Bière locale x6 Atlantique,Liquides,66,27,116,29,30,5,100,F CFA,2026-09-17
+EPI-0184,Piles LR20 Niger,Divers,34,8,43,9,10,3,50,F CFA,2026-09-17
+EPI-0185,Spaghetti 5kg,Épicerie,99,29,75,17,16,5,800,F CFA,2026-09-20
+EPI-0186,Ampoule LED x12 Volta,Divers,214,9,43,11,11,3,50,F CFA,2026-09-20
+EPI-0187,Papier toilette Lomé,Hygiène,200,23,145,34,35,21,12000,F CFA,2026-09-19
+EPI-0188,Savon Lomé,Hygiène,45,10,44,11,10,14,3500,F CFA,2026-09-19
+EPI-0189,Savon Sahel,Hygiène,78,34,106,29,27,3,350,F CFA,2026-09-17
+EPI-0190,Yaourt Kara,Frais,22,7,40,10,10,7,650,F CFA,2026-09-20
+EPI-0191,Assiette plastique Ouémé,Maison,59,20,51,13,12,3,6500,F CFA,2026-09-20
+EPI-0192,Huile moteur Dogbo,Divers,57,16,40,9,9,7,250,F CFA,2026-09-17
+EPI-0193,Sardines boîte 1kg,Épicerie,60,20,76,21,19,10,1100,F CFA,2026-09-17
+EPI-0194,Bière locale 1L Zou,Liquides,83,19,60,17,15,3,100,F CFA,2026-09-19
+EPI-0195,Jus local x12 Mono,Liquides,14,4,14,3,3,7,3500,F CFA,2026-09-20
+EPI-0196,Savon x12,Hygiène,303,51,323,68,70,14,1500,F CFA,2026-09-18
+EPI-0197,Bière locale x24 Ouémé,Liquides,163,29,102,23,23,21,1500,F CFA,2026-09-19
+EPI-0198,Jus local 5L Niger,Liquides,475,32,130,28,29,3,250,F CFA,2026-09-17
+EPI-0199,Pain de mie Volta,Frais,27,8,33,8,8,3,800,F CFA,2026-09-17
+EPI-0200,Dentifrice x24 Kara,Hygiène,30,7,45,11,11,7,6500,F CFA,2026-09-18
+EPI-0201,Savon Ouémé,Hygiène,16,6,20,4,4,3,1100,F CFA,2026-09-17
+EPI-0202,Assiette plastique Volta,Maison,72,18,57,13,12,21,250,F CFA,2026-09-18
+EPI-0203,Assiette plastique Atlantique,Maison,27,13,37,10,9,10,4200,F CFA,2026-09-18
+EPI-0204,Yaourt Zou,Frais,44,17,71,16,16,3,1100,F CFA,2026-09-19
+EPI-0205,Bière locale 50cl Bénin,Liquides,33,8,20,6,5,3,50,F CFA,2026-09-18
+EPI-0206,Papier toilette Zou,Hygiène,67,17,75,20,18,10,1500,F CFA,2026-09-17
+EPI-0207,Recharge téléphone x24,Divers,111,22,132,32,34,14,6500,F CFA,2026-09-18
+EPI-0208,Sardines boîte x6 Atlantique,Épicerie,126,47,135,36,33,10,150,F CFA,2026-09-20
+EPI-0209,Dentifrice x12 Lomé,Hygiène,71,17,46,11,11,14,4200,F CFA,2026-09-18
+EPI-0210,Pain de mie Lomé,Frais,94,43,113,29,28,10,150,F CFA,2026-09-17
+EPI-0211,Pain de mie 250g,Frais,23,9,29,8,7,14,250,F CFA,2026-09-17
+EPI-0212,Bière locale 75cl Atlantique,Liquides,120,18,84,20,20,21,25,F CFA,2026-09-17
+EPI-0213,Yaourt Bonjour,Frais,19,9,28,6,6,10,1100,F CFA,2026-09-18
+EPI-0214,Œufs x6 Niger,Frais,84,21,60,17,15,7,250,F CFA,2026-09-18
+EPI-0215,Recharge téléphone x12 Dogbo,Divers,170,54,146,34,36,14,150,F CFA,2026-09-17
+EPI-0216,Riz 1kg Atlantique,Épicerie,210,41,295,81,75,10,25,F CFA,2026-09-20
+EPI-0217,Lait en poudre 5kg Dogbo,Épicerie,42,10,36,10,9,14,2300,F CFA,2026-09-19
+EPI-0218,Dentifrice,Hygiène,10,3,19,7,13,7,2300,F CFA,2026-09-18
+EPI-0219,Papier toilette Niger,Hygiène,11,3,13,3,3,5,6500,F CFA,2026-09-20
+EPI-0220,Bière locale 1.5L Bonjour,Liquides,140,35,114,28,28,3,6500,F CFA,2026-09-20
+EPI-0221,Tomate concentrée x12 Sahel,Épicerie,38,10,34,8,8,14,25,F CFA,2026-09-20
+EPI-0222,Piles LR20 Atlantique,Divers,102,23,143,40,36,7,1500,F CFA,2026-09-19
+EPI-0223,Boisson gazeuse x12 Ouémé,Liquides,141,16,94,19,20,21,2300,F CFA,2026-09-20
+EPI-0224,Dentifrice x6 Bonjour,Hygiène,62,9,38,11,10,21,1100,F CFA,2026-09-20
+EPI-0225,Bassine plastique Volta,Maison,47,11,64,16,16,10,150,F CFA,2026-09-20
+EPI-0226,Recharge téléphone x12 Kara,Divers,38,14,141,32,32,3,2300,F CFA,2026-09-17
+EPI-0227,Huile 1L Zou,Épicerie,149,39,130,29,30,14,1100,F CFA,2026-09-18
+EPI-0228,Bière locale 50cl Lomé,Liquides,14,6,52,13,13,3,1100,F CFA,2026-09-19
+EPI-0229,Savon Atlantique,Hygiène,43,15,46,10,10,10,4200,F CFA,2026-09-20
+EPI-0230,Lait en poudre 5kg,Épicerie,220,51,136,31,31,7,6500,F CFA,2026-09-20
+EPI-0231,Bière locale 33cl,Liquides,47,17,60,15,14,10,1100,F CFA,2026-09-19
+EPI-0232,Huile moteur x24 Lomé,Divers,22,51,155,32,33,21,6500,F CFA,2026-09-19
+EPI-0233,Huile 1L Kara,Épicerie,77,23,77,18,18,10,3500,F CFA,2026-09-17
+EPI-0234,Recharge téléphone x24 Sahel,Divers,26,12,32,8,7,7,12000,F CFA,2026-09-19
+EPI-0235,Bouillon cube x6,Épicerie,115,31,148,32,32,3,650,F CFA,2026-09-17
+EPI-0236,Recharge téléphone x24 Ouémé,Divers,12,5,19,5,5,7,1500,F CFA,2026-09-19
+EPI-0237,Sucre 500g Ouémé,Épicerie,25,21,74,20,19,21,3500,F CFA,2026-09-19
+EPI-0238,Piles LR20 Lomé,Divers,320,73,278,61,63,10,650,F CFA,2026-09-18
+EPI-0239,Carte SIM Atlantique,Divers,302,95,320,81,75,7,650,F CFA,2026-09-20
+EPI-0240,Papier toilette Sahel,Hygiène,122,29,141,36,34,3,250,F CFA,2026-09-17

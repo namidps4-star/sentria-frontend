@@ -13,6 +13,54 @@ the "OK" state is visible too.
 | `retail-chaine.csv` | `chaine-magasins` | 6 | 11 |
 | `retail-grossiste.csv` | `grossiste-distributeur` | 4 | 8 |
 
+## Two sizes of file
+
+The four small files above exist to exercise every code path: 4 to 8
+rows, and between them all thirteen alert keys. They are a test
+fixture, not a shop.
+
+The four `-full` files are what a shop's inventory export actually looks
+like.
+
+| File | Activity | Products | Flagged | Alerts |
+|---|---|---|---|---|
+| `retail-supermarche-full.csv` | `supermarche-hypermarche` | 600 | 34 (5.7%) | 45 |
+| `retail-epicerie-full.csv` | `epicerie-proximite` | 240 | 12 (5.0%) | 15 |
+| `retail-chaine-full.csv` | `chaine-magasins` | 420 | 25 (6.0%) | 34 |
+| `retail-grossiste-full.csv` | `grossiste-distributeur` | 180 | 12 (6.7%) | 16 |
+
+The sizes are what those businesses carry. A mid-size supermarket runs
+3,000 to 15,000 SKUs, so 600 is one department's worth rather than the
+whole shop. A corner shop really does carry a few hundred lines. A
+wholesaler carries the fewest and moves the most.
+
+**The 5 to 7% flagged rate is the point.** In a working shop almost
+everything is fine, and a board that lights up every row is a board
+nobody reads. Getting there took two corrections: healthy stock has to
+clear `daily x supplier_lead_days` or reorder risk fires on a
+well-stocked product, and the two sales weeks have to be drawn together
+or a 15% drop appears by coincidence. Before those fixes 21% of rows
+were flagged, most of them wrongly.
+
+### These files carry only what a shop can honestly export
+
+No `shrinkage_rate`, `foot_traffic`, `staff_count` or
+`pos_downtime_minutes`. Nobody can supply those per product, and on a
+600-line file the two shop-level ones would fire once per row. Dropping
+all four costs 4 of the 13 alerts and keeps 9, including every alert
+with money in it. The small files still cover those four.
+
+Columns, by activity:
+
+- **Supermarket**: sku, product_name, category, stock_qty, min_stock,
+  the three sales figures, supplier_lead_days, unit_cost, currency,
+  expiry_date, last_sale_date
+- **Convenience**: the same without expiry_date
+- **Chain and wholesaler**: no money columns at all, because neither
+  activity has a layer that reads them
+
+Generated with a fixed seed, so regenerating gives the same file.
+
 ## Before you upload: the sector has to be `retail`
 
 `check_equipment()` dispatches on `sector == "retail"`. Anything it does
