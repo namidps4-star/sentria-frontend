@@ -1,0 +1,7 @@
+store_id,product_name,sku,category,stock_qty,min_stock,sales_last_30_days,supplier_lead_days,target_days_of_inventory,shrinkage_rate,max_shrinkage_rate,pos_downtime_minutes,max_pos_downtime_minutes,foot_traffic,staff_count,max_customers_per_staff,sales_last_7_days,sales_previous_7_days,unit_cost,currency,last_sale_date
+EPI-AKPAKPA,Huile moteur 5L,AUT-HUI-002,Divers,36,6,0,14,30,0.5,2.0,0,15,260,2,200,0,0,6500,F CFA,2026-05-02
+EPI-AKPAKPA,Piles LR20 x4,ELE-PIL-007,Divers,90,20,0,21,60,0.3,2.0,0,15,260,2,200,0,0,1200,F CFA,2026-04-18
+EPI-AKPAKPA,Pain de mie,BOU-PAI-001,Frais,3,15,240,2,5,1.4,2.0,0,15,260,2,200,58,56,700,F CFA,2026-09-19
+EPI-GBEGAMEY,Cigarettes paquet,TAB-CIG-001,Tabac,120,30,450,5,15,2.9,2.0,0,15,310,2,200,104,101,1100,F CFA,2026-09-19
+EPI-GBEGAMEY,Bassine plastique 30L,MAI-BAS-014,Maison,150,10,6,30,30,0.2,2.0,0,15,310,2,200,1,2,2300,F CFA,2026-05-30
+EPI-GBEGAMEY,Sachet d'eau 50cl,LIQ-EAU-001,Liquides,800,200,2400,2,12,0.4,2.0,0,15,310,2,200,560,548,25,F CFA,2026-09-19
