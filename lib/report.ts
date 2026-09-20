@@ -37,7 +37,12 @@ export type ReportMonitoringKey =
 export type ReportKpi = {
   label: Localized
   value: string
+  /** Week-over-week: this 7-day window's count minus the previous 7-day
+   *  window's, not day-over-day. A single bad day used to flip the
+   *  badge on its own; this reads a real week of signal. */
   delta: number
+  criticalCount: number
+  warningCount: number
 }
 
 export type ReportTrendPoint = { date: string; value: number }
@@ -50,6 +55,14 @@ export type ReportAlertRow = {
   severity: ReportSeverity
   status: "open" | "resolved"
   message: string
+  /** The backend's own 0-100 composite score for this row. Null when
+   *  the backend didn't compute one — never filled in on this end. */
+  riskScore: number | null
+}
+
+export type ReportOffender = {
+  equipment: string
+  count: number
 }
 
 export type BuiltReport = {
@@ -60,6 +73,10 @@ export type BuiltReport = {
   kpis: Partial<Record<ReportMonitoringKey, ReportKpi>>
   trends: Partial<Record<ReportMonitoringKey, ReportTrendPoint[]>>
   alerts: ReportAlertRow[]
+  /** Equipment/sites named on 2+ alerts this period, worst first. A
+   *  chronic problem named once rather than left to drown in the
+   *  table below. */
+  topOffenders: ReportOffender[]
   /** True when there is nothing to report, so the view can say so
    *  instead of drawing an empty frame. */
   empty: boolean
@@ -154,6 +171,7 @@ export function buildReport(
       kpis: {},
       trends: {},
       alerts: [],
+      topOffenders: [],
       empty: true,
     }
   }
@@ -183,28 +201,49 @@ export function buildReport(
   const labels = dayLabels(days, zone.zone, tx)
 
   for (const [key, list] of byCategory) {
-    const counts = dailyCounts(
-      list,
-      days,
-      () => true
-    )
+    /* Two windows back to back so the delta is a week against the week
+       before it, not one day against the one before it: a single bad
+       day used to be able to flip the badge on its own. */
+    const counts = dailyCounts(list, days * 2, () => true)
+    const previousWindow = counts.slice(0, days)
+    const currentWindow = counts.slice(days)
 
-    /* The delta is the last day against the one before it, which is a
-       real comparison. The mock's deltas were written by hand. */
-    const today = counts[counts.length - 1] ?? 0
-    const yesterday = counts[counts.length - 2] ?? 0
+    const sum = (values: number[]) => values.reduce((a, b) => a + b, 0)
+
+    const criticalCount = list.filter(
+      (alert) => severityOf(alert) === "critical"
+    ).length
 
     kpis[key] = {
       label: CATEGORY_KPI_LABEL[key],
       value: String(list.length),
-      delta: today - yesterday,
+      delta: sum(currentWindow) - sum(previousWindow),
+      criticalCount,
+      warningCount: list.length - criticalCount,
     }
 
-    trends[key] = counts.map((value, index) => ({
+    trends[key] = currentWindow.map((value, index) => ({
       date: labels[index] ?? "",
       value,
     }))
   }
+
+  /* Named once here rather than left for the reader to spot by
+     scanning forty rows of the table below. */
+  const offenderCounts = new Map<string, number>()
+
+  for (const alert of alerts) {
+    offenderCounts.set(
+      alert.equipment,
+      (offenderCounts.get(alert.equipment) ?? 0) + 1
+    )
+  }
+
+  const topOffenders: ReportOffender[] = [...offenderCounts.entries()]
+    .filter(([, count]) => count >= 2)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([equipment, count]) => ({ equipment, count }))
 
   const rows: ReportAlertRow[] = [...alerts]
     .sort(
@@ -222,6 +261,8 @@ export function buildReport(
          invention. */
       status: "open" as const,
       message: messageFinding(alert) || alert.message,
+      riskScore:
+        typeof alert.risk_score === "number" ? alert.risk_score : null,
     }))
 
   return {
@@ -237,6 +278,7 @@ export function buildReport(
     kpis,
     trends,
     alerts: rows,
+    topOffenders,
     empty: false,
   }
 }

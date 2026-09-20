@@ -20,6 +20,7 @@ import { API_BASE } from "@/lib/api"
 import { readCompanyName, readTimezoneId } from "@/lib/company"
 import { buildReport } from "@/lib/report"
 import type { LogisticsAlert } from "@/lib/logistics-signals"
+import { SECTOR_LABELS, sectorLabel, type Sector } from "@/lib/priorities"
 import { cn } from "@/lib/utils"
 import { localized, resolve, useTx, type Localized } from "@/lib/i18n"
 
@@ -48,6 +49,8 @@ interface KpiPoint {
   deltaUnit?: string
   /** Whether a rise is good news. False for anything counting alerts. */
   higherIsBetter?: boolean
+  criticalCount: number
+  warningCount: number
 }
 
 interface TrendPoint {
@@ -63,6 +66,12 @@ interface AlertRow {
   severity: Severity
   status: AlertStatus
   message: string
+  riskScore: number | null
+}
+
+interface Offender {
+  equipment: string
+  count: number
 }
 
 interface ReportData {
@@ -73,6 +82,7 @@ interface ReportData {
   kpis: Partial<Record<MonitoringKey, KpiPoint>>
   trends: Partial<Record<MonitoringKey, TrendPoint[]>>
   alerts: AlertRow[]
+  topOffenders: Offender[]
 }
 
 // ---------------------------------------------------------------------------
@@ -139,6 +149,85 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
+/** The sectors this company actually onboarded, read the same way the
+ *  dashboard and profile page do: the multi-sector array first, the
+ *  older single-sector key as a fallback. Never invents a sector nobody
+ *  picked. */
+function readOnboardedSectors(): Sector[] {
+  if (typeof window === "undefined") return []
+
+  try {
+    const many = JSON.parse(localStorage.getItem("sentria_sectors") || "null")
+
+    if (Array.isArray(many)) {
+      const valid = many.filter(
+        (key): key is Sector => typeof key === "string" && key in SECTOR_LABELS
+      )
+
+      if (valid.length > 0) return valid
+    }
+  } catch {
+    /* fall through to the single-value key */
+  }
+
+  const one = localStorage.getItem("sentria_sector")
+
+  return one && one in SECTOR_LABELS ? [one as Sector] : []
+}
+
+/** Only rendered when the company onboarded more than one sector — a
+ *  single-sector company's report already is that sector's report, and
+ *  a toggle with one real choice would be noise rather than a filter. */
+function SectorTabs({
+  sectors,
+  alerts,
+  activeSector,
+  onChange,
+}: {
+  sectors: Sector[]
+  alerts: LogisticsAlert[]
+  activeSector: "all" | Sector
+  onChange: (sector: "all" | Sector) => void
+}) {
+  const tx = useTx()
+
+  function tabClass(active: boolean) {
+    return cn(
+      "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
+      active
+        ? "border-foreground bg-foreground text-background"
+        : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
+    )
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 print:hidden">
+      <button
+        type="button"
+        onClick={() => onChange("all")}
+        className={tabClass(activeSector === "all")}
+      >
+        {tx("Tous les secteurs", "All sectors")}
+        <span className="ml-1.5 text-[10px] opacity-60">{alerts.length}</span>
+      </button>
+
+      {sectors.map((sector) => (
+        <button
+          key={sector}
+          type="button"
+          onClick={() => onChange(sector)}
+          className={tabClass(activeSector === sector)}
+        >
+          {sectorLabel(sector, tx)}
+          <span className="ml-1.5 text-[10px] opacity-60">
+            {alerts.filter((a) => a.sector === sector).length}
+          </span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
 /** The change since the previous day.
  *
  *  Two things were wrong while the data was mocked and nobody could
@@ -192,6 +281,7 @@ function DeltaBadge({
 }
 
 function KpiCard({ point }: { point: KpiPoint }) {
+  const tx = useTx()
   const Icon = point.icon
 
   return (
@@ -211,6 +301,58 @@ function KpiCard({ point }: { point: KpiPoint }) {
         {point.value}
       </p>
       <p className="mt-1 text-sm text-muted-foreground">{point.label}</p>
+
+      {/* The mix, not just the total: ten warnings and ten criticals are
+          not the same alert count to react to. */}
+      {(point.criticalCount > 0 || point.warningCount > 0) && (
+        <div className="mt-3 flex items-center gap-3 border-t border-border pt-3 text-xs">
+          {point.criticalCount > 0 && (
+            <span className="flex items-center gap-1.5 font-semibold text-destructive">
+              <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
+              {point.criticalCount} {tx("critique", "critical")}
+            </span>
+          )}
+          {point.warningCount > 0 && (
+            <span className="flex items-center gap-1.5 text-amber-600">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+              {point.warningCount} {tx("attention", "warning")}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** Named once, up top, so a chronic problem isn't left for the reader
+ *  to notice by scanning forty rows of the alerts table below. */
+function OffendersCallout({ offenders }: { offenders: Offender[] }) {
+  const tx = useTx()
+
+  if (offenders.length === 0) return null
+
+  return (
+    <div className="rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] p-5">
+      <SectionLabel>
+        {tx("Ça revient souvent", "Keeps coming back")}
+      </SectionLabel>
+
+      <ul className="mt-3 space-y-2">
+        {offenders.map((offender) => (
+          <li
+            key={offender.equipment}
+            className="flex items-center justify-between gap-3 text-sm"
+          >
+            <span className="font-semibold">{offender.equipment}</span>
+            <span className="shrink-0 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-bold text-amber-700">
+              {tx(
+                `${offender.count} alertes`,
+                `${offender.count} alerts`
+              )}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
@@ -285,22 +427,20 @@ function Sparkline({ data }: { data: TrendPoint[] }) {
 function TrendCard({
   monitoringKey,
   data,
+  delta,
 }: {
   monitoringKey: MonitoringKey
   data: TrendPoint[]
+  /** This week's count minus last week's, from the same KPI card, so
+   *  the two never disagree the way day-over-day and the sparkline
+   *  used to. */
+  delta: number
 }) {
   const tx = useTx()
 
   const meta = MONITORING_META[monitoringKey]
   const Icon = meta.icon
-  const last = data[data.length - 1]?.value ?? 0
-  const previous = data[data.length - 2]?.value ?? 0
-
-  /* Day against previous day, the same comparison the KPI card makes.
-     It used to be first against last as a percentage, so a card could
-     read "stable" while its own KPI said "+15", and a series starting
-     at zero divided by zero and always came out flat. */
-  const delta = last - previous
+  const weekTotal = data.reduce((sum, point) => sum + point.value, 0)
 
   return (
     <div className="rounded-2xl border border-border bg-card p-5">
@@ -318,17 +458,15 @@ function TrendCard({
 
       <div className="mt-3 flex items-baseline gap-1.5">
         <span className="font-heading text-2xl font-bold tracking-tight tabular-nums">
-          {last}
+          {weekTotal}
         </span>
 
-        {/* The unit used to come from MONITORING_META, so the conditions
-            card printed "1.0 °C" for what is a count of one alert, as if
-            the temperature were one degree. These series count alerts
-            per day, and that is what the label says. */}
+        {/* Week against the week before, not day against day: a single
+            bad day used to be able to flip this on its own. */}
         <span className="text-sm text-muted-foreground">
-          {last > 1
-            ? tx("alertes le dernier jour", "alerts on the last day")
-            : tx("alerte le dernier jour", "alert on the last day")}
+          {weekTotal > 1
+            ? tx("alertes cette semaine", "alerts this week")
+            : tx("alerte cette semaine", "alert this week")}
         </span>
       </div>
 
@@ -403,6 +541,9 @@ function AlertsTable({ alerts }: { alerts: AlertRow[] }) {
               <th className="whitespace-nowrap px-3 py-2.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {tx("Gravité", "Severity")}
               </th>
+              <th className="whitespace-nowrap px-3 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {tx("Score de risque", "Risk score")}
+              </th>
               <th className="whitespace-nowrap px-5 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {tx("Statut", "Status")}
               </th>
@@ -412,7 +553,7 @@ function AlertsTable({ alerts }: { alerts: AlertRow[] }) {
             {visible.length === 0 && (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-5 py-8 text-center text-sm text-muted-foreground"
                 >
                   {tx("Aucune alerte pour ce filtre.", "No alert matches this filter.")}
@@ -452,6 +593,14 @@ function AlertsTable({ alerts }: { alerts: AlertRow[] }) {
                         alert.severity
                       )}
                     </span>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums text-muted-foreground">
+                    {/* The backend's own score, carried through unchanged.
+                        A dash when it never computed one, never a guess
+                        filled in on this end. */}
+                    {alert.riskScore ?? (
+                      <span aria-hidden="true">—</span>
+                    )}
                   </td>
                   <td className="whitespace-nowrap px-5 py-3 text-right">
                     <span
@@ -495,6 +644,8 @@ export function ReportView({ data }: { data?: ReportData }) {
   const [loaded, setLoaded] = useState(false)
   const [companyName, setCompanyName] = useState("")
   const [timezoneId, setTimezoneId] = useState("")
+  const [sectors] = useState<Sector[]>(readOnboardedSectors)
+  const [activeSector, setActiveSector] = useState<"all" | Sector>("all")
 
   useEffect(() => {
     setCompanyName(readCompanyName())
@@ -509,9 +660,21 @@ export function ReportView({ data }: { data?: ReportData }) {
       .finally(() => setLoaded(true))
   }, [])
 
+  /* Only actually filters once there is more than one real choice — see
+     SectorTabs. A single-sector company keeps seeing every one of its
+     own alerts rather than a strict equality check silently dropping
+     rows whose sector field is missing or stale. */
+  const scopedAlerts = useMemo(
+    () =>
+      sectors.length > 1 && activeSector !== "all"
+        ? alerts.filter((a) => a.sector === activeSector)
+        : alerts,
+    [alerts, sectors, activeSector]
+  )
+
   const built = useMemo(
-    () => buildReport(alerts, companyName, timezoneId, tx),
-    [alerts, companyName, timezoneId, tx]
+    () => buildReport(scopedAlerts, companyName, timezoneId, tx),
+    [scopedAlerts, companyName, timezoneId, tx]
   )
 
   const resolved: ReportData = useMemo(
@@ -530,6 +693,8 @@ export function ReportView({ data }: { data?: ReportData }) {
               delta: kpi!.delta,
               deltaUnit: "",
               higherIsBetter: false,
+              criticalCount: kpi!.criticalCount,
+              warningCount: kpi!.warningCount,
               icon:
                 MONITORING_META[key as MonitoringKey]?.icon ?? ShieldAlert,
             },
@@ -537,52 +702,92 @@ export function ReportView({ data }: { data?: ReportData }) {
         ),
         trends: built.trends as ReportData["trends"],
         alerts: built.alerts as ReportData["alerts"],
+        topOffenders: built.topOffenders,
       },
     [data, built]
   )
 
+  const showSectorTabs = !data && sectors.length > 1
+  const activeSectorLabel =
+    !data && activeSector !== "all" ? sectorLabel(activeSector, tx) : null
+
   if (!data && loaded && built.empty) {
     return (
-      <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
-          <FileDown
-            className="h-5 w-5 text-muted-foreground"
-            aria-hidden="true"
+      <div className="space-y-6">
+        {showSectorTabs && (
+          <SectorTabs
+            sectors={sectors}
+            alerts={alerts}
+            activeSector={activeSector}
+            onChange={setActiveSector}
           />
+        )}
+
+        <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
+            <FileDown
+              className="h-5 w-5 text-muted-foreground"
+              aria-hidden="true"
+            />
+          </div>
+
+          <h2 className="mt-4 font-heading text-lg font-bold">
+            {activeSectorLabel
+              ? tx(
+                  `Aucune alerte pour ${activeSectorLabel}`,
+                  `No alerts for ${activeSectorLabel}`
+                )
+              : tx("Aucun rapport à produire", "No report to produce")}
+          </h2>
+
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+            {tx(
+              "Le rapport est construit à partir de vos alertes. Tant qu'aucun fichier n'a été importé, il n'y a rien à rapporter, et remplir la page de chiffres inventés ne vous aiderait pas.",
+              "The report is built from your alerts. Until a file has been imported there is nothing to report, and filling the page with invented figures would not help you."
+            )}
+          </p>
+
+          <p className="mt-3 text-xs text-muted-foreground">
+            {tx(
+              "Importez un CSV depuis le tableau de bord pour générer votre premier rapport.",
+              "Import a CSV from the dashboard to produce your first report."
+            )}
+          </p>
         </div>
-
-        <h2 className="mt-4 font-heading text-lg font-bold">
-          {tx("Aucun rapport à produire", "No report to produce")}
-        </h2>
-
-        <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-          {tx(
-            "Le rapport est construit à partir de vos alertes. Tant qu'aucun fichier n'a été importé, il n'y a rien à rapporter, et remplir la page de chiffres inventés ne vous aiderait pas.",
-            "The report is built from your alerts. Until a file has been imported there is nothing to report, and filling the page with invented figures would not help you."
-          )}
-        </p>
-
-        <p className="mt-3 text-xs text-muted-foreground">
-          {tx(
-            "Importez un CSV depuis le tableau de bord pour générer votre premier rapport.",
-            "Import a CSV from the dashboard to produce your first report."
-          )}
-        </p>
       </div>
     )
   }
 
   return (
-    <ReportBody data={resolved} timezoneLabel={built.timezoneLabel} />
+    <div className="space-y-6">
+      {showSectorTabs && (
+        <SectorTabs
+          sectors={sectors}
+          alerts={alerts}
+          activeSector={activeSector}
+          onChange={setActiveSector}
+        />
+      )}
+
+      <ReportBody
+        data={resolved}
+        timezoneLabel={built.timezoneLabel}
+        sectorContext={activeSectorLabel}
+      />
+    </div>
   )
 }
 
 function ReportBody({
   data,
   timezoneLabel,
+  sectorContext,
 }: {
   data: ReportData
   timezoneLabel?: string
+  /** The onboarded sector this report is currently scoped to, already
+   *  resolved to its display label. Null when showing every sector. */
+  sectorContext?: string | null
 }) {
   const tx = useTx()
 
@@ -601,13 +806,13 @@ function ReportBody({
     () =>
       data.monitoring
         .filter((key) => data.trends[key])
-        .map((key) => ({ key, points: data.trends[key]! })),
+        .map((key) => ({
+          key,
+          points: data.trends[key]!,
+          delta: data.kpis[key]?.delta ?? 0,
+        })),
     [data]
   )
-
-  function handleExportPdf() {
-    window.print()
-  }
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 print:space-y-4">
@@ -634,7 +839,16 @@ function ReportBody({
         <div className="rounded-2xl border border-border bg-card p-6 print:rounded-none print:border-0 print:p-0">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <SectionLabel>{tx("Rapport", "Report")}</SectionLabel>
+              <div className="flex flex-wrap items-center gap-2">
+                <SectionLabel>{tx("Rapport", "Report")}</SectionLabel>
+
+                {sectorContext && (
+                  <span className="rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                    {sectorContext}
+                  </span>
+                )}
+              </div>
+
               <h1 className="mt-1.5 font-heading text-2xl font-bold tracking-tight">
                 {data.siteName}
               </h1>
@@ -653,7 +867,7 @@ function ReportBody({
 
             <button
               type="button"
-              onClick={handleExportPdf}
+              onClick={() => window.print()}
               className="inline-flex h-10 items-center gap-2 rounded-xl bg-foreground px-4 text-sm font-semibold text-background transition-opacity hover:opacity-90 print:hidden"
             >
               <FileDown className="h-4 w-4" />
@@ -661,6 +875,9 @@ function ReportBody({
             </button>
           </div>
         </div>
+
+        {/* Repeat offenders */}
+        <OffendersCallout offenders={data.topOffenders} />
 
         {/* KPI summary */}
         <div>
@@ -677,8 +894,13 @@ function ReportBody({
           <div>
             <SectionLabel>{tx("Tendances", "Trends")}</SectionLabel>
             <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 print:grid-cols-2">
-              {trendEntries.map(({ key, points }) => (
-                <TrendCard key={key} monitoringKey={key} data={points} />
+              {trendEntries.map(({ key, points, delta }) => (
+                <TrendCard
+                  key={key}
+                  monitoringKey={key}
+                  data={points}
+                  delta={delta}
+                />
               ))}
             </div>
           </div>
