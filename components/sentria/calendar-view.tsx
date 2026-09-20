@@ -29,22 +29,45 @@ type SectorKey =
   | "energy"
   | "eac"
 
+/** A site is a key, not a string.
+ *
+ *  Two reasons. The header counts distinct sites with a Set, and a Set
+ *  of pair objects would count by identity rather than by site, so the
+ *  same warehouse written twice would count twice. And a site name is
+ *  not untranslatable: "Usine Lyon" holds a common noun an English
+ *  reader does not read, even though "Lyon" itself stays put. */
+type SiteKey =
+  | "marseille"
+  | "lyon"
+  | "lille"
+  | "toulouse"
+  | "beauce"
+  | "rungis"
+  | "grenoble"
+  | "corridorNord"
+
 type CalendarEvent = {
   id: string
   day: number
   startHour: number
   endHour: number
-  // Mock content standing in for what a real alerts/tasks API would
-  // supply. Like `alert.equipment` and `alert.message` elsewhere in the
-  // app, this is data rather than UI chrome, so it is not run through
-  // tx() — see lib/i18n/fr.ts's note on what never belongs in the
-  // catalogue.
-  title: string
+  /* Mock content standing in for what a real alerts/tasks API would
+     supply.
+
+     It used to be plain French strings, on the reasoning that this is
+     data like `alert.message` and so does not belong in the catalogue.
+     The analogy does not hold: `alert.message` is French because the
+     backend rendered it before storing it, and the frontend has nothing
+     left to translate. This array is in the frontend, so no such
+     constraint applies - it was simply French text on an English
+     screen. Pairs rather than catalogue keys, because a module-level
+     constant cannot call a hook. */
+  title: Localized
   type: EventType
   sector: SectorKey
-  site: string
+  site: SiteKey
   severity?: "WARNING" | "CRITICAL"
-  detail: string
+  detail: Localized
   assignees: string[]
 }
 
@@ -71,159 +94,253 @@ const HOURS = Array.from(
   (_, i) => START_HOUR + i
 )
 
+const SITE_LABEL: Record<SiteKey, Localized> = {
+  marseille: localized("Port de Marseille", "Port of Marseille"),
+  lyon: localized("Usine Lyon", "Lyon plant"),
+  lille: localized("Entrepôt pharma Lille", "Lille pharma warehouse"),
+  toulouse: localized("Dépôt Toulouse", "Toulouse depot"),
+  beauce: localized("Silo Beauce", "Beauce silo"),
+  rungis: localized("Entrepôt Rungis", "Rungis warehouse"),
+  grenoble: localized("Centrale Grenoble", "Grenoble power station"),
+  corridorNord: localized("Corridor Nord", "North corridor"),
+}
+
+/* A person's name reads the same in every language, so these are the
+   one thing in this file that is not a pair. Named constants rather
+   than repeated literals, so the checker has a single place to skip
+   instead of twelve.
+
+   i18n-ignore-start: people's names */
+const PEOPLE = {
+  karim: "Karim B.",
+  sophie: "Sophie M.",
+  nadia: "Nadia T.",
+  yassine: "Yassine L.",
+  julien: "Julien P.",
+  marc: "Marc D.",
+  amina: "Amina K.",
+} as const
+/* i18n-ignore-end */
+
 const EVENTS: CalendarEvent[] = [
   {
     id: "evt-1",
     day: 0,
     startHour: 8,
     endHour: 9.5,
-    title: "Surestarie port — seuil dans 4h",
+    title: localized(
+      "Surestarie port — seuil dans 4h",
+      "Port demurrage, threshold in 4h"
+    ),
     type: "threshold",
     sector: "logistics",
-    site: "Port de Marseille",
+    site: "marseille",
     severity: "CRITICAL",
-    detail:
+    detail: localized(
       "Le conteneur LOT-2210 approche du seuil de surestarie. Une prise en charge sous 4h évite la pénalité.",
-    assignees: ["Karim B."],
+      "Container LOT-2210 is approaching the demurrage threshold. Handling it within 4h avoids the penalty."
+    ),
+    assignees: [PEOPLE.karim],
   },
   {
     id: "evt-2",
     day: 0,
     startHour: 10,
     endHour: 11,
-    title: "Vibration anormale — Compresseur C-12",
+    title: localized(
+      "Vibration anormale — Compresseur C-12",
+      "Abnormal vibration, compressor C-12"
+    ),
     type: "incident",
     sector: "industry",
-    site: "Usine Lyon",
+    site: "lyon",
     severity: "WARNING",
-    detail:
+    detail: localized(
       "Vibration au-dessus du seuil habituel détectée sur le compresseur C-12 depuis 40 minutes.",
-    assignees: ["Sophie M."],
+      "Vibration above the usual threshold on compressor C-12 for the past 40 minutes."
+    ),
+    assignees: [PEOPLE.sophie],
   },
   {
     id: "evt-3",
     day: 1,
     startHour: 9,
     endHour: 10,
-    title: "Audit conformité chaîne du froid",
+    title: localized(
+      "Audit conformité chaîne du froid",
+      "Cold chain compliance audit"
+    ),
     type: "deadline",
     sector: "health",
-    site: "Entrepôt pharma Lille",
-    detail:
+    site: "lille",
+    detail: localized(
       "Audit trimestriel de conformité de la chaîne du froid à finaliser avant la date limite.",
-    assignees: ["Nadia T."],
+      "The quarterly cold chain compliance audit has to be finished before the deadline."
+    ),
+    assignees: [PEOPLE.nadia],
   },
   {
     id: "evt-4",
     day: 1,
     startHour: 13,
     endHour: 14,
-    title: "Maintenance préventive effectuée — Flotte 12",
+    title: localized(
+      "Maintenance préventive effectuée — Flotte 12",
+      "Preventive maintenance done, fleet 12"
+    ),
     type: "resolved",
     sector: "transportation",
-    site: "Dépôt Toulouse",
-    detail: "Maintenance préventive réalisée sur les 6 véhicules de la flotte 12.",
-    assignees: ["Yassine L."],
+    site: "toulouse",
+    detail: localized(
+      "Maintenance préventive réalisée sur les 6 véhicules de la flotte 12.",
+      "Preventive maintenance carried out on all 6 vehicles in fleet 12."
+    ),
+    assignees: [PEOPLE.yassine],
   },
   {
     id: "evt-5",
     day: 2,
     startHour: 11,
     endHour: 12,
-    title: "Seuil d'humidité dépassé — Silo 4",
+    title: localized(
+      "Seuil d'humidité dépassé — Silo 4",
+      "Moisture threshold passed, silo 4"
+    ),
     type: "incident",
     sector: "agriculture",
-    site: "Silo Beauce",
+    site: "beauce",
     severity: "WARNING",
-    detail: "Taux d'humidité du silo 4 au-dessus du seuil recommandé pour le stockage.",
-    assignees: ["Julien P."],
+    detail: localized(
+      "Taux d'humidité du silo 4 au-dessus du seuil recommandé pour le stockage.",
+      "Silo 4's moisture level is above the threshold recommended for storage."
+    ),
+    assignees: [PEOPLE.julien],
   },
   {
     id: "evt-6",
     day: 2,
     startHour: 15,
     endHour: 16.5,
-    title: "Chaîne du froid — seuil critique produit",
+    title: localized(
+      "Chaîne du froid — seuil critique produit",
+      "Cold chain, product at its critical threshold"
+    ),
     type: "threshold",
     sector: "logistics",
-    site: "Entrepôt Rungis",
+    site: "rungis",
     severity: "CRITICAL",
-    detail: "Température proche du seuil de rupture de la chaîne du froid sur le lot F-118.",
-    assignees: ["Karim B.", "Nadia T."],
+    detail: localized(
+      "Température proche du seuil de rupture de la chaîne du froid sur le lot F-118.",
+      "Temperature close to the cold chain break threshold on batch F-118."
+    ),
+    assignees: [PEOPLE.karim, PEOPLE.nadia],
   },
   {
     id: "evt-7",
     day: 3,
     startHour: 8.5,
     endHour: 10,
-    title: "Révision turbine T-3",
+    title: localized("Révision turbine T-3", "Turbine T-3 overhaul"),
     type: "deadline",
     sector: "energy",
-    site: "Centrale Grenoble",
-    detail: "Révision périodique de la turbine T-3 à programmer avant échéance réglementaire.",
-    assignees: ["Marc D."],
+    site: "grenoble",
+    detail: localized(
+      "Révision périodique de la turbine T-3 à programmer avant échéance réglementaire.",
+      "Turbine T-3's periodic overhaul has to be scheduled before the regulatory deadline."
+    ),
+    assignees: [PEOPLE.marc],
   },
   {
     id: "evt-8",
     day: 3,
     startHour: 12,
     endHour: 13,
-    title: "Retard douane — Corridor Nord",
+    title: localized(
+      "Retard douane — Corridor Nord",
+      "Customs delay, North corridor"
+    ),
     type: "incident",
     sector: "eac",
-    site: "Corridor Nord",
+    site: "corridorNord",
     severity: "WARNING",
-    detail: "Retard de dédouanement signalé sur le corridor Nord, impact estimé +3h.",
-    assignees: ["Amina K."],
+    detail: localized(
+      "Retard de dédouanement signalé sur le corridor Nord, impact estimé +3h.",
+      "A clearance delay was reported on the North corridor, estimated impact +3h."
+    ),
+    assignees: [PEOPLE.amina],
   },
   {
     id: "evt-9",
     day: 4,
     startHour: 9,
     endHour: 10,
-    title: "Remplacement filtre — Ligne 2",
+    title: localized(
+      "Remplacement filtre — Ligne 2",
+      "Filter replacement, line 2"
+    ),
     type: "deadline",
     sector: "industry",
-    site: "Usine Lyon",
-    detail: "Remplacement du filtre de la ligne 2 à effectuer avant redémarrage de production.",
-    assignees: ["Sophie M."],
+    site: "lyon",
+    detail: localized(
+      "Remplacement du filtre de la ligne 2 à effectuer avant redémarrage de production.",
+      "Line 2's filter has to be replaced before production restarts."
+    ),
+    assignees: [PEOPLE.sophie],
   },
   {
     id: "evt-10",
     day: 4,
     startHour: 16,
     endHour: 17,
-    title: "Livraison confirmée — Lot LOT-3390",
+    title: localized(
+      "Livraison confirmée — Lot LOT-3390",
+      "Delivery confirmed, batch LOT-3390"
+    ),
     type: "resolved",
     sector: "logistics",
-    site: "Entrepôt Rungis",
-    detail: "Livraison du lot LOT-3390 confirmée dans la fenêtre prévue.",
-    assignees: ["Karim B."],
+    site: "rungis",
+    detail: localized(
+      "Livraison du lot LOT-3390 confirmée dans la fenêtre prévue.",
+      "Batch LOT-3390 was delivered inside the planned window."
+    ),
+    assignees: [PEOPLE.karim],
   },
   {
     id: "evt-11",
     day: 5,
     startHour: 10,
     endHour: 11,
-    title: "Fenêtre de livraison expirant",
+    title: localized(
+      "Fenêtre de livraison expirant",
+      "Delivery window closing"
+    ),
     type: "threshold",
     sector: "transportation",
-    site: "Dépôt Toulouse",
+    site: "toulouse",
     severity: "CRITICAL",
-    detail: "La fenêtre de livraison du client Delmas expire dans moins d'1h.",
-    assignees: ["Yassine L."],
+    detail: localized(
+      "La fenêtre de livraison du client Delmas expire dans moins d'1h.",
+      "The Delmas delivery window closes in under 1h."
+    ),
+    assignees: [PEOPLE.yassine],
   },
   {
     id: "evt-12",
     day: 6,
     startHour: 14,
     endHour: 15.5,
-    title: "Renouvellement certification équipement",
+    title: localized(
+      "Renouvellement certification équipement",
+      "Equipment certification renewal"
+    ),
     type: "deadline",
     sector: "health",
-    site: "Entrepôt pharma Lille",
-    detail: "Certification de l'équipement de réfrigération à renouveler.",
-    assignees: ["Nadia T."],
+    site: "lille",
+    detail: localized(
+      "Certification de l'équipement de réfrigération à renouveler.",
+      "The refrigeration equipment's certification is due for renewal."
+    ),
+    assignees: [PEOPLE.nadia],
   },
 ]
 
@@ -658,7 +775,7 @@ export function CalendarView() {
                       <div className="flex items-center gap-1">
                         <Icon className="h-3 w-3 shrink-0" />
                         <span className="truncate text-[10px] font-bold">
-                          {event.title}
+                          {px(event.title)}
                         </span>
                       </div>
 
@@ -701,11 +818,11 @@ export function CalendarView() {
                           </div>
 
                           <p className="mt-2.5 text-base font-bold leading-snug">
-                            {event.title}
+                            {px(event.title)}
                           </p>
 
                           <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
-                            {event.detail}
+                            {px(event.detail)}
                           </p>
 
                           <div className="mt-3 flex flex-wrap gap-1.5">
@@ -721,7 +838,7 @@ export function CalendarView() {
                           </div>
 
                           <p className="mt-2 text-[10px] text-muted-foreground">
-                            {event.site}
+                            {px(SITE_LABEL[event.site])}
                           </p>
 
                           <button

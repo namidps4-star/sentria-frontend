@@ -1360,7 +1360,12 @@ export function DashboardView({
   }, [])
 
   function refreshRecommendations() {
-    fetch(`${API}/recommendations?limit=20&lang=fr`)
+    /* The backend renders recommended_action and reasoning itself and
+       takes a lang, so asking it for French while the screen is in
+       English put two French sentences on every card. */
+    fetch(
+      `${API}/recommendations?limit=20&lang=${tx("fr", "en")}`
+    )
       .then((r) => r.json())
       .then((d) => {
         if (!Array.isArray(d?.recommendations)) {
@@ -1419,9 +1424,16 @@ export function DashboardView({
       })
   }
 
+  /* Refetched when the language changes, not only on mount. The action
+     and the reasoning on every card are rendered by the backend, so
+     switching to English and leaving this alone would keep showing the
+     French it was asked for at mount. */
+  const recommendationsLang = tx("fr", "en")
+
   useEffect(() => {
     refreshRecommendations()
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recommendationsLang])
 
   function openLogisticsOverview() {
     setFilterSector("logistics")
@@ -1641,13 +1653,45 @@ export function DashboardView({
     .filter((a) => a.sector === "logistics")
     .filter(matchesActivity)
 
+  /* A recommendation is filtered on what is KNOWN about its activity,
+     never on what is missing.
+
+     matchesActivity ends with "an unlabelled row is judged against its
+     own sector": if that sector has labelled rows elsewhere, the
+     unlabelled one is assumed to belong to a different activity and is
+     dropped. That is right for an alert, where a missing business_type
+     really does mean the row was never labelled.
+
+     It was wrong here. /recommendations did not return business_type at
+     all, so every recommendation looked unlabelled, and in any sector
+     with labelled alerts - which is every sector, once onboarding has
+     run - all five were dropped and the panel vanished. The backend now
+     sends the field, but an API that has not been redeployed yet still
+     does not, and the top of the dashboard is not something to lose to
+     a deploy order.
+
+     So: drop a recommendation only when its activity is known AND
+     different. Unknown means show it. The cost is that an operator may
+     see a neighbouring activity's priority against an old API; the cost
+     of the other choice was an empty dashboard. */
+  const recommendationMatchesActivity = (r: {
+    business_type?: string | null
+    alert_key?: string | null
+  }) => {
+    if (!businessType) return true
+
+    const activity = activityOf(r)
+
+    return activity === null || activity === businessType
+  }
+
   const filteredRecommendations = recommendations
     .filter(
       (r) =>
         filterSector === "all" ||
         r.sector === filterSector
     )
-    .filter(matchesActivity)
+    .filter(recommendationMatchesActivity)
     .slice(0, 5)
 
   const presetMs =

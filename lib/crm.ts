@@ -65,7 +65,37 @@ export type Assignment = {
   status: AssignmentStatus
   priority: AssignmentPriority
   deadline: string | null
-  contractor_id: string | null
+  /** Everyone on this task. A crane driver and a customs agent are on
+   *  the same container, so a task holds a set rather than one person.
+   *
+   *  The API also still returns the old single `contractor_id`, as a
+   *  mirror of the first of this set, so an older build keeps working
+   *  through a deploy. Nothing here reads it: a mirror that two places
+   *  disagree about is worse than no mirror at all. */
+  contractor_ids: string[]
+}
+
+/** The ids on an assignment, whichever shape the API answered in.
+ *
+ *  An API that has not been redeployed yet answers with `contractor_id`
+ *  and no `contractor_ids`, and a board that read the new field alone
+ *  would show every task as unassigned against it. Normalising on the
+ *  way in means exactly one place has to know that. */
+export function contractorIdsOf(row: unknown): string[] {
+  if (!row || typeof row !== "object") return []
+
+  const record = row as Record<string, unknown>
+  const many = record.contractor_ids
+
+  if (Array.isArray(many)) {
+    return many
+      .filter((id): id is string => typeof id === "string" && id.length > 0)
+      .filter((id, index, all) => all.indexOf(id) === index)
+  }
+
+  const one = record.contractor_id
+
+  return typeof one === "string" && one.length > 0 ? [one] : []
 }
 
 export type CrmResult<T> =
@@ -275,7 +305,11 @@ export function fetchAssignments(
   return call(
     `/assignments?company_name=${encodeURIComponent(companyName)}`,
     { method: "GET" },
-    (body) => asArray<Assignment>(body.assignments)
+    (body) =>
+      asArray<Assignment>(body.assignments).map((row) => ({
+        ...row,
+        contractor_ids: contractorIdsOf(row),
+      }))
   )
 }
 
@@ -296,6 +330,10 @@ export function saveAssignment(
       method: "PUT",
       body: JSON.stringify({ company_name: companyName, ...assignment }),
     },
-    (body) => body.assignment as Assignment
+    (body) => {
+      const row = body.assignment as Assignment
+
+      return { ...row, contractor_ids: contractorIdsOf(row) }
+    }
   )
 }

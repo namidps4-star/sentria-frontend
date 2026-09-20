@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils"
 import { useCompanyIdentity } from "@/lib/company"
 import {
   AVAILABILITY_LABEL,
+  contractorIdsOf,
   fetchAssignments,
   fetchContractors,
   saveAssignment,
@@ -64,10 +65,12 @@ type Priority = "low" | "medium" | "high" | "critical"
 
 /** One card's state. The field names are the server's column names on
  *  purpose: a translation layer between "assignee" here and
- *  "contractor_id" there would be one more place to get it wrong. */
+ *  "contractor_ids" there would be one more place to get it wrong. */
 type TaskMeta = {
   status: Status
-  contractor_id: string | null
+  /** Everyone on this task, in the order they were added. A crane
+   *  driver and a customs agent are on the same container. */
+  contractor_ids: string[]
   deadline: string | null
   priority: Priority
 }
@@ -270,7 +273,7 @@ function clearLegacyTaskMap() {
 function defaultTask(rec: Recommendation): TaskMeta {
   return {
     status: "todo",
-    contractor_id: null,
+    contractor_ids: [],
     deadline: null,
     priority: getDefaultPriority(rec),
   }
@@ -304,7 +307,7 @@ function taskMapFrom(rows: Assignment[]): Record<string, TaskMeta> {
 
     map[row.task_key] = {
       status: asStatus(row.status),
-      contractor_id: row.contractor_id ?? null,
+      contractor_ids: contractorIdsOf(row),
       deadline: row.deadline ?? null,
       priority: asPriority(row.priority),
     }
@@ -453,20 +456,25 @@ function Chip({
   )
 }
 
-/** The assignee cluster: a real person or an honest gap.
+/** Who is on the card: the people, or an honest gap.
  *
- *  The reference board puts a stack of faces here. This one puts the one
- *  contractor who owns the job, and when there is nobody it says so
- *  rather than showing a placeholder face — an avatar nobody is behind is
- *  the single most misleading thing a board can draw. */
+ *  Every initial drawn here has a real contractor behind it. There is no
+ *  placeholder face when nobody is assigned, because an avatar nobody is
+ *  behind is the single most misleading thing a board can draw.
+ *
+ *  Four initials is the cap. Past that the stack stops being readable
+ *  and the count carries it, and a task with five names on it is
+ *  something the administrator should open anyway. */
+const OWNER_FACES = 4
+
 function Owner({
-  assignee,
+  assignees,
   tx,
 }: {
-  assignee: Contractor | undefined
+  assignees: Contractor[]
   tx: Tx
 }) {
-  if (!assignee) {
+  if (assignees.length === 0) {
     return (
       <>
         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-dashed border-foreground/25 text-muted-foreground">
@@ -480,13 +488,61 @@ function Owner({
     )
   }
 
+  const shown = assignees.slice(0, OWNER_FACES)
+  const hidden = assignees.length - shown.length
+
   return (
     <>
-      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-foreground text-[10px] font-bold text-background">
-        {getInitials(assignee.name)}
+      {/* The stack is one image of a group, so it gets one label with
+          every name in it rather than four unlabelled initials. */}
+      <span
+        className="flex shrink-0 items-center"
+        role="img"
+        aria-label={tx(
+          `Assigné à ${assignees.map((person) => person.name).join(", ")}`,
+          `Assigned to ${assignees.map((person) => person.name).join(", ")}`
+        )}
+      >
+        {shown.map((person, index) => (
+          <span
+            key={person.id}
+            className={cn(
+              "flex h-6 w-6 items-center justify-center rounded-full bg-foreground text-[10px] font-bold text-background",
+              /* A ring in the card's own colour, so overlapping
+                 initials stay separable instead of merging into one
+                 dark blob. */
+              "ring-2 ring-card",
+              index > 0 && "-ml-2"
+            )}
+          >
+            {/* One letter once they overlap. Two initials in a 24px
+                circle with 8px hidden under the next one renders as a
+                letter and a sliver of a letter, which looks like a
+                rendering fault rather than a stack. The full names are
+                on the group's label. */}
+            {assignees.length > 1
+              ? getInitials(person.name).slice(0, 1)
+              : getInitials(person.name)}
+          </span>
+        ))}
+
+        {hidden > 0 && (
+          <span className="-ml-2 flex h-6 items-center justify-center rounded-full bg-muted px-1.5 text-[10px] font-bold text-muted-foreground ring-2 ring-card">
+            {`+${hidden}`}
+          </span>
+        )}
       </span>
 
-      <span className="truncate text-xs font-medium">{assignee.name}</span>
+      {/* One name reads better than "1 person". Past that the count is
+          the only thing that fits in a card column. */}
+      <span className="truncate text-xs font-medium">
+        {assignees.length === 1
+          ? assignees[0].name
+          : tx(
+              `${assignees.length} intervenants`,
+              `${assignees.length} people`
+            )}
+      </span>
     </>
   )
 }
@@ -740,54 +796,89 @@ function DetailDialog({
             </div>
           </div>
 
-          <div>
-            <label htmlFor="priority-detail-owner" className={labelClass}>
-              {tx("Responsable", "Owner")}
-            </label>
+          {/* A checkbox list rather than a multiple <select>. A native
+              multi-select needs ctrl-click to add a second name and
+              silently drops the first if you plain-click, which is the
+              wrong way round for a control whose whole point is holding
+              several. Each row carries what the person said about
+              themselves and how much they are already holding, because
+              "available" next to "4 open" is the case worth seeing
+              before handing them a fifth. */}
+          <fieldset>
+            <legend className={labelClass}>
+              {tx("Intervenants", "Assigned to")}
+            </legend>
 
-            {/* Each option carries what the person said about themselves
-                and how much they are already holding, because "available"
-                next to "4 open" is the case worth seeing before handing
-                them a fifth. */}
-            <select
-              id="priority-detail-owner"
-              value={task.contractor_id ?? ""}
-              onChange={(event) =>
-                onPatch({ contractor_id: event.target.value || null })
-              }
-              className={fieldClass}
-            >
-              <option value="">{tx("Non assigné", "Unassigned")}</option>
+            {contractors.length > 0 && (
+              <div className="mt-1.5 max-h-56 overflow-y-auto rounded-xl border border-border">
+                {contractors.map((person) => {
+                  const picked = task.contractor_ids.includes(person.id)
 
-              {contractors.map((person) => (
-                <option key={person.id} value={person.id}>
-                  {person.name}
-                  {" · "}
-                  {px(AVAILABILITY_LABEL[person.availability]) ||
-                    person.availability}
-                  {person.open_assignments > 0 &&
-                    tx(
-                      ` · ${person.open_assignments} en cours`,
-                      ` · ${person.open_assignments} open`
-                    )}
-                </option>
-              ))}
-            </select>
+                  return (
+                    <label
+                      key={person.id}
+                      className={cn(
+                        "flex cursor-pointer items-center gap-3 border-b border-border px-3 py-2.5 last:border-0",
+                        "transition-colors hover:bg-muted",
+                        "focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-inset",
+                        picked && "bg-muted"
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={picked}
+                        onChange={() =>
+                          onPatch({
+                            contractor_ids: picked
+                              ? task.contractor_ids.filter(
+                                  (id) => id !== person.id
+                                )
+                              : [...task.contractor_ids, person.id],
+                          })
+                        }
+                        className="h-4 w-4 shrink-0 accent-foreground"
+                      />
 
-            {contractors.length === 0 && (
-              <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
-                {contractorsLoaded
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">
+                          {person.name}
+                        </span>
+
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {px(AVAILABILITY_LABEL[person.availability]) ||
+                            person.availability}
+                          {person.open_assignments > 0 &&
+                            tx(
+                              ` · ${person.open_assignments} en cours`,
+                              ` · ${person.open_assignments} open`
+                            )}
+                        </span>
+                      </span>
+                    </label>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Says how many, because a scrolled list can hide a tick
+                and "nobody" has to be distinguishable from "somebody
+                further down". */}
+            <p className="mt-1.5 text-xs leading-5 text-muted-foreground">
+              {contractors.length === 0
+                ? contractorsLoaded
                   ? tx(
                       "Aucun intervenant enregistré. Ajoutez-les depuis Intervenants.",
                       "No contractor on file. Add them from Contractors."
                     )
+                  : tx("Chargement des intervenants…", "Loading contractors…")
+                : task.contractor_ids.length === 0
+                  ? tx("Personne n'est assigné.", "Nobody is assigned.")
                   : tx(
-                      "Chargement des intervenants…",
-                      "Loading contractors…"
+                      `${task.contractor_ids.length} intervenant${task.contractor_ids.length === 1 ? "" : "s"} sur cette tâche.`,
+                      `${task.contractor_ids.length} ${task.contractor_ids.length === 1 ? "person" : "people"} on this task.`
                     )}
-              </p>
-            )}
-          </div>
+            </p>
+          </fieldset>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -930,7 +1021,7 @@ export function RecommendationsBoard({
                never real contractor ids, so they cannot be carried over
                without inventing a link. Status, priority and deadline
                are real; the assignment has to be made again. */
-            contractor_id: null,
+            contractor_ids: [],
           })
 
           if (result.ok) pushed.push(key)
@@ -947,7 +1038,7 @@ export function RecommendationsBoard({
             status: asStatus(legacy[key].status),
             priority: asPriority(legacy[key].priority),
             deadline: legacy[key].deadline ?? null,
-            contractor_id: null,
+            contractor_ids: [],
           }
         }
 
@@ -1000,7 +1091,7 @@ export function RecommendationsBoard({
   ).length
 
   const unassignedCount = cards.filter(
-    (card) => !card.task.contractor_id
+    (card) => card.task.contractor_ids.length === 0
   ).length
 
   const totalExposure = cards.reduce(
@@ -1013,9 +1104,12 @@ export function RecommendationsBoard({
    *  is holding it. Built in the reader's language, because the category
    *  they would search for is the one they can see. */
   function haystack(card: Card): string {
-    const assignee = contractors.find(
-      (person) => person.id === card.task.contractor_id
-    )
+    /* Every name on the task, not just the first. Searching for the
+       customs agent has to find the container she is on even when the
+       crane driver was added before her. */
+    const names = card.task.contractor_ids
+      .map((id) => contractors.find((person) => person.id === id)?.name ?? "")
+      .join(" ")
 
     return [
       card.rec.equipment,
@@ -1024,7 +1118,7 @@ export function RecommendationsBoard({
       card.rec.message,
       px(CATEGORY_LABEL[card.rec.action_category] ?? CATEGORY_LABEL.other),
       px(PRIORITY_LABEL[card.task.priority]),
-      assignee?.name ?? "",
+      names,
     ]
       .join(" ")
       .toLowerCase()
@@ -1038,7 +1132,7 @@ export function RecommendationsBoard({
     if (filter === "critical") {
       out = out.filter((card) => card.rec.severity === "CRITICAL")
     } else if (filter === "unassigned") {
-      out = out.filter((card) => !card.task.contractor_id)
+      out = out.filter((card) => card.task.contractor_ids.length === 0)
     }
 
     if (trimmedQuery) {
@@ -1093,7 +1187,7 @@ export function RecommendationsBoard({
 
         /* The open-task counts next to each contractor are derived from
            these rows, so they move whenever one does. */
-        if ("contractor_id" in patch || "status" in patch) {
+        if ("contractor_ids" in patch || "status" in patch) {
           refreshContractors()
         }
 
@@ -1497,9 +1591,16 @@ export function RecommendationsBoard({
                   const isDragging = draggingId === id
                   const overdue = isDeadlineOverdue(task.deadline)
 
-                  const assignee = contractors.find(
-                    (person) => person.id === task.contractor_id
-                  )
+                  /* Resolved in the order they were added, and a stale
+                     id that no longer matches a contractor is dropped
+                     rather than drawn as a blank face. */
+                  const assignees = task.contractor_ids
+                    .map((cid) =>
+                      contractors.find((person) => person.id === cid)
+                    )
+                    .filter((person): person is Contractor =>
+                      Boolean(person)
+                    )
 
                   const signals = rec.alertCount ?? 0
 
@@ -1534,7 +1635,7 @@ export function RecommendationsBoard({
                           onClick={() => setEditingId(id)}
                           className="flex min-w-0 items-center gap-2 rounded-full text-left transition-opacity hover:opacity-70"
                         >
-                          <Owner assignee={assignee} tx={tx} />
+                          <Owner assignees={assignees} tx={tx} />
                         </button>
 
                         <span
