@@ -5,6 +5,8 @@ import {
   AlertTriangle,
   ArrowUpRight,
   Check,
+  CheckCircle2,
+  Clock,
   Loader2,
   Mail,
   Phone,
@@ -12,6 +14,7 @@ import {
   Trash2,
   UserPlus,
   UserRound,
+  XCircle,
   Zap,
 } from "lucide-react"
 
@@ -51,6 +54,22 @@ const AVAILABILITY_TONE: Record<Availability, string> = {
   off: "bg-muted text-muted-foreground",
 }
 
+/** Same three states, read as a one-line status and a workload-bar color. */
+const AVAILABILITY_ICON = {
+  available: CheckCircle2,
+  busy: Clock,
+  off: XCircle,
+} as const
+
+const WORKLOAD_BAR_TONE: Record<Availability, string> = {
+  available: "bg-accent",
+  busy: "bg-amber-500",
+  off: "bg-muted-foreground/40",
+}
+
+/** Grouping key for contractors with no `role` set. Never shown as-is. */
+const NO_ROLE = "__no_role__"
+
 function initialsOfPerson(name: string): string {
   return name
     .trim()
@@ -85,6 +104,10 @@ export function ContractorsView({
     phone: "",
     email: "",
   })
+
+  const [roleFilter, setRoleFilter] = useState<string | null>(null)
+  const [availabilityFilter, setAvailabilityFilter] =
+    useState<Availability | null>(null)
 
   async function reload() {
     if (!companyName) {
@@ -244,6 +267,48 @@ export function ContractorsView({
   const carryingWork = contractors.filter(
     (person) => person.open_assignments > 0
   ).length
+
+  /* Every role that actually appears, in first-seen order, so the filter
+     pills never offer a choice nobody is on file under. */
+  const roleKeys: string[] = []
+  for (const person of contractors) {
+    const key = person.role?.trim() || NO_ROLE
+    if (!roleKeys.includes(key)) roleKeys.push(key)
+  }
+
+  const filteredContractors = contractors.filter((person) => {
+    if (roleFilter !== null && (person.role?.trim() || NO_ROLE) !== roleFilter)
+      return false
+    if (availabilityFilter !== null && person.availability !== availabilityFilter)
+      return false
+    return true
+  })
+
+  const groups = new Map<string, Contractor[]>()
+  for (const person of filteredContractors) {
+    const key = person.role?.trim() || NO_ROLE
+    const bucket = groups.get(key)
+    if (bucket) bucket.push(person)
+    else groups.set(key, [person])
+  }
+
+  /* The workload bar reads as "relative to the busiest person on file
+     today," never as a fabricated percentage of a capacity nobody
+     declared. */
+  const maxOpenAssignments = Math.max(
+    1,
+    ...contractors.map((person) => person.open_assignments)
+  )
+
+  function filterPillClass(active: boolean) {
+    return cn(
+      "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+      active
+        ? "bg-foreground text-background"
+        : "bg-muted text-muted-foreground hover:bg-muted/70"
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -490,136 +555,242 @@ export function ContractorsView({
           </p>
         </div>
       ) : (
-        <ul className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {contractors.map((person) => (
-            <li
-              key={person.id}
-              className="rounded-3xl border border-border bg-card p-5"
+        <div className="space-y-6">
+          {/* FILTERS — only the fields the CRM actually has. */}
+          <div className="flex flex-wrap items-center gap-2 rounded-3xl border border-border bg-card p-4">
+            <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              {tx("Fonction", "Role")}
+            </span>
+            <button
+              type="button"
+              onClick={() => setRoleFilter(null)}
+              className={filterPillClass(roleFilter === null)}
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-foreground text-xs font-bold text-background">
-                    {initialsOfPerson(person.name) || (
-                      <UserRound className="h-4 w-4" aria-hidden="true" />
-                    )}
-                  </span>
+              {tx("Toutes", "All")}
+            </button>
+            {roleKeys.map((key) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setRoleFilter(key)}
+                className={filterPillClass(roleFilter === key)}
+              >
+                {key === NO_ROLE
+                  ? tx("Sans fonction", "No role")
+                  : key}
+              </button>
+            ))}
 
-                  <div className="min-w-0">
-                    <p className="truncate font-heading text-base font-bold">
-                      {person.name}
-                    </p>
+            <span className="mx-1 h-5 w-px shrink-0 bg-border" />
 
-                    <p className="truncate text-sm text-muted-foreground">
-                      {person.role || tx("Fonction non renseignée", "No role set")}
-                    </p>
-                  </div>
-                </div>
+            <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              {tx("Disponibilité", "Availability")}
+            </span>
+            <button
+              type="button"
+              onClick={() => setAvailabilityFilter(null)}
+              className={filterPillClass(availabilityFilter === null)}
+            >
+              {tx("Toutes", "All")}
+            </button>
+            {AVAILABILITY_ORDER.map((value) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setAvailabilityFilter(value)}
+                className={filterPillClass(availabilityFilter === value)}
+              >
+                {px(AVAILABILITY_LABEL[value])}
+              </button>
+            ))}
+          </div>
 
-                <button
-                  type="button"
-                  onClick={() => remove(person)}
-                  aria-label={tx(
-                    `Retirer ${person.name}`,
-                    `Remove ${person.name}`
-                  )}
-                  className="shrink-0 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <Trash2 className="h-4 w-4" aria-hidden="true" />
-                </button>
-              </div>
-
-              {(person.phone || person.email) && (
-                <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
-                  {person.phone && (
-                    <span className="flex items-center gap-2">
-                      <Phone className="h-3.5 w-3.5" aria-hidden="true" />
-                      {person.phone}
-                    </span>
-                  )}
-
-                  {person.email && (
-                    <span className="flex min-w-0 items-center gap-2">
-                      <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                      <span className="truncate">{person.email}</span>
-                    </span>
-                  )}
-                </div>
+          {groups.size === 0 ? (
+            <p className="rounded-3xl border border-dashed border-border bg-card px-5 py-8 text-center text-sm text-muted-foreground">
+              {tx(
+                "Aucun intervenant ne correspond à ces filtres.",
+                "No contractor matches these filters."
               )}
+            </p>
+          ) : (
+            Array.from(groups.entries()).map(([key, people]) => (
+              <div key={key}>
+                <div className="mb-3 flex items-center gap-2">
+                  <h4 className="font-heading text-sm font-bold uppercase tracking-wide text-foreground">
+                    {key === NO_ROLE
+                      ? tx("Sans fonction", "No role set")
+                      : key}
+                  </h4>
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold tabular-nums text-muted-foreground">
+                    {people.length}
+                  </span>
+                </div>
 
-              {/* The two facts, side by side and never merged. */}
-              <div className="mt-4 flex items-center justify-between gap-3 border-t border-border pt-4">
-                <div
-                  className="flex items-center gap-1"
-                  role="group"
-                  aria-label={tx(
-                    `Disponibilité de ${person.name}`,
-                    `${person.name}'s availability`
-                  )}
-                >
-                  {AVAILABILITY_ORDER.map((value) => {
-                    const active = person.availability === value
+                <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                  {people.map((person) => {
+                    const StatusIcon = AVAILABILITY_ICON[person.availability]
+                    const barPct = Math.round(
+                      (person.open_assignments / maxOpenAssignments) * 100
+                    )
 
                     return (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => setAvailability(person, value)}
-                        aria-pressed={active}
-                        className={cn(
-                          "rounded-full px-2.5 py-1 text-[10px] font-semibold transition-colors",
-                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                          active
-                            ? AVAILABILITY_TONE[value]
-                            : "text-muted-foreground hover:bg-muted"
-                        )}
+                      <li
+                        key={person.id}
+                        className="rounded-3xl border border-border bg-card p-5"
                       >
-                        {px(AVAILABILITY_LABEL[value]) || value}
-                      </button>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-foreground text-xs font-bold text-background">
+                              {initialsOfPerson(person.name) || (
+                                <UserRound className="h-4 w-4" aria-hidden="true" />
+                              )}
+                            </span>
+
+                            <div className="min-w-0">
+                              <p className="truncate font-heading text-base font-bold">
+                                {person.name}
+                              </p>
+
+                              <p className="truncate text-sm text-muted-foreground">
+                                {person.role ||
+                                  tx("Fonction non renseignée", "No role set")}
+                              </p>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => remove(person)}
+                            aria-label={tx(
+                              `Retirer ${person.name}`,
+                              `Remove ${person.name}`
+                            )}
+                            className="shrink-0 rounded-lg p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            <Trash2 className="h-4 w-4" aria-hidden="true" />
+                          </button>
+                        </div>
+
+                        {(person.phone || person.email) && (
+                          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
+                            {person.phone && (
+                              <span className="flex items-center gap-1.5">
+                                <Phone className="h-3 w-3" aria-hidden="true" />
+                                {person.phone}
+                              </span>
+                            )}
+
+                            {person.email && (
+                              <span className="flex min-w-0 items-center gap-1.5">
+                                <Mail
+                                  className="h-3 w-3 shrink-0"
+                                  aria-hidden="true"
+                                />
+                                <span className="truncate">{person.email}</span>
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Workload, scaled against the busiest person on
+                            file today — not a fixed capacity nobody
+                            declared. */}
+                        <div className="mt-4">
+                          <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                            <span>{tx("Charge", "Workload")}</span>
+                            <span className="tabular-nums text-foreground">
+                              {tx(
+                                `${person.open_assignments} en cours`,
+                                `${person.open_assignments} open`
+                              )}
+                            </span>
+                          </div>
+
+                          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                            <div
+                              className={cn(
+                                "h-full rounded-full transition-all",
+                                WORKLOAD_BAR_TONE[person.availability]
+                              )}
+                              style={{ width: `${barPct}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* One-line status: what they wrote, or what they
+                            declared. */}
+                        <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <StatusIcon
+                            className="h-3.5 w-3.5 shrink-0"
+                            aria-hidden="true"
+                          />
+                          <span className="truncate">
+                            {person.note || px(AVAILABILITY_LABEL[person.availability])}
+                          </span>
+                        </div>
+
+                        <div className="mt-4 flex items-center gap-1 border-t border-border pt-4">
+                          <div
+                            className="flex items-center gap-1"
+                            role="group"
+                            aria-label={tx(
+                              `Disponibilité de ${person.name}`,
+                              `${person.name}'s availability`
+                            )}
+                          >
+                            {AVAILABILITY_ORDER.map((value) => {
+                              const active = person.availability === value
+
+                              return (
+                                <button
+                                  key={value}
+                                  type="button"
+                                  onClick={() => setAvailability(person, value)}
+                                  aria-pressed={active}
+                                  className={cn(
+                                    "rounded-full px-2.5 py-1 text-[10px] font-semibold transition-colors",
+                                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                    active
+                                      ? AVAILABILITY_TONE[value]
+                                      : "text-muted-foreground hover:bg-muted"
+                                  )}
+                                >
+                                  {px(AVAILABILITY_LABEL[value]) || value}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+
+                        {/* The disagreement worth seeing, stated rather
+                            than left for the reader to spot. */}
+                        {person.availability === "available" &&
+                          person.open_assignments > 0 && (
+                            <p className="mt-2 text-[10px] leading-4 text-muted-foreground">
+                              {tx(
+                                `Se dit disponible tout en portant ${
+                                  person.open_assignments
+                                } tâche${
+                                  person.open_assignments > 1 ? "s" : ""
+                                } ouverte${
+                                  person.open_assignments > 1 ? "s" : ""
+                                }.`,
+                                `Says available while carrying ${
+                                  person.open_assignments
+                                } open task${
+                                  person.open_assignments > 1 ? "s" : ""
+                                }.`
+                              )}
+                            </p>
+                          )}
+                      </li>
                     )
                   })}
-                </div>
-
-                <span
-                  className={cn(
-                    "shrink-0 text-xs tabular-nums",
-                    person.open_assignments > 0
-                      ? "font-bold"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  {tx(
-                    `${person.open_assignments} en cours`,
-                    `${person.open_assignments} open`
-                  )}
-                </span>
+                </ul>
               </div>
-
-              {/* The disagreement worth seeing, stated rather than
-                  left for the reader to spot. */}
-              {person.availability === "available" &&
-                person.open_assignments > 0 && (
-                  <p className="mt-2 text-[10px] leading-4 text-muted-foreground">
-                    {tx(
-                      `Se dit disponible tout en portant ${
-                        person.open_assignments
-                      } tâche${
-                        person.open_assignments > 1 ? "s" : ""
-                      } ouverte${person.open_assignments > 1 ? "s" : ""}.`,
-                      `Says available while carrying ${
-                        person.open_assignments
-                      } open task${person.open_assignments > 1 ? "s" : ""}.`
-                    )}
-                  </p>
-                )}
-
-              {person.note && (
-                <p className="mt-2 text-[10px] leading-4 text-muted-foreground">
-                  {person.note}
-                </p>
-              )}
-            </li>
-          ))}
-        </ul>
+            ))
+          )}
+        </div>
       )}
     </div>
   )
