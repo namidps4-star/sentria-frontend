@@ -261,7 +261,37 @@ const CSV_COLUMNS: Record<string, string[]> = {
   "agriculture": ["batch_id", "days_stored", "storage_temp"],
   "transportation": ["vehicle_id", "km_since_service", "engine_temp"],
   "energy": ["generator_id", "fuel_level", "coolant_temp"],
-  "commerce": ["product_name", "stock_qty", "min_stock", "shrinkage_rate"],
+  /* Retail, per activity.
+     
+     All four used to fall through to the "commerce" line below, which
+     asked every one of them for shrinkage_rate. A shop only knows its
+     shrinkage after a physical stock count, and most never do one, so
+     the field came back blank or invented. Meanwhile the two columns
+     that give a supermarket its best alerts, unit_cost and expiry_date,
+     were not asked for at all.
+     
+     These lists are what each activity's checks actually read. Verified
+     by ablation; see test-data/RETAIL.md. */
+  "supermarche-hypermarche": [
+    "product_name", "stock_qty", "min_stock",
+    "unit_cost", "expiry_date", "last_sale_date",
+    "sales_last_30_days",
+  ],
+  "epicerie-proximite": [
+    "product_name", "stock_qty", "min_stock",
+    "unit_cost", "last_sale_date", "sales_last_30_days",
+  ],
+  /* No money columns: neither activity has a layer that reads them. */
+  "chaine-magasins": [
+    "product_name", "stock_qty", "min_stock",
+    "sales_last_30_days", "sales_last_7_days", "sales_previous_7_days",
+  ],
+  "grossiste-distributeur": [
+    "product_name", "stock_qty", "min_stock",
+    "sales_last_30_days", "supplier_lead_days",
+  ],
+  /* The fallback, for a file uploaded before the activity was chosen. */
+  "commerce": ["product_name", "stock_qty", "min_stock", "unit_cost"],
 }
 /* i18n-ignore-end */
 
