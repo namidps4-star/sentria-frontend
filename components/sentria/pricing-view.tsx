@@ -109,14 +109,14 @@ export function PricingView() {
 
   return (
     <div
-      className="min-h-screen w-full py-12 px-4 flex items-center justify-center"
+      className="w-full h-full min-h-screen py-12 px-4 overflow-y-auto"
       style={{
         background:
           "radial-gradient(ellipse at 20% 30%, #c8e06a 0%, #8fa84a 25%, #4a6a3a 50%, #1a2a20 80%, #0d1a14 100%)",
       }}
     >
       <div
-        className="w-full max-w-6xl rounded-2xl px-6 py-12 md:px-12 md:py-16"
+        className="w-full max-w-6xl mx-auto rounded-2xl px-6 py-12 md:px-12 md:py-16"
         style={{ backgroundColor: "#e8e8e6" }}
       >
         {/* Header */}
@@ -379,4 +379,3 @@ export function PricingView() {
     </div>
   );
 }
-
