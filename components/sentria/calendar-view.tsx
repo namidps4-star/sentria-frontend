@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -8,465 +8,377 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Filter,
-  MapPin,
+  Inbox,
+  Loader2,
   Timer,
   UserRound,
+  Wrench,
   X,
   Zap,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { localized, resolve, useTx, type Localized } from "@/lib/i18n"
+import { useCompanyIdentity } from "@/lib/company"
+import { API_BASE } from "@/lib/api"
+import {
+  fetchAssignments,
+  fetchContractors,
+  type Assignment,
+  type Contractor,
+} from "@/lib/crm"
+import { sectorLabel } from "@/lib/priorities"
+import { localized, useTx, type Localized } from "@/lib/i18n"
 
-type EventType = "incident" | "deadline" | "threshold" | "resolved"
-
-type SectorKey =
-  | "industry"
-  | "health"
-  | "agriculture"
-  | "transportation"
-  | "logistics"
-  | "energy"
-  | "eac"
-
-/** A site is a key, not a string.
+/* --------------------------------------------------------------------------
+ * What's on the calendar, and where it comes from
  *
- *  Two reasons. The header counts distinct sites with a Set, and a Set
- *  of pair objects would count by identity rather than by site, so the
- *  same warehouse written twice would count twice. And a site name is
- *  not untranslatable: "Usine Lyon" holds a common noun an English
- *  reader does not read, even though "Lyon" itself stays put. */
-type SiteKey =
-  | "marseille"
-  | "lyon"
-  | "lille"
-  | "toulouse"
-  | "beauce"
-  | "rungis"
-  | "grenoble"
-  | "corridorNord"
+ * Every event here is one of the board's own recommendation cards, placed
+ * on a real date:
+ *
+ *  - An assignment with a deadline (an admin's own date, set on the board)
+ *    places the event on that date, as a "deadline" — or "resolved" once
+ *    its status is done.
+ *  - Anything else places the event on the alert's own timestamp: CRITICAL
+ *    reads as an incident, WARNING as a threshold.
+ *
+ * "Who's assigned" is the same contractor_ids the board reads, resolved to
+ * names and roles. Nothing here is invented: a task with nobody on it says
+ * so, and a card with no real date to place it on is left off the
+ * calendar rather than pinned to a guess.
+ * -------------------------------------------------------------------------- */
+
+type EventKind = "incident" | "threshold" | "deadline" | "resolved"
+
+type Recommendation = {
+  id: string
+  equipment: string
+  sector?: string | null
+  severity: "WARNING" | "CRITICAL" | string
+  date: string
+  message: string
+  recommended_action?: string
+  alert_key?: string | null
+  action_category?: string
+}
 
 type CalendarEvent = {
   id: string
-  day: number
-  startHour: number
-  endHour: number
-  /* Mock content standing in for what a real alerts/tasks API would
-     supply.
-
-     It used to be plain French strings, on the reasoning that this is
-     data like `alert.message` and so does not belong in the catalogue.
-     The analogy does not hold: `alert.message` is French because the
-     backend rendered it before storing it, and the frontend has nothing
-     left to translate. This array is in the frontend, so no such
-     constraint applies - it was simply French text on an English
-     screen. Pairs rather than catalogue keys, because a module-level
-     constant cannot call a hook. */
-  title: Localized
-  type: EventType
-  sector: SectorKey
-  site: SiteKey
-  severity?: "WARNING" | "CRITICAL"
-  detail: Localized
-  assignees: string[]
+  date: Date
+  /** Real time-of-day only exists for incident/threshold events, taken
+   *  from the alert's own timestamp. A deadline is a plain date — an
+   *  admin picked a day, not an hour. */
+  hasTime: boolean
+  kind: EventKind
+  severity: string
+  sector: string | null
+  equipment: string
+  title: string
+  detail: string
+  overdue: boolean
+  assignees: Contractor[]
 }
 
-const MONTH_LABEL: Localized = localized("Septembre", "September")
+const NO_ROLE = "__no_role__"
 
-const WEEK_DAYS: { label: Localized; date: number }[] = [
-  { label: localized("LU", "MO"), date: 14 },
-  { label: localized("MA", "TU"), date: 15 },
-  { label: localized("ME", "WE"), date: 16 },
-  { label: localized("JE", "TH"), date: 17 },
-  { label: localized("VE", "FR"), date: 18 },
-  { label: localized("SA", "SA"), date: 19 },
-  { label: localized("DI", "SU"), date: 20 },
-]
-
-const TODAY_INDEX = 5
-
-const START_HOUR = 7
-const END_HOUR = 20
-const ROW_HEIGHT = 64
-
-const HOURS = Array.from(
-  { length: END_HOUR - START_HOUR },
-  (_, i) => START_HOUR + i
-)
-
-const SITE_LABEL: Record<SiteKey, Localized> = {
-  marseille: localized("Port de Marseille", "Port of Marseille"),
-  lyon: localized("Usine Lyon", "Lyon plant"),
-  lille: localized("Entrepôt pharma Lille", "Lille pharma warehouse"),
-  toulouse: localized("Dépôt Toulouse", "Toulouse depot"),
-  beauce: localized("Silo Beauce", "Beauce silo"),
-  rungis: localized("Entrepôt Rungis", "Rungis warehouse"),
-  grenoble: localized("Centrale Grenoble", "Grenoble power station"),
-  corridorNord: localized("Corridor Nord", "North corridor"),
-}
-
-/* A person's name reads the same in every language, so these are the
-   one thing in this file that is not a pair. Named constants rather
-   than repeated literals, so the checker has a single place to skip
-   instead of twelve.
-
-   i18n-ignore-start: people's names */
-const PEOPLE = {
-  karim: "Karim B.",
-  sophie: "Sophie M.",
-  nadia: "Nadia T.",
-  yassine: "Yassine L.",
-  julien: "Julien P.",
-  marc: "Marc D.",
-  amina: "Amina K.",
-} as const
-/* i18n-ignore-end */
-
-const EVENTS: CalendarEvent[] = [
-  {
-    id: "evt-1",
-    day: 0,
-    startHour: 8,
-    endHour: 9.5,
-    title: localized(
-      "Surestarie port — seuil dans 4h",
-      "Port demurrage, threshold in 4h"
-    ),
-    type: "threshold",
-    sector: "logistics",
-    site: "marseille",
-    severity: "CRITICAL",
-    detail: localized(
-      "Le conteneur LOT-2210 approche du seuil de surestarie. Une prise en charge sous 4h évite la pénalité.",
-      "Container LOT-2210 is approaching the demurrage threshold. Handling it within 4h avoids the penalty."
-    ),
-    assignees: [PEOPLE.karim],
-  },
-  {
-    id: "evt-2",
-    day: 0,
-    startHour: 10,
-    endHour: 11,
-    title: localized(
-      "Vibration anormale — Compresseur C-12",
-      "Abnormal vibration, compressor C-12"
-    ),
-    type: "incident",
-    sector: "industry",
-    site: "lyon",
-    severity: "WARNING",
-    detail: localized(
-      "Vibration au-dessus du seuil habituel détectée sur le compresseur C-12 depuis 40 minutes.",
-      "Vibration above the usual threshold on compressor C-12 for the past 40 minutes."
-    ),
-    assignees: [PEOPLE.sophie],
-  },
-  {
-    id: "evt-3",
-    day: 1,
-    startHour: 9,
-    endHour: 10,
-    title: localized(
-      "Audit conformité chaîne du froid",
-      "Cold chain compliance audit"
-    ),
-    type: "deadline",
-    sector: "health",
-    site: "lille",
-    detail: localized(
-      "Audit trimestriel de conformité de la chaîne du froid à finaliser avant la date limite.",
-      "The quarterly cold chain compliance audit has to be finished before the deadline."
-    ),
-    assignees: [PEOPLE.nadia],
-  },
-  {
-    id: "evt-4",
-    day: 1,
-    startHour: 13,
-    endHour: 14,
-    title: localized(
-      "Maintenance préventive effectuée — Flotte 12",
-      "Preventive maintenance done, fleet 12"
-    ),
-    type: "resolved",
-    sector: "transportation",
-    site: "toulouse",
-    detail: localized(
-      "Maintenance préventive réalisée sur les 6 véhicules de la flotte 12.",
-      "Preventive maintenance carried out on all 6 vehicles in fleet 12."
-    ),
-    assignees: [PEOPLE.yassine],
-  },
-  {
-    id: "evt-5",
-    day: 2,
-    startHour: 11,
-    endHour: 12,
-    title: localized(
-      "Seuil d'humidité dépassé — Silo 4",
-      "Moisture threshold passed, silo 4"
-    ),
-    type: "incident",
-    sector: "agriculture",
-    site: "beauce",
-    severity: "WARNING",
-    detail: localized(
-      "Taux d'humidité du silo 4 au-dessus du seuil recommandé pour le stockage.",
-      "Silo 4's moisture level is above the threshold recommended for storage."
-    ),
-    assignees: [PEOPLE.julien],
-  },
-  {
-    id: "evt-6",
-    day: 2,
-    startHour: 15,
-    endHour: 16.5,
-    title: localized(
-      "Chaîne du froid — seuil critique produit",
-      "Cold chain, product at its critical threshold"
-    ),
-    type: "threshold",
-    sector: "logistics",
-    site: "rungis",
-    severity: "CRITICAL",
-    detail: localized(
-      "Température proche du seuil de rupture de la chaîne du froid sur le lot F-118.",
-      "Temperature close to the cold chain break threshold on batch F-118."
-    ),
-    assignees: [PEOPLE.karim, PEOPLE.nadia],
-  },
-  {
-    id: "evt-7",
-    day: 3,
-    startHour: 8.5,
-    endHour: 10,
-    title: localized("Révision turbine T-3", "Turbine T-3 overhaul"),
-    type: "deadline",
-    sector: "energy",
-    site: "grenoble",
-    detail: localized(
-      "Révision périodique de la turbine T-3 à programmer avant échéance réglementaire.",
-      "Turbine T-3's periodic overhaul has to be scheduled before the regulatory deadline."
-    ),
-    assignees: [PEOPLE.marc],
-  },
-  {
-    id: "evt-8",
-    day: 3,
-    startHour: 12,
-    endHour: 13,
-    title: localized(
-      "Retard douane — Corridor Nord",
-      "Customs delay, North corridor"
-    ),
-    type: "incident",
-    sector: "eac",
-    site: "corridorNord",
-    severity: "WARNING",
-    detail: localized(
-      "Retard de dédouanement signalé sur le corridor Nord, impact estimé +3h.",
-      "A clearance delay was reported on the North corridor, estimated impact +3h."
-    ),
-    assignees: [PEOPLE.amina],
-  },
-  {
-    id: "evt-9",
-    day: 4,
-    startHour: 9,
-    endHour: 10,
-    title: localized(
-      "Remplacement filtre — Ligne 2",
-      "Filter replacement, line 2"
-    ),
-    type: "deadline",
-    sector: "industry",
-    site: "lyon",
-    detail: localized(
-      "Remplacement du filtre de la ligne 2 à effectuer avant redémarrage de production.",
-      "Line 2's filter has to be replaced before production restarts."
-    ),
-    assignees: [PEOPLE.sophie],
-  },
-  {
-    id: "evt-10",
-    day: 4,
-    startHour: 16,
-    endHour: 17,
-    title: localized(
-      "Livraison confirmée — Lot LOT-3390",
-      "Delivery confirmed, batch LOT-3390"
-    ),
-    type: "resolved",
-    sector: "logistics",
-    site: "rungis",
-    detail: localized(
-      "Livraison du lot LOT-3390 confirmée dans la fenêtre prévue.",
-      "Batch LOT-3390 was delivered inside the planned window."
-    ),
-    assignees: [PEOPLE.karim],
-  },
-  {
-    id: "evt-11",
-    day: 5,
-    startHour: 10,
-    endHour: 11,
-    title: localized(
-      "Fenêtre de livraison expirant",
-      "Delivery window closing"
-    ),
-    type: "threshold",
-    sector: "transportation",
-    site: "toulouse",
-    severity: "CRITICAL",
-    detail: localized(
-      "La fenêtre de livraison du client Delmas expire dans moins d'1h.",
-      "The Delmas delivery window closes in under 1h."
-    ),
-    assignees: [PEOPLE.yassine],
-  },
-  {
-    id: "evt-12",
-    day: 6,
-    startHour: 14,
-    endHour: 15.5,
-    title: localized(
-      "Renouvellement certification équipement",
-      "Equipment certification renewal"
-    ),
-    type: "deadline",
-    sector: "health",
-    site: "lille",
-    detail: localized(
-      "Certification de l'équipement de réfrigération à renouveler.",
-      "The refrigeration equipment's certification is due for renewal."
-    ),
-    assignees: [PEOPLE.nadia],
-  },
-]
-
-const TYPE_LABEL: Record<EventType, Localized> = {
+const TYPE_LABEL: Record<EventKind, Localized> = {
   incident: localized("Incident", "Incident"),
-  deadline: localized("Échéance", "Deadline"),
   threshold: localized("Seuil critique", "Critical threshold"),
+  deadline: localized("Échéance", "Deadline"),
   resolved: localized("Résolu", "Resolved"),
 }
 
-const TYPE_ICON: Record<EventType, typeof AlertTriangle> = {
+const TYPE_ICON: Record<EventKind, typeof AlertTriangle> = {
   incident: AlertTriangle,
-  deadline: CalendarClock,
   threshold: Timer,
+  deadline: CalendarClock,
   resolved: CheckCircle2,
 }
 
-const SECTOR_LABEL: Record<SectorKey, Localized> = {
-  industry: localized("Industrie", "Industry"),
-  health: localized("Santé", "Health"),
-  agriculture: localized("Agriculture", "Agriculture"),
-  transportation: localized("Transport", "Transport"),
-  logistics: localized("Logistique", "Logistics"),
-  energy: localized("Énergie", "Energy"),
-  eac: localized("EAC", "EAC"),
+const TYPE_TONE: Record<EventKind, string> = {
+  resolved: "bg-primary text-primary-foreground",
+  threshold: "bg-red-500/15 text-red-700 dark:bg-red-500/20 dark:text-red-300",
+  incident: "bg-blue-600 text-white",
+  deadline: "bg-accent text-accent-foreground",
 }
 
-const ALL_SECTOR_KEYS = Object.keys(SECTOR_LABEL) as SectorKey[]
+function parseDate(value: string | null | undefined): Date | null {
+  if (!value) return null
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? null : date
+}
 
-function getOnboardedSectors(): SectorKey[] {
-  if (typeof window === "undefined") {
-    return ALL_SECTOR_KEYS
-  }
+function startOfDay(date: Date): Date {
+  const copy = new Date(date)
+  copy.setHours(0, 0, 0, 0)
+  return copy
+}
 
-  try {
-    const stored = JSON.parse(
-      localStorage.getItem("sentria_sectors") || "[]"
-    )
+function addDays(date: Date, days: number): Date {
+  const copy = new Date(date)
+  copy.setDate(copy.getDate() + days)
+  return copy
+}
 
-    const valid = Array.isArray(stored)
-      ? stored.filter((key): key is SectorKey =>
-          ALL_SECTOR_KEYS.includes(key)
-        )
-      : []
+function mondayOf(date: Date): Date {
+  const copy = startOfDay(date)
+  const day = copy.getDay() // 0 = Sunday
+  const diff = day === 0 ? -6 : 1 - day
+  return addDays(copy, diff)
+}
 
-    // Fall back to every sector so the preview stays populated when the
-    // company hasn't gone through onboarding yet (e.g. local dev).
-    return valid.length > 0 ? valid : ALL_SECTOR_KEYS
-  } catch {
-    return ALL_SECTOR_KEYS
-  }
+function sameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  )
 }
 
 function getInitials(name: string) {
   return name
-    .split(" ")
+    .trim()
+    .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("")
 }
 
-function formatHour(hour: number) {
-  const h = Math.floor(hour)
-  const m = Math.round((hour - h) * 60)
-  return m === 0 ? `${h}h` : `${h}h${m.toString().padStart(2, "0")}`
+/** Joins recommendations to their assignment (by task_key === rec.id) and
+ *  to the contractors on it, then places each on a real date. A card with
+ *  neither a deadline nor a readable alert timestamp is dropped rather
+ *  than guessed at. */
+/** The backend answers with `alert_id`, never `id` — the dashboard and
+ *  board both derive a stable id from the alert's own fields instead,
+ *  and the board saves assignments keyed against that derived id. Using
+ *  `rec.id` unmodified here would leave every event's id undefined,
+ *  silently breaking both the assignment join and React's keys. Same
+ *  algorithm as the dashboard, so a task saved from the board lands on
+ *  the same id here. */
+function normalizeRecommendations(
+  raw: (Partial<Recommendation> & { id?: string | null })[]
+): Recommendation[] {
+  const usedIds = new Set<string>()
+
+  return raw.map((rec, index) => {
+    const baseId =
+      rec.id ??
+      [
+        rec.alert_key ?? "",
+        rec.equipment,
+        rec.date,
+        rec.action_category,
+        rec.recommended_action,
+      ].join("::")
+
+    let id = String(baseId)
+
+    if (usedIds.has(id)) id = `${id}::${index}`
+    while (usedIds.has(id)) id = `${id}::${Math.random().toString(36).slice(2, 8)}`
+
+    usedIds.add(id)
+
+    return {
+      id,
+      equipment: rec.equipment ?? "",
+      sector: rec.sector ?? null,
+      severity: rec.severity ?? "WARNING",
+      date: rec.date ?? "",
+      message: rec.message ?? "",
+      recommended_action: rec.recommended_action,
+      alert_key: rec.alert_key,
+      action_category: rec.action_category,
+    }
+  })
 }
 
-function isPast(day: number, endHour: number) {
-  if (day < TODAY_INDEX) return true
-  if (day > TODAY_INDEX) return false
-  return endHour < 13
-}
+function buildEvents(
+  recommendations: Recommendation[],
+  assignments: Assignment[],
+  contractorsById: Map<string, Contractor>
+): CalendarEvent[] {
+  const assignmentByTaskKey = new Map(assignments.map((a) => [a.task_key, a]))
+  const today = startOfDay(new Date())
+  const events: CalendarEvent[] = []
 
-// Solid, block-color treatment: one bold tone per event type so the week
-// reads at a glance, the way a shift calendar does.
-function getEventColors(event: CalendarEvent, overdue: boolean) {
-  if (event.type === "resolved") {
-    return "bg-primary text-primary-foreground"
+  for (const rec of recommendations) {
+    const assignment = assignmentByTaskKey.get(rec.id)
+    const alertDate = parseDate(rec.date)
+    const deadlineDate = parseDate(assignment?.deadline ?? null)
+
+    const assignees = (assignment?.contractor_ids ?? [])
+      .map((id) => contractorsById.get(id))
+      .filter((c): c is Contractor => Boolean(c))
+
+    let kind: EventKind
+    let placement: Date
+    let hasTime: boolean
+
+    if (assignment?.status === "done") {
+      const resolvedOn = deadlineDate ?? alertDate
+      if (!resolvedOn) continue
+      kind = "resolved"
+      placement = resolvedOn
+      hasTime = false
+    } else if (deadlineDate) {
+      kind = "deadline"
+      placement = deadlineDate
+      hasTime = false
+    } else if (alertDate) {
+      kind = rec.severity === "CRITICAL" ? "incident" : "threshold"
+      placement = alertDate
+      hasTime = true
+    } else {
+      continue
+    }
+
+    events.push({
+      id: rec.id,
+      date: placement,
+      hasTime,
+      kind,
+      severity: rec.severity,
+      sector: rec.sector ?? null,
+      equipment: rec.equipment,
+      title: rec.recommended_action || rec.message,
+      detail: rec.message,
+      overdue: kind === "deadline" && startOfDay(placement) < today,
+      assignees,
+    })
   }
 
-  if (event.type === "threshold" || overdue) {
-    return "bg-red-500/15 text-red-700 dark:bg-red-500/20 dark:text-red-300"
-  }
-
-  if (event.type === "incident") {
-    return "bg-blue-600 text-white"
-  }
-
-  return "bg-accent text-accent-foreground"
+  return events
 }
 
 export function CalendarView() {
   const tx = useTx()
-  const px = (text: Localized) => resolve(text, tx)
+  const { name: companyName } = useCompanyIdentity()
 
-  const [companySectors] = useState<SectorKey[]>(getOnboardedSectors)
-  const [activeSector, setActiveSector] = useState<SectorKey | null>(null)
-  const [viewMode, setViewMode] = useState<"week" | "day">("week")
-  const [showFilters, setShowFilters] = useState(false)
-  const [selected, setSelected] = useState<CalendarEvent | null>(null)
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([])
+  const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [contractors, setContractors] = useState<Contractor[]>([])
+  const [loaded, setLoaded] = useState(false)
 
-  const scopedEvents = EVENTS.filter((e) =>
-    companySectors.includes(e.sector)
+  const [weekOffset, setWeekOffset] = useState(0)
+  const [activeSector, setActiveSector] = useState<string | null>(null)
+  const [activeRole, setActiveRole] = useState<string | null>(null)
+  const [selected, setSelected] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function load() {
+      const recsPromise = fetch(
+        `${API_BASE}/recommendations?limit=100&lang=${tx("fr", "en")}`
+      )
+        .then((r) => r.json())
+        .then((d) => (Array.isArray(d?.recommendations) ? d.recommendations : []))
+        .catch(() => [])
+
+      const [recs, assignmentsResult, contractorsResult] = await Promise.all([
+        recsPromise,
+        companyName ? fetchAssignments(companyName) : Promise.resolve(null),
+        companyName ? fetchContractors(companyName) : Promise.resolve(null),
+      ])
+
+      if (cancelled) return
+
+      setRecommendations(normalizeRecommendations(recs))
+      setAssignments(assignmentsResult?.ok ? assignmentsResult.data : [])
+      setContractors(contractorsResult?.ok ? contractorsResult.data : [])
+      setLoaded(true)
+    }
+
+    load()
+
+    return () => {
+      cancelled = true
+    }
+  }, [companyName, tx])
+
+  const contractorsById = useMemo(
+    () => new Map(contractors.map((c) => [c.id, c])),
+    [contractors]
   )
 
-  const events = activeSector
-    ? scopedEvents.filter((e) => e.sector === activeSector)
-    : scopedEvents
+  const allEvents = useMemo(
+    () => buildEvents(recommendations, assignments, contractorsById),
+    [recommendations, assignments, contractorsById]
+  )
 
-  const visibleDays = viewMode === "day" ? [TODAY_INDEX] : WEEK_DAYS.map((_, i) => i)
+  const monday = useMemo(
+    () => addDays(mondayOf(new Date()), weekOffset * 7),
+    [weekOffset]
+  )
+  const weekDates = useMemo(
+    () => Array.from({ length: 7 }, (_, i) => addDays(monday, i)),
+    [monday]
+  )
 
-  const siteCount = new Set(scopedEvents.map((e) => e.site)).size
+  const weekEvents = useMemo(
+    () =>
+      allEvents.filter((e) =>
+        weekDates.some((d) => sameDay(d, e.date))
+      ),
+    [allEvents, weekDates]
+  )
+
+  const sectorKeys = useMemo(() => {
+    const seen: string[] = []
+    for (const e of weekEvents) {
+      if (e.sector && !seen.includes(e.sector)) seen.push(e.sector)
+    }
+    return seen
+  }, [weekEvents])
+
+  const roleKeys = useMemo(() => {
+    const seen: string[] = []
+    for (const c of contractors) {
+      const key = c.role?.trim() || NO_ROLE
+      if (!seen.includes(key)) seen.push(key)
+    }
+    return seen
+  }, [contractors])
+
+  const visibleEvents = weekEvents.filter((e) => {
+    if (activeSector && e.sector !== activeSector) return false
+    if (activeRole) {
+      const roles = e.assignees.map((a) => a.role?.trim() || NO_ROLE)
+      if (activeRole === NO_ROLE ? e.assignees.length > 0 : !roles.includes(activeRole))
+        return false
+    }
+    return true
+  })
 
   const stats = {
-    incidents: events.filter((e) => e.type === "incident").length,
-    thresholds: events.filter((e) => e.type === "threshold").length,
-    deadlines: events.filter((e) => e.type === "deadline").length,
+    deadlines: visibleEvents.filter((e) => e.kind === "deadline").length,
+    incidents: visibleEvents.filter((e) => e.kind === "incident").length,
+    thresholds: visibleEvents.filter((e) => e.kind === "threshold").length,
   }
+
+  const equipmentCount = new Set(weekEvents.map((e) => e.equipment)).size
+
+  const weekLabel = tx("fr-FR", "en-GB")
+  const rangeLabel = `${new Intl.DateTimeFormat(weekLabel, {
+    day: "numeric",
+    month: "short",
+  }).format(monday)} – ${new Intl.DateTimeFormat(weekLabel, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(weekDates[6])}`
+
+  const dayLabelFormatter = new Intl.DateTimeFormat(weekLabel, { weekday: "short" })
+  const timeFormatter = new Intl.DateTimeFormat(weekLabel, {
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+
+  const today = startOfDay(new Date())
 
   return (
     <div className="flex flex-col gap-6">
-      {/* BANNER — same treatment as the Dashboard hero (bg-sidebar, the
-          accent "Live" pill, a bold headline and an accent CTA), so the
-          calendar opens with the same visual signature as the rest of
-          the app instead of its own look. */}
+      {/* BANNER — same treatment as the Dashboard hero, so the calendar
+          opens with the same visual signature as the rest of the app. */}
       <div className="flex flex-col gap-4 rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-xl">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
@@ -503,96 +415,60 @@ export function CalendarView() {
         </button>
       </div>
 
+      {!companyName && (
+        <p className="rounded-2xl border border-dashed border-border bg-card px-4 py-3 text-xs leading-5 text-muted-foreground">
+          {tx(
+            "Renseignez le nom de votre entreprise dans les Paramètres pour voir les échéances et qui est assigné.",
+            "Set your company name in Settings to see deadlines and who's assigned."
+          )}
+        </p>
+      )}
+
       {/* HEADER */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="font-heading text-5xl font-black leading-[0.85] tracking-tight text-foreground sm:text-6xl">
-            {px(MONTH_LABEL)}
+          <h2 className="font-heading text-3xl font-black leading-tight tracking-tight text-foreground sm:text-4xl">
+            {rangeLabel}
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            {tx("2026 — semaine du 14 au 20", "2026 — week of Sep 14–20")}
+            {tx("Semaine de travail", "Work week")}
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
+            onClick={() => setWeekOffset((w) => w - 1)}
             aria-label={tx("Semaine précédente", "Previous week")}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground opacity-40"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:bg-muted"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
 
           <button
             type="button"
-            className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium hover:bg-muted"
+            onClick={() => setWeekOffset(0)}
+            disabled={weekOffset === 0}
+            className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
           >
             {tx("Aujourd'hui", "Today")}
           </button>
 
           <button
             type="button"
+            onClick={() => setWeekOffset((w) => w + 1)}
             aria-label={tx("Semaine suivante", "Next week")}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground opacity-40"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:bg-muted"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
 
-          <div className="flex items-center rounded-xl bg-primary p-1">
-            <button
-              type="button"
-              disabled
-              className="cursor-not-allowed rounded-lg px-3 py-1.5 text-xs font-medium text-primary-foreground/30"
-            >
-              {tx("Mois", "Month")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("week")}
-              className={cn(
-                "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-                viewMode === "week"
-                  ? "bg-accent text-accent-foreground"
-                  : "text-primary-foreground/60 hover:text-primary-foreground"
-              )}
-            >
-              {tx("Semaine", "Week")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("day")}
-              className={cn(
-                "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-                viewMode === "day"
-                  ? "bg-accent text-accent-foreground"
-                  : "text-primary-foreground/60 hover:text-primary-foreground"
-              )}
-            >
-              {tx("Jour", "Day")}
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowFilters((current) => !current)}
-            aria-label={tx("Filtrer par secteur", "Filter by sector")}
-            aria-pressed={showFilters}
-            className={cn(
-              "flex h-9 w-9 items-center justify-center rounded-xl border transition-colors",
-              showFilters
-                ? "border-accent bg-accent/10 text-accent-foreground"
-                : "border-border bg-card text-muted-foreground hover:bg-muted"
-            )}
-          >
-            <Filter className="h-4 w-4" />
-          </button>
-
           <span className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-medium text-primary-foreground">
-            <MapPin className="h-3.5 w-3.5 text-accent" />
-            {siteCount}{" "}
-            {siteCount > 1
-              ? tx("sites suivis", "sites tracked")
-              : tx("site suivi", "site tracked")}
+            <Wrench className="h-3.5 w-3.5 text-accent" />
+            {equipmentCount}{" "}
+            {equipmentCount > 1
+              ? tx("équipements suivis", "assets tracked")
+              : tx("équipement suivi", "asset tracked")}
           </span>
         </div>
       </div>
@@ -604,7 +480,7 @@ export function CalendarView() {
             {tx("Échéances", "Deadlines")}
           </p>
           <p className="mt-1 font-heading text-4xl font-black leading-none text-accent-foreground">
-            {stats.deadlines}
+            {loaded ? stats.deadlines : "—"}
           </p>
           <p className="mt-1.5 text-[10px] text-accent-foreground/60">
             {tx("à traiter cette semaine", "due this week")}
@@ -616,7 +492,7 @@ export function CalendarView() {
             {tx("Incidents actifs", "Active incidents")}
           </p>
           <p className="mt-1 font-heading text-4xl font-black leading-none text-blue-400">
-            {stats.incidents}
+            {loaded ? stats.incidents : "—"}
           </p>
           <p className="mt-1.5 text-[10px] text-primary-foreground/40">
             {tx("détectés cette semaine", "detected this week")}
@@ -628,7 +504,7 @@ export function CalendarView() {
             {tx("Seuils critiques", "Critical thresholds")}
           </p>
           <p className="mt-1 font-heading text-4xl font-black leading-none text-red-400">
-            {stats.thresholds}
+            {loaded ? stats.thresholds : "—"}
           </p>
           <p className="mt-1.5 text-[10px] text-primary-foreground/40">
             {tx("à risque de dépassement", "at risk of being breached")}
@@ -636,261 +512,286 @@ export function CalendarView() {
         </div>
       </div>
 
-      {/* SECTOR FILTERS */}
-      {showFilters && (
-        <div className="flex flex-wrap gap-1.5">
-          <button
-            type="button"
-            onClick={() => setActiveSector(null)}
-            className={cn(
-              "rounded-full border px-3 py-1 text-[11px] font-medium transition-colors",
-              activeSector === null
-                ? "border-accent bg-accent/10 text-accent-foreground"
-                : "border-border bg-card text-muted-foreground hover:bg-muted"
-            )}
-          >
-            {tx("Tous", "All")}
-          </button>
+      {/* FILTERS — only real sectors/roles present this week, and only
+          shown once there's more than one real choice to make. */}
+      {(sectorKeys.length > 1 || roleKeys.length > 1) && (
+        <div className="flex flex-wrap items-center gap-2 rounded-3xl border border-border bg-card p-4">
+          {sectorKeys.length > 1 && (
+            <>
+              <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                {tx("Secteur", "Sector")}
+              </span>
+              <button
+                type="button"
+                onClick={() => setActiveSector(null)}
+                className={cn(
+                  "rounded-full px-3 py-1 text-[11px] font-semibold transition-colors",
+                  activeSector === null
+                    ? "bg-foreground text-background"
+                    : "bg-muted text-muted-foreground hover:bg-muted/70"
+                )}
+              >
+                {tx("Tous", "All")}
+              </button>
+              {sectorKeys.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setActiveSector(key)}
+                  className={cn(
+                    "rounded-full px-3 py-1 text-[11px] font-semibold transition-colors",
+                    activeSector === key
+                      ? "bg-foreground text-background"
+                      : "bg-muted text-muted-foreground hover:bg-muted/70"
+                  )}
+                >
+                  {sectorLabel(key, tx)}
+                </button>
+              ))}
+            </>
+          )}
 
-          {companySectors.map((sector) => (
-            <button
-              key={sector}
-              type="button"
-              onClick={() => setActiveSector(sector)}
-              className={cn(
-                "rounded-full border px-3 py-1 text-[11px] font-medium transition-colors",
-                activeSector === sector
-                  ? "border-accent bg-accent/10 text-accent-foreground"
-                  : "border-border bg-card text-muted-foreground hover:bg-muted"
-              )}
-            >
-              {px(SECTOR_LABEL[sector])}
-            </button>
-          ))}
+          {sectorKeys.length > 1 && roleKeys.length > 1 && (
+            <span className="mx-1 h-5 w-px shrink-0 bg-border" />
+          )}
+
+          {roleKeys.length > 1 && (
+            <>
+              <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                {tx("Département", "Department")}
+              </span>
+              <button
+                type="button"
+                onClick={() => setActiveRole(null)}
+                className={cn(
+                  "rounded-full px-3 py-1 text-[11px] font-semibold transition-colors",
+                  activeRole === null
+                    ? "bg-foreground text-background"
+                    : "bg-muted text-muted-foreground hover:bg-muted/70"
+                )}
+              >
+                {tx("Tous", "All")}
+              </button>
+              {roleKeys.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setActiveRole(key)}
+                  className={cn(
+                    "rounded-full px-3 py-1 text-[11px] font-semibold transition-colors",
+                    activeRole === key
+                      ? "bg-foreground text-background"
+                      : "bg-muted text-muted-foreground hover:bg-muted/70"
+                  )}
+                >
+                  {key === NO_ROLE ? tx("Sans fonction", "No role") : key}
+                </button>
+              ))}
+            </>
+          )}
         </div>
       )}
 
-      {/* CALENDAR GRID */}
-      <div
-        id="calendar-grid"
-        className="overflow-x-auto rounded-3xl border border-border bg-gradient-to-b from-accent/15 via-accent/5 to-transparent p-4 shadow-sm"
-      >
-        <div
-          className="grid min-w-[720px]"
-          style={{
-            gridTemplateColumns: `56px repeat(${visibleDays.length}, 1fr)`,
-          }}
-        >
-          {/* day headers */}
-          <div />
-          {visibleDays.map((dayIndex) => {
-            const day = WEEK_DAYS[dayIndex]
-            const isToday = dayIndex === TODAY_INDEX
-
-            return (
-              <div key={dayIndex} className="flex justify-center pb-3">
-                <div
-                  className={cn(
-                    "flex flex-col items-center rounded-xl px-3 py-1.5",
-                    isToday && "bg-primary text-primary-foreground"
-                  )}
-                >
-                  <span className="text-[10px] font-semibold tracking-wide opacity-70">
-                    {px(day.label)}
-                  </span>
-                  <span className="font-heading text-sm font-bold">
-                    {day.date}
-                  </span>
-                </div>
-              </div>
-            )
-          })}
-
-          {/* hour labels */}
-          <div className="relative" style={{ height: HOURS.length * ROW_HEIGHT }}>
-            {HOURS.map((hour, i) => (
-              <div
-                key={hour}
-                className="absolute right-2 -translate-y-1/2 text-[10px] text-muted-foreground"
-                style={{ top: i * ROW_HEIGHT }}
-              >
-                {hour}h
-              </div>
-            ))}
+      {/* WEEK AGENDA — a day-by-day list rather than an hourly grid, because
+          a deadline is a date an admin picked, not an hour. Only an
+          incident/threshold carries a real timestamp. */}
+      <div id="calendar-grid" className="rounded-3xl border border-border bg-card p-4 shadow-sm">
+        {!loaded ? (
+          <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            {tx("Chargement du calendrier…", "Loading the calendar…")}
           </div>
+        ) : allEvents.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 py-16 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
+              <Inbox className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+            </div>
+            <h3 className="font-heading text-base font-bold">
+              {tx("Rien à afficher", "Nothing to show")}
+            </h3>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              {tx(
+                "Le calendrier se remplit dès qu'une alerte est détectée ou qu'une échéance est fixée sur le tableau des priorités.",
+                "The calendar fills in as soon as an alert is detected or a deadline is set on the priorities board."
+              )}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-7">
+            {weekDates.map((day) => {
+              const isToday = sameDay(day, today)
+              const dayEvents = visibleEvents
+                .filter((e) => sameDay(e.date, day))
+                .sort((a, b) => a.date.getTime() - b.date.getTime())
 
-          {/* day columns */}
-          {visibleDays.map((dayIndex) => {
-            const dayEvents = events.filter((e) => e.day === dayIndex)
-
-            return (
-              <div
-                key={dayIndex}
-                className="relative border-l border-border/60"
-                style={{ height: HOURS.length * ROW_HEIGHT }}
-              >
-                {HOURS.map((hour, i) => (
+              return (
+                <div key={day.toISOString()} className="min-w-[150px]">
                   <div
-                    key={hour}
-                    className="absolute inset-x-0 border-t border-border/40"
-                    style={{ top: i * ROW_HEIGHT }}
-                  />
-                ))}
+                    className={cn(
+                      "mb-2 flex items-center justify-between rounded-xl px-2.5 py-1.5",
+                      isToday && "bg-primary text-primary-foreground"
+                    )}
+                  >
+                    <span className="text-[10px] font-semibold uppercase tracking-wide opacity-70">
+                      {dayLabelFormatter.format(day)}
+                    </span>
+                    <span className="font-heading text-sm font-bold">
+                      {day.getDate()}
+                    </span>
+                  </div>
 
-                {dayEvents.map((event) => {
-                  const Icon = TYPE_ICON[event.type]
-                  const top = (event.startHour - START_HOUR) * ROW_HEIGHT
-                  const height = Math.max(
-                    (event.endHour - event.startHour) * ROW_HEIGHT - 4,
-                    28
-                  )
-                  const overdue =
-                    event.type === "deadline" && isPast(event.day, event.endHour)
+                  <div className="space-y-1.5">
+                    {dayEvents.length === 0 && (
+                      <p className="rounded-xl border border-dashed border-border/60 px-2 py-3 text-center text-[10px] text-muted-foreground">
+                        {tx("Rien", "Nothing")}
+                      </p>
+                    )}
 
-                  return (
-                    <div
-                      key={event.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() =>
-                        setSelected(
-                          selected?.id === event.id ? null : event
-                        )
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault()
-                          setSelected(
-                            selected?.id === event.id ? null : event
-                          )
-                        }
-                      }}
-                      className={cn(
-                        "absolute inset-x-1 flex cursor-pointer flex-col rounded-2xl px-2.5 py-1.5 text-left shadow-sm transition-transform hover:-translate-y-0.5",
-                        selected?.id === event.id ? "z-40" : "z-10",
-                        getEventColors(event, overdue)
-                      )}
-                      style={{ top: top + 2, height }}
-                    >
-                      <div className="flex items-center gap-1">
-                        <Icon className="h-3 w-3 shrink-0" />
-                        <span className="truncate text-[10px] font-bold">
-                          {px(event.title)}
-                        </span>
-                      </div>
+                    {dayEvents.map((event) => {
+                      const Icon = TYPE_ICON[event.kind]
+                      const isOpen = selected === event.id
 
-                      {height > 44 && (
-                        <span className="mt-0.5 truncate text-[9px] opacity-80">
-                          {formatHour(event.startHour)} – {formatHour(event.endHour)}
-                        </span>
-                      )}
-
-                      {overdue && height > 44 && (
-                        <span className="mt-auto text-[9px] font-bold">
-                          {tx("En retard", "Overdue")}
-                        </span>
-                      )}
-
-                      {selected?.id === event.id && (
-                        <div
-                          className="absolute left-0 top-full z-30 mt-2 w-64 rounded-3xl bg-popover p-4 text-foreground shadow-xl"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <span
-                              className={cn(
-                                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider",
-                                getEventColors(event, overdue)
-                              )}
-                            >
-                              <Icon className="h-3 w-3" />
-                              {px(TYPE_LABEL[event.type])}
-                            </span>
-
-                            <button
-                              type="button"
-                              onClick={() => setSelected(null)}
-                              className="rounded-md p-0.5 text-muted-foreground hover:bg-muted"
-                              aria-label={tx("Fermer", "Close")}
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-
-                          <p className="mt-2.5 text-base font-bold leading-snug">
-                            {px(event.title)}
-                          </p>
-
-                          <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
-                            {px(event.detail)}
-                          </p>
-
-                          <div className="mt-3 flex flex-wrap gap-1.5">
-                            <span className="rounded-full bg-muted px-2.5 py-1 text-[9px] font-semibold text-foreground/80">
-                              {px(WEEK_DAYS[event.day].label)} {WEEK_DAYS[event.day].date}
-                            </span>
-                            <span className="rounded-full bg-muted px-2.5 py-1 text-[9px] font-semibold text-foreground/80">
-                              {px(SECTOR_LABEL[event.sector])}
-                            </span>
-                            <span className="rounded-full bg-muted px-2.5 py-1 text-[9px] font-semibold text-foreground/80">
-                              {formatHour(event.startHour)} – {formatHour(event.endHour)}
-                            </span>
-                          </div>
-
-                          <p className="mt-2 text-[10px] text-muted-foreground">
-                            {px(SITE_LABEL[event.site])}
-                          </p>
-
-                          <button
-                            type="button"
-                            onClick={() => setSelected(null)}
-                            className="mt-3 w-full rounded-xl bg-accent px-3 py-2.5 text-xs font-bold text-accent-foreground transition-colors hover:bg-accent/90"
+                      return (
+                        <div key={event.id} className="relative">
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setSelected(isOpen ? null : event.id)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault()
+                                setSelected(isOpen ? null : event.id)
+                              }
+                            }}
+                            className={cn(
+                              "flex cursor-pointer flex-col gap-0.5 rounded-xl px-2.5 py-1.5 text-left shadow-sm transition-transform hover:-translate-y-0.5",
+                              TYPE_TONE[event.kind]
+                            )}
                           >
-                            {tx("Fermer", "Close")}
-                          </button>
+                            <div className="flex items-center gap-1">
+                              <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />
+                              <span className="truncate text-[10px] font-bold">
+                                {event.title}
+                              </span>
+                            </div>
 
-                          <div className="mt-3 flex items-center gap-2">
-                            <p className="text-[10px] font-medium text-muted-foreground">
-                              {tx("Assigné à", "Assigned to")}
-                            </p>
+                            <span className="truncate text-[9px] opacity-80">
+                              {event.hasTime
+                                ? timeFormatter.format(event.date)
+                                : tx("Toute la journée", "All day")}
+                            </span>
 
-                            {event.assignees.length > 0 ? (
-                              <div className="flex -space-x-1.5">
-                                {event.assignees.map((name) => (
-                                  <span
-                                    key={name}
-                                    title={name}
-                                    className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-popover bg-accent text-[9px] font-bold text-accent-foreground"
-                                  >
-                                    {getInitials(name)}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              <span className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-border text-muted-foreground">
-                                <UserRound className="h-3 w-3" />
+                            {event.overdue && (
+                              <span className="text-[9px] font-bold">
+                                {tx("En retard", "Overdue")}
                               </span>
                             )}
                           </div>
+
+                          {isOpen && (
+                            <div
+                              className="absolute left-0 top-full z-40 mt-2 w-64 rounded-3xl bg-popover p-4 text-foreground shadow-xl"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <span
+                                  className={cn(
+                                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                                    TYPE_TONE[event.kind]
+                                  )}
+                                >
+                                  <Icon className="h-3 w-3" aria-hidden="true" />
+                                  {tx(TYPE_LABEL[event.kind].fr, TYPE_LABEL[event.kind].en)}
+                                </span>
+
+                                <button
+                                  type="button"
+                                  onClick={() => setSelected(null)}
+                                  className="rounded-md p-0.5 text-muted-foreground hover:bg-muted"
+                                  aria-label={tx("Fermer", "Close")}
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+
+                              <p className="mt-2.5 text-sm font-bold leading-snug">
+                                {event.detail}
+                              </p>
+
+                              {event.title !== event.detail && (
+                                <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+                                  {event.title}
+                                </p>
+                              )}
+
+                              <div className="mt-3 flex flex-wrap gap-1.5">
+                                <span className="rounded-full bg-muted px-2.5 py-1 text-[9px] font-semibold text-foreground/80">
+                                  {event.equipment}
+                                </span>
+                                {event.sector && (
+                                  <span className="rounded-full bg-muted px-2.5 py-1 text-[9px] font-semibold text-foreground/80">
+                                    {sectorLabel(event.sector, tx)}
+                                  </span>
+                                )}
+                                <span className="rounded-full bg-muted px-2.5 py-1 text-[9px] font-semibold text-foreground/80">
+                                  {event.hasTime
+                                    ? timeFormatter.format(event.date)
+                                    : tx("Toute la journée", "All day")}
+                                </span>
+                              </div>
+
+                              <div className="mt-3 flex items-center gap-2">
+                                <p className="text-[10px] font-medium text-muted-foreground">
+                                  {tx("Assigné à", "Assigned to")}
+                                </p>
+
+                                {event.assignees.length > 0 ? (
+                                  <div className="flex -space-x-1.5">
+                                    {event.assignees.map((person) => (
+                                      <span
+                                        key={person.id}
+                                        title={`${person.name}${person.role ? ` — ${person.role}` : ""}`}
+                                        className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-popover bg-accent text-[9px] font-bold text-accent-foreground"
+                                      >
+                                        {getInitials(person.name)}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <span className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-border text-muted-foreground">
+                                    <UserRound className="h-3 w-3" />
+                                  </span>
+                                )}
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => setSelected(null)}
+                                className="mt-3 w-full rounded-xl bg-accent px-3 py-2.5 text-xs font-bold text-accent-foreground transition-colors hover:bg-accent/90"
+                              >
+                                {tx("Fermer", "Close")}
+                              </button>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )
-          })}
-        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* LEGEND */}
       <div className="flex flex-wrap items-center gap-4 px-1 text-[11px] text-muted-foreground">
-        {(Object.keys(TYPE_LABEL) as EventType[]).map((type) => {
-          const Icon = TYPE_ICON[type]
+        {(Object.keys(TYPE_LABEL) as EventKind[]).map((kind) => {
+          const Icon = TYPE_ICON[kind]
           return (
-            <div key={type} className="flex items-center gap-1.5">
+            <div key={kind} className="flex items-center gap-1.5">
               <Icon className="h-3.5 w-3.5" />
-              {px(TYPE_LABEL[type])}
+              {tx(TYPE_LABEL[kind].fr, TYPE_LABEL[kind].en)}
             </div>
           )
         })}
