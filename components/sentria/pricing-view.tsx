@@ -379,3 +379,4 @@ export function PricingView() {
     </div>
   );
 }
+
