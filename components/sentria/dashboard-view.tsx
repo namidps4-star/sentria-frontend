@@ -1182,6 +1182,16 @@ export function DashboardView({
     null
   )
 
+  /** The panel's own lookup for when the clicked alert isn't in the
+   *  top-20 `recommendations` already in memory — most alerts aren't,
+   *  since that list is a global shortlist across every sector. Keyed
+   *  by equipment so switching between two open alerts for the same
+   *  equipment doesn't refetch. */
+  const [fetchedRecommendation, setFetchedRecommendation] =
+    useState<Recommendation | null>(null)
+  const [fetchingRecommendationFor, setFetchingRecommendationFor] =
+    useState<string | null>(null)
+
   const [alertSearch, setAlertSearch] = useState("")
 
   const [selectedRecommendation, setSelectedRecommendation] =
@@ -1339,7 +1349,7 @@ export function DashboardView({
   }, [activeSectors, uploadSector, filterSector])
 
   useEffect(() => {
-    fetch(`${API}/alerts`)
+    fetch(`${API}/alerts?lang=${tx("fr", "en")}`)
       .then((r) => {
         if (!r.ok) {
           throw new Error(`HTTP ${r.status}`)
@@ -1566,7 +1576,7 @@ export function DashboardView({
 
       await new Promise((r) => setTimeout(r, 1500))
 
-      const r2 = await fetch(`${API}/alerts`)
+      const r2 = await fetch(`${API}/alerts?lang=${tx("fr", "en")}`)
       const d2 = await r2.json()
 
       setAlerts(Array.isArray(d2) ? d2.map(withOurSector) : [])
@@ -1785,7 +1795,7 @@ export function DashboardView({
     ) ?? null
 
   const expandedRecommendation = expandedAlert
-    ? recommendations.find(
+    ? (recommendations.find(
         (r) =>
           r.equipment === expandedAlert.equipment &&
           r.date === expandedAlert.date
@@ -1793,8 +1803,38 @@ export function DashboardView({
       recommendations.find(
         (r) => r.equipment === expandedAlert.equipment
       ) ??
-      null
+      (fetchedRecommendation?.equipment === expandedAlert.equipment
+        ? fetchedRecommendation
+        : null))
     : null
+
+  /* The in-memory shortlist missed this alert — ask for it by name
+     instead of showing "not computed" for data that was in fact
+     computed, just not in a global top-20. */
+  useEffect(() => {
+    if (!expandedAlert || expandedRecommendation) return
+    if (fetchingRecommendationFor === expandedAlert.equipment) return
+
+    setFetchingRecommendationFor(expandedAlert.equipment)
+
+    fetch(
+      `${API}/recommendations?equipment=${encodeURIComponent(
+        expandedAlert.equipment
+      )}&limit=1&lang=${tx("fr", "en")}`
+    )
+      .then((r) => r.json())
+      .then((d) => {
+        const found = Array.isArray(d?.recommendations)
+          ? d.recommendations[0]
+          : null
+        if (found) setFetchedRecommendation(found)
+      })
+      .catch((err) => {
+        console.error("Failed to fetch this alert's recommendation:", err)
+      })
+      .finally(() => setFetchingRecommendationFor(null))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expandedAlert?.equipment, expandedRecommendation])
 
   const meta =
     filterSector === "logistics" && opsType

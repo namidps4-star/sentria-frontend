@@ -651,7 +651,7 @@ export function ReportView({ data }: { data?: ReportData }) {
     setCompanyName(readCompanyName())
     setTimezoneId(readTimezoneId())
 
-    fetch(`${API_BASE}/alerts`)
+    fetch(`${API_BASE}/alerts?lang=${tx("fr", "en")}`)
       .then((r) => (r.ok ? r.json() : []))
       .then((d) => setAlerts(Array.isArray(d) ? d : []))
       .catch((error) => {

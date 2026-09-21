@@ -58,6 +58,8 @@ type Recommendation = {
   recommended_action?: string
   alert_key?: string | null
   action_category?: string
+  risk_score?: number | null
+  confidence?: number | null
 }
 
 type CalendarEvent = {
@@ -73,6 +75,9 @@ type CalendarEvent = {
   equipment: string
   title: string
   detail: string
+  recommendedAction: string | null
+  riskScore: number | null
+  confidence: number | null
   overdue: boolean
   assignees: Contractor[]
 }
@@ -187,6 +192,8 @@ function normalizeRecommendations(
       recommended_action: rec.recommended_action,
       alert_key: rec.alert_key,
       action_category: rec.action_category,
+      risk_score: rec.risk_score ?? null,
+      confidence: rec.confidence ?? null,
     }
   })
 }
@@ -241,6 +248,9 @@ function buildEvents(
       equipment: rec.equipment,
       title: rec.recommended_action || rec.message,
       detail: rec.message,
+      recommendedAction: rec.recommended_action ?? null,
+      riskScore: rec.risk_score ?? null,
+      confidence: rec.confidence ?? null,
       overdue: kind === "deadline" && startOfDay(placement) < today,
       assignees,
     })
@@ -718,13 +728,45 @@ export function CalendarView() {
                                 {event.detail}
                               </p>
 
-                              {event.title !== event.detail && (
-                                <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
-                                  {event.title}
+                              {/* Always shown, never conditional: an
+                                  operator deciding what to do next needs
+                                  the same three answers every time —
+                                  what to do, how risky it is, how sure
+                                  the system is. A null score says so
+                                  honestly rather than being hidden. */}
+                              <div className="mt-2 rounded-xl bg-muted/60 px-2.5 py-2">
+                                <p className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+                                  {tx("Recommandation", "Recommendation")}
                                 </p>
-                              )}
+                                <p className="mt-0.5 text-[11px] leading-4 text-foreground">
+                                  {event.recommendedAction ??
+                                    tx(
+                                      "Aucune recommandation disponible.",
+                                      "No recommendation available."
+                                    )}
+                                </p>
+                              </div>
 
-                              <div className="mt-3 flex flex-wrap gap-1.5">
+                              <div className="mt-2 flex gap-1.5">
+                                <div className="flex-1 rounded-xl border border-border px-2.5 py-1.5 text-center">
+                                  <p className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">
+                                    {tx("Risque", "Risk")}
+                                  </p>
+                                  <p className="text-xs font-bold tabular-nums">
+                                    {event.riskScore != null ? `${event.riskScore}/100` : "—"}
+                                  </p>
+                                </div>
+                                <div className="flex-1 rounded-xl border border-border px-2.5 py-1.5 text-center">
+                                  <p className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">
+                                    {tx("Confiance", "Confidence")}
+                                  </p>
+                                  <p className="text-xs font-bold tabular-nums">
+                                    {event.confidence != null ? `${event.confidence}%` : "—"}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="mt-2 flex flex-wrap gap-1.5">
                                 <span className="rounded-full bg-muted px-2.5 py-1 text-[9px] font-semibold text-foreground/80">
                                   {event.equipment}
                                 </span>
