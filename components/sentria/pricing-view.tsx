@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Sparkles, TrendingUp } from "lucide-react";
+import { Check, Sparkles, TrendingUp, X } from "lucide-react";
 
 type Localized = { fr: string; en: string };
 
@@ -17,6 +17,7 @@ type Tier = {
   cta: Localized;
   featured?: boolean;
   features: Localized[];
+  missing?: Localized[];
   highlight?: Highlight;
 };
 
@@ -90,7 +91,7 @@ const TIERS: Tier[] = [
   },
 ];
 
-export default function App() {
+export function PricingView() {
   const [annual, setAnnual] = useState<boolean>(false);
   const [lang, setLang] = useState<"fr" | "en">("en");
 
