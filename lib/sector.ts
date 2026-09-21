@@ -1,55 +1,46 @@
+// lib/sector.ts
+
 /**
- * The frontend and the backend spell one sector differently.
+ * Sector keys are not the same on both sides of the wire.
  *
- * Onboarding calls it "commerce". The pipeline's dispatcher branches on
- * `sector == "retail"`, and `SECTORS.get(sector, check_industry)` sends
- * anything it does not recognise to the industry checks, which have
- * nothing to say about a shop. So a retail CSV uploaded from the app
- * landed, succeeded, and produced zero alerts.
+ * The UI calls the retail sector "commerce". The backend, in
+ * pipeline/alerts.py's SECTORS dict and check_retail(), calls it
+ * "retail". Every sector that uses different words on the two sides
+ * has to be listed here TWICE: once in the UI→API direction
+ * (toApiSector) and once in the API→UI direction (withOurSector).
  *
- * It cuts the other way too: all thirteen retail checks call
- * `fire(..., "retail", ...)`, so every alert comes back stamped
- * "retail" while the dashboard filters on "commerce". Even with the
- * upload fixed, picking Commerce on the dashboard would have shown an
- * empty list.
- *
- * Renaming one side to match the other would be cleaner and is the
- * right end state. It is not this change: "commerce" is written into
- * every user's localStorage, into PRIORITIES_BY_SECTOR, into
- * ACTIVITIES_BY_SECTOR and into the calendar, and a rename that misses
- * one of them silently empties a view. This translates at the two
- * points where the two vocabularies actually meet, and nowhere else.
+ * Missing one direction is exactly the bug this file exists to prevent.
+ * An upload tagged "commerce" whose sector is not translated before it
+ * reaches run_pipeline() falls through check_equipment()'s default
+ * branch, gets processed by check_industry(), finds no "Torque [Nm]"
+ * column, and returns ["OK"] for every row. Zero alerts saved, no error
+ * logged, dashboard shows an empty sector.
  */
 
-/** Sector ids this app uses, mapped to what the API calls them. */
-const TO_API: Record<string, string> = {
+const UI_TO_API: Record<string, string> = {
   commerce: "retail",
+  // Add every other pair as you find it. Check by curling /alerts and
+  // comparing the distinct `sector` values against the SECTORS array in
+  // dashboard-view.tsx.
 }
 
-/** The inverse, built from the same table so the two cannot drift. */
-const FROM_API: Record<string, string> = Object.fromEntries(
-  Object.entries(TO_API).map(([ours, theirs]) => [theirs, ours])
+const API_TO_UI: Record<string, string> = Object.fromEntries(
+  Object.entries(UI_TO_API).map(([ui, api]) => [api, ui])
 )
 
-/** Our sector id, in the spelling the API expects. Pass-through for
- *  every sector whose name already agrees. */
+/** UI sector key -> backend sector key. Identity when no pair is known,
+ *  so a new sector added on both sides just works. */
 export function toApiSector(sector: string): string {
-  return TO_API[sector] ?? sector
+  return UI_TO_API[sector] ?? sector
 }
 
-/** The API's sector id, in our spelling. */
-export function fromApiSector(sector: string | null | undefined): string {
-  if (!sector) return ""
+/** Backend row -> row whose `sector` field speaks the UI's vocabulary.
+ *  Identity when no pair is known. Rows without a sector are passed
+ *  through untouched. */
+export function withOurSector<T extends { sector?: string | null }>(row: T): T {
+  if (!row.sector) return row
 
-  return FROM_API[sector] ?? sector
-}
+  const mapped = API_TO_UI[row.sector]
 
-/** An alert as the API returned it, with its sector translated.
- *
- *  Applied on the way in, so nothing downstream has to know the API
- *  spells this differently. */
-export function withOurSector<T extends { sector?: string | null }>(
-  alert: T
-): T {
-  return { ...alert, sector: fromApiSector(alert.sector) }
+  return mapped ? { ...row, sector: mapped } : row
 }

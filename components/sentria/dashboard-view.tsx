@@ -76,13 +76,8 @@ type Alert = {
   severity: "WARNING" | "CRITICAL" | string
   date: string
   sector?: string | null
-  /** Set by the backend once it records which activity produced the row. */
   business_type?: string | null
-  /** Namespaced key such as "lab.tests_remaining.critical". Used to infer
-   *  the activity for rows written before business_type was recorded. */
   alert_key?: string | null
-  /** 0-100 composite score the backend computed for this row. The
-   *  logistics views read it instead of asserting a risk of their own. */
   risk_score?: number | null
 }
 
@@ -98,11 +93,6 @@ type Recommendation = {
   business_type?: string | null
   recommended_action: string
   action_category: string
-  /**
-   * The backend doesn't send these yet. Once it does, this type already
-   * has room for them and the UI will use the real value automatically
-   * (see estimateConfidence / reasoningFor below).
-   */
   confidence?: number | null
   reasoning?: string | null
 }
@@ -130,11 +120,6 @@ type IndustryPriority =
   | "production"
   | "maintenance"
 
-/** Count alerts per day over the last `days` days, oldest first.
- *
- *  Every sparkline and the area chart read from this, so a card's trend
- *  line and its number always describe the same alerts. Replaces the
- *  invented arrays that used to be drawn as if they were history. */
 function dailySeries(
   alerts: Alert[],
   days = 7,
@@ -160,32 +145,25 @@ function dailySeries(
   })
 }
 
-/** Human label for each onboarded subtype, shown on the dashboard so the
- *  user can see which business the numbers describe. */
 const BUSINESS_TYPE_LABELS: Record<string, Localized> = {
-  // Industry
   "usine-production": localized("Usine de production", "Production plant"),
   "atelier-soustraitance": localized(
     "Atelier / sous-traitance", "Workshop / subcontracting"),
   "usine-agroalimentaire": localized(
     "Usine agroalimentaire", "Food processing plant"),
-  // Health
   "pharmacie": localized("Pharmacie", "Pharmacy"),
   "grossiste-pharma": localized(
     "Grossiste-répartiteur pharmaceutique", "Pharmaceutical wholesaler"),
   "clinique-hopital": localized("Clinique / Hôpital", "Clinic / Hospital"),
   "laboratoire": localized("Laboratoire", "Laboratory"),
-  // Agriculture
   "exploitation-agricole": localized("Exploitation agricole", "Farm"),
   "cooperative-agricole": localized(
     "Coopérative agricole", "Agricultural cooperative"),
   "silo-stockage": localized(
     "Silo / stockage de récolte", "Silo / harvest storage"),
-  // Transportation
   "transporteur-routier": localized("Transporteur routier", "Road haulier"),
   "flotte-entreprise": localized("Flotte d'entreprise", "Company fleet"),
   "location-vehicules": localized("Location de véhicules", "Vehicle rental"),
-  // Logistics
   "port-conteneurs": localized("Port & conteneurs", "Port & containers"),
   "entrepot-manutention": localized(
     "Entrepôt & manutention", "Warehouse & handling"),
@@ -195,13 +173,11 @@ const BUSINESS_TYPE_LABELS: Record<string, Localized> = {
     "Préparation & expédition", "Picking & dispatch"),
   "chaine-froid": localized("Chaîne du froid", "Cold chain"),
   "plusieurs-activites": localized("Plusieurs activités", "Several activities"),
-  // Energy
   "centrale-production": localized("Centrale de production", "Power plant"),
   "generateurs-secours": localized(
     "Générateurs de secours", "Backup generators"),
   "distribution-energetique": localized(
     "Distribution énergétique", "Power distribution"),
-  // Commerce
   "grossiste-distributeur": localized(
     "Grossiste / distributeur", "Wholesaler / distributor"),
   "supermarche-hypermarche": localized(
@@ -211,13 +187,6 @@ const BUSINESS_TYPE_LABELS: Record<string, Localized> = {
     "Épicerie / commerce de proximité", "Grocery / convenience store"),
 }
 
-/** Per-subtype label overrides, keyed by business_type.
- *
- *  Only the wording changes. A laboratory counts tests and reagents, a
- *  hospital counts unsubstitutable supplies, a wholesaler counts client
- *  pharmacies. Showing all three "Medicaments concernes" made the
- *  dashboard look like it was built for a pharmacy no matter what was
- *  onboarded. */
 const SUBTYPE_KPI_LABELS: Record<string, Localized[]> = {
   "laboratoire": [
     localized("Analyses bloquées", "Tests blocked"),
@@ -256,13 +225,24 @@ const SUBTYPE_CHART_TITLES: Record<string, Localized> = {
     "Alertes sanitaires · 7 jours", "Hygiene alerts · 7 days"),
 }
 
-/** Which activity produced this alert.
+/**
+ * Which activity produced this alert.
  *
- *  Prefers the recorded business_type. Falls back to the alert_key
- *  namespace, since those keys are written per activity and already exist
- *  on rows saved before business_type was stored. Returns null when
- *  neither can say, and a null is never filtered out: hiding a real alert
- *  because we cannot classify it would be worse than showing it. */
+ * Prefers the recorded business_type. Falls back to the alert_key
+ * namespace, since those keys are written per activity and already exist
+ * on rows saved before business_type was stored. Returns null when
+ * neither can say, and a null is never filtered out: hiding a real alert
+ * because we cannot classify it would be worse than showing it.
+ *
+ * FIX: commerce namespaces. The health activity prefixes (lab.,
+ * hospital., wholesaler.) were the only ones listed, so a commerce row
+ * saved without business_type — which is every commerce row before the
+ * backend stamps the column — fell through to the null branch and got
+ * dropped. The prefixes below match the alert_keys that
+ * pipeline/alerts.py's check_retail() and its supermarket and corner
+ * shop variants actually fire; verified against MESSAGES in
+ * pipeline/i18n.py.
+ */
 function activityOf(row: {
   business_type?: string | null
   alert_key?: string | null
@@ -271,37 +251,32 @@ function activityOf(row: {
 
   const key = row.alert_key ?? ""
 
+  // Health
   if (key.startsWith("lab.")) return "laboratoire"
   if (key.startsWith("hospital.")) return "clinique-hopital"
   if (key.startsWith("wholesaler.")) return "grossiste-pharma"
 
+  // Commerce — every prefix check_retail dispatches to. The two
+  // subtype-specific families (retail.expiry, retail.slow_mover,
+  // retail.deadstock) live under "retail." alongside the general ones,
+  // so one prefix covers the sector. The subtype is decided by which
+  // columns the row carries, and that lives in business_type, not here.
+  if (key.startsWith("retail.")) return "commerce"
+
   return null
 }
 
-/** Label for each alert_key family, the middle segment of a key such as
- *  the "cold_chain" in "health.cold_chain.broken". Extracted from every
- *  key the backend fires, so the breakdown covers all of them.
- *
- *  An unlisted family still charts, under its own raw name, which is how
- *  a family added to the backend later shows up without a frontend
- *  release. That was the flaw in the old approach: the three new health
- *  activities were invisible because nobody updated a hardcoded list. */
 const KEY_FAMILY_LABELS: Record<string, Localized> = {
-  // health
   stock: localized("Stock", "Stock"),
   reorder: localized("Réappro", "Reorder"),
   cold_chain: localized("Chaîne du froid", "Cold chain"),
   expiry: localized("Péremption", "Expiry"),
   slow_mover: localized("Rotation faible", "Slow movers"),
   deadstock: localized("Invendus", "Deadstock"),
-  // lab
   tests_remaining: localized("Analyses", "Tests"),
   reagent: localized("Réactifs", "Reagents"),
-  // hospital
   critical_supply: localized("Sans alternative", "No substitute"),
-  // wholesaler
   rebalance: localized("Transferts", "Transfers"),
-  // industry
   torque: localized("Couple", "Torque"),
   wear: localized("Usure", "Wear"),
   failure: localized("Panne", "Failure"),
@@ -312,53 +287,32 @@ const KEY_FAMILY_LABELS: Record<string, Localized> = {
   maintenance: localized("Maintenance", "Maintenance"),
   food_temp: localized("Température alim.", "Food temp."),
   hygiene: localized("Hygiène", "Hygiene"),
-  // logistics
   cycles: localized("Cycles", "Cycles"),
   wait: localized("Attente", "Waiting"),
   service: localized("Entretien", "Servicing"),
   risk: localized("Risque", "Risk"),
-  // port: the gate stages. Without these the chart fell back to the raw
-  // key family and printed "arrival" and "customs" in English next to
-  // French labels.
   arrival: localized("Arrivée", "Arrival"),
   customs: localized("Douane", "Customs"),
-  // transport
   engine: localized("Moteur", "Engine"),
   oil: localized("Huile", "Oil"),
   fuel: localized("Carburant", "Fuel"),
   fuel_low: localized("Carburant bas", "Low fuel"),
   tires: localized("Pneus", "Tyres"),
-  // energy
   coolant: localized("Refroidissement", "Coolant"),
   load: localized("Charge", "Load"),
   output: localized("Production", "Output"),
-  // agri
   storage: localized("Stockage", "Storage"),
   temp: localized("Température", "Temperature"),
-  // retail
   pos: localized("Caisse", "Checkout"),
   sales: localized("Ventes", "Sales"),
   shrinkage: localized("Démarque", "Shrinkage"),
   staffing: localized("Personnel", "Staffing"),
-  // supplier
   delivery: localized("Livraisons", "Deliveries"),
   lead_time: localized("Délais", "Lead time"),
   fill_rate: localized("Taux de service", "Fill rate"),
   reliability: localized("Fiabilité", "Reliability"),
 }
 
-/** Breakdown of alerts by what they are about, grouped on the alert_key
- *  family rather than by searching the message text.
- *
- *  The previous version matched French words such as "rupture" and
- *  "froid" inside the message. That failed three ways at once: a
- *  laboratory and a wholesaler use none of those words, so their chart
- *  was always empty; a hospital matched only some; and in English almost
- *  nothing matched for anybody, because the words being searched for only
- *  exist in the French translations. The key is language-independent.
- *
- *  Rows with no alert_key fall back to a severity split, so legacy data
- *  still charts as something rather than nothing. */
 function alertBreakdown(
   alerts: Alert[],
   tx: Tx
@@ -409,8 +363,6 @@ const SECTOR_META: Record<
       value: string
       delta: Localized
       up: boolean
-      /** Optional subset this card counts, so its sparkline tracks the
-       *  same alerts as its number. Omitted means every alert in view. */
       match?: (alert: Alert) => boolean
     }[]
     chartTitle: Localized
@@ -818,13 +770,6 @@ const LOGISTICS_OPS_META: Record<
   multi: SECTOR_META.logistics,
 }
 
-/** Read the priorities picked during onboarding, for any sector.
- *
- *  All sectors write to the same `sentria_equipment` key, so one reader
- *  serves all of them. Ids are returned in catalog order rather than
- *  click order, and anything the catalog no longer knows about is
- *  dropped, so a stale id from an older build cannot render as a chip
- *  with no label. */
 function getSavedPriorities(sector: string): string[] {
   if (typeof window === "undefined") return []
 
@@ -837,11 +782,6 @@ function getSavedPriorities(sector: string): string[] {
 
     if (!Array.isArray(stored)) return []
 
-    /* No default priority. The readers used to fall back to the first
-       entry in the sector's catalog, which meant a pharmacist who never
-       configured industry still saw "Priorités industrie : Machines de
-       production" on their dashboard. An empty list renders the real
-       empty state instead. */
     return orderPriorities(
       sector,
       stored.filter((value): value is string => typeof value === "string")
@@ -898,6 +838,10 @@ function getRecommendationContext(
       "Priorité énergie : maintenir la disponibilité des générateurs et prévenir les arrêts.",
       "Energy priority: keep the generators available and prevent outages."
     ),
+    commerce: tx(
+      "Priorité commerce : éviter les ruptures en rayon et protéger la marge.",
+      "Retail priority: avoid out-of-stocks on the shelf and protect margin."
+    ),
     eac: tx(
       "Contexte EAC : sécuriser les flux régionaux, les passages transfrontaliers, la conformité documentaire et la disponibilité des marchandises.",
       "EAC context: protect regional flows, border crossings, document compliance and goods availability."
@@ -911,20 +855,6 @@ function getRecommendationContext(
   return contexts[sector] ?? contexts.all
 }
 
-/*
- * SentrIA should behave like a decision system, not a dashboard: every
- * priority a human sees should answer six questions, in this order —
- * what did we see (evidence), how sure are we (confidence), what does
- * it cost (impact — see getRecommendationContext above), why do we think
- * this (reasoning), what should be done (recommended_action, already
- * shown), and what happened after someone acted (outcome — see
- * ActionRecord + recordAction in the component below).
- *
- * Confidence is computed by the shared, documented formula in
- * lib/confidence.ts — not invented ad hoc per screen. The backend
- * doesn't send a real confidence value yet, so this stays a labelled
- * estimate; the moment it does, this wrapper uses that instead.
- */
 function estimateConfidence(
   rec: Recommendation,
   recurrence: number,
@@ -942,13 +872,6 @@ function estimateConfidence(
   })
 }
 
-/**
- * The confidence formula's most SentrIA-specific ingredient: has this
- * deployment's own team historically acted on this category of alert,
- * or dismissed it? That's the part a generic dashboard-plus-AI can't
- * copy — it only exists because SentrIA closes the loop with real
- * human decisions (see actionsLog / recordAction below).
- */
 function trackRecordForCategory(
   category: string,
   recs: Recommendation[],
@@ -975,10 +898,6 @@ function reasoningFor(
   recurrence: number,
   tx: Tx
 ): string {
-  /* The backend writes this one, already rendered in the language it was
-     fired in. Translating it here would mean re-deriving a sentence from
-     text, so it is left as it came: see PASSATION.md, read-time alert
-     translation. */
   if (rec.reasoning) return rec.reasoning
 
   const parts: string[] = []
@@ -1007,7 +926,6 @@ function reasoningFor(
   return parts.join(" ")
 }
 
-/** How many times this equipment already triggered an alert. */
 function recurrenceOf(equipment: string, alerts: Alert[]): number {
   return alerts.filter((a) => a.equipment === equipment).length
 }
@@ -1019,26 +937,10 @@ export function DashboardView({
 }) {
   const tx = useTx()
 
-  /** Resolve a module-level fr/en pair into the language on screen.
-   *
-   *  The label catalogues at the top of this file are built outside
-   *  React, so they hold pairs rather than strings. This is the one place
-   *  a pair becomes a single language. */
   const px = (text: Localized | undefined) => resolve(text, tx)
 
-  /** The locale every date and time on this screen is formatted in.
-   *
-   *  Hardcoded "fr-FR" meant an English dashboard still printed
-   *  "18/09/2026 14:30" with French month names in the long formats. It
-   *  goes through tx() like any other string, because the right locale
-   *  is a function of the same choice. */
   const dateLocale = tx("fr-FR", "en-GB")
 
-  /** The display name of a sector key, or null when the key is unknown.
-   *
-   *  Null rather than the raw key: a caller that wants the key as a
-   *  fallback says so, and the ones that want "this activity" instead
-   *  can have it. */
   const sectorName = (key: string | null | undefined) => {
     const found = SECTORS.find((item) => item.key === key)
 
@@ -1052,23 +954,10 @@ export function DashboardView({
 
   const [uploadSector, setUploadSector] = useState("industry")
 
-  /* These five start at their server value and are filled in from
-     localStorage by the mount effect below. Reading storage in the
-     initializer made the client's first render differ from the server's
-     HTML ("Logistique" against "Industrie" in the header), which React
-     reports as a hydration mismatch and then re-renders the whole tree
-     to recover from. */
   const [filterSector, setFilterSector] = useState("all")
 
-  /* Which activity the next import is tagged with. It used to be
-     invisible: the panel only offered a sector, the activity came from
-     whatever onboarding had stored, and nothing on screen said which one
-     would be sent. Changing it meant editing localStorage by hand. */
   const [uploadActivity, setUploadActivity] = useState<string | null>(null)
 
-  /* Every logistics activity this deployment runs. The flow chain is the
-     union of exactly these, instead of one activity or, for the old
-     "multi", all five. */
   const [opsTypes, setOpsTypes] = useState<SingleOpsType[]>([])
 
   const [uploading, setUploading] = useState(false)
@@ -1096,9 +985,6 @@ export function DashboardView({
   const [selectedIndustryPriorities, setSelectedIndustryPriorities] =
     useState<IndustryPriority[]>([])
 
-  /* Health, commerce, agriculture and the rest pick priorities during
-     onboarding too, but have no per-priority screens yet. They still get
-     to see what they configured, as static chips. */
   const [selectedSectorPriorities, setSelectedSectorPriorities] = useState<
     string[]
   >([])
@@ -1107,9 +993,6 @@ export function DashboardView({
     setSelectedSectorPriorities(getSavedPriorities(filterSector))
   }, [filterSector])
 
-  /* Default the import activity to whatever this sector is configured
-     for, and fall back to the sector's first activity so the panel is
-     never sending an activity it is not showing. */
   useEffect(() => {
     const options = activitiesFor(uploadSector)
 
@@ -1133,10 +1016,6 @@ export function DashboardView({
     setUploadActivity(match?.id ?? options[0].id)
   }, [uploadSector, opsType, businessType])
 
-  /* Mount-only: pull the stored configuration in once, now that the
-     initializers above no longer do it. Runs before the browser paints
-     the committed frame, so the stored sector and priorities are what
-     the user sees rather than a visible flip from the defaults. */
   useEffect(() => {
     try {
       const storedSectors = JSON.parse(
@@ -1160,8 +1039,6 @@ export function DashboardView({
 
     const savedSector = localStorage.getItem("sentria_sector")
 
-    /* "logistics" is reached through the sector chip rather than
-       restored, which is why it maps back to "all" here. */
     if (savedSector && savedSector !== "logistics") {
       setFilterSector(savedSector)
     }
@@ -1182,11 +1059,6 @@ export function DashboardView({
     null
   )
 
-  /** The panel's own lookup for when the clicked alert isn't in the
-   *  top-20 `recommendations` already in memory — most alerts aren't,
-   *  since that list is a global shortlist across every sector. Keyed
-   *  by equipment so switching between two open alerts for the same
-   *  equipment doesn't refetch. */
   const [fetchedRecommendation, setFetchedRecommendation] =
     useState<Recommendation | null>(null)
   const [fetchingRecommendationFor, setFetchingRecommendationFor] =
@@ -1197,12 +1069,6 @@ export function DashboardView({
   const [selectedRecommendation, setSelectedRecommendation] =
     useState<Recommendation | null>(null)
 
-  /*
-   * Closing the decision loop: once someone acts on a priority (marks it
-   * handled or dismisses it), SentrIA remembers that and shows it back —
-   * otherwise every session starts from zero and nobody can tell what
-   * the system has actually helped with.
-   */
   const [actionsLog, setActionsLog] = useState<
     Record<string, ActionRecord>
   >(() => {
@@ -1371,9 +1237,6 @@ export function DashboardView({
   }, [])
 
   function refreshRecommendations() {
-    /* The backend renders recommended_action and reasoning itself and
-       takes a lang, so asking it for French while the screen is in
-       English put two French sentences on every card. */
     fetch(
       `${API}/recommendations?limit=20&lang=${tx("fr", "en")}`
     )
@@ -1435,10 +1298,6 @@ export function DashboardView({
       })
   }
 
-  /* Refetched when the language changes, not only on mount. The action
-     and the reasoning on every card are rendered by the backend, so
-     switching to English and leaving this alone would keep showing the
-     French it was asked for at mount. */
   const recommendationsLang = tx("fr", "en")
 
   useEffect(() => {
@@ -1477,9 +1336,6 @@ export function DashboardView({
     localStorage.setItem("sentria_sector", "all")
   }
 
-  /** Is the chosen import activity the one the dashboard is configured
-   *  for? When it is not, the panel says so rather than letting the user
-   *  wonder why their import does not show up. */
   function isConfiguredActivity(sector: string, activityId: string) {
     if (sector === "logistics") {
       return normalizeOpsType(activityId) === normalizeOpsType(opsType)
@@ -1503,9 +1359,6 @@ export function DashboardView({
     )
   }
 
-  /** Point the dashboard at the activity being imported, which is what
-   *  the user almost always wants right after importing it. Writes the
-   *  same keys onboarding does, so the views pick it up. */
   function applyActivityToDashboard(sector: string, activityId: string) {
     if (sector === "logistics") {
       const normalized = normalizeOpsType(activityId)
@@ -1540,23 +1393,19 @@ export function DashboardView({
     form.append("file", file)
 
     try {
-      /* The activity chosen in the panel, normalized: the backend
-         branches on "port", never on onboarding's "port-conteneurs". */
       const chosenOpsType =
         uploadSector === "logistics"
           ? normalizeOpsType(uploadActivity) ?? normalizeOpsType(opsType)
           : undefined
 
       const chosenBusinessType =
-        uploadSector === "logistics" ? businessType : uploadActivity ?? businessType
+        uploadSector === "logistics"
+          ? businessType
+          : uploadActivity ?? businessType
 
       const res = await fetch(
         `${API}/upload?sector=${toApiSector(uploadSector)}&lang=fr` +
           (chosenOpsType ? `&ops_type=${chosenOpsType}` : "") +
-          // Sent for every sector. check_industry and check_health branch
-          // on it, and every sector needs it recorded on the alert so the
-          // dashboard can separate activities. A value that does not
-          // belong to the chosen sector is ignored safely by the backend.
           (chosenBusinessType
             ? `&business_type=${encodeURIComponent(chosenBusinessType)}`
             : ""),
@@ -1585,6 +1434,27 @@ export function DashboardView({
 
       setFilterSector(uploadSector)
       localStorage.setItem("sentria_sector", uploadSector)
+
+      // FIX: keep sentria_business_type in sync with what was just
+      // imported. Before this, uploading a subtype different from the
+      // one onboarding stored meant every imported row was tagged with
+      // the NEW subtype while businessType still held the OLD one, so
+      // matchesActivity() dropped every row it had just imported and
+      // the sector view went blank. Applying it here — the same
+      // function the "Switch the dashboard to it" button calls — makes
+      // the dashboard point at what the user just uploaded, which is
+      // what they almost always want.
+      //
+      // Logistics is excluded because applyActivityToDashboard handles
+      // ops_types itself and setting businessType for logistics would
+      // fight the ops_type routing. All other sectors want it.
+      if (
+        uploadSector !== "logistics" &&
+        uploadActivity &&
+        uploadActivity !== businessType
+      ) {
+        applyActivityToDashboard(uploadSector, uploadActivity)
+      }
     } catch (error) {
       console.error(error)
       setUploadFailed(true)
@@ -1600,18 +1470,6 @@ export function DashboardView({
     }
   }
 
-  // Separate the activities inside a sector, not just the sectors. A
-  // laboratory and a pharmacy both write sector "health", so this is what
-  // stops one activity's alerts appearing under another.
-  //
-  // This has to hold in the "Tous" view too. An account is onboarded for
-  // one activity, so another activity's rows are never its own, and
-  // exempting "Tous" was what made the separation look like it had never
-  // happened: the view the dashboard opens on mixed every activity back
-  // together.
-  //
-  // Which sectors have labelled rows, so an unlabelled row is judged
-  // against its own sector rather than against the whole table.
   const sectorsWithRecordedActivity = new Set(
     alerts
       .filter((a) => Boolean(a.business_type))
@@ -1629,9 +1487,6 @@ export function DashboardView({
 
     if (activity !== null) return activity === businessType
 
-    // Unclassifiable. Exclude it only when its own sector has labelled
-    // rows to compare against, otherwise show it rather than blank the
-    // view.
     return !sectorsWithRecordedActivity.has(a.sector ?? "")
   }
 
@@ -1655,36 +1510,10 @@ export function DashboardView({
       )
     })
 
-  /* What the logistics priority views read. Scoped to the logistics
-     sector and to the user's own activity, so a port operator never
-     sees a cold-chain reading, but deliberately not narrowed by the
-     alert table's own search box: those controls belong to the table
-     below, not to a view the user opened from a priority card. */
   const logisticsViewAlerts = alerts
     .filter((a) => a.sector === "logistics")
     .filter(matchesActivity)
 
-  /* A recommendation is filtered on what is KNOWN about its activity,
-     never on what is missing.
-
-     matchesActivity ends with "an unlabelled row is judged against its
-     own sector": if that sector has labelled rows elsewhere, the
-     unlabelled one is assumed to belong to a different activity and is
-     dropped. That is right for an alert, where a missing business_type
-     really does mean the row was never labelled.
-
-     It was wrong here. /recommendations did not return business_type at
-     all, so every recommendation looked unlabelled, and in any sector
-     with labelled alerts - which is every sector, once onboarding has
-     run - all five were dropped and the panel vanished. The backend now
-     sends the field, but an API that has not been redeployed yet still
-     does not, and the top of the dashboard is not something to lose to
-     a deploy order.
-
-     So: drop a recommendation only when its activity is known AND
-     different. Unknown means show it. The cost is that an operator may
-     see a neighbouring activity's priority against an old API; the cost
-     of the other choice was an empty dashboard. */
   const recommendationMatchesActivity = (r: {
     business_type?: string | null
     alert_key?: string | null
@@ -1808,9 +1637,6 @@ export function DashboardView({
         : null))
     : null
 
-  /* The in-memory shortlist missed this alert — ask for it by name
-     instead of showing "not computed" for data that was in fact
-     computed, just not in a global top-20. */
   useEffect(() => {
     if (!expandedAlert || expandedRecommendation) return
     if (fetchingRecommendationFor === expandedAlert.equipment) return
@@ -1843,29 +1669,17 @@ export function DashboardView({
         SECTOR_META.all
       : SECTOR_META[filterSector] ?? SECTOR_META.all
 
-  // The onboarded subtype relabels the cards so the dashboard describes
-  // the business that was actually set up, not whichever one the sector
-  // defaults to. Sector views only: the "Tous" cards count across
-  // sectors, and a laboratory wording on a cross-sector count would be a
-  // claim the number does not support.
   const subtypeLabels =
     businessType && filterSector !== "all"
       ? SUBTYPE_KPI_LABELS[businessType]
       : undefined
 
-  // The activity this account was onboarded for. Taken from the saved
-  // onboarding choice rather than from the current filter, so it is
-  // stated in every view including "Tous". Tying it to the filter meant
-  // the view the dashboard opens on named no activity at all.
   const subtypeName = businessType
     ? BUSINESS_TYPE_LABELS[businessType]
       ? px(BUSINESS_TYPE_LABELS[businessType])
       : undefined
     : undefined
 
-  // The sector that goes with it. In a sector view that is the filter;
-  // in "Tous" it is the onboarded sector, which is a single one because
-  // onboarding saves exactly one.
   const onboardedSectorKey =
     filterSector !== "all"
       ? filterSector
@@ -1875,17 +1689,10 @@ export function DashboardView({
 
   const onboardedSectorLabel = sectorName(onboardedSectorKey)
 
-  // "Santé · Laboratoire". Null only when nothing was onboarded, in
-  // which case there is no activity to name.
   const departmentLabel =
     [onboardedSectorLabel, subtypeName].filter(Boolean).join(" · ") ||
     null
 
-  // Can the activity filter actually separate anything yet? Only once a
-  // row in this sector carries an activity, by recorded business_type or
-  // by alert_key namespace. Until then every unclassified row stays
-  // visible, so saying the view is limited to one activity would be a
-  // claim the data does not support.
   const activitySeparationActive =
     Boolean(businessType) &&
     alerts.some(
@@ -1910,10 +1717,6 @@ export function DashboardView({
       meta.chartTitle
   )
 
-  // No rows for this sector means nothing has been uploaded for it yet.
-  // Showing four zeroes and a flat line reads as "all clear", which is a
-  // very different claim from "we have no data", so the cards and charts
-  // are replaced by a panel that says which is true.
   const hasNoDataForSector =
     filteredAlerts.length === 0 && !alertsError
 
@@ -2088,9 +1891,6 @@ export function DashboardView({
   }
 
   if (filterSector === "logistics") {
-    /* Prefer the stored set: it says which activities are actually run,
-       where the single value can only say "multi", which used to mean
-       every chain at once. */
     const normalizedOpsType =
       opsTypes.length > 0 ? opsTypeFor(opsTypes) : normalizeOpsType(opsType)
 
@@ -2355,9 +2155,6 @@ export function DashboardView({
               {tx("Temps réel", "Live")}
             </span>
 
-            {/* Which business this dashboard is for. Stated here, in
-                every view, because the department was the one thing the
-                dashboard never said out loud. */}
             {departmentLabel && (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-sidebar-foreground/25 bg-sidebar-foreground/10 px-3 py-1 text-xs font-semibold text-sidebar-foreground">
                 <Shield className="h-3.5 w-3.5" aria-hidden="true" />
@@ -2501,11 +2298,6 @@ export function DashboardView({
 
       </div>
 
-      {/* The same chip row as inside a priority, rather than the bespoke
-          capsule that used to hang off the filter row and only ever showed
-          logistics. On a single sector with no per-priority screens the
-          chips are static: the user sees their configuration without
-          anything pretending to be a link. */}
       {filterSector === "all" ? (
         <>
           {activeSectors.includes("logistics") && (
@@ -2585,7 +2377,6 @@ export function DashboardView({
         </div>
       ) : (
         <>
-      {/* Context for the priorities above, not the headline */}
       <p className="text-[11px] font-bold uppercase tracking-[0.13em] text-muted-foreground">
         {tx("Contexte général", "General context")}
       </p>
@@ -2763,10 +2554,6 @@ export function DashboardView({
           </p>
         )}
 
-        {/* The activity the file will be tagged with. The panel used to
-            offer a sector only and send whatever onboarding had stored,
-            so a port CSV could be read with the warehouse rules and
-            nothing on screen explained why. */}
         {activitiesFor(uploadSector).length > 0 && (
           <div className="mt-4 border-t border-border pt-4">
             <p className="text-xs font-semibold">
@@ -2812,8 +2599,8 @@ export function DashboardView({
                       ? ` (${configuredActivityLabel(uploadSector)})`
                       : ""}
                     {tx(
-                      ". Le tableau de bord continue d'afficher l'activité configurée.",
-                      ". The dashboard keeps showing the configured activity."
+                      ". Le tableau de bord basculera dessus après l'import.",
+                      ". The dashboard will switch to it after the import."
                     )}
                   </p>
 
@@ -2825,8 +2612,8 @@ export function DashboardView({
                     className="rounded-full border border-foreground bg-foreground px-3 py-1 text-[11px] font-semibold text-background transition-opacity hover:opacity-90"
                   >
                     {tx(
-                      "Basculer le tableau de bord dessus",
-                      "Switch the dashboard to it"
+                      "Basculer maintenant",
+                      "Switch now"
                     )}
                   </button>
                 </div>
@@ -3355,12 +3142,6 @@ export function DashboardView({
                   </p>
                 </div>
 
-                {/*
-                  Confidence is a SEPARATE measure from risk and gets its own
-                  labelled cell: risk = "how bad is this problem", confidence =
-                  "how sure are we this deserves attention". Sharing one label
-                  made them read as a single number.
-                */}
                 <div>
                   <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
                     {tx("Confiance", "Confidence")}
