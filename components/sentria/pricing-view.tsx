@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Sparkles, TrendingUp, X } from "lucide-react";
+import { Check, Sparkles, TrendingUp } from "lucide-react";
 
 type Localized = { fr: string; en: string };
 
@@ -109,14 +109,15 @@ export function PricingView() {
 
   return (
     <div
-      className="w-full h-full min-h-screen py-12 px-4 overflow-y-auto"
+      className="flex h-full w-full items-center justify-center p-6"
       style={{
+        minHeight: "100%",
         background:
           "radial-gradient(ellipse at 20% 30%, #c8e06a 0%, #8fa84a 25%, #4a6a3a 50%, #1a2a20 80%, #0d1a14 100%)",
       }}
     >
       <div
-        className="w-full max-w-6xl mx-auto rounded-2xl px-6 py-12 md:px-12 md:py-16"
+        className="w-full max-w-6xl rounded-2xl px-6 py-12 md:px-12 md:py-16"
         style={{ backgroundColor: "#e8e8e6" }}
       >
         {/* Header */}
