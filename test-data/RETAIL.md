@@ -61,19 +61,29 @@ Columns, by activity:
 
 Generated with a fixed seed, so regenerating gives the same file.
 
-## Before you upload: the sector has to be `retail`
+## The sector has to be `retail`, and the app now sends that
 
 `check_equipment()` dispatches on `sector == "retail"`. Anything it does
 not recognise falls through to `check_industry()`, which has nothing to
 say about a shop, so the upload lands and produces zero alerts.
 
-The app's own sector id for this is `commerce`, and nothing maps it to
-`retail`, so uploading through the UI currently takes the wrong branch.
-Until that is fixed, upload with the sector spelled `retail`:
+The app's own sector id is `commerce`, so for a while every retail upload
+from the UI took the wrong branch and every one of these files looked
+broken. It cut the other way too: all thirteen retail checks stamp their
+alerts `"retail"`, and the dashboard filters on `commerce`, so even a
+correct upload would have drawn an empty list.
+
+`lib/sector.ts` translates at the crossing points now: `commerce` goes
+out as `retail`, and `retail` comes back in as `commerce`. Uploading
+through the UI works, and so does uploading by hand:
 
 ```
 POST /upload?sector=retail&business_type=supermarche-hypermarche&lang=en
 ```
+
+`scripts/smoke-sector-mapping.mjs` holds that shut. Ablate the one line
+in `lib/sector.ts` that maps the two names and five of its seven
+assertions fail.
 
 ## What each activity's checks read
 

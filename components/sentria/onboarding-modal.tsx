@@ -26,6 +26,7 @@ import {
 import { cn } from "@/lib/utils"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
 import { API_BASE } from "@/lib/api"
+import { toApiSector } from "@/lib/sector"
 import {
   detectTimezoneId,
   TIMEZONES,
@@ -964,7 +965,7 @@ export function OnboardingView({
     form.append("file", file)
 
     const query =
-      `?sector=${encodeURIComponent(sector)}&lang=fr` +
+      `?sector=${encodeURIComponent(toApiSector(sector))}&lang=fr` +
       (subType ? `&business_type=${encodeURIComponent(subType)}` : "")
 
     try {
