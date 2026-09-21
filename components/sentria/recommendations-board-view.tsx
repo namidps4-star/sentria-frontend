@@ -36,6 +36,9 @@ import {
 } from "@/lib/crm"
 import { formatMoney, useLocale, type Currency } from "@/lib/locale"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
+import { sectorLabel } from "@/lib/priorities"
+
+const NO_ROLE = "__no_role__"
 
 type Recommendation = {
   id: string
@@ -1072,6 +1075,8 @@ export function RecommendationsBoard({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>("all")
   const [query, setQuery] = useState("")
+  const [activeSector, setActiveSector] = useState<string | null>(null)
+  const [activeRole, setActiveRole] = useState<string | null>(null)
 
   const cards: Card[] = useMemo(() => {
     return recommendations.map((rec) => {
@@ -1126,6 +1131,33 @@ export function RecommendationsBoard({
 
   const trimmedQuery = query.trim().toLowerCase()
 
+  /** Sectors and departments actually present on the board right now — one
+   *  shared board with filters, not a board per sector, since the same
+   *  person often works across sectors and a split board would just hide
+   *  their other work from them. */
+  const sectorKeys = useMemo(() => {
+    const seen: string[] = []
+    for (const card of cards) {
+      if (card.rec.sector && !seen.includes(card.rec.sector)) seen.push(card.rec.sector)
+    }
+    return seen
+  }, [cards])
+
+  const roleKeys = useMemo(() => {
+    const seen: string[] = []
+    for (const person of contractors) {
+      const key = person.role?.trim() || NO_ROLE
+      if (!seen.includes(key)) seen.push(key)
+    }
+    return seen
+  }, [contractors])
+
+  function cardRoles(card: Card): string[] {
+    return card.task.contractor_ids.map(
+      (id) => contractors.find((person) => person.id === id)?.role?.trim() || NO_ROLE
+    )
+  }
+
   const visible = useMemo(() => {
     let out = cards
 
@@ -1135,13 +1167,26 @@ export function RecommendationsBoard({
       out = out.filter((card) => card.task.contractor_ids.length === 0)
     }
 
+    if (activeSector) {
+      out = out.filter((card) => card.rec.sector === activeSector)
+    }
+
+    if (activeRole) {
+      out = out.filter((card) => {
+        const roles = cardRoles(card)
+        return activeRole === NO_ROLE
+          ? card.task.contractor_ids.length > 0 && roles.includes(NO_ROLE)
+          : roles.includes(activeRole)
+      })
+    }
+
     if (trimmedQuery) {
       out = out.filter((card) => haystack(card).includes(trimmedQuery))
     }
 
     return out
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cards, filter, trimmedQuery, contractors, tx])
+  }, [cards, filter, trimmedQuery, activeSector, activeRole, contractors, tx])
 
   const FILTERS: { id: Filter; label: string; count: number }[] = [
     { id: "all", label: tx("Toutes", "All"), count: cards.length },
@@ -1439,6 +1484,88 @@ export function RecommendationsBoard({
           })}
         </div>
       </div>
+
+      {/* Sector/department filters, adapted to a single shared board rather
+          than one board per sector: only shown once there's more than one
+          real choice on screen, since a department that only has one
+          option isn't a filter, it's a label. */}
+      {(sectorKeys.length > 1 || roleKeys.length > 1) && (
+        <div className="flex flex-wrap items-center gap-2 border-t border-border px-5 py-3 md:px-6">
+          {sectorKeys.length > 1 && (
+            <>
+              <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                {tx("Secteur", "Sector")}
+              </span>
+              <button
+                type="button"
+                onClick={() => setActiveSector(null)}
+                className={cn(
+                  "rounded-xl px-3 py-1 text-[11px] font-semibold transition-colors",
+                  activeSector === null
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                {tx("Tous", "All")}
+              </button>
+              {sectorKeys.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setActiveSector(key)}
+                  className={cn(
+                    "rounded-xl px-3 py-1 text-[11px] font-semibold transition-colors",
+                    activeSector === key
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  {sectorLabel(key, tx)}
+                </button>
+              ))}
+            </>
+          )}
+
+          {sectorKeys.length > 1 && roleKeys.length > 1 && (
+            <span className="mx-1 h-5 w-px shrink-0 bg-border" />
+          )}
+
+          {roleKeys.length > 1 && (
+            <>
+              <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                {tx("Département", "Department")}
+              </span>
+              <button
+                type="button"
+                onClick={() => setActiveRole(null)}
+                className={cn(
+                  "rounded-xl px-3 py-1 text-[11px] font-semibold transition-colors",
+                  activeRole === null
+                    ? "bg-foreground text-background"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                {tx("Tous", "All")}
+              </button>
+              {roleKeys.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setActiveRole(key)}
+                  className={cn(
+                    "rounded-xl px-3 py-1 text-[11px] font-semibold transition-colors",
+                    activeRole === key
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  {key === NO_ROLE ? tx("Sans fonction", "No role") : key}
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+      )}
 
       {/* One atomic sentence rather than four competing live regions, so a
           screen reader hears what the board holds instead of a bare number
