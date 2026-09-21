@@ -1,0 +1,181 @@
+sku,product_name,category,stock_qty,min_stock,sales_last_30_days,sales_last_7_days,sales_previous_7_days,supplier_lead_days
+GRO-0001,Palette bière x24 Lomé,Liquides,42,16,53,14,13,7
+GRO-0002,Carton lait poudre,Frais,65,17,58,14,14,10
+GRO-0003,Carton papier x24,Hygiène,121,47,191,43,42,3
+GRO-0004,Carton papier x24 Atlantique,Hygiène,19,5,28,7,7,10
+GRO-0005,Carton lait poudre x24 Ouémé,Frais,147,61,193,49,44,10
+GRO-0006,Carton beurre x20,Frais,92,40,136,33,33,10
+GRO-0007,Palette bière x24,Liquides,64,18,131,36,32,7
+GRO-0008,Palette sucre 5kg,Épicerie,30,7,51,12,12,7
+GRO-0009,Carton riz 25kg Niger,Épicerie,596,138,437,107,105,7
+GRO-0010,Carton beurre x20 Sahel,Frais,714,73,220,47,48,21
+GRO-0011,Carton beurre x20 Bénin,Frais,110,30,119,26,26,10
+GRO-0012,Carton riz 25kg Mono,Épicerie,61,21,71,18,16,5
+GRO-0013,Carton jus x12,Liquides,41,15,58,15,15,10
+GRO-0014,Carton jus x12 Kara,Liquides,15,5,19,5,5,5
+GRO-0015,Carton beurre x20 Niger,Frais,17,5,23,5,5,5
+GRO-0016,Carton dentifrice x36,Hygiène,76,23,97,24,24,5
+GRO-0017,Carton jus x12 Mono,Liquides,43,17,66,17,15,10
+GRO-0018,Carton pâtes x24,Épicerie,43,12,60,12,13,10
+GRO-0019,Palette eau 12x1.5L Lomé,Liquides,62,14,43,11,10,10
+GRO-0020,Carton lait poudre x6,Frais,123,25,105,22,23,21
+GRO-0021,Palette bière x24 Volta,Liquides,71,28,108,24,24,5
+GRO-0022,Carton lait poudre Sahel,Frais,20,5,26,6,6,7
+GRO-0023,Carton savon x48 Volta,Hygiène,72,24,115,24,25,3
+GRO-0024,Carton beurre x20 Volta,Frais,9,3,13,3,3,3
+GRO-0025,Sac farine 50kg,Épicerie,16,5,17,4,4,10
+GRO-0026,Carton huile 12x1L Bonjour,Épicerie,278,78,226,50,49,3
+GRO-0027,Carton sardines x48 Ouémé,Épicerie,24,7,28,7,6,5
+GRO-0028,Carton jus x12 Sahel,Liquides,335,152,446,112,113,5
+GRO-0029,Carton lait poudre 5kg,Frais,32,8,59,13,13,7
+GRO-0030,Carton savon x48,Hygiène,238,65,164,40,37,21
+GRO-0031,Palette bière x24 Dogbo,Liquides,149,36,107,27,25,3
+GRO-0032,Sac farine 50kg Bonjour,Épicerie,84,23,57,14,14,14
+GRO-0033,Carton riz 25kg,Épicerie,50,14,77,19,20,3
+GRO-0034,Carton lait poudre 250g,Frais,48,14,96,23,22,7
+GRO-0035,Palette bière x24 Kara,Liquides,186,48,137,31,32,14
+GRO-0036,Sac farine 50kg Dogbo,Épicerie,8,4,22,7,6,5
+GRO-0037,Carton lait poudre x12 Kara,Frais,91,32,343,90,86,10
+GRO-0038,Carton lait poudre Ouémé,Frais,504,19,94,23,22,10
+GRO-0039,Carton huile 12x1L,Épicerie,539,181,575,93,344,14
+GRO-0040,Palette eau 12x1.5L Bénin,Liquides,95,36,169,38,37,3
+GRO-0041,Carton papier x24 Dogbo,Hygiène,59,21,63,15,14,14
+GRO-0042,Carton jus x12 Lomé,Liquides,106,48,135,30,32,10
+GRO-0043,Carton lait poudre x6 Atlantique,Frais,68,22,64,15,15,14
+GRO-0044,Carton lait poudre x24 Atlantique,Frais,240,78,221,52,54,10
+GRO-0045,Carton beurre x20 Ouémé,Frais,408,170,688,180,165,5
+GRO-0046,Palette eau 12x1.5L,Liquides,101,25,129,29,29,3
+GRO-0047,Carton lait poudre 250g Ouémé,Frais,81,22,81,19,18,5
+GRO-0048,Carton lait poudre Dogbo,Frais,108,25,65,17,16,14
+GRO-0049,Palette bière x24 Mono,Liquides,60,53,244,59,62,14
+GRO-0050,Palette sucre 1kg Dogbo,Épicerie,39,9,26,6,6,14
+GRO-0051,Carton lait poudre 500g,Frais,29,12,84,21,19,5
+GRO-0052,Palette eau 12x1.5L Kara,Liquides,96,27,70,18,18,10
+GRO-0053,Palette bière x24 Niger,Liquides,135,65,210,51,50,3
+GRO-0054,Sac farine 50kg Kara,Épicerie,44,8,53,14,13,14
+GRO-0055,Carton jus x12 Bonjour,Liquides,198,47,123,29,31,7
+GRO-0056,Carton papier x24 Bénin,Hygiène,98,22,122,32,29,7
+GRO-0057,Carton dentifrice x36 Dogbo,Hygiène,45,20,68,16,15,3
+GRO-0058,Carton lait poudre x12,Frais,196,68,214,55,55,7
+GRO-0059,Carton papier x24 Zou,Hygiène,142,56,150,36,34,5
+GRO-0060,Carton beurre x20 Atlantique,Frais,84,9,59,15,14,21
+GRO-0061,Carton beurre x20 Kara,Frais,33,13,43,11,10,3
+GRO-0062,Carton lait poudre Volta,Frais,231,87,257,64,60,5
+GRO-0063,Carton huile 12x1L Bénin,Épicerie,120,28,92,21,22,5
+GRO-0064,Carton riz 25kg Sahel,Épicerie,62,22,117,28,26,7
+GRO-0065,Carton dentifrice x36 Bénin,Hygiène,26,10,27,8,7,5
+GRO-0066,Carton sardines x48,Épicerie,36,13,32,9,8,10
+GRO-0067,Carton papier x24 Niger,Hygiène,71,17,46,10,10,21
+GRO-0068,Palette sucre x12 Sahel,Épicerie,24,10,39,9,9,5
+GRO-0069,Carton beurre x20 Bonjour,Frais,46,16,47,12,11,10
+GRO-0070,Carton dentifrice x36 Atlantique,Hygiène,22,9,59,14,13,3
+GRO-0071,Palette eau 12x1.5L Mono,Liquides,110,40,139,33,32,5
+GRO-0072,Carton beurre x20 Mono,Frais,41,13,34,8,8,3
+GRO-0073,Palette bière x24 Bénin,Liquides,81,21,61,16,15,7
+GRO-0074,Carton dentifrice x36 Bonjour,Hygiène,41,15,54,12,12,14
+GRO-0075,Carton lait poudre 1kg,Frais,23,64,169,46,42,14
+GRO-0076,Palette bière x24 Sahel,Liquides,26,9,48,12,11,10
+GRO-0077,Carton beurre x20 Lomé,Frais,606,145,396,89,91,14
+GRO-0078,Carton savon x48 Kara,Hygiène,271,31,189,48,46,21
+GRO-0079,Carton papier x24 Lomé,Hygiène,110,41,175,42,39,7
+GRO-0080,Carton lait poudre 500g Sahel,Frais,103,24,152,39,39,7
+GRO-0081,Carton sardines x48 Sahel,Épicerie,44,11,78,17,17,10
+GRO-0082,Carton lait poudre 250g Atlantique,Frais,54,17,49,10,11,10
+GRO-0083,Carton huile 12x1L Sahel,Épicerie,219,58,160,41,37,5
+GRO-0084,Palette eau 12x1.5L Niger,Liquides,143,45,119,29,29,14
+GRO-0085,Carton dentifrice x36 Kara,Hygiène,263,78,495,130,118,7
+GRO-0086,Carton savon x48 Niger,Hygiène,458,119,334,81,82,10
+GRO-0087,Palette eau 12x1.5L Bonjour,Liquides,200,52,201,45,45,10
+GRO-0088,Palette bière x24 Atlantique,Liquides,26,11,29,7,7,7
+GRO-0089,Carton lait poudre x6 Bénin,Frais,1037,472,1247,302,299,3
+GRO-0090,Carton savon x48 Lomé,Hygiène,89,31,104,26,24,10
+GRO-0091,Carton beurre x20 Zou,Frais,54,12,60,13,13,10
+GRO-0092,Carton huile 12x1L Lomé,Épicerie,557,165,707,181,170,10
+GRO-0093,Carton jus x12 Niger,Liquides,82,38,133,33,33,10
+GRO-0094,Palette sucre 25kg,Épicerie,8,2,15,3,3,5
+GRO-0095,Palette bière x24 Bonjour,Liquides,20,7,17,4,4,10
+GRO-0096,Carton lait poudre 250g Dogbo,Frais,301,68,300,71,73,14
+GRO-0097,Carton beurre x20 Dogbo,Frais,214,59,158,33,34,14
+GRO-0098,Carton lait poudre x24 Volta,Frais,197,43,126,34,31,21
+GRO-0099,Carton lait poudre x24 Sahel,Frais,403,93,305,77,71,21
+GRO-0100,Carton lait poudre 5kg Bénin,Frais,8,27,71,15,16,7
+GRO-0101,Carton papier x24 Mono,Hygiène,67,20,85,18,19,3
+GRO-0102,Carton papier x24 Kara,Hygiène,494,97,302,67,71,21
+GRO-0103,Carton savon x48 Dogbo,Hygiène,214,90,388,88,92,3
+GRO-0104,Palette bière x24 Zou,Liquides,62,16,57,15,14,7
+GRO-0105,Carton pâtes x24 Lomé,Épicerie,56,15,55,14,13,14
+GRO-0106,Carton riz 25kg Kara,Épicerie,428,208,645,168,159,10
+GRO-0107,Carton riz 25kg Ouémé,Épicerie,162,76,251,58,58,5
+GRO-0108,Sac farine 50kg Mono,Épicerie,439,125,628,135,137,3
+GRO-0109,Carton lait poudre x12 Volta,Frais,26,7,27,7,7,14
+GRO-0110,Carton pâtes x24 Dogbo,Épicerie,26,11,45,12,11,5
+GRO-0111,Carton dentifrice x36 Zou,Hygiène,223,41,209,48,46,14
+GRO-0112,Palette sucre x12 Ouémé,Épicerie,278,63,179,39,41,21
+GRO-0113,Carton pâtes x24 Kara,Épicerie,34,12,43,12,11,5
+GRO-0114,Palette sucre 1kg Niger,Épicerie,40,18,67,17,16,3
+GRO-0115,Carton sardines x48 Mono,Épicerie,107,31,90,22,21,7
+GRO-0116,Carton lait poudre x24,Frais,25,6,30,7,7,5
+GRO-0117,Carton papier x24 Sahel,Hygiène,171,49,173,41,39,3
+GRO-0118,Palette eau 12x1.5L Dogbo,Liquides,138,44,114,29,27,21
+GRO-0119,Carton lait poudre Mono,Frais,664,211,615,145,139,14
+GRO-0120,Carton lait poudre x6 Lomé,Frais,21,9,50,12,12,3
+GRO-0121,Carton riz 25kg Bénin,Épicerie,200,39,181,41,42,14
+GRO-0122,Carton jus x12 Bénin,Liquides,20,5,18,4,4,14
+GRO-0123,Palette sucre 500g Sahel,Épicerie,201,49,296,81,75,7
+GRO-0124,Carton lait poudre 25kg Dogbo,Frais,81,19,59,14,13,21
+GRO-0125,Palette sucre 5kg Volta,Épicerie,31,12,31,8,8,5
+GRO-0126,Carton lait poudre Bonjour,Frais,229,48,139,31,31,21
+GRO-0127,Carton sardines x48 Volta,Épicerie,10,4,18,4,4,10
+GRO-0128,Carton savon x48 Bonjour,Hygiène,236,56,229,50,51,3
+GRO-0129,Carton sardines x48 Bénin,Épicerie,37,11,81,13,51,7
+GRO-0130,Carton riz 25kg Atlantique,Épicerie,342,27,75,17,17,7
+GRO-0131,Palette eau 12x1.5L Zou,Liquides,39,92,290,75,67,7
+GRO-0132,Carton dentifrice x36 Mono,Hygiène,205,49,137,31,32,21
+GRO-0133,Carton huile 12x1L Mono,Épicerie,48,15,41,11,10,14
+GRO-0134,Palette sucre 500g Zou,Épicerie,287,62,297,74,72,14
+GRO-0135,Carton lait poudre x12 Niger,Frais,50,12,70,19,17,10
+GRO-0136,Carton pâtes x24 Bonjour,Épicerie,119,11,76,17,17,21
+GRO-0137,Carton jus x12 Dogbo,Liquides,55,21,58,13,13,10
+GRO-0138,Carton pâtes x24 Bénin,Épicerie,137,38,109,28,28,3
+GRO-0139,Sac farine 50kg Sahel,Épicerie,90,38,132,38,34,5
+GRO-0140,Carton dentifrice x36 Ouémé,Hygiène,21,10,26,6,6,3
+GRO-0141,Carton lait poudre 5kg Niger,Frais,126,45,123,32,29,3
+GRO-0142,Carton riz 25kg Zou,Épicerie,204,48,120,30,29,3
+GRO-0143,Carton jus x12 Zou,Liquides,33,9,40,11,10,3
+GRO-0144,Palette eau 12x1.5L Ouémé,Liquides,40,20,95,24,22,3
+GRO-0145,Carton lait poudre Lomé,Frais,118,30,111,24,25,5
+GRO-0146,Carton dentifrice x36 Sahel,Hygiène,79,11,54,12,12,21
+GRO-0147,Carton jus x12 Ouémé,Liquides,93,28,177,47,43,3
+GRO-0148,Carton sardines x48 Lomé,Épicerie,16,7,18,4,4,3
+GRO-0149,Carton lait poudre 25kg Zou,Frais,83,30,89,24,22,3
+GRO-0150,Palette eau 12x1.5L Sahel,Liquides,79,19,54,12,12,7
+GRO-0151,Carton dentifrice x36 Lomé,Hygiène,107,42,122,29,27,7
+GRO-0152,Palette sucre x12 Kara,Épicerie,94,23,58,15,15,10
+GRO-0153,Carton lait poudre Bénin,Frais,26,9,33,8,8,7
+GRO-0154,Sac farine 50kg Ouémé,Épicerie,43,10,44,10,10,7
+GRO-0155,Carton lait poudre x12 Bonjour,Frais,11,4,15,4,4,3
+GRO-0156,Carton savon x48 Atlantique,Hygiène,22,17,63,16,15,10
+GRO-0157,Carton dentifrice x36 Volta,Hygiène,364,86,230,62,56,10
+GRO-0158,Sac farine 50kg Zou,Épicerie,118,30,133,34,32,3
+GRO-0159,Carton savon x48 Ouémé,Hygiène,57,24,64,14,14,10
+GRO-0160,Carton huile 12x1L Ouémé,Épicerie,12,4,20,5,5,3
+GRO-0161,Carton lait poudre 1kg Ouémé,Frais,214,53,154,34,106,3
+GRO-0162,Carton lait poudre x24 Lomé,Frais,38,11,59,13,14,10
+GRO-0163,Carton jus x12 Atlantique,Liquides,328,75,232,57,52,5
+GRO-0164,Palette eau 12x1.5L Atlantique,Liquides,105,24,99,23,24,10
+GRO-0165,Carton lait poudre x12 Sahel,Frais,175,39,123,32,30,14
+GRO-0166,Carton savon x48 Sahel,Hygiène,701,192,932,196,200,10
+GRO-0167,Palette eau 12x1.5L Volta,Liquides,146,47,190,47,47,5
+GRO-0168,Carton lait poudre x24 Bonjour,Frais,85,25,74,18,16,3
+GRO-0169,Carton lait poudre 500g Atlantique,Frais,155,45,285,61,64,7
+GRO-0170,Carton riz 25kg Bonjour,Épicerie,200,52,132,34,32,21
+GRO-0171,Carton huile 12x1L Atlantique,Épicerie,69,22,72,16,16,14
+GRO-0172,Palette bière x24 Ouémé,Liquides,37,7,41,10,10,14
+GRO-0173,Carton pâtes x24 Ouémé,Épicerie,36,12,34,9,8,14
+GRO-0174,Carton dentifrice x36 Niger,Hygiène,238,43,226,60,57,14
+GRO-0175,Carton pâtes x24 Zou,Épicerie,54,10,44,11,10,21
+GRO-0176,Carton lait poudre x12 Bénin,Frais,82,26,68,17,16,14
+GRO-0177,Palette sucre 1kg,Épicerie,71,27,107,27,26,10
+GRO-0178,Carton lait poudre 250g Sahel,Frais,35,12,61,14,13,5
+GRO-0179,Carton lait poudre 250g Zou,Frais,317,95,256,61,59,3
+GRO-0180,Carton lait poudre 1kg Bonjour,Frais,105,22,74,20,18,21

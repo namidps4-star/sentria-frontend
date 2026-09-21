@@ -1,0 +1,421 @@
+sku,product_name,category,stock_qty,min_stock,sales_last_30_days,sales_last_7_days,sales_previous_7_days,supplier_lead_days
+CHA-0001,Short enfant S,Enfant,33,12,32,7,7,7
+CHA-0002,Écharpe,Accessoires,30,8,31,8,8,3
+CHA-0003,Short chino XXL,Textile,33,8,39,11,10,7
+CHA-0004,Bottines 42 Dogbo,Chaussures,37,17,67,18,17,3
+CHA-0005,Bottines 40 Volta,Chaussures,102,39,126,29,28,5
+CHA-0006,Basket enfant XL Dogbo,Enfant,60,19,56,16,14,3
+CHA-0007,Veste légère L Zou,Textile,8,2,10,2,2,10
+CHA-0008,Basket enfant XL Atlantique,Enfant,9,3,15,4,4,3
+CHA-0009,Sac bandoulière Bénin,Accessoires,13,4,12,2,2,7
+CHA-0010,T-shirt enfant M Sahel,Enfant,33,12,37,8,8,7
+CHA-0011,T-shirt coton M Volta,Textile,41,5,26,6,6,21
+CHA-0012,Sandales cuir 38 Kara,Chaussures,100,31,81,21,19,14
+CHA-0013,Ceinture cuir,Accessoires,71,16,65,17,16,10
+CHA-0014,Basket enfant XL Sahel,Enfant,136,38,95,25,24,21
+CHA-0015,Robe fillette L Ouémé,Enfant,42,15,44,11,11,14
+CHA-0016,Robe été M Lomé,Textile,97,13,70,14,15,21
+CHA-0017,Bottines 38 Lomé,Chaussures,34,8,27,8,7,21
+CHA-0018,Mocassins 42 Volta,Chaussures,17,4,25,6,6,10
+CHA-0019,Casquette Bénin,Accessoires,135,33,91,24,22,5
+CHA-0020,Robe fillette S,Enfant,38,9,39,11,10,14
+CHA-0021,Sandales cuir 42 Sahel,Chaussures,16,5,18,4,4,14
+CHA-0022,Écharpe Kara,Accessoires,31,11,32,7,7,14
+CHA-0023,Écharpe Lomé,Accessoires,84,16,59,16,15,21
+CHA-0024,T-shirt coton XL Bonjour,Textile,74,22,60,13,13,21
+CHA-0025,Basket enfant S,Enfant,18,5,25,6,6,7
+CHA-0026,Sac bandoulière Bonjour,Accessoires,9,3,13,3,3,7
+CHA-0027,T-shirt enfant L,Enfant,16,5,18,4,4,10
+CHA-0028,Casquette,Accessoires,52,13,45,10,11,21
+CHA-0029,T-shirt coton XXL,Textile,33,13,35,10,9,5
+CHA-0030,Robe fillette S Volta,Enfant,14,3,17,4,4,14
+CHA-0031,Robe fillette L,Enfant,81,20,58,14,13,5
+CHA-0032,Portefeuille Bénin,Accessoires,19,5,19,4,4,14
+CHA-0033,Robe été S Dogbo,Textile,134,30,157,37,39,14
+CHA-0034,Chemise lin M Dogbo,Textile,83,20,122,29,28,3
+CHA-0035,Chemise lin S Bonjour,Textile,2,12,81,18,18,10
+CHA-0036,Sac bandoulière Dogbo,Accessoires,66,31,110,30,28,10
+CHA-0037,Mocassins 38,Chaussures,257,66,252,67,64,14
+CHA-0038,Bottines 44 Ouémé,Chaussures,78,19,61,16,16,7
+CHA-0039,Sandales cuir 38,Chaussures,62,27,70,16,17,3
+CHA-0040,Jean slim XL Sahel,Textile,60,25,77,17,17,5
+CHA-0041,Sandales cuir 38 Volta,Chaussures,35,8,24,5,5,3
+CHA-0042,Chemise lin XL Ouémé,Textile,46,19,77,21,19,3
+CHA-0043,Sandales cuir 38 Atlantique,Chaussures,227,23,141,35,32,21
+CHA-0044,T-shirt coton M,Textile,3,5,35,9,9,10
+CHA-0045,Basket enfant S Kara,Enfant,34,14,36,8,8,5
+CHA-0046,Pull maille XXL Lomé,Textile,333,26,106,28,26,7
+CHA-0047,Sandales cuir 44 Lomé,Chaussures,135,30,133,30,29,5
+CHA-0048,Basket enfant L,Enfant,86,17,106,26,27,14
+CHA-0049,Short chino S Zou,Textile,23,8,22,6,6,10
+CHA-0050,Basket enfant XL Lomé,Enfant,37,10,29,7,7,10
+CHA-0051,Robe fillette M Bénin,Enfant,41,12,91,23,21,3
+CHA-0052,Sandales cuir 44 Dogbo,Chaussures,24,8,50,12,13,3
+CHA-0053,Ceinture cuir Mono,Accessoires,136,56,141,36,33,14
+CHA-0054,Jean slim XXL Zou,Textile,78,12,80,19,20,14
+CHA-0055,Portefeuille,Accessoires,10,8,32,9,8,21
+CHA-0056,Ceinture cuir Lomé,Accessoires,8,4,30,9,8,7
+CHA-0057,Portefeuille Mono,Accessoires,41,11,37,8,8,5
+CHA-0058,Basket enfant XL Niger,Enfant,48,14,39,9,9,5
+CHA-0059,Veste légère S,Textile,2,3,14,3,3,3
+CHA-0060,Jean slim XXL,Textile,39,10,38,10,9,14
+CHA-0061,Chemise lin L,Textile,58,7,46,13,12,21
+CHA-0062,Bottines 38,Chaussures,201,65,163,37,37,5
+CHA-0063,Basket enfant M Kara,Enfant,38,17,46,12,12,10
+CHA-0064,T-shirt enfant M Dogbo,Enfant,4,17,44,11,10,14
+CHA-0065,Écharpe Niger,Accessoires,42,11,38,10,9,14
+CHA-0066,Jean slim M Ouémé,Textile,93,12,83,20,19,14
+CHA-0067,Short chino S,Textile,19,5,13,3,3,21
+CHA-0068,Sneakers 44,Chaussures,262,61,178,44,42,14
+CHA-0069,Short enfant L Zou,Enfant,21,8,25,7,6,3
+CHA-0070,T-shirt enfant S Lomé,Enfant,68,7,47,12,11,21
+CHA-0071,Casquette Lomé,Accessoires,12,4,26,8,7,5
+CHA-0072,Short chino XL,Textile,13,5,22,5,5,5
+CHA-0073,T-shirt coton XL,Textile,37,10,34,8,8,7
+CHA-0074,Jean slim S Mono,Textile,16,5,16,4,4,7
+CHA-0075,Robe fillette S Bénin,Enfant,396,94,506,138,127,10
+CHA-0076,Mocassins 42,Chaussures,152,42,129,31,28,14
+CHA-0077,Mocassins 40 Kara,Chaussures,46,17,85,21,21,3
+CHA-0078,Bottines 44,Chaussures,233,63,277,63,65,3
+CHA-0079,Short chino XL Volta,Textile,27,5,22,6,5,21
+CHA-0080,Short enfant M Volta,Enfant,35,14,37,11,10,10
+CHA-0081,Mocassins 42 Kara,Chaussures,25,7,30,8,7,14
+CHA-0082,Sneakers 44 Kara,Chaussures,46,13,63,15,14,10
+CHA-0083,Ceinture cuir Kara,Accessoires,91,27,158,34,35,3
+CHA-0084,Basket enfant S Atlantique,Enfant,19,7,29,7,7,7
+CHA-0085,Bottines 42,Chaussures,30,7,30,7,7,3
+CHA-0086,Veste légère M Lomé,Textile,9,4,13,3,3,10
+CHA-0087,T-shirt enfant XXL,Enfant,8,2,6,1,1,3
+CHA-0088,T-shirt enfant M,Enfant,6,2,8,2,2,7
+CHA-0089,T-shirt coton S,Textile,791,63,157,41,37,7
+CHA-0090,Short enfant M,Enfant,67,21,66,17,16,3
+CHA-0091,Ceinture cuir Zou,Accessoires,82,33,102,24,25,5
+CHA-0092,Pull maille S Atlantique,Textile,40,10,49,12,12,14
+CHA-0093,Jean slim M Sahel,Textile,39,11,61,16,14,7
+CHA-0094,Short chino S Volta,Textile,24,6,17,4,4,3
+CHA-0095,Écharpe Bénin,Accessoires,34,11,50,11,11,5
+CHA-0096,Mocassins 40,Chaussures,37,14,37,8,8,3
+CHA-0097,Basket enfant L Zou,Enfant,31,7,28,7,7,7
+CHA-0098,Mocassins 38 Niger,Chaussures,8,2,8,2,2,7
+CHA-0099,Chemise lin XL,Textile,23,6,19,4,4,14
+CHA-0100,Sneakers 38 Bénin,Chaussures,23,9,25,6,6,10
+CHA-0101,Sac bandoulière,Accessoires,20,6,15,3,3,7
+CHA-0102,Jean slim L Bonjour,Textile,46,20,63,14,15,3
+CHA-0103,Écharpe Mono,Accessoires,144,33,100,24,24,3
+CHA-0104,Short chino S Mono,Textile,25,8,26,7,7,14
+CHA-0105,T-shirt enfant XL,Enfant,128,43,136,34,34,7
+CHA-0106,Pull maille XL Niger,Textile,227,34,155,37,34,21
+CHA-0107,Casquette Zou,Accessoires,38,10,25,6,6,3
+CHA-0108,Pull maille XL Zou,Textile,105,24,116,30,30,14
+CHA-0109,Short enfant M Dogbo,Enfant,8,2,7,2,2,3
+CHA-0110,Sneakers 38 Lomé,Chaussures,22,6,22,5,5,3
+CHA-0111,Pantalon toile XXL Lomé,Textile,4,2,7,1,1,7
+CHA-0112,T-shirt enfant XXL Dogbo,Enfant,29,8,27,6,6,14
+CHA-0113,Sac bandoulière Zou,Accessoires,63,16,93,26,23,7
+CHA-0114,Short enfant XXL,Enfant,17,5,36,8,8,7
+CHA-0115,Sneakers 44 Lomé,Chaussures,56,18,80,21,20,7
+CHA-0116,Short enfant L,Enfant,16,6,16,4,4,10
+CHA-0117,Pull maille M Zou,Textile,7,2,13,3,3,7
+CHA-0118,Short enfant XXL Mono,Enfant,37,9,48,11,11,7
+CHA-0119,Jean slim S,Textile,68,20,133,33,32,3
+CHA-0120,Mocassins 42 Zou,Chaussures,27,11,31,8,8,5
+CHA-0121,Sandales cuir 40,Chaussures,66,25,108,26,24,5
+CHA-0122,T-shirt coton S Volta,Textile,35,8,22,5,5,10
+CHA-0123,Bottines 40 Mono,Chaussures,35,10,34,7,7,14
+CHA-0124,Short enfant XL,Enfant,47,20,63,18,16,5
+CHA-0125,Sac bandoulière Volta,Accessoires,120,34,121,33,30,14
+CHA-0126,Sandales cuir 44 Niger,Chaussures,41,18,67,18,16,10
+CHA-0127,Short enfant XL Sahel,Enfant,47,17,82,23,21,7
+CHA-0128,Ceinture cuir Bonjour,Accessoires,5,2,6,1,1,14
+CHA-0129,Sandales cuir 42 Zou,Chaussures,167,59,155,40,36,10
+CHA-0130,Short enfant L Dogbo,Enfant,19,6,16,4,4,7
+CHA-0131,Portefeuille Lomé,Accessoires,20,6,17,4,4,21
+CHA-0132,Sneakers 40 Ouémé,Chaussures,31,7,27,7,7,3
+CHA-0133,Jean slim M,Textile,29,8,56,14,13,7
+CHA-0134,Robe été L Bonjour,Textile,24,5,35,8,8,10
+CHA-0135,Sneakers 40 Bonjour,Chaussures,32,9,45,7,25,7
+CHA-0136,Jean slim M Dogbo,Textile,18,4,15,3,3,10
+CHA-0137,Sac bandoulière Kara,Accessoires,82,5,18,4,4,10
+CHA-0138,Basket enfant M,Enfant,44,13,43,10,10,10
+CHA-0139,Portefeuille Kara,Accessoires,168,38,159,37,38,7
+CHA-0140,Sac bandoulière Atlantique,Accessoires,11,5,16,3,3,5
+CHA-0141,Sac bandoulière Lomé,Accessoires,22,7,20,5,5,7
+CHA-0142,Pull maille M Niger,Textile,54,13,59,15,14,14
+CHA-0143,Pantalon toile L,Textile,32,7,40,10,10,14
+CHA-0144,Pull maille M Sahel,Textile,11,3,15,3,3,14
+CHA-0145,Sneakers 44 Bonjour,Chaussures,31,8,29,7,7,3
+CHA-0146,Robe fillette S Bonjour,Enfant,30,8,39,10,10,3
+CHA-0147,Casquette Kara,Accessoires,50,18,56,14,13,7
+CHA-0148,T-shirt coton M Mono,Textile,38,10,39,10,9,7
+CHA-0149,Pantalon toile S Bonjour,Textile,44,32,125,27,28,3
+CHA-0150,Chemise lin M,Textile,18,8,28,7,7,3
+CHA-0151,Veste légère M,Textile,72,21,63,15,14,14
+CHA-0152,Bottines 44 Sahel,Chaussures,41,10,45,12,11,10
+CHA-0153,Sneakers 38 Ouémé,Chaussures,14,3,18,4,4,10
+CHA-0154,Portefeuille Ouémé,Accessoires,27,9,39,10,9,3
+CHA-0155,Bottines 40,Chaussures,11,3,11,3,3,7
+CHA-0156,Chemise lin S Kara,Textile,159,30,210,51,50,14
+CHA-0157,Robe fillette XL,Enfant,27,6,16,4,4,14
+CHA-0158,Casquette Ouémé,Accessoires,184,31,158,36,37,21
+CHA-0159,Pull maille M,Textile,5,5,29,7,7,5
+CHA-0160,Mocassins 44 Ouémé,Chaussures,156,52,203,50,51,5
+CHA-0161,Sneakers 42 Ouémé,Chaussures,17,8,28,6,6,5
+CHA-0162,T-shirt enfant XXL Bonjour,Enfant,34,9,54,13,13,5
+CHA-0163,Robe fillette XL Atlantique,Enfant,11,5,14,4,4,7
+CHA-0164,Sandales cuir 42,Chaussures,8,6,35,8,8,21
+CHA-0165,Veste légère XXL Volta,Textile,145,40,230,53,50,7
+CHA-0166,Short enfant M Bonjour,Enfant,160,29,194,46,49,14
+CHA-0167,Portefeuille Sahel,Accessoires,88,15,54,12,13,21
+CHA-0168,Short enfant S Dogbo,Enfant,35,12,30,7,7,7
+CHA-0169,Mocassins 44 Bénin,Chaussures,71,20,85,19,20,3
+CHA-0170,Sneakers 38,Chaussures,224,27,186,50,45,21
+CHA-0171,T-shirt coton S Zou,Textile,34,14,35,9,9,14
+CHA-0172,Ceinture cuir Volta,Accessoires,57,22,57,13,12,5
+CHA-0173,Mocassins 42 Bonjour,Chaussures,72,17,68,18,16,5
+CHA-0174,Jean slim L Niger,Textile,12,4,19,4,4,5
+CHA-0175,Short chino M Zou,Textile,7,2,23,6,5,7
+CHA-0176,Jean slim XXL Sahel,Textile,19,7,18,4,4,5
+CHA-0177,T-shirt coton S Atlantique,Textile,21,5,36,9,8,7
+CHA-0178,Basket enfant XXL,Enfant,17,6,24,6,6,5
+CHA-0179,Pull maille L Volta,Textile,26,6,27,7,6,14
+CHA-0180,Casquette Niger,Accessoires,106,20,130,30,31,14
+CHA-0181,Pantalon toile XL,Textile,289,116,339,76,78,14
+CHA-0182,Basket enfant XXL Ouémé,Enfant,41,10,42,10,10,7
+CHA-0183,Veste légère XL,Textile,68,9,48,13,12,21
+CHA-0184,Robe fillette M,Enfant,34,8,55,13,12,3
+CHA-0185,T-shirt enfant S,Enfant,8,3,40,9,9,7
+CHA-0186,Pull maille S Zou,Textile,28,8,27,7,7,10
+CHA-0187,Casquette Dogbo,Accessoires,40,15,74,17,17,5
+CHA-0188,Veste légère XL Niger,Textile,57,18,64,16,16,10
+CHA-0189,Pantalon toile XL Niger,Textile,10,2,9,2,2,21
+CHA-0190,T-shirt coton XXL Dogbo,Textile,120,34,88,24,22,7
+CHA-0191,Sneakers 40 Zou,Chaussures,69,19,121,33,30,3
+CHA-0192,Veste légère XXL,Textile,64,22,65,17,16,5
+CHA-0193,Robe fillette XL Bonjour,Enfant,15,5,18,4,4,5
+CHA-0194,Casquette Bonjour,Accessoires,67,16,64,14,14,14
+CHA-0195,Pantalon toile M,Textile,14,4,24,5,5,7
+CHA-0196,Pull maille XXL Kara,Textile,55,11,55,13,13,14
+CHA-0197,Sneakers 42,Chaussures,10,3,11,2,2,7
+CHA-0198,Portefeuille Atlantique,Accessoires,43,10,31,7,7,7
+CHA-0199,Short chino M,Textile,120,37,169,42,41,10
+CHA-0200,Pull maille M Lomé,Textile,37,9,39,11,10,14
+CHA-0201,Short enfant XL Lomé,Enfant,12,4,10,2,2,21
+CHA-0202,Sandales cuir 42 Ouémé,Chaussures,12,2,13,3,3,14
+CHA-0203,Chemise lin XL Dogbo,Textile,26,6,27,6,6,14
+CHA-0204,Portefeuille Zou,Accessoires,11,2,12,3,3,14
+CHA-0205,Mocassins 44 Atlantique,Chaussures,6,2,14,3,3,5
+CHA-0206,Sneakers 40,Chaussures,77,15,112,27,28,10
+CHA-0207,T-shirt coton L Ouémé,Textile,8,2,6,1,1,5
+CHA-0208,Robe été L,Textile,31,7,30,9,8,10
+CHA-0209,Chemise lin XXL Sahel,Textile,35,8,28,8,7,10
+CHA-0210,Casquette Sahel,Accessoires,40,13,56,15,14,5
+CHA-0211,Mocassins 44,Chaussures,38,13,40,9,9,14
+CHA-0212,T-shirt coton XL Bénin,Textile,9,2,7,2,2,14
+CHA-0213,Mocassins 38 Sahel,Chaussures,13,4,19,4,4,5
+CHA-0214,Veste légère L Lomé,Textile,13,4,12,3,3,7
+CHA-0215,Casquette Mono,Accessoires,38,9,36,10,9,14
+CHA-0216,Ceinture cuir Sahel,Accessoires,412,21,64,16,16,7
+CHA-0217,Chemise lin L Niger,Textile,13,5,23,5,5,7
+CHA-0218,Portefeuille Bonjour,Accessoires,33,12,43,11,10,10
+CHA-0219,Basket enfant L Kara,Enfant,41,14,40,10,9,5
+CHA-0220,Veste légère L,Textile,33,15,88,23,21,3
+CHA-0221,Sneakers 38 Kara,Chaussures,96,42,118,30,29,7
+CHA-0222,Robe été XL,Textile,84,23,119,29,30,7
+CHA-0223,Sandales cuir 40 Zou,Chaussures,27,6,16,4,4,14
+CHA-0224,Casquette Volta,Accessoires,40,14,44,10,10,5
+CHA-0225,Écharpe Atlantique,Accessoires,83,19,89,23,23,5
+CHA-0226,Jean slim XL,Textile,18,13,44,11,10,21
+CHA-0227,Sneakers 38 Atlantique,Chaussures,81,38,136,38,35,7
+CHA-0228,Sneakers 38 Bonjour,Chaussures,33,10,26,6,6,10
+CHA-0229,Veste légère XXL Dogbo,Textile,28,8,29,8,7,7
+CHA-0230,Bottines 42 Niger,Chaussures,37,12,33,8,8,14
+CHA-0231,Casquette Atlantique,Accessoires,66,22,61,15,15,5
+CHA-0232,Jean slim S Dogbo,Textile,255,64,339,85,77,10
+CHA-0233,Veste légère S Ouémé,Textile,87,37,116,29,29,7
+CHA-0234,Écharpe Sahel,Accessoires,31,15,65,15,15,5
+CHA-0235,Robe fillette S Lomé,Enfant,18,5,33,8,8,3
+CHA-0236,Short enfant S Kara,Enfant,4,5,13,3,3,14
+CHA-0237,Veste légère L Dogbo,Textile,107,36,103,25,25,5
+CHA-0238,Basket enfant S Mono,Enfant,13,5,18,4,4,5
+CHA-0239,Pantalon toile L Bonjour,Textile,6,4,15,3,3,5
+CHA-0240,Sandales cuir 44,Chaussures,8,2,10,3,3,3
+CHA-0241,Robe été L Zou,Textile,66,12,81,19,19,14
+CHA-0242,Sandales cuir 42 Bénin,Chaussures,33,13,43,10,10,3
+CHA-0243,Sneakers 40 Mono,Chaussures,21,8,25,5,5,10
+CHA-0244,Portefeuille Dogbo,Accessoires,29,14,74,20,19,3
+CHA-0245,Short chino XL Mono,Textile,44,13,95,26,24,7
+CHA-0246,Pull maille XXL Zou,Textile,67,19,83,22,20,5
+CHA-0247,T-shirt enfant XL Ouémé,Enfant,43,15,71,18,18,5
+CHA-0248,Robe été XXL Lomé,Textile,20,4,19,5,5,14
+CHA-0249,Robe été L Volta,Textile,15,4,23,6,6,10
+CHA-0250,Veste légère XXL Mono,Textile,50,13,46,12,11,14
+CHA-0251,Basket enfant XL,Enfant,23,5,29,8,7,10
+CHA-0252,Chemise lin XL Volta,Textile,3,2,12,3,3,5
+CHA-0253,Jean slim XXL Atlantique,Textile,36,10,46,13,12,14
+CHA-0254,Short chino L Sahel,Textile,362,117,374,103,92,7
+CHA-0255,Short enfant M Zou,Enfant,107,44,149,42,38,3
+CHA-0256,Sandales cuir 38 Bonjour,Chaussures,33,12,47,10,10,3
+CHA-0257,Robe été S Sahel,Textile,26,5,16,4,4,21
+CHA-0258,Mocassins 38 Mono,Chaussures,19,7,27,6,6,3
+CHA-0259,Veste légère XXL Niger,Textile,25,8,24,6,6,5
+CHA-0260,Pull maille XL Kara,Textile,15,5,18,4,4,3
+CHA-0261,Short chino M Niger,Textile,142,45,122,30,28,10
+CHA-0262,Short chino S Atlantique,Textile,99,18,69,18,18,21
+CHA-0263,Robe fillette XXL,Enfant,38,7,44,10,10,14
+CHA-0264,Basket enfant L Bonjour,Enfant,139,31,127,29,30,7
+CHA-0265,Short enfant S Zou,Enfant,88,9,64,14,14,21
+CHA-0266,Sneakers 40 Kara,Chaussures,63,20,75,17,17,3
+CHA-0267,Sandales cuir 44 Bonjour,Chaussures,94,22,82,22,20,10
+CHA-0268,Pull maille L Mono,Textile,58,12,36,8,8,21
+CHA-0269,Sneakers 44 Volta,Chaussures,43,11,30,8,8,5
+CHA-0270,Sac bandoulière Sahel,Accessoires,15,5,32,9,8,3
+CHA-0271,Pull maille XL,Textile,205,45,146,31,32,21
+CHA-0272,Chemise lin XL Sahel,Textile,36,7,23,5,5,21
+CHA-0273,Short chino L Bénin,Textile,36,11,28,7,6,7
+CHA-0274,Sandales cuir 40 Sahel,Chaussures,160,47,158,40,40,10
+CHA-0275,Mocassins 38 Bonjour,Chaussures,12,5,16,3,3,14
+CHA-0276,Robe fillette L Zou,Enfant,34,8,23,5,5,3
+CHA-0277,Robe été S Zou,Textile,61,5,38,9,8,21
+CHA-0278,Chemise lin L Bénin,Textile,26,6,19,5,5,21
+CHA-0279,T-shirt enfant S Zou,Enfant,111,34,99,24,24,7
+CHA-0280,T-shirt enfant XL Mono,Enfant,29,6,19,4,4,21
+CHA-0281,Robe fillette L Sahel,Enfant,8,3,16,4,4,21
+CHA-0282,Chemise lin S Sahel,Textile,13,6,27,7,6,7
+CHA-0283,Robe été L Sahel,Textile,78,21,142,33,32,5
+CHA-0284,Veste légère L Bénin,Textile,310,81,297,73,70,7
+CHA-0285,Sneakers 42 Bonjour,Chaussures,42,6,29,8,7,21
+CHA-0286,Veste légère S Bénin,Textile,147,69,192,48,44,7
+CHA-0287,Robe été XXL Kara,Textile,202,47,123,30,29,5
+CHA-0288,Short chino XXL Atlantique,Textile,97,24,85,20,19,5
+CHA-0289,Sandales cuir 40 Bénin,Chaussures,23,6,22,5,5,5
+CHA-0290,Sneakers 40 Sahel,Chaussures,39,10,37,9,8,5
+CHA-0291,Sac bandoulière Niger,Accessoires,42,10,28,7,7,21
+CHA-0292,Sneakers 44 Niger,Chaussures,9,2,15,4,4,10
+CHA-0293,Mocassins 40 Dogbo,Chaussures,535,125,546,150,137,7
+CHA-0294,Portefeuille Niger,Accessoires,11,4,17,4,4,10
+CHA-0295,Robe fillette XL Ouémé,Enfant,81,11,52,13,13,21
+CHA-0296,Pantalon toile XXL Mono,Textile,8,4,44,11,11,3
+CHA-0297,Écharpe Dogbo,Accessoires,38,11,28,6,11,10
+CHA-0298,Pull maille L,Textile,63,22,91,21,22,10
+CHA-0299,Sandales cuir 44 Volta,Chaussures,30,7,20,5,5,5
+CHA-0300,Ceinture cuir Dogbo,Accessoires,78,21,124,32,29,5
+CHA-0301,Robe fillette L Bonjour,Enfant,38,13,79,18,18,7
+CHA-0302,Écharpe Ouémé,Accessoires,68,20,52,13,12,21
+CHA-0303,T-shirt enfant L Lomé,Enfant,9,3,10,2,2,10
+CHA-0304,Short enfant L Sahel,Enfant,13,3,17,4,4,7
+CHA-0305,Basket enfant XXL Zou,Enfant,23,9,50,11,11,7
+CHA-0306,T-shirt coton L Bonjour,Textile,52,14,80,20,20,10
+CHA-0307,Short chino XXL Dogbo,Textile,35,10,57,13,13,3
+CHA-0308,T-shirt enfant L Niger,Enfant,4,7,31,8,8,7
+CHA-0309,Short chino S Ouémé,Textile,22,5,13,3,3,10
+CHA-0310,Robe fillette XL Bénin,Enfant,62,17,55,13,12,10
+CHA-0311,Écharpe Volta,Accessoires,92,19,65,18,16,21
+CHA-0312,Veste légère XL Mono,Textile,71,23,139,35,34,7
+CHA-0313,Bottines 42 Bénin,Chaussures,15,3,12,3,3,21
+CHA-0314,Robe été XXL Mono,Textile,34,8,22,5,5,10
+CHA-0315,Sandales cuir 42 Atlantique,Chaussures,46,13,38,10,9,21
+CHA-0316,Robe fillette M Volta,Enfant,17,5,15,4,4,5
+CHA-0317,Jean slim L,Textile,123,32,93,25,24,14
+CHA-0318,Robe été M Zou,Textile,29,11,38,9,8,5
+CHA-0319,Sandales cuir 38 Niger,Chaussures,17,4,17,4,4,3
+CHA-0320,Ceinture cuir Ouémé,Accessoires,9,4,19,5,5,3
+CHA-0321,Mocassins 42 Sahel,Chaussures,85,24,79,18,19,5
+CHA-0322,Basket enfant S Volta,Enfant,5,2,6,1,1,10
+CHA-0323,Short enfant S Sahel,Enfant,103,14,63,14,14,21
+CHA-0324,Robe fillette XXL Niger,Enfant,57,26,71,17,17,7
+CHA-0325,Sandales cuir 40 Niger,Chaussures,41,15,49,12,11,10
+CHA-0326,Pull maille L Lomé,Textile,78,26,130,31,30,7
+CHA-0327,Ceinture cuir Atlantique,Accessoires,3,3,9,2,2,5
+CHA-0328,Robe été M Bonjour,Textile,46,15,41,9,9,10
+CHA-0329,Mocassins 42 Lomé,Chaussures,20,3,15,3,3,21
+CHA-0330,Short chino L,Textile,161,54,138,35,34,21
+CHA-0331,Sandales cuir 44 Ouémé,Chaussures,14,4,15,3,3,14
+CHA-0332,T-shirt coton L Dogbo,Textile,126,37,115,29,28,10
+CHA-0333,Robe été S,Textile,43,10,29,6,6,3
+CHA-0334,Basket enfant XXL Lomé,Enfant,132,27,117,27,25,21
+CHA-0335,Mocassins 40 Atlantique,Chaussures,15,3,14,3,3,14
+CHA-0336,Robe été M Kara,Textile,114,39,145,37,36,5
+CHA-0337,Sneakers 44 Mono,Chaussures,41,12,52,12,13,10
+CHA-0338,Robe fillette L Dogbo,Enfant,24,8,28,8,7,14
+CHA-0339,Short enfant L Mono,Enfant,28,7,28,8,7,14
+CHA-0340,Sandales cuir 40 Kara,Chaussures,41,15,42,10,10,10
+CHA-0341,Pull maille XXL Sahel,Textile,14,5,16,2,9,3
+CHA-0342,Pull maille XXL Ouémé,Textile,296,81,217,52,50,10
+CHA-0343,Basket enfant M Lomé,Enfant,16,7,18,4,4,7
+CHA-0344,Chemise lin M Volta,Textile,21,8,49,11,11,5
+CHA-0345,Basket enfant M Dogbo,Enfant,101,21,141,35,34,10
+CHA-0346,T-shirt coton XL Atlantique,Textile,99,36,116,32,29,10
+CHA-0347,Basket enfant XXL Bonjour,Enfant,26,6,23,5,5,14
+CHA-0348,Pull maille S,Textile,32,12,37,9,9,5
+CHA-0349,Basket enfant L Bénin,Enfant,22,10,40,9,9,10
+CHA-0350,T-shirt enfant XL Atlantique,Enfant,6,2,12,3,3,7
+CHA-0351,T-shirt coton XXL Sahel,Textile,143,32,103,27,26,10
+CHA-0352,T-shirt coton L Sahel,Textile,38,11,36,8,8,3
+CHA-0353,Short enfant XL Atlantique,Enfant,1048,158,624,151,157,21
+CHA-0354,Sneakers 38 Dogbo,Chaussures,62,20,55,13,13,10
+CHA-0355,T-shirt coton XXL Atlantique,Textile,29,7,40,11,10,3
+CHA-0356,Short enfant XXL Bénin,Enfant,34,12,53,14,13,7
+CHA-0357,Short enfant S Volta,Enfant,97,34,86,19,19,5
+CHA-0358,Bottines 40 Ouémé,Chaussures,37,11,81,19,20,5
+CHA-0359,Short chino L Lomé,Textile,15,3,16,4,4,14
+CHA-0360,Veste légère M Sahel,Textile,65,17,45,12,11,7
+CHA-0361,Basket enfant L Atlantique,Enfant,35,16,94,22,20,5
+CHA-0362,Ceinture cuir Niger,Accessoires,12,11,54,14,13,21
+CHA-0363,Sneakers 42 Sahel,Chaussures,48,13,57,16,14,3
+CHA-0364,Short enfant S Lomé,Enfant,26,5,18,4,4,21
+CHA-0365,Pantalon toile XXL,Textile,10,3,10,2,2,14
+CHA-0366,Sac bandoulière Mono,Accessoires,15,6,65,15,15,14
+CHA-0367,Short enfant XL Niger,Enfant,73,13,67,16,17,14
+CHA-0368,Sandales cuir 38 Lomé,Chaussures,45,11,27,7,7,5
+CHA-0369,Robe été XXL,Textile,12,4,27,6,6,3
+CHA-0370,Sneakers 42 Niger,Chaussures,59,18,50,11,11,3
+CHA-0371,Pantalon toile L Volta,Textile,26,10,59,15,14,5
+CHA-0372,T-shirt enfant M Kara,Enfant,680,174,553,140,125,10
+CHA-0373,Pantalon toile S Ouémé,Textile,50,10,45,12,11,14
+CHA-0374,Robe fillette M Mono,Enfant,53,14,35,8,7,10
+CHA-0375,Mocassins 42 Mono,Chaussures,137,29,92,24,22,21
+CHA-0376,Sandales cuir 42 Lomé,Chaussures,51,17,52,13,13,10
+CHA-0377,Chemise lin S Atlantique,Textile,21,5,17,4,4,21
+CHA-0378,T-shirt enfant L Volta,Enfant,14,7,66,16,17,7
+CHA-0379,T-shirt enfant S Mono,Enfant,477,129,480,128,120,10
+CHA-0380,Short enfant L Niger,Enfant,26,7,22,5,5,14
+CHA-0381,Robe fillette L Lomé,Enfant,13,3,11,2,2,3
+CHA-0382,T-shirt enfant M Volta,Enfant,34,8,24,6,6,3
+CHA-0383,Short enfant S Ouémé,Enfant,171,26,103,24,25,21
+CHA-0384,Mocassins 44 Mono,Chaussures,17,4,23,5,5,10
+CHA-0385,Pantalon toile XXL Bénin,Textile,23,7,29,8,7,7
+CHA-0386,Chemise lin XXL Mono,Textile,237,68,214,43,46,10
+CHA-0387,T-shirt coton XXL Mono,Textile,122,49,349,82,83,3
+CHA-0388,Bottines 44 Dogbo,Chaussures,20,10,36,8,8,5
+CHA-0389,Sneakers 44 Ouémé,Chaussures,8,3,10,2,2,14
+CHA-0390,Robe fillette M Niger,Enfant,38,11,39,8,8,5
+CHA-0391,Robe fillette L Atlantique,Enfant,38,12,83,18,51,7
+CHA-0392,Pull maille M Kara,Textile,33,8,22,5,5,21
+CHA-0393,Robe fillette S Mono,Enfant,103,24,71,20,18,21
+CHA-0394,Basket enfant L Mono,Enfant,7,2,8,2,2,7
+CHA-0395,Robe fillette S Ouémé,Enfant,33,11,35,8,8,3
+CHA-0396,Pull maille S Ouémé,Textile,33,14,40,10,10,3
+CHA-0397,Sandales cuir 38 Mono,Chaussures,241,28,154,42,39,21
+CHA-0398,Robe été S Volta,Textile,29,14,41,10,10,5
+CHA-0399,Chemise lin XXL,Textile,31,7,24,5,5,14
+CHA-0400,Sneakers 38 Volta,Chaussures,59,15,47,12,12,7
+CHA-0401,Basket enfant XXL Niger,Enfant,40,13,89,19,20,7
+CHA-0402,T-shirt coton S Lomé,Textile,12,5,31,8,7,5
+CHA-0403,Sneakers 40 Dogbo,Chaussures,64,19,67,16,15,3
+CHA-0404,Basket enfant M Niger,Enfant,155,54,149,37,35,7
+CHA-0405,T-shirt coton XXL Bonjour,Textile,18,9,25,6,6,7
+CHA-0406,Robe fillette XL Zou,Enfant,39,10,36,9,9,14
+CHA-0407,Mocassins 40 Niger,Chaussures,14,5,18,4,4,3
+CHA-0408,Short enfant L Ouémé,Enfant,23,6,21,5,5,3
+CHA-0409,T-shirt enfant S Kara,Enfant,28,9,26,6,6,3
+CHA-0410,Sandales cuir 38 Zou,Chaussures,18,7,35,9,8,3
+CHA-0411,Bottines 38 Dogbo,Chaussures,54,7,41,11,10,21
+CHA-0412,T-shirt enfant XXL Kara,Enfant,19,6,28,7,7,5
+CHA-0413,Pull maille XXL Volta,Textile,248,66,237,54,56,5
+CHA-0414,Veste légère L Volta,Textile,27,3,16,4,4,21
+CHA-0415,Robe fillette XL Mono,Enfant,96,10,58,13,13,21
+CHA-0416,Sac bandoulière Ouémé,Accessoires,144,32,86,18,19,10
+CHA-0417,Écharpe Bonjour,Accessoires,11,5,22,5,5,5
+CHA-0418,Mocassins 42 Bénin,Chaussures,14,5,11,3,3,5
+CHA-0419,T-shirt enfant M Zou,Enfant,135,33,92,22,21,7
+CHA-0420,Chemise lin XL Kara,Textile,193,44,308,73,73,3

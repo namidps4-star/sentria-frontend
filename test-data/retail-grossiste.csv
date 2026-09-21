@@ -1,0 +1,5 @@
+product_name,sku,store,category,stock_qty,min_stock,sales_last_30_days,supplier_lead_days,target_days_of_inventory,shrinkage_rate,max_shrinkage_rate,pos_downtime_minutes,max_pos_downtime_minutes,foot_traffic,staff_count,max_customers_per_staff,sales_last_7_days,sales_previous_7_days
+Carton savon x48,GRO-SAV-500,DEPOT-TOKOIN,Hygiène,40,150,1800,21,45,0.9,2.0,0,30,90,12,40,410,430
+Palette riz 25kg,GRO-RIZ-900,DEPOT-TOKOIN,Épicerie,2600,300,900,30,40,0.5,2.0,0,30,90,12,40,215,220
+Carton huile 12x1L,GRO-HUI-320,DEPOT-AGOE,Épicerie,520,200,1500,25,45,4.6,2.0,0,30,140,2,40,330,360
+Carton lait poudre,GRO-LAI-410,DEPOT-AGOE,Frais,640,180,1200,20,45,1.0,2.0,0,30,140,12,40,150,290

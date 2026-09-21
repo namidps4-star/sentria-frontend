@@ -37,6 +37,7 @@ import {
 } from "./industry-view"
 
 import { API_BASE as API } from "@/lib/api"
+import { toApiSector, withOurSector } from "@/lib/sector"
 import {
   PriorityCards,
   PriorityHeading,
@@ -1346,7 +1347,7 @@ export function DashboardView({
         return r.json()
       })
       .then((d) => {
-        setAlerts(Array.isArray(d) ? d : [])
+        setAlerts(Array.isArray(d) ? d.map(withOurSector) : [])
         setAlertsError(null)
       })
       .catch((err) => {
@@ -1407,10 +1408,10 @@ export function DashboardView({
 
               usedIds.add(id)
 
-              return {
+              return withOurSector({
                 ...rec,
                 id,
-              }
+              })
             }
           )
 
@@ -1540,7 +1541,7 @@ export function DashboardView({
         uploadSector === "logistics" ? businessType : uploadActivity ?? businessType
 
       const res = await fetch(
-        `${API}/upload?sector=${uploadSector}&lang=fr` +
+        `${API}/upload?sector=${toApiSector(uploadSector)}&lang=fr` +
           (chosenOpsType ? `&ops_type=${chosenOpsType}` : "") +
           // Sent for every sector. check_industry and check_health branch
           // on it, and every sector needs it recorded on the alert so the
@@ -1568,7 +1569,7 @@ export function DashboardView({
       const r2 = await fetch(`${API}/alerts`)
       const d2 = await r2.json()
 
-      setAlerts(Array.isArray(d2) ? d2 : [])
+      setAlerts(Array.isArray(d2) ? d2.map(withOurSector) : [])
 
       refreshRecommendations()
 
