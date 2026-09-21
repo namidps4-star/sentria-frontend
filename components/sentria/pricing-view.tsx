@@ -109,32 +109,41 @@ export function PricingView() {
 
   return (
     <div
-      className="w-full h-full overflow-hidden"
+      className="w-full h-full overflow-hidden relative"
       style={{
         background:
-          "radial-gradient(ellipse at 20% 30%, #c8e06a 0%, #8fa84a 25%, #4a6a3a 50%, #1a2a20 80%, #0d1a14 100%)",
+          "radial-gradient(ellipse at 15% 20%, #c8e06a 0%, #a8c45a 18%, #7fa048 35%, #4a6a3a 55%, #2a4025 75%, #0d1a14 100%)",
       }}
     >
-      <div className="w-full h-full px-6 py-8 flex flex-col">
+      {/* Subtle decorative glow */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(circle at 80% 80%, rgba(217, 243, 110, 0.08) 0%, transparent 40%)",
+        }}
+      />
+
+      <div className="relative w-full h-full px-10 py-10 flex flex-col">
         {/* Header row */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center justify-between mb-10">
+          <div className="flex items-center gap-4">
             <div
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
+              className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold"
               style={{ backgroundColor: "#d9f36e", color: "#1d1d1b" }}
             >
               <Sparkles className="h-3.5 w-3.5" />
               Pricing
             </div>
             <h2
-              className="text-2xl font-bold tracking-tight"
+              className="text-3xl font-bold tracking-tight"
               style={{ color: "#ffffff" }}
             >
               Operational intelligence at every scale
             </h2>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setLang("fr")}
@@ -142,7 +151,7 @@ export function PricingView() {
                 style={{
                   backgroundColor: lang === "fr" ? "#ffffff" : "transparent",
                   color: lang === "fr" ? "#1d1d1b" : "#c8e06a",
-                  border: lang === "fr" ? "none" : "1px solid #c8e06a44",
+                  border: lang === "fr" ? "none" : "1px solid #c8e06a55",
                 }}
               >
                 FR
@@ -153,15 +162,21 @@ export function PricingView() {
                 style={{
                   backgroundColor: lang === "en" ? "#ffffff" : "transparent",
                   color: lang === "en" ? "#1d1d1b" : "#c8e06a",
-                  border: lang === "en" ? "none" : "1px solid #c8e06a44",
+                  border: lang === "en" ? "none" : "1px solid #c8e06a55",
                 }}
               >
                 EN
               </button>
             </div>
 
-            <div className="flex items-center gap-2 rounded-full px-3 py-1.5"
-              style={{ backgroundColor: "#0f1a14", border: "1px solid #c8e06a33" }}>
+            <div
+              className="flex items-center gap-2.5 rounded-full px-4 py-2"
+              style={{
+                backgroundColor: "rgba(15, 26, 20, 0.6)",
+                border: "1px solid rgba(200, 224, 106, 0.25)",
+                backdropFilter: "blur(8px)",
+              }}
+            >
               <span
                 className="text-xs font-medium"
                 style={{ color: !annual ? "#d9f36e" : "#8a8a8a" }}
@@ -170,14 +185,14 @@ export function PricingView() {
               </span>
               <button
                 onClick={() => setAnnual(!annual)}
-                className="relative w-10 h-5 rounded-full transition-colors"
+                className="relative w-11 h-5 rounded-full transition-colors"
                 style={{ backgroundColor: "#d9f36e" }}
               >
                 <span
                   className="absolute top-0.5 w-4 h-4 rounded-full transition-transform"
                   style={{
                     backgroundColor: "#0f1a14",
-                    left: annual ? "22px" : "2px",
+                    left: annual ? "24px" : "2px",
                   }}
                 />
               </button>
@@ -188,7 +203,7 @@ export function PricingView() {
                 Annual
               </span>
               <span
-                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                 style={{ backgroundColor: "#d9f36e", color: "#1d1d1b" }}
               >
                 −20%
@@ -197,23 +212,29 @@ export function PricingView() {
           </div>
         </div>
 
-        {/* Cards row */}
-        <div className="grid grid-cols-4 gap-4 flex-1">
+        {/* Cards row - spread out */}
+        <div className="grid grid-cols-4 gap-6 flex-1">
           {TIERS.map((tier: Tier) => (
             <div
               key={tier.name}
               className="flex flex-col rounded-2xl overflow-hidden"
               style={{
-                backgroundColor: tier.featured ? "#0f1a14" : "#ffffff",
+                backgroundColor: tier.featured
+                  ? "rgba(15, 26, 20, 0.85)"
+                  : "rgba(255, 255, 255, 0.95)",
                 border: tier.featured
                   ? "2px solid #d9f36e"
-                  : "1px solid #e0e0dc",
-                padding: "18px",
+                  : "1px solid rgba(224, 224, 220, 0.6)",
+                padding: "22px",
+                backdropFilter: "blur(10px)",
+                boxShadow: tier.featured
+                  ? "0 20px 50px -20px rgba(217, 243, 110, 0.25)"
+                  : "0 10px 30px -15px rgba(0, 0, 0, 0.15)",
               }}
             >
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between mb-2">
                 <h3
-                  className="text-sm font-bold"
+                  className="text-base font-bold"
                   style={{
                     color: tier.featured ? "#d9f36e" : "#1a1a1a",
                   }}
@@ -222,7 +243,7 @@ export function PricingView() {
                 </h3>
                 {tier.featured && (
                   <span
-                    className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full"
+                    className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
                     style={{ backgroundColor: "#d9f36e", color: "#1a1a1a" }}
                   >
                     Popular
@@ -231,7 +252,7 @@ export function PricingView() {
               </div>
 
               <p
-                className="text-[11px] mb-3"
+                className="text-[11px] mb-4"
                 style={{
                   color: tier.featured ? "#b0b0a8" : "#8a8a8a",
                 }}
@@ -241,7 +262,7 @@ export function PricingView() {
 
               <div className="flex items-end gap-1 mb-1">
                 <span
-                  className="text-3xl font-bold leading-none"
+                  className="text-4xl font-bold leading-none"
                   style={{
                     color: tier.featured ? "#d9f36e" : "#1a1a1a",
                   }}
@@ -250,7 +271,7 @@ export function PricingView() {
                 </span>
                 {tier.monthly !== null && tier.monthly > 0 && (
                   <span
-                    className="text-[11px] mb-0.5 ml-0.5"
+                    className="text-[11px] mb-1 ml-1"
                     style={{
                       color: tier.featured ? "#b0b0a8" : "#8a8a8a",
                     }}
@@ -261,7 +282,7 @@ export function PricingView() {
               </div>
 
               <p
-                className="text-[10px] min-h-3 mb-3"
+                className="text-[10px] min-h-3 mb-4"
                 style={{ color: "#8a887a" }}
               >
                 {tier.monthly !== null && tier.monthly > 0 && annual
@@ -272,19 +293,24 @@ export function PricingView() {
               </p>
 
               <div
-                className="rounded-lg p-3 flex-1 mb-3"
+                className="rounded-lg p-3.5 flex-1 mb-4"
                 style={{
-                  backgroundColor: tier.featured ? "#ffffff10" : "#f0f0ec",
+                  backgroundColor: tier.featured
+                    ? "rgba(255, 255, 255, 0.06)"
+                    : "rgba(240, 240, 236, 0.8)",
+                  border: tier.featured
+                    ? "1px solid rgba(217, 243, 110, 0.15)"
+                    : "1px solid rgba(224, 224, 220, 0.5)",
                 }}
               >
-                <ul className="space-y-1.5">
+                <ul className="space-y-2">
                   {tier.features.map((f, idx) => (
                     <li
                       key={idx}
-                      className="flex items-start gap-1.5 text-[11px]"
+                      className="flex items-start gap-2 text-[11px]"
                     >
                       <span
-                        className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full"
+                        className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full"
                         style={{
                           backgroundColor: tier.featured
                             ? "#d9f36e"
@@ -292,14 +318,19 @@ export function PricingView() {
                         }}
                       >
                         <Check
-                          className="h-2 w-2"
+                          className="h-2.5 w-2.5"
                           strokeWidth={3}
                           style={{
                             color: tier.featured ? "#0f1a14" : "#1a1a1a",
                           }}
                         />
                       </span>
-                      <span style={{ color: tier.featured ? "#e8e8e6" : "#3c3b33" }}>
+                      <span
+                        style={{
+                          color: tier.featured ? "#e8e8e6" : "#3c3b33",
+                          lineHeight: "1.4",
+                        }}
+                      >
                         {t(f)}
                       </span>
                     </li>
@@ -308,10 +339,13 @@ export function PricingView() {
 
                 {tier.highlight && (
                   <div
-                    className="mt-2 rounded-lg p-2"
-                    style={{ backgroundColor: "#d9f36e22" }}
+                    className="mt-3 rounded-lg p-2.5"
+                    style={{
+                      backgroundColor: "rgba(217, 243, 110, 0.15)",
+                      border: "1px solid rgba(217, 243, 110, 0.25)",
+                    }}
                   >
-                    <div className="mb-1.5 flex items-center gap-1.5">
+                    <div className="mb-2 flex items-center gap-1.5">
                       <TrendingUp
                         className="h-3 w-3"
                         style={{ color: "#d9f36e" }}
@@ -323,7 +357,7 @@ export function PricingView() {
                         {t(tier.highlight.label)}
                       </span>
                     </div>
-                    <ul className="space-y-1">
+                    <ul className="space-y-1.5">
                       {tier.highlight.features.map((f, idx) => (
                         <li
                           key={idx}
@@ -334,7 +368,12 @@ export function PricingView() {
                             strokeWidth={3}
                             style={{ color: "#d9f36e" }}
                           />
-                          <span style={{ color: "#e8e8e6" }}>
+                          <span
+                            style={{
+                              color: "#e8e8e6",
+                              lineHeight: "1.4",
+                            }}
+                          >
                             {t(f)}
                           </span>
                         </li>
@@ -345,7 +384,7 @@ export function PricingView() {
               </div>
 
               <button
-                className="w-full py-2 rounded-full text-xs font-semibold transition-opacity hover:opacity-90 mt-auto"
+                className="w-full py-2.5 rounded-full text-xs font-semibold transition-opacity hover:opacity-90 mt-auto"
                 style={{
                   backgroundColor: tier.featured ? "#d9f36e" : "#1d1d1b",
                   color: tier.featured ? "#0f1a14" : "#f5f4ec",
@@ -358,8 +397,12 @@ export function PricingView() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-[11px] mt-4" style={{ color: "#c8e06a" }}>
-          Every plan includes data encryption and a 14-day trial with no commitment.
+        <p
+          className="text-center text-[11px] mt-6"
+          style={{ color: "rgba(200, 224, 106, 0.8)" }}
+        >
+          Every plan includes data encryption and a 14-day trial with no
+          commitment.
         </p>
       </div>
     </div>
