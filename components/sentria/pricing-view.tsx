@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Sparkles, TrendingUp, X } from "lucide-react";
+import { Check, Sparkles, TrendingUp } from "lucide-react";
 
 type Localized = { fr: string; en: string };
 
@@ -32,7 +32,7 @@ const TIERS: Tier[] = [
       { fr: "1 secteur au choix", en: "1 sector of your choice" },
       { fr: "Upload CSV manuel", en: "Manual CSV upload" },
       { fr: "Alertes SMS · 10/mois", en: "SMS alerts · 10/month" },
-      { fr: "Ask SentrIA · 20 requêtes/mois", en: "Ask SentrIA · 20 queries/month" },
+      { fr: "Ask SentrIA · 20/mois", en: "Ask SentrIA · 20 queries/month" },
       { fr: "Historique 7 jours", en: "7-day history" },
     ],
   },
@@ -46,17 +46,17 @@ const TIERS: Tier[] = [
       { fr: "Jusqu'à 5 sites · 3 secteurs", en: "Up to 5 sites · 3 sectors" },
       { fr: "Alertes SMS illimitées", en: "Unlimited SMS alerts" },
       { fr: "Ask SentrIA illimité", en: "Unlimited Ask SentrIA" },
-      { fr: "Historique 12 mois & exports CSV/PDF", en: "12-month history & CSV/PDF exports" },
-      { fr: "IA prédictive & détection d'anomalies", en: "Predictive AI & anomaly detection" },
+      { fr: "Historique 12 mois & exports", en: "12-month history & CSV/PDF exports" },
+      { fr: "IA prédictive & anomalies", en: "Predictive AI & anomaly detection" },
       { fr: "SentrIA Network Insights", en: "SentrIA Network Insights" },
     ],
     highlight: {
       icon: TrendingUp,
       label: { fr: "SentrIA Intelligence", en: "SentrIA Intelligence" },
       features: [
-        { fr: "Comparaison avec les tendances du secteur", en: "Benchmarked against sector trends" },
+        { fr: "Tendances du secteur", en: "Benchmarked against sector trends" },
         { fr: "Benchmarks anonymisés", en: "Anonymised benchmarks" },
-        { fr: "Alertes basées sur les tendances du marché", en: "Alerts driven by market trends" },
+        { fr: "Alertes marché", en: "Alerts driven by market trends" },
       ],
     },
   },
@@ -69,24 +69,24 @@ const TIERS: Tier[] = [
     features: [
       { fr: "Sites & secteurs illimités", en: "Unlimited sites & sectors" },
       { fr: "Capteurs IoT intégrés", en: "Built-in IoT sensors" },
-      { fr: "Espaces partagés + rôles & permissions", en: "Shared workspaces + roles & permissions" },
-      { fr: "Accès API & webhooks", en: "API access & webhooks" },
-      { fr: "Scoring de risque personnalisé", en: "Custom risk scoring" },
+      { fr: "Espaces partagés + rôles", en: "Shared workspaces + roles & permissions" },
+      { fr: "API & webhooks", en: "API access & webhooks" },
+      { fr: "Scoring de risque", en: "Custom risk scoring" },
       { fr: "Support prioritaire", en: "Priority support" },
     ],
   },
   {
     name: "Enterprise",
-    tagline: { fr: "Pour les institutions et les grands volumes", en: "Best for institutions & scale" },
+    tagline: { fr: "Pour les institutions", en: "Best for institutions & scale" },
     monthly: null,
     priceLabel: { fr: "Sur devis", en: "On request" },
     cta: { fr: "Contacter les ventes", en: "Contact sales" },
     features: [
-      { fr: "SSO / SAML, journaux d'audit", en: "SSO / SAML, audit logs" },
-      { fr: "Modèles dédiés & option on-premise", en: "Dedicated models & on-premise option" },
-      { fr: "SLA + responsable de compte dédié", en: "SLA + dedicated account manager" },
-      { fr: "Sièges & volume API illimités", en: "Unlimited seats & API volume" },
-      { fr: "Marque blanche disponible", en: "White label available" },
+      { fr: "SSO / SAML, journaux", en: "SSO / SAML, audit logs" },
+      { fr: "Modèles dédiés & on-premise", en: "Dedicated models & on-premise option" },
+      { fr: "SLA + responsable dédié", en: "SLA + dedicated account manager" },
+      { fr: "Sièges & API illimités", en: "Unlimited seats & API volume" },
+      { fr: "Marque blanche", en: "White label available" },
     ],
   },
 ];
@@ -109,100 +109,96 @@ export function PricingView() {
 
   return (
     <div
-      className="w-full h-full min-h-screen py-12 px-4 overflow-y-auto"
+      className="w-full h-full overflow-hidden"
       style={{
         background:
           "radial-gradient(ellipse at 20% 30%, #c8e06a 0%, #8fa84a 25%, #4a6a3a 50%, #1a2a20 80%, #0d1a14 100%)",
       }}
     >
-      <div
-        className="w-full max-w-6xl mx-auto rounded-2xl px-6 py-12 md:px-12 md:py-16"
-        style={{ backgroundColor: "#e8e8e6" }}
-      >
-        {/* Header */}
-        <div className="text-center mb-10">
-          <div
-            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold mb-4"
-            style={{ backgroundColor: "#d9f36e", color: "#1d1d1b" }}
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            Pricing
-          </div>
-
-          <h2
-            className="text-3xl md:text-5xl font-bold tracking-tight mb-3"
-            style={{ color: "#1a1a1a", fontFamily: "'Inter', sans-serif" }}
-          >
-            Operational intelligence at every scale
-          </h2>
-          <p className="text-sm max-w-xl mx-auto" style={{ color: "#6b6a5e" }}>
-            From corner shops to institutions: pick the plan that fits your
-            operations, anywhere in the world.
-          </p>
-        </div>
-
-        {/* Language & Toggle */}
-        <div className="flex flex-col items-center gap-4 mb-12">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setLang("fr")}
-              className="px-3 py-1 text-xs font-semibold rounded-full transition-colors"
-              style={{
-                backgroundColor: lang === "fr" ? "#1d1d1b" : "transparent",
-                color: lang === "fr" ? "#f5f4ec" : "#6b6a5e",
-              }}
+      <div className="w-full h-full px-6 py-8 flex flex-col">
+        {/* Header row */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
+              style={{ backgroundColor: "#d9f36e", color: "#1d1d1b" }}
             >
-              FR
-            </button>
-            <button
-              onClick={() => setLang("en")}
-              className="px-3 py-1 text-xs font-semibold rounded-full transition-colors"
-              style={{
-                backgroundColor: lang === "en" ? "#1d1d1b" : "transparent",
-                color: lang === "en" ? "#f5f4ec" : "#6b6a5e",
-              }}
+              <Sparkles className="h-3.5 w-3.5" />
+              Pricing
+            </div>
+            <h2
+              className="text-2xl font-bold tracking-tight"
+              style={{ color: "#ffffff" }}
             >
-              EN
-            </button>
+              Operational intelligence at every scale
+            </h2>
           </div>
 
           <div className="flex items-center gap-3">
-            <span
-              className="text-sm font-medium"
-              style={{ color: !annual ? "#1a1a1a" : "#8a8a8a" }}
-            >
-              Monthly
-            </span>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setLang("fr")}
+                className="px-3 py-1 text-xs font-semibold rounded-full transition-colors"
+                style={{
+                  backgroundColor: lang === "fr" ? "#ffffff" : "transparent",
+                  color: lang === "fr" ? "#1d1d1b" : "#c8e06a",
+                  border: lang === "fr" ? "none" : "1px solid #c8e06a44",
+                }}
+              >
+                FR
+              </button>
+              <button
+                onClick={() => setLang("en")}
+                className="px-3 py-1 text-xs font-semibold rounded-full transition-colors"
+                style={{
+                  backgroundColor: lang === "en" ? "#ffffff" : "transparent",
+                  color: lang === "en" ? "#1d1d1b" : "#c8e06a",
+                  border: lang === "en" ? "none" : "1px solid #c8e06a44",
+                }}
+              >
+                EN
+              </button>
+            </div>
 
-            <button
-              onClick={() => setAnnual(!annual)}
-              className="relative w-12 h-6 rounded-full transition-colors"
-              style={{ backgroundColor: "#1a1a1a" }}
-            >
+            <div className="flex items-center gap-2 rounded-full px-3 py-1.5"
+              style={{ backgroundColor: "#0f1a14", border: "1px solid #c8e06a33" }}>
               <span
-                className="absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform"
-                style={{ left: annual ? "26px" : "2px" }}
-              />
-            </button>
-
-            <span
-              className="text-sm font-medium"
-              style={{ color: annual ? "#1a1a1a" : "#8a8a8a" }}
-            >
-              Annual
-            </span>
-
-            <span
-              className="text-xs font-semibold px-2.5 py-1 rounded-full"
-              style={{ backgroundColor: "#d9f36e", color: "#1a1a1a" }}
-            >
-              −20%
-            </span>
+                className="text-xs font-medium"
+                style={{ color: !annual ? "#d9f36e" : "#8a8a8a" }}
+              >
+                Monthly
+              </span>
+              <button
+                onClick={() => setAnnual(!annual)}
+                className="relative w-10 h-5 rounded-full transition-colors"
+                style={{ backgroundColor: "#d9f36e" }}
+              >
+                <span
+                  className="absolute top-0.5 w-4 h-4 rounded-full transition-transform"
+                  style={{
+                    backgroundColor: "#0f1a14",
+                    left: annual ? "22px" : "2px",
+                  }}
+                />
+              </button>
+              <span
+                className="text-xs font-medium"
+                style={{ color: annual ? "#d9f36e" : "#8a8a8a" }}
+              >
+                Annual
+              </span>
+              <span
+                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                style={{ backgroundColor: "#d9f36e", color: "#1d1d1b" }}
+              >
+                −20%
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5 mb-12">
+        {/* Cards row */}
+        <div className="grid grid-cols-4 gap-4 flex-1">
           {TIERS.map((tier: Tier) => (
             <div
               key={tier.name}
@@ -210,23 +206,23 @@ export function PricingView() {
               style={{
                 backgroundColor: tier.featured ? "#0f1a14" : "#ffffff",
                 border: tier.featured
-                  ? "3px solid #0f1a14"
+                  ? "2px solid #d9f36e"
                   : "1px solid #e0e0dc",
-                padding: "24px",
+                padding: "18px",
               }}
             >
               <div className="flex items-center justify-between mb-1">
                 <h3
-                  className="text-base font-bold"
+                  className="text-sm font-bold"
                   style={{
-                    color: tier.featured ? "#ffffff" : "#1a1a1a",
+                    color: tier.featured ? "#d9f36e" : "#1a1a1a",
                   }}
                 >
                   {tier.name}
                 </h3>
                 {tier.featured && (
                   <span
-                    className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full"
+                    className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full"
                     style={{ backgroundColor: "#d9f36e", color: "#1a1a1a" }}
                   >
                     Popular
@@ -235,7 +231,7 @@ export function PricingView() {
               </div>
 
               <p
-                className="text-xs mb-6"
+                className="text-[11px] mb-3"
                 style={{
                   color: tier.featured ? "#b0b0a8" : "#8a8a8a",
                 }}
@@ -243,9 +239,9 @@ export function PricingView() {
                 {t(tier.tagline)}
               </p>
 
-              <div className="flex items-end gap-1 mb-2">
+              <div className="flex items-end gap-1 mb-1">
                 <span
-                  className="text-5xl font-bold leading-none"
+                  className="text-3xl font-bold leading-none"
                   style={{
                     color: tier.featured ? "#d9f36e" : "#1a1a1a",
                   }}
@@ -254,18 +250,18 @@ export function PricingView() {
                 </span>
                 {tier.monthly !== null && tier.monthly > 0 && (
                   <span
-                    className="text-sm mb-1 ml-1"
+                    className="text-[11px] mb-0.5 ml-0.5"
                     style={{
                       color: tier.featured ? "#b0b0a8" : "#8a8a8a",
                     }}
                   >
-                    /month
+                    /mo
                   </span>
                 )}
               </div>
 
               <p
-                className="text-[11px] min-h-4 mb-5"
+                className="text-[10px] min-h-3 mb-3"
                 style={{ color: "#8a887a" }}
               >
                 {tier.monthly !== null && tier.monthly > 0 && annual
@@ -276,67 +272,69 @@ export function PricingView() {
               </p>
 
               <div
-                className="rounded-xl p-4 flex-1 mb-5"
+                className="rounded-lg p-3 flex-1 mb-3"
                 style={{
-                  backgroundColor: tier.featured ? "#ffffff" : "#e8e8e6",
+                  backgroundColor: tier.featured ? "#ffffff10" : "#f0f0ec",
                 }}
               >
-                <ul className="space-y-2.5">
+                <ul className="space-y-1.5">
                   {tier.features.map((f, idx) => (
                     <li
                       key={idx}
-                      className="flex items-start gap-2.5 text-[13px]"
+                      className="flex items-start gap-1.5 text-[11px]"
                     >
                       <span
-                        className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full"
+                        className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full"
                         style={{
                           backgroundColor: tier.featured
-                            ? "#0f1a14"
+                            ? "#d9f36e"
                             : "#c9e5b8",
                         }}
                       >
                         <Check
-                          className="h-2.5 w-2.5"
+                          className="h-2 w-2"
                           strokeWidth={3}
                           style={{
-                            color: tier.featured ? "#ffffff" : "#1a1a1a",
+                            color: tier.featured ? "#0f1a14" : "#1a1a1a",
                           }}
                         />
                       </span>
-                      <span style={{ color: "#3c3b33" }}>{t(f)}</span>
+                      <span style={{ color: tier.featured ? "#e8e8e6" : "#3c3b33" }}>
+                        {t(f)}
+                      </span>
                     </li>
                   ))}
                 </ul>
 
                 {tier.highlight && (
                   <div
-                    className="mt-3 rounded-xl p-3.5"
-                    style={{ backgroundColor: "#d9f36e33" }}
+                    className="mt-2 rounded-lg p-2"
+                    style={{ backgroundColor: "#d9f36e22" }}
                   >
-                    <div className="mb-2.5 flex items-center gap-2">
+                    <div className="mb-1.5 flex items-center gap-1.5">
                       <TrendingUp
-                        className="h-3.5 w-3.5"
-                        style={{ color: "#1a1a1a" }}
+                        className="h-3 w-3"
+                        style={{ color: "#d9f36e" }}
                       />
                       <span
-                        className="text-[11px] font-bold"
-                        style={{ color: "#1a1a1a" }}
+                        className="text-[10px] font-bold"
+                        style={{ color: "#d9f36e" }}
                       >
                         {t(tier.highlight.label)}
                       </span>
                     </div>
-                    <ul className="space-y-2">
+                    <ul className="space-y-1">
                       {tier.highlight.features.map((f, idx) => (
                         <li
                           key={idx}
-                          className="flex items-start gap-2 text-xs"
+                          className="flex items-start gap-1.5 text-[10px]"
                         >
                           <Check
-                            className="mt-0.5 h-3 w-3 shrink-0"
+                            className="mt-0.5 h-2.5 w-2.5 shrink-0"
                             strokeWidth={3}
-                            style={{ color: "#1a1a1a" }}
+                            style={{ color: "#d9f36e" }}
                           />
-                          <span style={{ color: "#3c3b33" }}>
+                          <span style={{ color: "#e8e8e6" }}>
                             {t(f)}
                           </span>
                         </li>
@@ -346,19 +344,8 @@ export function PricingView() {
                 )}
               </div>
 
-              <p
-                className="text-xs leading-relaxed mb-5"
-                style={{ color: "#6b6a5e" }}
-              >
-                {tier.featured
-                  ? "Full power for operational teams who need scale, intelligence and flexibility."
-                  : tier.monthly === null
-                  ? "Custom deployment, dedicated models and enterprise-grade support for large institutions."
-                  : "All the essentials to monitor, alert and act with confidence."}
-              </p>
-
               <button
-                className="w-full py-3 rounded-full text-sm font-semibold transition-opacity hover:opacity-90"
+                className="w-full py-2 rounded-full text-xs font-semibold transition-opacity hover:opacity-90 mt-auto"
                 style={{
                   backgroundColor: tier.featured ? "#d9f36e" : "#1d1d1b",
                   color: tier.featured ? "#0f1a14" : "#f5f4ec",
@@ -371,9 +358,8 @@ export function PricingView() {
         </div>
 
         {/* Footer */}
-        <p className="text-center text-xs" style={{ color: "#6b6a5e" }}>
-          Every plan includes data encryption and a 14-day trial with no
-          commitment.
+        <p className="text-center text-[11px] mt-4" style={{ color: "#c8e06a" }}>
+          Every plan includes data encryption and a 14-day trial with no commitment.
         </p>
       </div>
     </div>
