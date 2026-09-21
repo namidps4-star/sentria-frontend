@@ -435,10 +435,6 @@ export function CalendarView() {
     return counts
   }, [selectedDayEvents])
 
-  const shortMonth = new Intl.DateTimeFormat(weekLabel, {
-    month: "short",
-  }).format(currentMonth)
-
   return (
     <div className="flex flex-col gap-6">
       {/* BANNER */}
@@ -993,7 +989,7 @@ export function CalendarView() {
             </div>
           </div>
 
-          {/* RIGHT PANEL — Wegrow green boxes + day view */}
+          {/* RIGHT PANEL — Wegrow green boxes with day view data */}
           <div
             className="rounded-3xl overflow-hidden flex flex-col"
             style={{
@@ -1099,7 +1095,7 @@ export function CalendarView() {
                     </div>
                   </div>
 
-                  {/* Event list — day view */}
+                  {/* Day view events — MED-001 style */}
                   {selectedDayEvents.length === 0 ? (
                     <div
                       className="rounded-3xl p-6 text-center"
@@ -1119,7 +1115,7 @@ export function CalendarView() {
                   ) : (
                     selectedDayEvents.map((event) => {
                       const Icon = TYPE_ICON[event.kind]
-                      const eventDate = new Intl.DateTimeFormat(weekLabel, {
+                      const eventMonth = new Intl.DateTimeFormat(weekLabel, {
                         month: "short",
                       }).format(event.date)
                       const eventDay = event.date.getDate()
@@ -1132,17 +1128,17 @@ export function CalendarView() {
                           className="w-full rounded-3xl p-4 text-left transition-transform hover:-translate-y-0.5"
                           style={{
                             backgroundColor: "#c8e06a",
-                            border: "1px solid rgba(10, 42, 26, 0.08)",
                           }}
                         >
-                          {/* Date + title row */}
+                          {/* Date column + content */}
                           <div className="flex items-start gap-3">
-                            <div className="flex flex-col items-center">
+                            {/* Date on the left */}
+                            <div className="flex flex-col items-center shrink-0">
                               <span
                                 className="text-[10px] font-bold uppercase tracking-wider"
                                 style={{ color: "#0a2a1a", opacity: 0.7 }}
                               >
-                                {eventDate}
+                                {eventMonth}
                               </span>
                               <span
                                 className="font-heading text-2xl font-black leading-none"
@@ -1152,6 +1148,7 @@ export function CalendarView() {
                               </span>
                             </div>
 
+                            {/* Title + equipment */}
                             <div className="flex-1 min-w-0">
                               <p
                                 className="text-sm font-bold leading-snug"
@@ -1163,7 +1160,7 @@ export function CalendarView() {
                                 className="mt-1 text-xs font-semibold"
                                 style={{
                                   color: "#0a2a1a",
-                                  opacity: 0.7,
+                                  opacity: 0.75,
                                 }}
                               >
                                 {event.equipment}
@@ -1176,7 +1173,7 @@ export function CalendarView() {
                             />
                           </div>
 
-                          {/* Severity + time chips */}
+                          {/* Chips row */}
                           <div className="mt-3 flex flex-wrap items-center gap-1.5">
                             <span
                               className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider"
@@ -1196,7 +1193,7 @@ export function CalendarView() {
                                     event.severity === "CRITICAL"
                                       ? "#0a2a1a"
                                       : "rgba(10, 42, 26, 0.15)",
-                                  color: "#0a2a1a",
+                                  color: event.severity === "CRITICAL" ? "#c8e06a" : "#0a2a1a",
                                 }}
                               >
                                 {event.severity}
