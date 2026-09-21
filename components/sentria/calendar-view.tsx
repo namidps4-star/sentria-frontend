@@ -15,8 +15,6 @@ import {
   Wrench,
   X,
   Zap,
-  Share2,
-  Search,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useCompanyIdentity } from "@/lib/company"
@@ -424,6 +422,23 @@ export function CalendarView() {
     )
   }, [selectedDay, eventsByDay])
 
+  const selectedDayCounts = useMemo(() => {
+    const counts: Record<EventKind, number> = {
+      incident: 0,
+      threshold: 0,
+      deadline: 0,
+      resolved: 0,
+    }
+    for (const e of selectedDayEvents) {
+      counts[e.kind] += 1
+    }
+    return counts
+  }, [selectedDayEvents])
+
+  const shortMonth = new Intl.DateTimeFormat(weekLabel, {
+    month: "short",
+  }).format(currentMonth)
+
   return (
     <div className="flex flex-col gap-6">
       {/* BANNER */}
@@ -486,7 +501,6 @@ export function CalendarView() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* View mode toggle */}
           <div className="flex items-center rounded-xl border border-border bg-card p-1">
             <button
               type="button"
@@ -812,38 +826,18 @@ export function CalendarView() {
         </div>
       )}
 
-      {/* MONTH VIEW — October aesthetic */}
+      {/* MONTH VIEW */}
       {viewMode === "month" && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px]">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_400px]">
           {/* October-style calendar */}
           <div className="overflow-hidden rounded-3xl border border-border bg-white">
-            {/* Lime header with huge month name */}
             <div
               className="px-6 pt-6 pb-4"
               style={{
                 background: "linear-gradient(135deg, #d9f36e 0%, #c8e06a 100%)",
               }}
             >
-              {/* Top action bar */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-[#1d1d1b]/20 bg-white/40 text-[#1d1d1b] transition-colors hover:bg-white/60"
-                  >
-                    <Share2 className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    className="flex h-9 items-center gap-2 rounded-full border border-[#1d1d1b]/20 bg-white/40 px-3 text-[#1d1d1b] transition-colors hover:bg-white/60"
-                  >
-                    <Search className="h-3.5 w-3.5" />
-                    <span className="text-xs font-semibold">
-                      {tx("Rechercher", "Search")}
-                    </span>
-                  </button>
-                </div>
-
+              <div className="flex items-center justify-end mb-4">
                 <div className="flex items-center gap-1.5">
                   <button
                     type="button"
@@ -872,7 +866,6 @@ export function CalendarView() {
                 </div>
               </div>
 
-              {/* Huge month name */}
               <h1
                 className="font-heading leading-none tracking-tighter"
                 style={{
@@ -886,7 +879,6 @@ export function CalendarView() {
               </h1>
             </div>
 
-            {/* Day headers */}
             <div className="grid grid-cols-7 border-b border-[#1d1d1b]/10 bg-white">
               {Array.from({ length: 7 }, (_, i) => {
                 const d = addDays(mondayOf(new Date()), i)
@@ -901,14 +893,12 @@ export function CalendarView() {
               })}
             </div>
 
-            {/* Month sub-header */}
             <div className="bg-white px-4 py-2 text-center border-b border-[#1d1d1b]/5">
               <span className="text-xs font-semibold text-[#1d1d1b]/70">
                 {monthName} {monthYear}
               </span>
             </div>
 
-            {/* Day cells grid */}
             <div className="grid grid-cols-7 bg-white">
               {monthGrid.flat().map((day, idx) => {
                 const isCurrentMonth = day.getMonth() === currentMonth.getMonth()
@@ -934,7 +924,6 @@ export function CalendarView() {
                       hasDeadline && !isSelected && "bg-[#2563eb]/3"
                     )}
                   >
-                    {/* Day number */}
                     <div className="flex items-center justify-between mb-1">
                       <span
                         className={cn(
@@ -961,7 +950,6 @@ export function CalendarView() {
                       )}
                     </div>
 
-                    {/* Event cards */}
                     <div className="flex flex-col gap-0.5">
                       {dayEvts.slice(0, 2).map((event) => {
                         const Icon = TYPE_ICON[event.kind]
@@ -993,7 +981,6 @@ export function CalendarView() {
                       )}
                     </div>
 
-                    {/* Blue highlight bar for deadline days */}
                     {hasDeadline && (
                       <div
                         className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
@@ -1006,296 +993,392 @@ export function CalendarView() {
             </div>
           </div>
 
-          {/* Selected day detail — workout-card style */}
+          {/* RIGHT PANEL — Wegrow green boxes + day view */}
           <div
-            className="rounded-3xl overflow-hidden"
+            className="rounded-3xl overflow-hidden flex flex-col"
             style={{
-              background: "#0f1a14",
-              border: "1px solid rgba(217, 243, 110, 0.15)",
+              background: "#0a2a1a",
+              border: "1px solid rgba(200, 224, 106, 0.15)",
+              minHeight: "520px",
             }}
           >
-            <div className="px-5 py-4">
-              {selectedDay ? (
-                <>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p
-                        className="text-[10px] font-bold uppercase tracking-[0.18em]"
-                        style={{ color: "#d9f36e", opacity: 0.7 }}
-                      >
-                        {tx("Détails du jour", "Day details")}
-                      </p>
-                      <h3
-                        className="mt-0.5 font-heading text-xl font-black tracking-tight"
-                        style={{ color: "#ffffff" }}
-                      >
-                        {new Intl.DateTimeFormat(weekLabel, {
-                          weekday: "long",
-                          day: "numeric",
-                          month: "long",
-                        }).format(selectedDay)}
-                      </h3>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedDay(null)}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-white/60 transition-colors hover:bg-white/5"
-                      aria-label={tx("Fermer", "Close")}
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+            {/* Panel header */}
+            <div className="px-5 pt-5 pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="h-7 w-7 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: "#c8e06a" }}
+                  >
+                    <Wrench className="h-3.5 w-3.5" style={{ color: "#0a2a1a" }} />
                   </div>
+                  <span
+                    className="text-sm font-semibold"
+                    style={{ color: "#c8e06a" }}
+                  >
+                    {tx("Calendrier", "Calendar")}
+                  </span>
+                </div>
 
-                  <div className="mt-3 flex items-center gap-2">
-                    <span
-                      className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold"
-                      style={{
-                        backgroundColor: "#d9f36e",
-                        color: "#1d1d1b",
-                      }}
-                    >
-                      <Wrench className="h-3 w-3" />
-                      {selectedDayEvents.length}{" "}
-                      {selectedDayEvents.length > 1
-                        ? tx("événements", "events")
-                        : tx("événement", "event")}
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p
-                    className="text-[10px] font-bold uppercase tracking-[0.18em]"
-                    style={{ color: "#d9f36e", opacity: 0.7 }}
+                {selectedDay && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDay(null)}
+                    className="flex h-7 w-7 items-center justify-center rounded-full border border-[#c8e06a]/30 text-[#c8e06a]/70 transition-colors hover:bg-[#c8e06a]/10"
+                    aria-label={tx("Fermer", "Close")}
                   >
-                    {tx("Sélectionnez un jour", "Select a day")}
-                  </p>
-                  <h3
-                    className="mt-0.5 font-heading text-xl font-black tracking-tight"
-                    style={{ color: "#ffffff" }}
-                  >
-                    {tx("Aperçu du mois", "Month overview")}
-                  </h3>
-                  <p className="mt-2 text-xs leading-5 text-white/60">
-                    {tx(
-                      "Touchez une journée du calendrier pour voir ses événements en détail.",
-                      "Tap a day on the calendar to see its events in detail."
-                    )}
-                  </p>
-                </>
-              )}
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="space-y-2 px-5 pb-5">
+            <div className="px-5 pb-5 flex-1 flex flex-col gap-3 overflow-y-auto">
               {selectedDay ? (
-                selectedDayEvents.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center">
-                    <Inbox
-                      className="mx-auto h-6 w-6 text-white/40"
-                      aria-hidden="true"
-                    />
-                    <p className="mt-2 text-xs text-white/50">
-                      {tx("Rien ce jour-là", "Nothing on this day")}
+                <>
+                  {/* Big green box — headline */}
+                  <div
+                    className="rounded-3xl p-5"
+                    style={{ backgroundColor: "#c8e06a" }}
+                  >
+                    <p
+                      className="font-heading text-2xl font-black leading-tight tracking-tight"
+                      style={{ color: "#0a2a1a" }}
+                    >
+                      {tx(
+                        "All your events for",
+                        "Tous vos événements du"
+                      )}
                     </p>
-                  </div>
-                ) : (
-                  selectedDayEvents.map((event) => {
-                    const Icon = TYPE_ICON[event.kind]
-                    const isResolved = event.kind === "resolved"
-                    const isDeadline = event.kind === "deadline"
-                    const isIncident = event.kind === "incident"
-                    const isThreshold = event.kind === "threshold"
+                    <p
+                      className="mt-1 font-heading text-lg font-bold"
+                      style={{ color: "#0a2a1a", opacity: 0.85 }}
+                    >
+                      {new Intl.DateTimeFormat(weekLabel, {
+                        day: "numeric",
+                        month: "long",
+                      }).format(selectedDay)}
+                    </p>
 
-                    return (
-                      <button
-                        key={event.id}
-                        type="button"
-                        onClick={() => setSelected(event.id)}
-                        className={cn(
-                          "w-full rounded-2xl border p-3 text-left transition-transform hover:-translate-y-0.5",
-                          isDeadline &&
-                            "border-[#d9f36e]/30 bg-[#d9f36e]/10",
-                          isIncident &&
-                            "border-[#2563eb]/30 bg-[#2563eb]/10",
-                          isThreshold &&
-                            "border-[#ef4444]/30 bg-[#ef4444]/10",
-                          isResolved &&
-                            "border-white/10 bg-white/5"
-                        )}
+                    {/* Pill with total */}
+                    <div
+                      className="mt-4 inline-flex items-center rounded-full overflow-hidden"
+                      style={{ backgroundColor: "#0a2a1a" }}
+                    >
+                      <div
+                        className="px-4 py-2.5"
+                        style={{ backgroundColor: "#c8e06a" }}
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-start gap-2.5">
-                            <div
-                              className={cn(
-                                "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-                                isDeadline && "bg-[#d9f36e]/20",
-                                isIncident && "bg-[#2563eb]/20",
-                                isThreshold && "bg-[#ef4444]/20",
-                                isResolved && "bg-white/10"
-                              )}
-                            >
-                              <Icon
-                                className={cn(
-                                  "h-4 w-4",
-                                  isDeadline && "text-[#d9f36e]",
-                                  isIncident && "text-[#60a5fa]",
-                                  isThreshold && "text-[#ef4444]",
-                                  isResolved && "text-white/70"
-                                )}
-                              />
-                            </div>
+                        <p
+                          className="font-heading text-xl font-black tabular-nums"
+                          style={{ color: "#0a2a1a" }}
+                        >
+                          {selectedDayEvents.length}
+                        </p>
+                        <p
+                          className="text-[10px] font-semibold"
+                          style={{ color: "#0a2a1a", opacity: 0.8 }}
+                        >
+                          {tx("events", "événements")}
+                        </p>
+                      </div>
+                      <div className="px-4 py-2.5">
+                        <p
+                          className="font-heading text-xl font-black tabular-nums"
+                          style={{ color: "#c8e06a" }}
+                        >
+                          {selectedDayCounts.deadline + selectedDayCounts.incident}
+                        </p>
+                        <p
+                          className="text-[10px] font-semibold"
+                          style={{ color: "#c8e06a", opacity: 0.8 }}
+                        >
+                          {tx("active", "actifs")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-                            <div className="min-w-0">
-                              <p
-                                className="truncate text-sm font-bold"
-                                style={{ color: "#ffffff" }}
-                              >
-                                {event.title}
-                              </p>
-                              <p className="mt-0.5 truncate text-[10px] text-white/50">
-                                {event.detail}
-                              </p>
-                            </div>
-                          </div>
-
-                          {event.overdue && (
-                            <span
-                              className="shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold"
-                              style={{
-                                backgroundColor: "#ef4444",
-                                color: "#ffffff",
-                              }}
-                            >
-                              {tx("En retard", "Overdue")}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                          <span
-                            className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider"
-                            style={{
-                              backgroundColor: "#d9f36e",
-                              color: "#1d1d1b",
-                            }}
-                          >
-                            {tx(TYPE_LABEL[event.kind].fr, TYPE_LABEL[event.kind].en)}
-                          </span>
-
-                          {event.sector && (
-                            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-semibold text-white/70">
-                              {sectorLabel(event.sector, tx)}
-                            </span>
-                          )}
-
-                          <span className="rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-semibold text-white/70">
-                            {event.equipment}
-                          </span>
-
-                          {event.hasTime && (
-                            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-semibold text-white/70">
-                              {timeFormatter.format(event.date)}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="mt-2.5 flex items-center justify-between">
-                          <div className="flex items-center gap-1.5">
-                            {event.assignees.length > 0 ? (
-                              <div className="flex -space-x-1.5">
-                                {event.assignees.slice(0, 3).map((p) => (
-                                  <span
-                                    key={p.id}
-                                    title={p.name}
-                                    className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-[#0f1a14] bg-[#d9f36e] text-[8px] font-bold text-[#1d1d1b]"
-                                  >
-                                    {getInitials(p.name)}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              <span className="flex h-5 w-5 items-center justify-center rounded-full border border-dashed border-white/20 text-white/40">
-                                <UserRound className="h-2.5 w-2.5" />
-                              </span>
-                            )}
-                            <span className="text-[9px] text-white/50">
-                              {event.assignees.length > 0
-                                ? `${event.assignees.length} ${tx("assigné(s)", "assigned")}`
-                                : tx("Non assigné", "Unassigned")}
-                            </span>
-                          </div>
-
-                          <ChevronRight className="h-3.5 w-3.5 text-white/40" />
-                        </div>
-                      </button>
-                    )
-                  })
-                )
-              ) : (
-                <div className="space-y-2">
-                  {visibleEvents
-                    .sort((a, b) => a.date.getTime() - b.date.getTime())
-                    .slice(0, 8)
-                    .map((event) => {
+                  {/* Event list — day view */}
+                  {selectedDayEvents.length === 0 ? (
+                    <div
+                      className="rounded-3xl p-6 text-center"
+                      style={{ backgroundColor: "#c8e06a" }}
+                    >
+                      <Inbox
+                        className="mx-auto h-6 w-6"
+                        style={{ color: "#0a2a1a" }}
+                      />
+                      <p
+                        className="mt-2 text-sm font-bold"
+                        style={{ color: "#0a2a1a" }}
+                      >
+                        {tx("Nothing on this day", "Rien ce jour-là")}
+                      </p>
+                    </div>
+                  ) : (
+                    selectedDayEvents.map((event) => {
                       const Icon = TYPE_ICON[event.kind]
+                      const eventDate = new Intl.DateTimeFormat(weekLabel, {
+                        month: "short",
+                      }).format(event.date)
+                      const eventDay = event.date.getDate()
+
                       return (
                         <button
                           key={event.id}
                           type="button"
-                          onClick={() => {
-                            setSelectedDay(event.date)
-                            setSelected(event.id)
+                          onClick={() => setSelected(event.id)}
+                          className="w-full rounded-3xl p-4 text-left transition-transform hover:-translate-y-0.5"
+                          style={{
+                            backgroundColor: "#c8e06a",
+                            border: "1px solid rgba(10, 42, 26, 0.08)",
                           }}
-                          className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 text-left transition-colors hover:bg-white/10"
                         >
-                          <div className="flex h-9 w-9 shrink-0 flex-col items-center justify-center rounded-lg bg-[#d9f36e]/15">
-                            <span
-                              className="text-[8px] font-bold uppercase leading-none"
-                              style={{ color: "#d9f36e" }}
-                            >
-                              {new Intl.DateTimeFormat(weekLabel, {
-                                month: "short",
-                              })
-                                .format(event.date)
-                                .slice(0, 3)}
-                            </span>
-                            <span
-                              className="text-sm font-black leading-none"
-                              style={{ color: "#d9f36e" }}
-                            >
-                              {event.date.getDate()}
-                            </span>
+                          {/* Date + title row */}
+                          <div className="flex items-start gap-3">
+                            <div className="flex flex-col items-center">
+                              <span
+                                className="text-[10px] font-bold uppercase tracking-wider"
+                                style={{ color: "#0a2a1a", opacity: 0.7 }}
+                              >
+                                {eventDate}
+                              </span>
+                              <span
+                                className="font-heading text-2xl font-black leading-none"
+                                style={{ color: "#0a2a1a" }}
+                              >
+                                {eventDay}
+                              </span>
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                              <p
+                                className="text-sm font-bold leading-snug"
+                                style={{ color: "#0a2a1a" }}
+                              >
+                                {event.title}
+                              </p>
+                              <p
+                                className="mt-1 text-xs font-semibold"
+                                style={{
+                                  color: "#0a2a1a",
+                                  opacity: 0.7,
+                                }}
+                              >
+                                {event.equipment}
+                              </p>
+                            </div>
+
+                            <Icon
+                              className="h-4 w-4 shrink-0 mt-1"
+                              style={{ color: "#0a2a1a" }}
+                            />
                           </div>
 
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-xs font-bold text-white">
-                              {event.title}
-                            </p>
-                            <p className="truncate text-[10px] text-white/50">
-                              {event.equipment}
-                            </p>
-                          </div>
+                          {/* Severity + time chips */}
+                          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                            <span
+                              className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider"
+                              style={{
+                                backgroundColor: "#0a2a1a",
+                                color: "#c8e06a",
+                              }}
+                            >
+                              {tx(TYPE_LABEL[event.kind].fr, TYPE_LABEL[event.kind].en)}
+                            </span>
 
-                          <Icon
-                            className={cn(
-                              "h-4 w-4 shrink-0",
-                              event.kind === "deadline" && "text-[#d9f36e]",
-                              event.kind === "incident" && "text-[#60a5fa]",
-                              event.kind === "threshold" && "text-[#ef4444]",
-                              event.kind === "resolved" && "text-white/60"
+                            {event.severity && (
+                              <span
+                                className="rounded-full px-2.5 py-0.5 text-[9px] font-bold"
+                                style={{
+                                  backgroundColor:
+                                    event.severity === "CRITICAL"
+                                      ? "#0a2a1a"
+                                      : "rgba(10, 42, 26, 0.15)",
+                                  color: "#0a2a1a",
+                                }}
+                              >
+                                {event.severity}
+                              </span>
                             )}
-                          />
+
+                            {event.hasTime && (
+                              <span
+                                className="rounded-full px-2.5 py-0.5 text-[9px] font-bold"
+                                style={{
+                                  backgroundColor: "rgba(10, 42, 26, 0.15)",
+                                  color: "#0a2a1a",
+                                }}
+                              >
+                                {timeFormatter.format(event.date)}
+                              </span>
+                            )}
+
+                            {event.overdue && (
+                              <span
+                                className="rounded-full px-2.5 py-0.5 text-[9px] font-bold"
+                                style={{
+                                  backgroundColor: "#0a2a1a",
+                                  color: "#c8e06a",
+                                }}
+                              >
+                                {tx("Overdue", "En retard")}
+                              </span>
+                            )}
+                          </div>
                         </button>
                       )
-                    })}
-
-                  {visibleEvents.length > 8 && (
-                    <p className="text-center text-[10px] text-white/40">
-                      +{visibleEvents.length - 8}{" "}
-                      {tx("autres événements", "more events")}
-                    </p>
+                    })
                   )}
-                </div>
+                </>
+              ) : (
+                <>
+                  {/* Big green box — headline */}
+                  <div
+                    className="rounded-3xl p-5"
+                    style={{ backgroundColor: "#c8e06a" }}
+                  >
+                    <p
+                      className="font-heading text-2xl font-black leading-tight tracking-tight"
+                      style={{ color: "#0a2a1a" }}
+                    >
+                      {tx(
+                        "Clear, straightforward view of your month.",
+                        "Vue claire et directe de votre mois."
+                      )}
+                    </p>
+
+                    {/* Pill with totals */}
+                    <div
+                      className="mt-4 inline-flex items-center rounded-full overflow-hidden"
+                      style={{ backgroundColor: "#0a2a1a" }}
+                    >
+                      <div
+                        className="px-4 py-2.5"
+                        style={{ backgroundColor: "#c8e06a" }}
+                      >
+                        <p
+                          className="font-heading text-xl font-black tabular-nums"
+                          style={{ color: "#0a2a1a" }}
+                        >
+                          {visibleEvents.length}
+                        </p>
+                        <p
+                          className="text-[10px] font-semibold"
+                          style={{ color: "#0a2a1a", opacity: 0.8 }}
+                        >
+                          {tx("events", "événements")}
+                        </p>
+                      </div>
+                      <div className="px-4 py-2.5">
+                        <p
+                          className="font-heading text-xl font-black tabular-nums"
+                          style={{ color: "#c8e06a" }}
+                        >
+                          {equipmentCount}
+                        </p>
+                        <p
+                          className="text-[10px] font-semibold"
+                          style={{ color: "#c8e06a", opacity: 0.8 }}
+                        >
+                          {tx("assets", "équipements")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Deadline box */}
+                  <div
+                    className="rounded-3xl p-4"
+                    style={{ backgroundColor: "#c8e06a" }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CalendarClock
+                          className="h-4 w-4"
+                          style={{ color: "#0a2a1a" }}
+                        />
+                        <span
+                          className="text-sm font-bold"
+                          style={{ color: "#0a2a1a" }}
+                        >
+                          {tx("Deadlines", "Échéances")}
+                        </span>
+                      </div>
+                      <span
+                        className="font-heading text-2xl font-black tabular-nums"
+                        style={{ color: "#0a2a1a" }}
+                      >
+                        {stats.deadlines}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Incident box */}
+                  <div
+                    className="rounded-3xl p-4"
+                    style={{ backgroundColor: "#c8e06a" }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle
+                          className="h-4 w-4"
+                          style={{ color: "#0a2a1a" }}
+                        />
+                        <span
+                          className="text-sm font-bold"
+                          style={{ color: "#0a2a1a" }}
+                        >
+                          {tx("Incidents", "Incidents")}
+                        </span>
+                      </div>
+                      <span
+                        className="font-heading text-2xl font-black tabular-nums"
+                        style={{ color: "#0a2a1a" }}
+                      >
+                        {stats.incidents}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Threshold box */}
+                  <div
+                    className="rounded-3xl p-4"
+                    style={{ backgroundColor: "#c8e06a" }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Timer
+                          className="h-4 w-4"
+                          style={{ color: "#0a2a1a" }}
+                        />
+                        <span
+                          className="text-sm font-bold"
+                          style={{ color: "#0a2a1a" }}
+                        >
+                          {tx("Thresholds", "Seuils")}
+                        </span>
+                      </div>
+                      <span
+                        className="font-heading text-2xl font-black tabular-nums"
+                        style={{ color: "#0a2a1a" }}
+                      >
+                        {stats.thresholds}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p
+                    className="text-center text-[11px] mt-1"
+                    style={{ color: "#c8e06a", opacity: 0.55 }}
+                  >
+                    {tx(
+                      "Tap a day on the calendar to see its events.",
+                      "Touchez un jour pour voir ses événements."
+                    )}
+                  </p>
+                </>
               )}
             </div>
           </div>
