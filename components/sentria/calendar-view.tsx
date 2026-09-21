@@ -15,8 +15,8 @@ import {
   Wrench,
   X,
   Zap,
-  ChevronDown,
-  Plus,
+  Share2,
+  Search,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useCompanyIdentity } from "@/lib/company"
@@ -391,10 +391,11 @@ export function CalendarView() {
     year: "numeric",
   }).format(weekDates[6])}`
 
-  const monthLabel = new Intl.DateTimeFormat(weekLabel, {
+  const monthName = new Intl.DateTimeFormat(weekLabel, {
     month: "long",
-    year: "numeric",
   }).format(currentMonth)
+
+  const monthYear = currentMonth.getFullYear()
 
   const dayLabelFormatter = new Intl.DateTimeFormat(weekLabel, { weekday: "short" })
   const dayLabelShort = new Intl.DateTimeFormat(weekLabel, { weekday: "narrow" })
@@ -475,7 +476,7 @@ export function CalendarView() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="font-heading text-3xl font-black leading-tight tracking-tight text-foreground sm:text-4xl">
-            {viewMode === "week" ? rangeLabel : monthLabel}
+            {viewMode === "week" ? rangeLabel : `${monthName} ${monthYear}`}
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
             {viewMode === "week"
@@ -811,74 +812,88 @@ export function CalendarView() {
         </div>
       )}
 
-      {/* MONTH VIEW — October-style aesthetics */}
+      {/* MONTH VIEW — October aesthetic */}
       {viewMode === "month" && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px]">
-          {/* Calendar grid */}
-          <div
-            className="rounded-3xl overflow-hidden"
-            style={{
-              background: "#c8e06a",
-              border: "1px solid rgba(29, 29, 27, 0.1)",
-            }}
-          >
-            {/* Lime header */}
-            <div className="flex items-center justify-between px-6 py-4">
-              <div>
-                <p
-                  className="text-[10px] font-bold uppercase tracking-[0.18em]"
-                  style={{ color: "#1d1d1b", opacity: 0.55 }}
-                >
-                  {tx("Calendrier", "Calendar")}
-                </p>
-                <h3
-                  className="mt-0.5 font-heading text-2xl font-black tracking-tight"
-                  style={{ color: "#1d1d1b" }}
-                >
-                  {monthLabel}
-                </h3>
+          {/* October-style calendar */}
+          <div className="overflow-hidden rounded-3xl border border-border bg-white">
+            {/* Lime header with huge month name */}
+            <div
+              className="px-6 pt-6 pb-4"
+              style={{
+                background: "linear-gradient(135deg, #d9f36e 0%, #c8e06a 100%)",
+              }}
+            >
+              {/* Top action bar */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-[#1d1d1b]/20 bg-white/40 text-[#1d1d1b] transition-colors hover:bg-white/60"
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    className="flex h-9 items-center gap-2 rounded-full border border-[#1d1d1b]/20 bg-white/40 px-3 text-[#1d1d1b] transition-colors hover:bg-white/60"
+                  >
+                    <Search className="h-3.5 w-3.5" />
+                    <span className="text-xs font-semibold">
+                      {tx("Rechercher", "Search")}
+                    </span>
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setMonthOffset((m) => m - 1)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-[#1d1d1b]/20 bg-white/40 text-[#1d1d1b] transition-colors hover:bg-white/60"
+                    aria-label={tx("Mois précédent", "Previous month")}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMonthOffset(0)}
+                    disabled={monthOffset === 0}
+                    className="rounded-full border border-[#1d1d1b]/20 bg-white/40 px-3 py-1.5 text-xs font-semibold text-[#1d1d1b] transition-colors hover:bg-white/60 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {tx("Aujourd'hui", "Today")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMonthOffset((m) => m + 1)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-[#1d1d1b]/20 bg-white/40 text-[#1d1d1b] transition-colors hover:bg-white/60"
+                    aria-label={tx("Mois suivant", "Next month")}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setMonthOffset((m) => m - 1)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-[#1d1d1b]/20 bg-white/30 text-[#1d1d1b] transition-colors hover:bg-white/50"
-                  aria-label={tx("Mois précédent", "Previous month")}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMonthOffset(0)}
-                  disabled={monthOffset === 0}
-                  className="rounded-full border border-[#1d1d1b]/20 bg-white/30 px-3 py-1.5 text-xs font-semibold text-[#1d1d1b] transition-colors hover:bg-white/50 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  {tx("Aujourd'hui", "Today")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMonthOffset((m) => m + 1)}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-[#1d1d1b]/20 bg-white/30 text-[#1d1d1b] transition-colors hover:bg-white/50"
-                  aria-label={tx("Mois suivant", "Next month")}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
+              {/* Huge month name */}
+              <h1
+                className="font-heading leading-none tracking-tighter"
+                style={{
+                  fontSize: "clamp(3rem, 8vw, 5rem)",
+                  fontWeight: 900,
+                  color: "#1d1d1b",
+                  letterSpacing: "-0.04em",
+                }}
+              >
+                {monthName}
+              </h1>
             </div>
 
             {/* Day headers */}
-            <div
-              className="grid grid-cols-7 border-t border-[#1d1d1b]/10"
-              style={{ backgroundColor: "rgba(255,255,255,0.25)" }}
-            >
+            <div className="grid grid-cols-7 border-b border-[#1d1d1b]/10 bg-white">
               {Array.from({ length: 7 }, (_, i) => {
                 const d = addDays(mondayOf(new Date()), i)
                 return (
                   <div
                     key={i}
-                    className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-wider"
-                    style={{ color: "#1d1d1b", opacity: 0.7 }}
+                    className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-[#1d1d1b]/60"
                   >
                     {dayLabelShort.format(d)}
                   </div>
@@ -886,11 +901,15 @@ export function CalendarView() {
               })}
             </div>
 
-            {/* Day cells */}
-            <div
-              className="grid grid-cols-7"
-              style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
-            >
+            {/* Month sub-header */}
+            <div className="bg-white px-4 py-2 text-center border-b border-[#1d1d1b]/5">
+              <span className="text-xs font-semibold text-[#1d1d1b]/70">
+                {monthName} {monthYear}
+              </span>
+            </div>
+
+            {/* Day cells grid */}
+            <div className="grid grid-cols-7 bg-white">
               {monthGrid.flat().map((day, idx) => {
                 const isCurrentMonth = day.getMonth() === currentMonth.getMonth()
                 const isToday = sameDay(day, today)
@@ -898,6 +917,8 @@ export function CalendarView() {
                   selectedDay !== null && sameDay(day, selectedDay)
                 const key = day.toISOString().split("T")[0]
                 const dayEvts = eventsByDay.get(key) ?? []
+                const hasEvents = dayEvts.length > 0
+                const hasDeadline = dayEvts.some((e) => e.kind === "deadline")
 
                 return (
                   <button
@@ -907,67 +928,78 @@ export function CalendarView() {
                       setSelectedDay(isSelected ? null : day)
                     }
                     className={cn(
-                      "relative flex min-h-[110px] flex-col border-b border-r border-[#1d1d1b]/10 p-1.5 text-left transition-colors",
-                      !isCurrentMonth && "opacity-30",
-                      isToday && "bg-white/40",
-                      isSelected && "bg-white/60"
+                      "relative flex min-h-[90px] flex-col border-b border-r border-[#1d1d1b]/8 p-1.5 text-left transition-all",
+                      !isCurrentMonth && "bg-[#f5f5f0] opacity-40",
+                      isSelected && "bg-[#2563eb]/5",
+                      hasDeadline && !isSelected && "bg-[#2563eb]/3"
                     )}
                   >
-                    <div className="flex items-center justify-between">
+                    {/* Day number */}
+                    <div className="flex items-center justify-between mb-1">
                       <span
                         className={cn(
-                          "flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold",
+                          "text-[11px] font-bold",
                           isToday
-                            ? "bg-[#1d1d1b] text-[#c8e06a]"
-                            : "text-[#1d1d1b]"
+                            ? "flex h-5 w-5 items-center justify-center rounded-full bg-[#1d1d1b] text-[#d9f36e]"
+                            : isSelected
+                            ? "text-[#2563eb]"
+                            : "text-[#1d1d1b]/70"
                         )}
                       >
                         {day.getDate()}
                       </span>
-                      {dayEvts.length > 0 && (
+                      {hasEvents && (
                         <span
-                          className="flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[9px] font-bold"
+                          className="flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[8px] font-black"
                           style={{
-                            backgroundColor: "#1d1d1b",
-                            color: "#c8e06a",
+                            backgroundColor: "#d9f36e",
+                            color: "#1d1d1b",
                           }}
                         >
-                          {dayEvts.length}
+                          {dayEvts.length}X
                         </span>
                       )}
                     </div>
 
-                    <div className="mt-1 flex flex-col gap-1">
-                      {dayEvts.slice(0, 3).map((event) => {
+                    {/* Event cards */}
+                    <div className="flex flex-col gap-0.5">
+                      {dayEvts.slice(0, 2).map((event) => {
                         const Icon = TYPE_ICON[event.kind]
                         return (
                           <div
                             key={event.id}
-                            className={cn(
-                              "flex items-center gap-1 rounded-md px-1.5 py-1 text-left shadow-sm",
-                              event.kind === "deadline" &&
-                                "bg-[#1d1d1b] text-[#c8e06a]",
-                              event.kind === "incident" &&
-                                "bg-[#2563eb] text-white",
-                              event.kind === "threshold" &&
-                                "bg-[#ef4444]/90 text-white",
-                              event.kind === "resolved" &&
-                                "bg-white text-[#1d1d1b]"
-                            )}
+                            className="flex items-center gap-1 rounded-md bg-[#1d1d1b] px-1.5 py-1 shadow-sm"
                           >
-                            <Icon className="h-2.5 w-2.5 shrink-0" />
-                            <span className="truncate text-[9px] font-semibold leading-tight">
+                            <Icon className="h-2 w-2 shrink-0 text-[#d9f36e]" />
+                            <span className="truncate text-[8px] font-bold leading-tight text-white">
                               {event.title}
+                            </span>
+                            <span
+                              className="ml-auto shrink-0 rounded-sm px-1 py-0.5 text-[7px] font-black"
+                              style={{
+                                backgroundColor: "#d9f36e",
+                                color: "#1d1d1b",
+                              }}
+                            >
+                              2X
                             </span>
                           </div>
                         )
                       })}
-                      {dayEvts.length > 3 && (
-                        <span className="text-[9px] font-semibold text-[#1d1d1b]/70">
-                          +{dayEvts.length - 3}
+                      {dayEvts.length > 2 && (
+                        <span className="text-[8px] font-bold text-[#1d1d1b]/50">
+                          +{dayEvts.length - 2}
                         </span>
                       )}
                     </div>
+
+                    {/* Blue highlight bar for deadline days */}
+                    {hasDeadline && (
+                      <div
+                        className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                        style={{ backgroundColor: "#2563eb" }}
+                      />
+                    )}
                   </button>
                 )
               })}
@@ -1200,7 +1232,6 @@ export function CalendarView() {
                   })
                 )
               ) : (
-                /* Month summary list */
                 <div className="space-y-2">
                   {visibleEvents
                     .sort((a, b) => a.date.getTime() - b.date.getTime())
