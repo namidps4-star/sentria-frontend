@@ -28,24 +28,6 @@ import {
 import { sectorLabel } from "@/lib/priorities"
 import { localized, useTx, type Localized } from "@/lib/i18n"
 
-/* --------------------------------------------------------------------------
- * What's on the calendar, and where it comes from
- *
- * Every event here is one of the board's own recommendation cards, placed
- * on a real date:
- *
- *  - An assignment with a deadline (an admin's own date, set on the board)
- *    places the event on that date, as a "deadline" — or "resolved" once
- *    its status is done.
- *  - Anything else places the event on the alert's own timestamp: CRITICAL
- *    reads as an incident, WARNING as a threshold.
- *
- * "Who's assigned" is the same contractor_ids the board reads, resolved to
- * names and roles. Nothing here is invented: a task with nobody on it says
- * so, and a card with no real date to place it on is left off the
- * calendar rather than pinned to a guess.
- * -------------------------------------------------------------------------- */
-
 type EventKind = "incident" | "threshold" | "deadline" | "resolved"
 
 type Recommendation = {
@@ -65,9 +47,6 @@ type Recommendation = {
 type CalendarEvent = {
   id: string
   date: Date
-  /** Real time-of-day only exists for incident/threshold events, taken
-   *  from the alert's own timestamp. A deadline is a plain date — an
-   *  admin picked a day, not an hour. */
   hasTime: boolean
   kind: EventKind
   severity: string
@@ -125,7 +104,7 @@ function addDays(date: Date, days: number): Date {
 
 function mondayOf(date: Date): Date {
   const copy = startOfDay(date)
-  const day = copy.getDay() // 0 = Sunday
+  const day = copy.getDay()
   const diff = day === 0 ? -6 : 1 - day
   return addDays(copy, diff)
 }
@@ -148,17 +127,6 @@ function getInitials(name: string) {
     .join("")
 }
 
-/** Joins recommendations to their assignment (by task_key === rec.id) and
- *  to the contractors on it, then places each on a real date. A card with
- *  neither a deadline nor a readable alert timestamp is dropped rather
- *  than guessed at. */
-/** The backend answers with `alert_id`, never `id` — the dashboard and
- *  board both derive a stable id from the alert's own fields instead,
- *  and the board saves assignments keyed against that derived id. Using
- *  `rec.id` unmodified here would leave every event's id undefined,
- *  silently breaking both the assignment join and React's keys. Same
- *  algorithm as the dashboard, so a task saved from the board lands on
- *  the same id here. */
 function normalizeRecommendations(
   raw: (Partial<Recommendation> & { id?: string | null })[]
 ): Recommendation[] {
@@ -387,8 +355,7 @@ export function CalendarView() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* BANNER — same treatment as the Dashboard hero, so the calendar
-          opens with the same visual signature as the rest of the app. */}
+      {/* BANNER */}
       <div className="flex flex-col gap-4 rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-xl">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
@@ -483,47 +450,159 @@ export function CalendarView() {
         </div>
       </div>
 
-      {/* STATS */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="flex flex-col items-center rounded-2xl bg-accent p-4 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-accent-foreground/70">
-            {tx("Échéances", "Deadlines")}
-          </p>
-          <p className="mt-1 font-heading text-4xl font-black leading-none text-accent-foreground">
-            {loaded ? stats.deadlines : "—"}
-          </p>
-          <p className="mt-1.5 text-[10px] text-accent-foreground/60">
-            {tx("à traiter cette semaine", "due this week")}
-          </p>
+      {/* STATS — bill banner style */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {/* DEADLINES — lime green card */}
+        <div
+          className="relative flex flex-col justify-between overflow-hidden rounded-3xl p-6"
+          style={{
+            background: "linear-gradient(135deg, #d9f36e 0%, #b8d84a 100%)",
+            minHeight: "180px",
+          }}
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <p
+                className="text-[10px] font-bold uppercase tracking-wider"
+                style={{ color: "#1d1d1b", opacity: 0.6 }}
+              >
+                {tx("Échéances", "Deadlines")}
+              </p>
+              <p
+                className="mt-1 text-sm font-semibold"
+                style={{ color: "#1d1d1b" }}
+              >
+                {tx("à traiter cette semaine", "due this week")}
+              </p>
+            </div>
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-full"
+              style={{ backgroundColor: "rgba(29, 29, 27, 0.1)" }}
+            >
+              <CalendarClock
+                className="h-5 w-5"
+                style={{ color: "#1d1d1b" }}
+              />
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <p
+              className="font-heading text-6xl font-black leading-none tracking-tight"
+              style={{ color: "#1d1d1b" }}
+            >
+              {loaded ? stats.deadlines : "—"}
+            </p>
+          </div>
+
+          <div
+            className="absolute -right-6 -bottom-6 h-24 w-24 rounded-full opacity-20"
+            style={{ backgroundColor: "#1d1d1b" }}
+          />
         </div>
 
-        <div className="flex flex-col items-center rounded-2xl bg-primary p-4 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-primary-foreground/50">
-            {tx("Incidents actifs", "Active incidents")}
-          </p>
-          <p className="mt-1 font-heading text-4xl font-black leading-none text-blue-400">
-            {loaded ? stats.incidents : "—"}
-          </p>
-          <p className="mt-1.5 text-[10px] text-primary-foreground/40">
-            {tx("détectés cette semaine", "detected this week")}
-          </p>
+        {/* INCIDENTS — dark card with lime accent */}
+        <div
+          className="relative flex flex-col justify-between overflow-hidden rounded-3xl p-6"
+          style={{
+            background: "#0f1a14",
+            border: "1px solid rgba(217, 243, 110, 0.2)",
+            minHeight: "180px",
+          }}
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <p
+                className="text-[10px] font-bold uppercase tracking-wider"
+                style={{ color: "#d9f36e", opacity: 0.7 }}
+              >
+                {tx("Incidents actifs", "Active incidents")}
+              </p>
+              <p
+                className="mt-1 text-sm font-semibold"
+                style={{ color: "#e8e8e6" }}
+              >
+                {tx("détectés cette semaine", "detected this week")}
+              </p>
+            </div>
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-full"
+              style={{ backgroundColor: "rgba(217, 243, 110, 0.15)" }}
+            >
+              <AlertTriangle
+                className="h-5 w-5"
+                style={{ color: "#d9f36e" }}
+              />
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <p
+              className="font-heading text-6xl font-black leading-none tracking-tight"
+              style={{ color: "#d9f36e" }}
+            >
+              {loaded ? stats.incidents : "—"}
+            </p>
+          </div>
+
+          <div
+            className="absolute -right-6 -bottom-6 h-24 w-24 rounded-full opacity-10"
+            style={{ backgroundColor: "#d9f36e" }}
+          />
         </div>
 
-        <div className="flex flex-col items-center rounded-2xl bg-primary p-4 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-primary-foreground/50">
-            {tx("Seuils critiques", "Critical thresholds")}
-          </p>
-          <p className="mt-1 font-heading text-4xl font-black leading-none text-red-400">
-            {loaded ? stats.thresholds : "—"}
-          </p>
-          <p className="mt-1.5 text-[10px] text-primary-foreground/40">
-            {tx("à risque de dépassement", "at risk of being breached")}
-          </p>
+        {/* THRESHOLDS — dark card with red accent */}
+        <div
+          className="relative flex flex-col justify-between overflow-hidden rounded-3xl p-6"
+          style={{
+            background: "#0f1a14",
+            border: "1px solid rgba(239, 68, 68, 0.2)",
+            minHeight: "180px",
+          }}
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <p
+                className="text-[10px] font-bold uppercase tracking-wider"
+                style={{ color: "#ef4444", opacity: 0.8 }}
+              >
+                {tx("Seuils critiques", "Critical thresholds")}
+              </p>
+              <p
+                className="mt-1 text-sm font-semibold"
+                style={{ color: "#e8e8e6" }}
+              >
+                {tx("à risque de dépassement", "at risk of being breached")}
+              </p>
+            </div>
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-full"
+              style={{ backgroundColor: "rgba(239, 68, 68, 0.15)" }}
+            >
+              <Timer
+                className="h-5 w-5"
+                style={{ color: "#ef4444" }}
+              />
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <p
+              className="font-heading text-6xl font-black leading-none tracking-tight"
+              style={{ color: "#ef4444" }}
+            >
+              {loaded ? stats.thresholds : "—"}
+            </p>
+          </div>
+
+          <div
+            className="absolute -right-6 -bottom-6 h-24 w-24 rounded-full opacity-10"
+            style={{ backgroundColor: "#ef4444" }}
+          />
         </div>
       </div>
 
-      {/* FILTERS — only real sectors/roles present this week, and only
-          shown once there's more than one real choice to make. */}
+      {/* FILTERS */}
       {(sectorKeys.length > 1 || roleKeys.length > 1) && (
         <div className="flex flex-wrap items-center gap-2 rounded-3xl border border-border bg-card p-4">
           {sectorKeys.length > 1 && (
@@ -602,9 +681,7 @@ export function CalendarView() {
         </div>
       )}
 
-      {/* WEEK AGENDA — a day-by-day list rather than an hourly grid, because
-          a deadline is a date an admin picked, not an hour. Only an
-          incident/threshold carries a real timestamp. */}
+      {/* WEEK AGENDA */}
       <div id="calendar-grid" className="rounded-3xl border border-border bg-card p-4 shadow-sm">
         {!loaded ? (
           <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
@@ -728,12 +805,6 @@ export function CalendarView() {
                                 {event.detail}
                               </p>
 
-                              {/* Always shown, never conditional: an
-                                  operator deciding what to do next needs
-                                  the same three answers every time —
-                                  what to do, how risky it is, how sure
-                                  the system is. A null score says so
-                                  honestly rather than being hidden. */}
                               <div className="mt-2 rounded-xl bg-muted/60 px-2.5 py-2">
                                 <p className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
                                   {tx("Recommandation", "Recommendation")}
