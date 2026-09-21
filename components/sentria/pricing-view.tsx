@@ -124,10 +124,16 @@ export function PricingView() {
         }}
       />
 
-      <div className="relative w-full h-full px-10 py-10 flex flex-col">
+      <div
+        className="relative w-full h-full flex flex-col"
+        style={{ padding: "48px 64px" }}
+      >
         {/* Header row */}
-        <div className="flex items-center justify-between mb-10">
-          <div className="flex items-center gap-4">
+        <div
+          className="flex items-center justify-between"
+          style={{ marginBottom: "56px" }}
+        >
+          <div className="flex items-center gap-5">
             <div
               className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold"
               style={{ backgroundColor: "#d9f36e", color: "#1d1d1b" }}
@@ -143,7 +149,7 @@ export function PricingView() {
             </h2>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-5">
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => setLang("fr")}
@@ -212,8 +218,14 @@ export function PricingView() {
           </div>
         </div>
 
-        {/* Cards row - spread out */}
-        <div className="grid grid-cols-4 gap-6 flex-1">
+        {/* Cards row - spread out with much larger gaps */}
+        <div
+          className="grid flex-1"
+          style={{
+            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+            gap: "32px",
+          }}
+        >
           {TIERS.map((tier: Tier) => (
             <div
               key={tier.name}
@@ -225,14 +237,17 @@ export function PricingView() {
                 border: tier.featured
                   ? "2px solid #d9f36e"
                   : "1px solid rgba(224, 224, 220, 0.6)",
-                padding: "22px",
+                padding: "28px",
                 backdropFilter: "blur(10px)",
                 boxShadow: tier.featured
                   ? "0 20px 50px -20px rgba(217, 243, 110, 0.25)"
                   : "0 10px 30px -15px rgba(0, 0, 0, 0.15)",
               }}
             >
-              <div className="flex items-center justify-between mb-2">
+              <div
+                className="flex items-center justify-between"
+                style={{ marginBottom: "10px" }}
+              >
                 <h3
                   className="text-base font-bold"
                   style={{
@@ -252,15 +267,16 @@ export function PricingView() {
               </div>
 
               <p
-                className="text-[11px] mb-4"
+                className="text-[11px]"
                 style={{
                   color: tier.featured ? "#b0b0a8" : "#8a8a8a",
+                  marginBottom: "20px",
                 }}
               >
                 {t(tier.tagline)}
               </p>
 
-              <div className="flex items-end gap-1 mb-1">
+              <div className="flex items-end gap-1" style={{ marginBottom: "6px" }}>
                 <span
                   className="text-4xl font-bold leading-none"
                   style={{
@@ -271,9 +287,11 @@ export function PricingView() {
                 </span>
                 {tier.monthly !== null && tier.monthly > 0 && (
                   <span
-                    className="text-[11px] mb-1 ml-1"
+                    className="text-[11px]"
                     style={{
                       color: tier.featured ? "#b0b0a8" : "#8a8a8a",
+                      marginBottom: "4px",
+                      marginLeft: "4px",
                     }}
                   >
                     /mo
@@ -282,8 +300,12 @@ export function PricingView() {
               </div>
 
               <p
-                className="text-[10px] min-h-3 mb-4"
-                style={{ color: "#8a887a" }}
+                className="text-[10px]"
+                style={{
+                  color: "#8a887a",
+                  minHeight: "14px",
+                  marginBottom: "22px",
+                }}
               >
                 {tier.monthly !== null && tier.monthly > 0 && annual
                   ? "billed annually"
@@ -293,7 +315,7 @@ export function PricingView() {
               </p>
 
               <div
-                className="rounded-lg p-3.5 flex-1 mb-4"
+                className="rounded-lg flex-1"
                 style={{
                   backgroundColor: tier.featured
                     ? "rgba(255, 255, 255, 0.06)"
@@ -301,20 +323,26 @@ export function PricingView() {
                   border: tier.featured
                     ? "1px solid rgba(217, 243, 110, 0.15)"
                     : "1px solid rgba(224, 224, 220, 0.5)",
+                  padding: "18px",
+                  marginBottom: "22px",
                 }}
               >
-                <ul className="space-y-2">
+                <ul style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
                   {tier.features.map((f, idx) => (
                     <li
                       key={idx}
-                      className="flex items-start gap-2 text-[11px]"
+                      className="flex items-start"
+                      style={{ gap: "10px" }}
                     >
                       <span
-                        className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full"
+                        className="flex shrink-0 items-center justify-center rounded-full"
                         style={{
                           backgroundColor: tier.featured
                             ? "#d9f36e"
                             : "#c9e5b8",
+                          width: "18px",
+                          height: "18px",
+                          marginTop: "1px",
                         }}
                       >
                         <Check
@@ -329,6 +357,7 @@ export function PricingView() {
                         style={{
                           color: tier.featured ? "#e8e8e6" : "#3c3b33",
                           lineHeight: "1.4",
+                          fontSize: "11px",
                         }}
                       >
                         {t(f)}
@@ -339,13 +368,18 @@ export function PricingView() {
 
                 {tier.highlight && (
                   <div
-                    className="mt-3 rounded-lg p-2.5"
+                    className="rounded-lg"
                     style={{
                       backgroundColor: "rgba(217, 243, 110, 0.15)",
                       border: "1px solid rgba(217, 243, 110, 0.25)",
+                      padding: "14px",
+                      marginTop: "18px",
                     }}
                   >
-                    <div className="mb-2 flex items-center gap-1.5">
+                    <div
+                      className="flex items-center"
+                      style={{ gap: "8px", marginBottom: "12px" }}
+                    >
                       <TrendingUp
                         className="h-3 w-3"
                         style={{ color: "#d9f36e" }}
@@ -357,21 +391,23 @@ export function PricingView() {
                         {t(tier.highlight.label)}
                       </span>
                     </div>
-                    <ul className="space-y-1.5">
+                    <ul style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                       {tier.highlight.features.map((f, idx) => (
                         <li
                           key={idx}
-                          className="flex items-start gap-1.5 text-[10px]"
+                          className="flex items-start"
+                          style={{ gap: "8px" }}
                         >
                           <Check
-                            className="mt-0.5 h-2.5 w-2.5 shrink-0"
+                            className="h-2.5 w-2.5 shrink-0"
                             strokeWidth={3}
-                            style={{ color: "#d9f36e" }}
+                            style={{ color: "#d9f36e", marginTop: "2px" }}
                           />
                           <span
                             style={{
                               color: "#e8e8e6",
                               lineHeight: "1.4",
+                              fontSize: "10px",
                             }}
                           >
                             {t(f)}
@@ -384,10 +420,12 @@ export function PricingView() {
               </div>
 
               <button
-                className="w-full py-2.5 rounded-full text-xs font-semibold transition-opacity hover:opacity-90 mt-auto"
+                className="w-full rounded-full text-xs font-semibold transition-opacity hover:opacity-90"
                 style={{
                   backgroundColor: tier.featured ? "#d9f36e" : "#1d1d1b",
                   color: tier.featured ? "#0f1a14" : "#f5f4ec",
+                  padding: "12px 0",
+                  marginTop: "auto",
                 }}
               >
                 {t(tier.cta)}
@@ -398,8 +436,8 @@ export function PricingView() {
 
         {/* Footer */}
         <p
-          className="text-center text-[11px] mt-6"
-          style={{ color: "rgba(200, 224, 106, 0.8)" }}
+          className="text-center text-[11px]"
+          style={{ color: "rgba(200, 224, 106, 0.8)", marginTop: "40px" }}
         >
           Every plan includes data encryption and a 14-day trial with no
           commitment.
