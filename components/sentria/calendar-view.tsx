@@ -422,24 +422,28 @@ export function CalendarView() {
     )
   }, [selectedDay, eventsByDay])
 
-  // Month overview: group visible events by day, sorted chronologically
-  const monthOverviewByDay = useMemo(() => {
-    const map = new Map<string, CalendarEvent[]>()
-    for (const e of visibleEvents) {
-      const key = e.date.toISOString().split("T")[0]
-      const list = map.get(key) ?? []
-      list.push(e)
-      map.set(key, list)
+  // Compact month overview: only today + next 4 days with events (max 5 days)
+  const upcomingDays = useMemo(() => {
+    const daysWithEvents: Array<{ date: Date; events: CalendarEvent[] }> = []
+    const todayKey = today.toISOString().split("T")[0]
+
+    // Check today + next 14 days, collect first 5 days that have events
+    for (let i = 0; i < 14 && daysWithEvents.length < 5; i++) {
+      const checkDay = addDays(today, i)
+      const key = checkDay.toISOString().split("T")[0]
+      const dayEvts = eventsByDay.get(key) ?? []
+      if (dayEvts.length > 0) {
+        daysWithEvents.push({ date: checkDay, events: dayEvts })
+      }
     }
-    // Sort each day's events
-    for (const list of map.values()) {
-      list.sort((a, b) => a.date.getTime() - b.date.getTime())
+
+    // If today has no events, still show it as empty for context
+    if (daysWithEvents.length === 0 || !sameDay(daysWithEvents[0].date, today)) {
+      daysWithEvents.unshift({ date: today, events: eventsByDay.get(todayKey) ?? [] })
     }
-    // Return sorted day keys
-    return Array.from(map.entries()).sort(
-      ([a], [b]) => new Date(a).getTime() - new Date(b).getTime()
-    )
-  }, [visibleEvents])
+
+    return daysWithEvents.slice(0, 5)
+  }, [eventsByDay, today])
 
   const selectedDayCounts = useMemo(() => {
     const counts: Record<EventKind, number> = {
@@ -843,7 +847,7 @@ export function CalendarView() {
 
       {/* MONTH VIEW */}
       {viewMode === "month" && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_400px]">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px]">
           {/* October-style calendar */}
           <div className="overflow-hidden rounded-3xl border border-border bg-white">
             <div
@@ -1008,13 +1012,12 @@ export function CalendarView() {
             </div>
           </div>
 
-          {/* RIGHT PANEL — Month overview by day, Wegrow green boxes */}
+          {/* RIGHT PANEL — Compact Wegrow-style, limited to 5 upcoming days */}
           <div
             className="rounded-3xl overflow-hidden flex flex-col"
             style={{
               background: "#0a2a1a",
               border: "1px solid rgba(200, 224, 106, 0.15)",
-              minHeight: "520px",
             }}
           >
             {/* Panel header */}
@@ -1031,7 +1034,7 @@ export function CalendarView() {
                     className="text-sm font-semibold"
                     style={{ color: "#c8e06a" }}
                   >
-                    {tx("Month overview", "Vue du mois")}
+                    {tx("Upcoming", "À venir")}
                   </span>
                 </div>
 
@@ -1044,118 +1047,90 @@ export function CalendarView() {
               </div>
             </div>
 
-            {/* Scrollable day list */}
-            <div className="px-5 pb-5 flex-1 flex flex-col gap-3 overflow-y-auto">
-              {monthOverviewByDay.length === 0 ? (
-                <div
-                  className="rounded-3xl p-6 text-center"
-                  style={{ backgroundColor: "#c8e06a" }}
-                >
-                  <Inbox
-                    className="mx-auto h-6 w-6"
-                    style={{ color: "#0a2a1a" }}
-                  />
-                  <p
-                    className="mt-2 text-sm font-bold"
-                    style={{ color: "#0a2a1a" }}
+            {/* Compact day list — max 5 days */}
+            <div className="px-5 pb-5 flex flex-col gap-2.5">
+              {upcomingDays.map(({ date, events: dayEvts }) => {
+                const isToday = sameDay(date, today)
+                const eventMonth = new Intl.DateTimeFormat(weekLabel, {
+                  month: "short",
+                }).format(date)
+                const eventDay = date.getDate()
+
+                return (
+                  <div
+                    key={date.toISOString()}
+                    className="rounded-2xl p-3"
+                    style={{ backgroundColor: "#c8e06a" }}
                   >
-                    {tx("No events this month", "Aucun événement ce mois-ci")}
-                  </p>
-                </div>
-              ) : (
-                monthOverviewByDay.map(([dayKey, dayEvents]) => {
-                  const dayDate = new Date(dayKey + "T00:00:00")
-                  const isToday = sameDay(dayDate, today)
-                  const isSelected =
-                    selectedDay !== null && sameDay(dayDate, selectedDay)
-                  const eventMonth = new Intl.DateTimeFormat(weekLabel, {
-                    month: "short",
-                  }).format(dayDate)
-                  const eventDay = dayDate.getDate()
+                    {/* Day header */}
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-col items-center">
+                          <span
+                            className="text-[9px] font-bold uppercase tracking-wider"
+                            style={{ color: "#0a2a1a", opacity: 0.7 }}
+                          >
+                            {eventMonth}
+                          </span>
+                          <span
+                            className="font-heading text-lg font-black leading-none"
+                            style={{ color: "#0a2a1a" }}
+                          >
+                            {eventDay}
+                          </span>
+                        </div>
 
-                  return (
-                    <div
-                      key={dayKey}
-                      className="rounded-3xl p-4"
-                      style={{
-                        backgroundColor: isSelected ? "#d9f36e" : "#c8e06a",
-                        border: isSelected
-                          ? "2px solid #0a2a1a"
-                          : "1px solid rgba(10, 42, 26, 0.08)",
-                      }}
-                    >
-                      {/* Day header */}
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSelectedDay(isSelected ? null : dayDate)
-                        }
-                        className="w-full flex items-center justify-between mb-3"
+                        {isToday && (
+                          <span
+                            className="rounded-full px-1.5 py-0.5 text-[7px] font-bold uppercase"
+                            style={{
+                              backgroundColor: "#0a2a1a",
+                              color: "#c8e06a",
+                            }}
+                          >
+                            {tx("Today", "Aujourd'hui")}
+                          </span>
+                        )}
+                      </div>
+
+                      {dayEvts.length > 0 && (
+                        <span
+                          className="rounded-full px-2 py-0.5 text-[9px] font-bold"
+                          style={{
+                            backgroundColor: "rgba(10, 42, 26, 0.15)",
+                            color: "#0a2a1a",
+                          }}
+                        >
+                          {dayEvts.length}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Events — max 2 per day to keep compact */}
+                    {dayEvts.length === 0 ? (
+                      <p
+                        className="text-[10px] font-semibold italic"
+                        style={{ color: "#0a2a1a", opacity: 0.5 }}
                       >
-                        <div className="flex items-center gap-2.5">
-                          <div className="flex flex-col items-center">
-                            <span
-                              className="text-[9px] font-bold uppercase tracking-wider"
-                              style={{ color: "#0a2a1a", opacity: 0.7 }}
-                            >
-                              {eventMonth}
-                            </span>
-                            <span
-                              className="font-heading text-xl font-black leading-none"
-                              style={{ color: "#0a2a1a" }}
-                            >
-                              {eventDay}
-                            </span>
-                          </div>
-
-                          {isToday && (
-                            <span
-                              className="rounded-full px-2 py-0.5 text-[8px] font-bold uppercase"
-                              style={{
-                                backgroundColor: "#0a2a1a",
-                                color: "#c8e06a",
-                              }}
-                            >
-                              {tx("Today", "Aujourd'hui")}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-1.5">
-                          {dayEvents.length > 0 && (
-                            <span
-                              className="rounded-full px-2 py-0.5 text-[10px] font-bold"
-                              style={{
-                                backgroundColor: "rgba(10, 42, 26, 0.15)",
-                                color: "#0a2a1a",
-                              }}
-                            >
-                              {dayEvents.length}{" "}
-                              {dayEvents.length > 1
-                                ? tx("events", "événements")
-                                : tx("event", "événement")}
-                            </span>
-                          )}
-                        </div>
-                      </button>
-
-                      {/* Events list */}
-                      <div className="space-y-2">
-                        {dayEvents.map((event) => {
+                        {tx("Nothing", "Rien")}
+                      </p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {dayEvts.slice(0, 2).map((event) => {
                           const Icon = TYPE_ICON[event.kind]
                           return (
                             <button
                               key={event.id}
                               type="button"
                               onClick={() => setSelected(event.id)}
-                              className="w-full rounded-2xl p-3 text-left transition-transform hover:-translate-y-0.5"
+                              className="w-full rounded-xl p-2 text-left transition-transform hover:-translate-y-0.5"
                               style={{
                                 backgroundColor: "rgba(10, 42, 26, 0.08)",
                               }}
                             >
-                              <div className="flex items-start gap-2.5">
+                              <div className="flex items-center gap-2">
                                 <div
-                                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
+                                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
                                   style={{
                                     backgroundColor:
                                       event.kind === "deadline"
@@ -1168,14 +1143,13 @@ export function CalendarView() {
                                   }}
                                 >
                                   <Icon
-                                    className="h-3.5 w-3.5"
+                                    className="h-2.5 w-2.5"
                                     style={{
                                       color:
                                         event.kind === "deadline"
                                           ? "#c8e06a"
-                                          : event.kind === "incident"
-                                          ? "#ffffff"
-                                          : event.kind === "threshold"
+                                          : event.kind === "incident" ||
+                                            event.kind === "threshold"
                                           ? "#ffffff"
                                           : "#0a2a1a",
                                     }}
@@ -1184,13 +1158,13 @@ export function CalendarView() {
 
                                 <div className="flex-1 min-w-0">
                                   <p
-                                    className="text-xs font-bold leading-snug"
+                                    className="text-[10px] font-bold leading-tight truncate"
                                     style={{ color: "#0a2a1a" }}
                                   >
                                     {event.title}
                                   </p>
                                   <p
-                                    className="mt-0.5 text-[10px] font-semibold"
+                                    className="text-[9px] font-semibold truncate"
                                     style={{
                                       color: "#0a2a1a",
                                       opacity: 0.7,
@@ -1200,72 +1174,47 @@ export function CalendarView() {
                                   </p>
                                 </div>
                               </div>
-
-                              {/* Chips */}
-                              <div className="mt-2 flex flex-wrap items-center gap-1">
-                                <span
-                                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider"
-                                  style={{
-                                    backgroundColor: "#0a2a1a",
-                                    color: "#c8e06a",
-                                  }}
-                                >
-                                  {tx(
-                                    TYPE_LABEL[event.kind].fr,
-                                    TYPE_LABEL[event.kind].en
-                                  )}
-                                </span>
-
-                                {event.severity && (
-                                  <span
-                                    className="rounded-full px-2 py-0.5 text-[8px] font-bold"
-                                    style={{
-                                      backgroundColor:
-                                        event.severity === "CRITICAL"
-                                          ? "#0a2a1a"
-                                          : "rgba(10, 42, 26, 0.15)",
-                                      color:
-                                        event.severity === "CRITICAL"
-                                          ? "#c8e06a"
-                                          : "#0a2a1a",
-                                    }}
-                                  >
-                                    {event.severity}
-                                  </span>
-                                )}
-
-                                {event.hasTime && (
-                                  <span
-                                    className="rounded-full px-2 py-0.5 text-[8px] font-bold"
-                                    style={{
-                                      backgroundColor: "rgba(10, 42, 26, 0.15)",
-                                      color: "#0a2a1a",
-                                    }}
-                                  >
-                                    {timeFormatter.format(event.date)}
-                                  </span>
-                                )}
-
-                                {event.overdue && (
-                                  <span
-                                    className="rounded-full px-2 py-0.5 text-[8px] font-bold"
-                                    style={{
-                                      backgroundColor: "#0a2a1a",
-                                      color: "#c8e06a",
-                                    }}
-                                  >
-                                    {tx("Overdue", "En retard")}
-                                  </span>
-                                )}
-                              </div>
                             </button>
                           )
                         })}
+                        {dayEvts.length > 2 && (
+                          <p
+                            className="text-[9px] font-bold text-center"
+                            style={{ color: "#0a2a1a", opacity: 0.6 }}
+                          >
+                            +{dayEvts.length - 2}{" "}
+                            {tx("more", "autres")}
+                          </p>
+                        )}
                       </div>
-                    </div>
-                  )
-                })
-              )}
+                    )}
+                  </div>
+                )
+              })}
+
+              {/* Summary pill at bottom */}
+              <div
+                className="rounded-full px-4 py-2 flex items-center justify-between"
+                style={{
+                  backgroundColor: "rgba(200, 224, 106, 0.15)",
+                  border: "1px solid rgba(200, 224, 106, 0.25)",
+                }}
+              >
+                <span
+                  className="text-[10px] font-semibold"
+                  style={{ color: "#c8e06a" }}
+                >
+                  {tx("This month", "Ce mois")}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="text-[10px] font-bold"
+                    style={{ color: "#c8e06a" }}
+                  >
+                    {visibleEvents.length} {tx("events", "événements")}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
