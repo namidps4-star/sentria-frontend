@@ -233,6 +233,15 @@ const SUBTYPE_CHART_TITLES: Record<string, Localized> = {
  * on rows saved before business_type was stored. Returns null when
  * neither can say, and a null is never filtered out: hiding a real alert
  * because we cannot classify it would be worse than showing it.
+ *
+ * FIX: commerce namespaces. The health activity prefixes (lab.,
+ * hospital., wholesaler.) were the only ones listed, so a commerce row
+ * saved without business_type — which is every commerce row before the
+ * backend stamps the column — fell through to the null branch and got
+ * dropped. The prefixes below match the alert_keys that
+ * pipeline/alerts.py's check_retail() and its supermarket and corner
+ * shop variants actually fire; verified against MESSAGES in
+ * pipeline/i18n.py.
  */
 function activityOf(row: {
   business_type?: string | null
@@ -921,40 +930,6 @@ function recurrenceOf(equipment: string, alerts: Alert[]): number {
   return alerts.filter((a) => a.equipment === equipment).length
 }
 
-/**
- * Which retail subtype an alert belongs to.
- *
- * The backend stamps business_type on modern rows. For legacy rows that
- * only carry an alert_key, the subtype is inferred from the key's third
- * segment (retail.expiry.*, retail.slow_mover.*, retail.deadstock.*)
- * or from the columns the row actually has.
- *
- * Returns null when the row is a general retail alert with no subtype
- * information: those belong to the sector-wide view, not to any one
- * convenience/supermarket/chain workspace.
- */
-function retailSubtypeOf(row: {
-  business_type?: string | null
-  alert_key?: string | null
-}): string | null {
-  if (row.business_type) return row.business_type
-
-  const key = row.alert_key ?? ""
-
-  if (!key.startsWith("retail.")) return null
-
-  const parts = key.split(".")
-
-  // retail.expiry.* / retail.slow_mover.* / retail.deadstock.*
-  // all carry the subtype family as the second segment. Older general
-  // keys (retail.stock.*, retail.pos.*, ...) do not.
-  if (parts[1] === "expiry") return "epicerie-proximite"
-  if (parts[1] === "slow_mover") return "supermarche-hypermarche"
-  if (parts[1] === "deadstock") return "chaine-magasins"
-
-  return null
-}
-
 export function DashboardView({
   search = "",
 }: {
@@ -1460,6 +1435,19 @@ export function DashboardView({
       setFilterSector(uploadSector)
       localStorage.setItem("sentria_sector", uploadSector)
 
+      // FIX: keep sentria_business_type in sync with what was just
+      // imported. Before this, uploading a subtype different from the
+      // one onboarding stored meant every imported row was tagged with
+      // the NEW subtype while businessType still held the OLD one, so
+      // matchesActivity() dropped every row it had just imported and
+      // the sector view went blank. Applying it here — the same
+      // function the "Switch the dashboard to it" button calls — makes
+      // the dashboard point at what the user just uploaded, which is
+      // what they almost always want.
+      //
+      // Logistics is excluded because applyActivityToDashboard handles
+      // ops_types itself and setting businessType for logistics would
+      // fight the ops_type routing. All other sectors want it.
       if (
         uploadSector !== "logistics" &&
         uploadActivity &&
@@ -1504,40 +1492,19 @@ export function DashboardView({
     const sector = normalizeDashboardSector(a.sector)
     const activity = activityOf(a)
 
+    // Exact subtype match when the backend has business_type.
     if (activity === businessType) return true
 
-    // FIX: retail subtypes are separated here. When a specific retail
-    // activity is configured (epicerie-proximite, supermarche-hypermarche,
-    // chaine-magasins), only alerts whose business_type or inferred
-    // subtype matches should pass. General commerce alerts that belong
-    // to no subtype are shown only in the all-sector view.
-    if (sector === "commerce") {
-      const subtype = retailSubtypeOf(a)
-
-      if (subtype === businessType) return true
-
-      // General retail alerts (no subtype) are visible when no specific
-      // retail activity is configured, or in the all-sector overview.
-      if (subtype === null && !businessType.startsWith("epicerie-") &&
-          !businessType.startsWith("supermarche-") &&
-          !businessType.startsWith("chaine-")) {
-        return true
-      }
-
-      // Legacy retail alerts without business_type and without subtype
-      // information remain visible for the configured retail activity
-      // only if it is a subtype that could own them.
-      if (
-        subtype === null &&
-        !a.business_type &&
-        (businessType === "epicerie-proximite" ||
-          businessType === "supermarche-hypermarche" ||
-          businessType === "chaine-magasins")
-      ) {
-        return true
-      }
-
-      return false
+    // Legacy retail alerts use retail.* alert keys but may have no
+    // business_type. activityOf() correctly identifies them as commerce,
+    // not as a specific retail subtype. Keep them visible instead of
+    // dropping the whole Commerce dashboard.
+    if (
+      sector === "commerce" &&
+      activity === "commerce" &&
+      !a.business_type
+    ) {
+      return true
     }
 
     if (activity !== null) return false
@@ -1577,27 +1544,6 @@ export function DashboardView({
     if (!businessType) return true
 
     const activity = activityOf(r)
-
-    if (activity === businessType) return true
-
-    if (r.business_type === businessType) return true
-
-    const subtype = retailSubtypeOf(r)
-
-    if (subtype === businessType) return true
-
-    // General recommendations with no subtype are kept for the
-    // configured retail activity only when it is a subtype that could
-    // own them; otherwise they belong to the all-sector view.
-    if (
-      subtype === null &&
-      !r.business_type &&
-      (businessType === "epicerie-proximite" ||
-        businessType === "supermarche-hypermarche" ||
-        businessType === "chaine-magasins")
-    ) {
-      return true
-    }
 
     return activity === null || activity === businessType
   }
