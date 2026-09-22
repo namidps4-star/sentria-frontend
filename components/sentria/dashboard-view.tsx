@@ -1470,10 +1470,16 @@ export function DashboardView({
     }
   }
 
+  const normalizeDashboardSector = (sector?: string | null) => {
+    if (!sector) return sector
+    if (sector === "retail") return "commerce"
+    return sector
+  }
+
   const sectorsWithRecordedActivity = new Set(
     alerts
       .filter((a) => Boolean(a.business_type))
-      .map((a) => a.sector ?? "")
+      .map((a) => normalizeDashboardSector(a.sector) ?? "")
   )
 
   const matchesActivity = (a: {
@@ -1483,18 +1489,34 @@ export function DashboardView({
   }) => {
     if (!businessType) return true
 
+    const sector = normalizeDashboardSector(a.sector)
     const activity = activityOf(a)
 
-    if (activity !== null) return activity === businessType
+    // Exact subtype match when the backend has business_type.
+    if (activity === businessType) return true
 
-    return !sectorsWithRecordedActivity.has(a.sector ?? "")
+    // Legacy retail alerts use retail.* alert keys but may have no
+    // business_type. activityOf() correctly identifies them as commerce,
+    // not as a specific retail subtype. Keep them visible instead of
+    // dropping the whole Commerce dashboard.
+    if (
+      sector === "commerce" &&
+      activity === "commerce" &&
+      !a.business_type
+    ) {
+      return true
+    }
+
+    if (activity !== null) return false
+
+    return !sectorsWithRecordedActivity.has(sector ?? "")
   }
 
   const filteredAlerts = alerts
     .filter(
       (a) =>
         filterSector === "all" ||
-        a.sector === filterSector
+        normalizeDashboardSector(a.sector) === filterSector
     )
     .filter(matchesActivity)
     .filter((a) => {
@@ -1506,12 +1528,13 @@ export function DashboardView({
         a.equipment.toLowerCase().includes(q) ||
         a.message.toLowerCase().includes(q) ||
         (a.sector ?? "").toLowerCase().includes(q) ||
+        (normalizeDashboardSector(a.sector) ?? "").toLowerCase().includes(q) ||
         a.severity.toLowerCase().includes(q)
       )
     })
 
   const logisticsViewAlerts = alerts
-    .filter((a) => a.sector === "logistics")
+    .filter((a) => normalizeDashboardSector(a.sector) === "logistics")
     .filter(matchesActivity)
 
   const recommendationMatchesActivity = (r: {
@@ -1597,6 +1620,7 @@ export function DashboardView({
         a.equipment.toLowerCase().includes(q) ||
         a.message.toLowerCase().includes(q) ||
         (a.sector ?? "").toLowerCase().includes(q) ||
+        (normalizeDashboardSector(a.sector) ?? "").toLowerCase().includes(q) ||
         a.severity.toLowerCase().includes(q)
 
       if (!matches) return false
@@ -1698,7 +1722,7 @@ export function DashboardView({
     alerts.some(
       (a) =>
         (onboardedSectorKey === null ||
-          a.sector === onboardedSectorKey) &&
+          normalizeDashboardSector(a.sector) === onboardedSectorKey) &&
         activityOf(a) !== null
     )
 
@@ -2289,7 +2313,7 @@ export function DashboardView({
             <span className="ml-1.5 text-[10px] opacity-60">
               {
                 alerts
-                  .filter((a) => a.sector === s.key)
+                  .filter((a) => normalizeDashboardSector(a.sector) === s.key)
                   .filter(matchesActivity).length
               }
             </span>
