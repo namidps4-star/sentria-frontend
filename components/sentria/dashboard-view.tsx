@@ -262,10 +262,10 @@ const SUBTYPE_KPI_LABELS: Record<string, Localized[]> = {
     localized("Démarque totale", "Total shrinkage"),
   ],
   "grossiste-distributeur": [
-    localized("Ruptures clients", "Client stockouts"),
-    localized("Retards livraison", "Delivery delays"),
-    localized("Clients concernés", "Clients affected"),
-    localized("Alertes fiabilité", "Reliability alerts"),
+    localized("Ruptures réseau", "Network stockouts"),
+    localized("Rééquilibrages suggérés", "Suggested transfers"),
+    localized("Produits concernés", "Products affected"),
+    localized("Invendus réseau", "Network deadstock"),
   ],
 }
 
@@ -285,7 +285,7 @@ const SUBTYPE_CHART_TITLES: Record<string, Localized> = {
   "chaine-magasins": localized(
     "Alertes réseau · 7 jours", "Network alerts · 7 days"),
   "grossiste-distributeur": localized(
-    "Alertes clients · 7 jours", "Client alerts · 7 days"),
+    "Alertes réseau · 7 jours", "Network alerts · 7 days"),
 }
 
 /** Which activity produced this alert.
