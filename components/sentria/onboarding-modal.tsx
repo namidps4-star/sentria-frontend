@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -72,9 +73,6 @@ type SectorConfig = {
   description: Localized
   icon: React.ElementType
   recommended?: boolean
-  /* A key, not the badge text. Storing the French words here meant the
-     badge could only ever be French, and comparing against them meant
-     the comparison broke the moment one was translated. */
   maturity?: "pilot" | "early"
 }
 
@@ -172,10 +170,6 @@ const SECTORS: SectorConfig[] = [
 ]
 
 /* -------------------------------------------------------------------------- */
-/* BUSINESS TYPES                                                             */
-/* -------------------------------------------------------------------------- */
-
-/* -------------------------------------------------------------------------- */
 /* DATA SOURCES                                                               */
 /* -------------------------------------------------------------------------- */
 
@@ -221,19 +215,7 @@ const DATA_SOURCES: DataSource[] = [
   },
 ]
 
-/** Columns each activity's CSV must carry.
- *
- *  A laboratory uploads reagents, a wholesaler uploads one row per
- *  (pharmacy, product), a hospital uploads categorised supplies. Telling
- *  the user which columns are expected is the difference between an
- *  upload that works and one that silently produces no alerts.
- *
- *  Keyed by business_type first, then sector as the fallback.
- *
- *  These are the header names the customer's own file must carry, not
- *  copy: translating "Torque [Nm]" would stop the column matching.
- *
- *  i18n-ignore-start: CSV header names, matched against the file */
+/** Columns each activity's CSV must carry. */
 const CSV_COLUMNS: Record<string, string[]> = {
   // Health
   "pharmacie": [
@@ -262,17 +244,7 @@ const CSV_COLUMNS: Record<string, string[]> = {
   "agriculture": ["batch_id", "days_stored", "storage_temp"],
   "transportation": ["vehicle_id", "km_since_service", "engine_temp"],
   "energy": ["generator_id", "fuel_level", "coolant_temp"],
-  /* Retail, per activity.
-     
-     All four used to fall through to the "commerce" line below, which
-     asked every one of them for shrinkage_rate. A shop only knows its
-     shrinkage after a physical stock count, and most never do one, so
-     the field came back blank or invented. Meanwhile the two columns
-     that give a supermarket its best alerts, unit_cost and expiry_date,
-     were not asked for at all.
-     
-     These lists are what each activity's checks actually read. Verified
-     by ablation; see test-data/RETAIL.md. */
+  /* Retail */
   "supermarche-hypermarche": [
     "product_name", "stock_qty", "min_stock",
     "unit_cost", "expiry_date", "last_sale_date",
@@ -282,7 +254,6 @@ const CSV_COLUMNS: Record<string, string[]> = {
     "product_name", "stock_qty", "min_stock",
     "unit_cost", "last_sale_date", "sales_last_30_days",
   ],
-  /* No money columns: neither activity has a layer that reads them. */
   "chaine-magasins": [
     "product_name", "stock_qty", "min_stock",
     "sales_last_30_days", "sales_last_7_days", "sales_previous_7_days",
@@ -291,22 +262,13 @@ const CSV_COLUMNS: Record<string, string[]> = {
     "product_name", "stock_qty", "min_stock",
     "sales_last_30_days", "supplier_lead_days",
   ],
-  /* The fallback, for a file uploaded before the activity was chosen. */
   "commerce": ["product_name", "stock_qty", "min_stock", "unit_cost"],
 }
-/* i18n-ignore-end */
 
 /* -------------------------------------------------------------------------- */
 /* LOGISTICS PREVIEW                                                          */
 /* -------------------------------------------------------------------------- */
 
-/** Class for a card in a two-column grid, so an odd count never leaves
- *  an orphan in a half-width slot.
- *
- *  Five of the seven sectors offer an odd number of activities, so the
- *  last card sat alone next to empty space. It spans both columns
- *  instead and its content spreads out, which reads as a deliberate
- *  closing row rather than a gap. */
 function isWideCard(index: number, total: number) {
   return total % 2 === 1 && index === total - 1
 }
@@ -315,9 +277,6 @@ function gridSpan(index: number, total: number) {
   return isWideCard(index, total) ? "md:col-span-2" : undefined
 }
 
-/** Bulk selection for a multi-select step. One component so the
- *  priorities step and the data-sources step offer the same control in
- *  the same place, with a live count. */
 function BulkSelect({
   count,
   total,
@@ -370,18 +329,6 @@ function BulkSelect({
 /* ONBOARDING                                                                 */
 /* -------------------------------------------------------------------------- */
 
-/** What SentrIA will follow for the chosen activity.
- *
- *  This replaces an animated container yard: thirty two tiles that went
- *  amber then red on a timer, with a recommendation appearing at 2.1
- *  seconds. It showed a scripted incident rather than anything the
- *  customer's own data would produce, and it only existed for one of the
- *  six logistics activities.
- *
- *  What an operator actually wants to know before uploading is which
- *  stages will be watched, so this draws their real chain, in the same
- *  capsule the dashboard uses, in its empty state. Nothing is filled in,
- *  because nothing has been measured yet, and it says so. */
 function ActivityFlowPreview({
   opsType,
   selected = [],
@@ -390,7 +337,6 @@ function ActivityFlowPreview({
   selected?: Exclude<OpsType, "multi">[]
 }) {
   const tx = useTx()
-
   const chain = chainFor(opsType, selected)
 
   if (chain.length === 0) return null
@@ -481,23 +427,6 @@ function ActivityFlowPreview({
   )
 }
 
-/* --------------------------------------------------------------------------
- * The choice card.
- *
- * Every question in the identity steps is a small, closed set, so they are
- * cards rather than a <select>. A native select on a phone is a system
- * sheet: it hides the options until tapped, shows no consequence next to
- * them, and makes four questions feel like a tax form. A card can carry
- * what the answer means, which is the point on the language step (what
- * SentrIA will answer in) and the country step (which currency).
- *
- * Defined once so the four steps cannot drift apart.
- * -------------------------------------------------------------------------- */
-
-/** One alert per sector, in the vocabulary of the people who work in
- *  it. The wizard shows it while it is still being filled in, so the
- *  thing the product actually does is visible during setup rather than
- *  only after it. */
 const SAMPLE_ALERTS: Record<Sector, Localized> = {
   industry: localized(
     "Ligne 2 : 3 arrêts en 4 h, au-dessus de votre seuil.",
@@ -536,8 +465,6 @@ const CHOICE_CARD = [
   "motion-reduce:transition-none motion-reduce:hover:translate-y-0",
 ].join(" ")
 
-/* Selection is carried by the fill AND by aria-pressed AND by the tick,
-   never by colour alone. */
 const CHOICE_ACTIVE = "border-foreground bg-foreground text-background shadow-sm"
 
 function CardTick() {
@@ -548,8 +475,6 @@ function CardTick() {
   )
 }
 
-/** What SentrIA will actually send, rendered in the operator's own
- *  words before they have finished setting it up. */
 function AlertPreview({
   tx,
   company,
@@ -603,34 +528,22 @@ function AlertPreview({
   )
 }
 
-
 export function OnboardingView({
   onComplete,
 }: {
   onComplete?: () => void
 }) {
-  /* The language the wizard itself is written in. It follows the choice
-     made on step 1: picking English on the first screen and then reading
-     French for the next seven was the whole of the complaint. */
   const tx = useTx()
-
-  /** Resolve a module-level fr/en pair. The sector, priority and source
-   *  catalogues are built outside React, so they hold pairs. */
   const px = (text: Localized | undefined) => resolve(text, tx)
 
-  /** A sector's display name, falling back to its id so a stale id saved
-   *  by an older build still renders as something. */
   const sectorName = (id: string) => {
     const found = SECTORS.find((item) => item.id === id)
-
     return found ? px(found.label) : id
   }
 
   useEffect(() => {
     const previous = document.body.style.overflow
-
     document.body.style.overflow = "hidden"
-
     return () => {
       document.body.style.overflow = previous
     }
@@ -639,43 +552,14 @@ export function OnboardingView({
   const [step, setStep] = useState(1)
   const [sector, setSector] = useState<Sector | null>(null)
   const [subType, setSubType] = useState<string | null>(null)
-
-  /** Every activity the customer runs. One entry for every sector except
-   *  logistics, where it is the real set. */
   const [subTypes2, setSubTypes2] = useState<string[]>([])
-
-  /* A second sector, for the rare group that really has one. Onboarding
-     only ever stored [sector], so the dashboard's multi-sector support
-     (the filter chips, the per-sector upload) was unreachable: you could
-     not say you run a factory and a warehouse. It stays behind an
-     opt-in, because one sector is the normal case and putting six
-     checkboxes in front of everyone to serve the exception is how an
-     onboarding gets abandoned. */
-  /* Asked here because the product consumes both: the name goes in
-     reports and in what Ask SentrIA calls the customer, and the zone is
-     what every hour-based threshold is read against. A free-text
-     description is deliberately not asked: the sector, the activities
-     and the priorities already say that in a form the pipeline reads. */
   const [companyName, setCompanyName] = useState("")
-
   const [timezoneId, setTimezoneId] = useState(TIMEZONES[0].id)
-
-  /* Country and language are two axes, not one. A Cotonou operator may
-     want French, a Lagos one English, and the country is what says
-     whether a figure is F CFA or naira. Deriving either from the other
-     would be wrong for most of this map. */
   const [countryCode, setCountryCode] = useState("")
-
+  
+  // Only French and English allowed
   const [language, setLanguage] = useState("fr")
 
-  /** Pick the language, and APPLY it, not just remember it.
-   *
-   *  This used to be a bare setLanguage(): the wizard kept the choice in
-   *  React state and only persisted it in finish(). useTx() reads the
-   *  stored value, so choosing a language on step 1 changed nothing on
-   *  screen and the operator then read seven more steps in whatever the
-   *  browser had been detected as. Writing it here is what makes step 1
-   *  mean anything, and it is the same thing the settings screen does. */
   function chooseLanguage(code: string) {
     setLanguage(code)
     writeLanguage(code)
@@ -683,17 +567,14 @@ export function OnboardingView({
 
   useEffect(() => {
     setTimezoneId(detectTimezoneId())
-    /* Write the detected default as well as holding it. readLanguage()
-       already falls back to detection, so this only makes the stored
-       value agree with what is on screen from the first frame. */
     const detected = detectLanguage()
-
-    setLanguage(detected)
-    writeLanguage(detected)
+    // Ensure we default to fr or en only
+    const safeLang = detected === "en" ? "en" : "fr"
+    setLanguage(safeLang)
+    writeLanguage(safeLang)
   }, [])
 
   const [multiSector, setMultiSector] = useState(false)
-
   const [extraSectors, setExtraSectors] = useState<Sector[]>([])
 
   const allSectors = useMemo(
@@ -708,16 +589,14 @@ export function OnboardingView({
         : [...current, id]
     )
   }
-  const [selectedEquipment, setSelectedEquipment] =
-    useState<string[]>([])
+
+  const [selectedEquipment, setSelectedEquipment] = useState<string[]>([])
   const [csvUploading, setCsvUploading] = useState(false)
   const [csvMsg, setCsvMsg] = useState("")
   const [csvFailed, setCsvFailed] = useState(false)
   const [csvDone, setCsvDone] = useState(false)
 
-  const [selectedSources, setSelectedSources] = useState<
-    DataSource["id"][]
-  >([])
+  const [selectedSources, setSelectedSources] = useState<DataSource["id"][]>([])
   const [configureLater, setConfigureLater] = useState(false)
 
   const equipment = useMemo(
@@ -747,16 +626,6 @@ export function OnboardingView({
 
   const isLogistics = sector === "logistics"
 
-  /* Language, country, timezone and company name used to sit in one
-     grid on the sector step, four questions deep before the operator
-     had answered anything. They are four steps now, in the order each
-     one informs the next: the language the screen is read in, then the
-     country, which fills the currency and the clock, then the clock
-     itself to confirm, then the name.
-
-     Asking one thing at a time is the whole point. A form that opens
-     with four unrelated fields reads as paperwork; a form that asks one
-     question reads as a conversation. */
   const langStepNumber = 1
   const countryStepNumber = 2
   const zoneStepNumber = 3
@@ -840,12 +709,6 @@ export function OnboardingView({
   const currentMeta = STEP_META[step - 1] ?? STEP_META[0]
   const CurrentStepIcon = currentMeta.icon
 
-  /* A wizard that changes its whole panel and leaves focus on the button
-     the operator just pressed strands a keyboard or screen reader user
-     at the bottom of a screen they cannot see. Focus moves to the new
-     question; the counter announces itself politely alongside, so the
-     change is heard as well as seen. Not on first paint: stealing focus
-     before anybody has interacted is its own annoyance. */
   const headingRef = useRef<HTMLHeadingElement>(null)
   const mounted = useRef(false)
 
@@ -854,26 +717,17 @@ export function OnboardingView({
       mounted.current = true
       return
     }
-
     headingRef.current?.focus()
   }, [step])
 
   function chooseSector(id: Sector) {
     setSector(id)
-
-    // Important: changing sector invalidates both the
-    // previously selected subtype and monitoring priorities.
     setSubType(null)
     setSubTypes2([])
     setExtraSectors((current) => current.filter((item) => item !== id))
     setSelectedEquipment([])
   }
 
-  /* Logistics is multi-select: a terminal handling reefers runs port
-     and cold chain, a 3PL runs warehouse, transport and cold chain. The
-     other sectors stay single-select, because a pharmacy is not also a
-     laboratory. subType keeps holding the primary activity so the CSV
-     column hints and the business_type parameter are unchanged. */
   function chooseSubType(id: string) {
     if (!isLogistics) {
       setSubType(id)
@@ -887,13 +741,10 @@ export function OnboardingView({
         : [...current, id]
 
       setSubType(next[0] ?? null)
-
       return next
     })
   }
 
-  /* "Plusieurs activités" was a single card that composed every chain
-     at once. Ticking several real activities replaces it exactly. */
   const shownSubTypes = useMemo(
     () => subTypes.filter((item) => item.id !== "plusieurs-activites"),
     [subTypes]
@@ -917,9 +768,6 @@ export function OnboardingView({
     )
   }
 
-  /* Bulk selection. The selectable set skips anything marked coming
-     soon, so "tout sélectionner" never turns on a priority the product
-     does not run yet. */
   const selectableEquipment = useMemo(
     () => equipment.filter((item) => !item.comingSoon).map((item) => item.id),
     [equipment]
@@ -941,15 +789,11 @@ export function OnboardingView({
     DATA_SOURCES.length > 0 &&
     DATA_SOURCES.every((source) => selectedSources.includes(source.id))
 
-  /** Columns expected for whatever was chosen in steps 1 and 2. */
   const csvColumns =
     (subType && CSV_COLUMNS[subType]) ||
     (sector && CSV_COLUMNS[sector]) ||
     []
 
-  /** Upload straight from onboarding, using the sector and activity the
-   *  user just chose, so the backend routes the file to the right checks
-   *  instead of defaulting to the sector's primary activity. */
   async function handleOnboardingUpload(
     e: React.ChangeEvent<HTMLInputElement>
   ) {
@@ -965,7 +809,7 @@ export function OnboardingView({
     form.append("file", file)
 
     const query =
-      `?sector=${encodeURIComponent(toApiSector(sector))}&lang=fr` +
+      `?sector=${encodeURIComponent(toApiSector(sector))}&lang=${language}` +
       (subType ? `&business_type=${encodeURIComponent(subType)}` : "")
 
     try {
@@ -987,8 +831,6 @@ export function OnboardingView({
 
       setCsvDone(true)
       setCsvMsg(
-        /* The backend's own success sentinel, not copy: it is compared
-           against, so it must not be translated. */
         data.message === "Processed successfully"
           ? tx(
               `${file.name} importé. Les alertes apparaîtront sur le tableau de bord.`,
@@ -1014,7 +856,6 @@ export function OnboardingView({
 
   function toggleSource(id: DataSource["id"]) {
     setConfigureLater(false)
-
     setSelectedSources((current) =>
       current.includes(id)
         ? current.filter((item) => item !== id)
@@ -1035,20 +876,17 @@ export function OnboardingView({
 
   function previousStep() {
     if (step <= 1) return
-
     setStep((current) => Math.max(1, current - 1))
   }
 
   function goToStep(targetStep: number) {
     if (targetStep < 1 || targetStep > step) return
-
     setStep(targetStep)
   }
 
   function finish() {
     if (typeof window !== "undefined") {
       localStorage.setItem("sentria_onboarded", "true")
-
       writeCompanyName(companyName)
       writeTimezoneId(timezoneId)
       writeCountryCode(countryCode)
@@ -1056,18 +894,11 @@ export function OnboardingView({
 
       if (sector) {
         localStorage.setItem("sentria_sector", sector)
-
-        /* Every sector the customer runs, primary first. This used to
-           be hardcoded to [sector], so the dashboard's sector chips
-           could never show more than one. */
         localStorage.setItem("sentria_sectors", JSON.stringify(allSectors))
       }
 
       if (subType) {
-        localStorage.setItem(
-          "sentria_business_type",
-          subType
-        )
+        localStorage.setItem("sentria_business_type", subType)
       }
 
       localStorage.setItem(
@@ -1080,12 +911,6 @@ export function OnboardingView({
         JSON.stringify(selectedEquipment)
       )
 
-      // The dashboard and the backend both branch on the short ops
-      // type ("port"), not on this step's subtype id
-      // ("port-conteneurs"), so normalize before storing. Writing the
-      // raw id meant a real onboarded port operator got neither the
-      // port chain nor the port checks. writeOpsTypes stores the whole
-      // set and keeps the single-value key in step.
       if (isLogistics && selectedOpsTypes.length > 0) {
         writeOpsTypes(selectedOpsTypes)
       }
@@ -1100,29 +925,18 @@ export function OnboardingView({
         JSON.stringify(configureLater)
       )
 
-      window.dispatchEvent(
-        new Event("sentria_sectors_updated")
-      )
-
-      window.dispatchEvent(
-        new Event("sentria_onboarding_completed")
-      )
+      window.dispatchEvent(new Event("sentria_sectors_updated"))
+      window.dispatchEvent(new Event("sentria_onboarding_completed"))
     }
 
     onComplete?.()
   }
 
-  /* aria-modal tells a screen reader to ignore everything behind this
-     panel. Tab has never read aria-modal, so without this the keyboard
-     walked straight out of the wizard and down the app sidebar
-     underneath it - a promise the markup made and the keyboard broke.
-     There is no close button to reach, so the wrap is unconditional. */
   const dialogRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       const node = dialogRef.current
-
       if (event.key !== "Tab" || !node) return
 
       const focusable = Array.from(
@@ -1145,14 +959,9 @@ export function OnboardingView({
     }
 
     document.addEventListener("keydown", onKeyDown, true)
-
     return () => document.removeEventListener("keydown", onKeyDown, true)
   }, [])
 
-  /* The country list carries an explicit "Autre pays (euro)", so there
-     is always a truthful answer and requiring one costs nobody an exit.
-     The language and the zone are pre-selected, so their steps are
-     already satisfied. */
   const canContinue =
     step === countryStepNumber
       ? Boolean(countryCode)
@@ -1168,9 +977,6 @@ export function OnboardingView({
 
   const alertHeadline = sector ? resolve(SAMPLE_ALERTS[sector], tx) : null
 
-  /* Which answer Continue is waiting on. A greyed-out button with no
-     reason beside it reads as a broken page rather than an unfinished
-     one, and the missing answer is not always on screen. */
   const blockedReason = canContinue
     ? null
     : step === countryStepNumber
@@ -1202,14 +1008,8 @@ export function OnboardingView({
       aria-label={tx("Configuration de SentrIA", "SentrIA setup")}
       className="fixed inset-0 z-[100] flex animate-in fade-in bg-background duration-200 ease-out motion-reduce:animate-none"
     >
-      {/* THE FORM
-          Its own column, with the header and the action bar pinned and
-          only the question scrolling between them. The step a person is
-          on and the way forward were both scrolling off the top and the
-          bottom of a step with twelve cards on it. */}
       <div className="flex min-w-0 flex-1 flex-col">
-
-        {/* HEADER: who is asking, and how far in */}
+        {/* HEADER */}
         <header className="shrink-0 border-b border-border bg-card/85 px-5 pb-4 pt-5 backdrop-blur-sm md:px-8 md:pt-6">
           <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
             <div className="flex items-center justify-between gap-4">
@@ -1230,9 +1030,6 @@ export function OnboardingView({
                 </span>
               </div>
 
-              {/* Visible, not sr-only. "Step 4 of 8" is the single thing
-                  that tells someone whether to keep going or come back
-                  later, and it costs one line. */}
               <p className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
                 {tx(
                   `Étape ${step} sur ${totalSteps}`,
@@ -1241,12 +1038,6 @@ export function OnboardingView({
               </p>
             </div>
 
-            {/* PROGRESS
-                One segment per step. Completed segments stay clickable,
-                so going back three answers is one click rather than
-                three. They carry no text, only a label, which keeps the
-                rail out of the way of anything reading the page for
-                buttons to press. */}
             <ol className="flex items-center gap-1.5">
               {STEP_META.map((meta, index) => {
                 const stepNumber = index + 1
@@ -1279,8 +1070,6 @@ export function OnboardingView({
               })}
             </ol>
 
-            {/* Heard as well as seen. Polite, and separate from the
-                heading, so it does not fight the focus move. */}
             <p className="sr-only" role="status" aria-live="polite">
               {tx(
                 `Étape ${step} sur ${totalSteps} : ${currentMeta.title}`,
@@ -1293,13 +1082,6 @@ export function OnboardingView({
         {/* THE QUESTION */}
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-7 md:px-8 md:py-10">
           <div className="mx-auto flex w-full max-w-3xl flex-col gap-7">
-
-            {/* STEP HEADER
-                The question itself, and the one element that moves when
-                the step changes. One or two animated things per view,
-                not every card: a panel that slides while twelve cards
-                stagger is noise, and it is the first thing to look
-                cheap on a slow device. */}
             <div
               key={step}
               className="flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out motion-reduce:animate-none"
@@ -1330,15 +1112,11 @@ export function OnboardingView({
               </div>
             </div>
 
-            {/* ---------------------------------------------------------------- */}
-            {/* STEP 1: LANGUAGE                                                 */}
-            {/* ---------------------------------------------------------------- */}
-
+            {/* STEP 1: LANGUAGE */}
             {step === langStepNumber && (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {LANGUAGES.map((item) => {
+                {LANGUAGES.filter(l => l.code === 'fr' || l.code === 'en').map((item) => {
                   const active = language === item.code
-
                   return (
                     <button
                       key={item.code}
@@ -1352,7 +1130,6 @@ export function OnboardingView({
                           <p className="font-heading text-lg font-bold tracking-tight">
                             {item.label}
                           </p>
-
                           <p
                             className={cn(
                               "mt-0.5 text-xs",
@@ -1364,13 +1141,8 @@ export function OnboardingView({
                             {px(item.region)}
                           </p>
                         </div>
-
                         {active && <CardTick />}
                       </div>
-
-                      {/* What this choice actually delivers, on the card
-                          and before it is made. Six languages are offered
-                          and they do not mean the same thing. */}
                       <p
                         className={cn(
                           "mt-4 text-[11px] leading-4",
@@ -1385,80 +1157,65 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* ---------------------------------------------------------------- */}
-            {/* STEP 2: COUNTRY                                                  */}
-            {/* ---------------------------------------------------------------- */}
-
+            {/* STEP 2: COUNTRY */}
             {step === countryStepNumber && (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {COUNTRIES.map((item) => {
-                  const active = countryCode === item.code
-
-                  return (
-                    <button
-                      key={item.code}
-                      type="button"
-                      onClick={() => {
-                        setCountryCode(item.code)
-
-                        /* The clock usually follows the country, so it
-                           arrives pre-answered on the next step rather
-                           than as a fifth question. */
-                        setTimezoneId(item.timezoneId)
-                      }}
-                      aria-pressed={active}
-                      className={cn(CHOICE_CARD, active && CHOICE_ACTIVE)}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="min-w-0 font-heading text-sm font-bold leading-snug">
-                          {px(item.name)}
+              <>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                  {COUNTRIES.map((item) => {
+                    const active = countryCode === item.code
+                    return (
+                      <button
+                        key={item.code}
+                        type="button"
+                        onClick={() => {
+                          setCountryCode(item.code)
+                          setTimezoneId(item.timezoneId)
+                        }}
+                        aria-pressed={active}
+                        className={cn(CHOICE_CARD, active && CHOICE_ACTIVE)}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="min-w-0 font-heading text-sm font-bold leading-snug">
+                            {px(item.name)}
+                          </p>
+                          {active && <CardTick />}
+                        </div>
+                        <p
+                          className={cn(
+                            "mt-3 font-heading text-xl font-bold tracking-tight",
+                            active ? "text-accent" : "text-foreground"
+                          )}
+                        >
+                          {item.currency.symbol}
                         </p>
-
-                        {active && <CardTick />}
-                      </div>
-
-                      <p
-                        className={cn(
-                          "mt-3 font-heading text-xl font-bold tracking-tight",
-                          active ? "text-accent" : "text-foreground"
-                        )}
-                      >
-                        {item.currency.symbol}
-                      </p>
-
-                      <p
-                        className={cn(
-                          "text-[10px] uppercase tracking-wider",
-                          active ? "text-background/60" : "text-muted-foreground"
-                        )}
-                      >
-                        {item.currency.code}
-                      </p>
-                    </button>
-                  )
-                })}
-              </div>
-            )}
-
-            {step === countryStepNumber && (
-              <p className="rounded-2xl border border-dashed border-border bg-background px-4 py-3 text-xs leading-5 text-muted-foreground">
-                {tx(
-                  "La devise sert à étiqueter vos propres montants, ceux que vous saisissez dans la vue Coûts.",
-                  "The currency labels your own figures, the ones you type into the Cost view."
-                )}{" "}
-                <span className="font-semibold text-foreground">
+                        <p
+                          className={cn(
+                            "text-[10px] uppercase tracking-wider",
+                            active ? "text-background/60" : "text-muted-foreground"
+                          )}
+                        >
+                          {item.currency.code}
+                        </p>
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="rounded-2xl border border-dashed border-border bg-background px-4 py-3 text-xs leading-5 text-muted-foreground">
                   {tx(
-                    "Aucune conversion n'est faite.",
-                    "Nothing is converted."
-                  )}
-                </span>
-              </p>
+                    "La devise sert à étiqueter vos propres montants, ceux que vous saisissez dans la vue Coûts.",
+                    "The currency labels your own figures, the ones you type into the Cost view."
+                  )}{" "}
+                  <span className="font-semibold text-foreground">
+                    {tx(
+                      "Aucune conversion n'est faite.",
+                      "Nothing is converted."
+                    )}
+                  </span>
+                </p>
+              </>
             )}
 
-            {/* ---------------------------------------------------------------- */}
-            {/* STEP 3: TIMEZONE                                                 */}
-            {/* ---------------------------------------------------------------- */}
-
+            {/* STEP 3: TIMEZONE */}
             {step === zoneStepNumber && (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {TIMEZONES.map((zone) => {
@@ -1478,13 +1235,8 @@ export function OnboardingView({
                         <p className="min-w-0 font-heading text-base font-bold leading-snug">
                           {zone.label}
                         </p>
-
                         {active && <CardTick />}
                       </div>
-
-                      {/* Says why it is already selected. A field that
-                          fills itself without explaining looks like a bug
-                          the first time you see it. */}
                       {suggested && (
                         <p
                           className={cn(
@@ -1501,24 +1253,17 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* ---------------------------------------------------------------- */}
-            {/* STEP 4: COMPANY                                                  */}
-            {/* ---------------------------------------------------------------- */}
-
+            {/* STEP 4: COMPANY */}
             {step === companyStepNumber && (
               <div className="max-w-xl">
                 <label className="block">
                   <span className="text-sm font-medium">
                     {tx("Nom de votre entreprise", "Your company name")}
                   </span>
-
                   <input
                     value={companyName}
                     onChange={(event) => setCompanyName(event.target.value)}
                     onKeyDown={(event) => {
-                      /* Enter is what anyone types after filling one
-                         field. Without this it does nothing, which reads
-                         as the form being stuck. */
                       if (event.key === "Enter" && companyName.trim()) {
                         event.preventDefault()
                         nextStep()
@@ -1532,15 +1277,10 @@ export function OnboardingView({
                     className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-4 font-heading text-xl font-bold tracking-tight outline-none transition-colors focus:border-ring md:text-2xl"
                   />
                 </label>
-
-                {/* The consequence of the answer, as it is typed. An
-                    operator sees where the name ends up instead of being
-                    told. */}
                 <div className="mt-5 rounded-2xl border border-border bg-background p-4">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                     {tx("Ce que SentrIA dira", "What SentrIA will say")}
                   </p>
-
                   <p className="mt-2 text-sm">
                     <span className="text-muted-foreground">
                       {tx("Bonjour ", "Hello ")}
@@ -1556,179 +1296,162 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* ---------------------------------------------------------------- */}
-            {/* STEP 5: SECTOR                                                   */}
-            {/* ---------------------------------------------------------------- */}
-
+            {/* STEP 5: SECTOR */}
             {step === sectorStepNumber && (
-              <div className="flex flex-wrap justify-center gap-3">
-                {SECTORS.map((item) => {
-                  const Icon = item.icon
-                  const active = sector === item.id
-                  const secondary = extraSectors.includes(item.id)
+              <>
+                <div className="flex flex-wrap justify-center gap-3">
+                  {SECTORS.map((item) => {
+                    const Icon = item.icon
+                    const active = sector === item.id
+                    const secondary = extraSectors.includes(item.id)
 
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() =>
-                        multiSector && sector && sector !== item.id
-                          ? toggleExtraSector(item.id)
-                          : chooseSector(item.id)
-                      }
-                      aria-pressed={active || secondary}
-                      className={cn(
-                        "relative flex w-[calc(50%-6px)] flex-col items-start gap-1 rounded-3xl border p-5 text-left shadow-sm transition-all sm:w-[calc(33.333%-8px)] lg:w-[calc(25%-9px)]",
-                        item.recommended &&
-                          !active &&
-                          !secondary &&
-                          "border-accent/50 ring-1 ring-accent/30",
-                        active
-                          ? "border-foreground bg-foreground text-background"
-                          : secondary
-                            ? "border-foreground bg-muted"
-                            : "border-border hover:border-accent/60 hover:bg-accent/10"
-                      )}
-                    >
-                      {item.maturity && (
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() =>
+                          multiSector && sector && sector !== item.id
+                            ? toggleExtraSector(item.id)
+                            : chooseSector(item.id)
+                        }
+                        aria-pressed={active || secondary}
+                        className={cn(
+                          "relative flex w-[calc(50%-6px)] flex-col items-start gap-1 rounded-3xl border p-5 text-left shadow-sm transition-all sm:w-[calc(33.333%-8px)] lg:w-[calc(25%-9px)]",
+                          item.recommended &&
+                            !active &&
+                            !secondary &&
+                            "border-accent/50 ring-1 ring-accent/30",
+                          active
+                            ? "border-foreground bg-foreground text-background"
+                            : secondary
+                              ? "border-foreground bg-muted"
+                              : "border-border hover:border-accent/60 hover:bg-accent/10"
+                        )}
+                      >
+                        {item.maturity && (
+                          <span
+                            className={cn(
+                              "absolute right-3 top-3 whitespace-nowrap rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                              item.recommended
+                                ? active
+                                  ? "bg-accent text-accent-foreground"
+                                  : "bg-accent/20 text-accent-foreground"
+                                : active
+                                  ? "bg-background/20 text-background/70"
+                                  : "bg-muted text-muted-foreground"
+                            )}
+                          >
+                            {maturityLabel(item.maturity, tx)}
+                          </span>
+                        )}
+
+                        {(active || secondary) && (
+                          <span
+                            className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-accent-foreground ring-2 ring-background"
+                            aria-hidden="true"
+                          >
+                            <Check className="h-3 w-3" strokeWidth={3} />
+                          </span>
+                        )}
+
                         <span
                           className={cn(
-                            "absolute right-3 top-3 whitespace-nowrap rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider",
-                            item.recommended
-                              ? active
-                                ? "bg-accent text-accent-foreground"
-                                : "bg-accent/20 text-accent-foreground"
-                              : active
-                                ? "bg-background/20 text-background/70"
-                                : "bg-muted text-muted-foreground"
+                            "flex h-9 w-9 items-center justify-center rounded-xl",
+                            active
+                              ? "bg-background/15"
+                              : "bg-accent/15 text-accent-foreground"
                           )}
                         >
-                          {maturityLabel(item.maturity, tx)}
+                          <Icon className="h-4.5 w-4.5" />
                         </span>
-                      )}
 
-                      {/* Selection badge: a filled circle overlapping the
-                          card's corner, the way a checked choice-card
-                          reads in the reference model, instead of an
-                          inline check next to the icon. */}
-                      {(active || secondary) && (
+                        <span className="mt-2.5 text-sm font-semibold">
+                          {px(item.label)}
+                        </span>
+
                         <span
-                          className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-accent-foreground ring-2 ring-background"
-                          aria-hidden="true"
+                          className={cn(
+                            "text-xs leading-5",
+                            active
+                              ? "text-background/70"
+                              : "text-muted-foreground"
+                          )}
                         >
-                          <Check className="h-3 w-3" strokeWidth={3} />
+                          {px(item.description)}
                         </span>
-                      )}
 
-                      <span
-                        className={cn(
-                          "flex h-9 w-9 items-center justify-center rounded-xl",
-                          active
-                            ? "bg-background/15"
-                            : "bg-accent/15 text-accent-foreground"
+                        {secondary && (
+                          <span className="mt-1.5 rounded-full bg-foreground px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-background">
+                            {tx("Secteur secondaire", "Secondary sector")}
+                          </span>
                         )}
-                      >
-                        <Icon className="h-4.5 w-4.5" />
-                      </span>
+                      </button>
+                    )
+                  })}
+                </div>
 
-                      <span className="mt-2.5 text-sm font-semibold">
-                        {px(item.label)}
-                      </span>
-
-                      <span
-                        className={cn(
-                          "text-xs leading-5",
-                          active
-                            ? "text-background/70"
-                            : "text-muted-foreground"
+                <div className="rounded-2xl border border-border bg-background p-4">
+                  <label className="flex cursor-pointer items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={multiSector}
+                      onChange={(event) => {
+                        setMultiSector(event.target.checked)
+                        if (!event.target.checked) setExtraSectors([])
+                      }}
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-foreground"
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold">
+                        {tx(
+                          "Mon entreprise couvre plusieurs secteurs",
+                          "My company covers more than one sector"
                         )}
-                      >
-                        {px(item.description)}
                       </span>
+                      <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
+                        {tx(
+                          "Par exemple une usine avec son propre entrepôt. Le secteur choisi ci-dessus reste le principal, et les autres s'ajoutent au tableau de bord.",
+                          "A factory with its own warehouse, for instance. The sector chosen above stays the main one, and the others are added to the dashboard."
+                        )}
+                      </span>
+                    </span>
+                  </label>
 
-                      {secondary && (
-                        <span className="mt-1.5 rounded-full bg-foreground px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-background">
-                          {tx("Secteur secondaire", "Secondary sector")}
-                        </span>
+                  {multiSector && (
+                    <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">
+                      {extraSectors.length > 0 ? (
+                        <>
+                          {tx("Secteurs :", "Sectors:")}{" "}
+                          <span className="font-semibold text-foreground">
+                            {allSectors
+                              .map((id) => sectorName(id))
+                              .join(", ")}
+                          </span>
+                        </>
+                      ) : sector ? (
+                        tx(
+                          "Touchez un autre secteur pour l'ajouter. Le premier reste le principal.",
+                          "Tap another sector to add it. The first stays the main one."
+                        )
+                      ) : (
+                        tx(
+                          "Choisissez d'abord votre secteur principal.",
+                          "Choose your main sector first."
+                        )
                       )}
-                    </button>
-                  )
-                })}
-              </div>
+                    </p>
+                  )}
+                </div>
+              </>
             )}
 
-            {step === sectorStepNumber && (
-              <div className="rounded-2xl border border-border bg-background p-4">
-                <label className="flex cursor-pointer items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={multiSector}
-                    onChange={(event) => {
-                      setMultiSector(event.target.checked)
-
-                      if (!event.target.checked) setExtraSectors([])
-                    }}
-                    className="mt-0.5 h-4 w-4 shrink-0 accent-foreground"
-                  />
-
-                  <span>
-                    <span className="block text-sm font-semibold">
-                      {tx(
-                        "Mon entreprise couvre plusieurs secteurs",
-                        "My company covers more than one sector"
-                      )}
-                    </span>
-
-                    <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
-                      {tx(
-                        "Par exemple une usine avec son propre entrepôt. Le secteur choisi ci-dessus reste le principal, et les autres s'ajoutent au tableau de bord.",
-                        "A factory with its own warehouse, for instance. The sector chosen above stays the main one, and the others are added to the dashboard."
-                      )}
-                    </span>
-                  </span>
-                </label>
-
-                {multiSector && (
-                  <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">
-                    {extraSectors.length > 0 ? (
-                      <>
-                        {tx("Secteurs :", "Sectors:")}{" "}
-                        <span className="font-semibold text-foreground">
-                          {allSectors
-                            .map(
-                              (id) =>
-                                sectorName(id)
-                            )
-                            .join(", ")}
-                        </span>
-                      </>
-                    ) : sector ? (
-                      tx(
-                        "Touchez un autre secteur pour l'ajouter. Le premier reste le principal.",
-                        "Tap another sector to add it. The first stays the main one."
-                      )
-                    ) : (
-                      tx(
-                        "Choisissez d'abord votre secteur principal.",
-                        "Choose your main sector first."
-                      )
-                    )}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* ---------------------------------------------------------------- */}
-            {/* STEP 2: BUSINESS TYPE                                            */}
-            {/* ---------------------------------------------------------------- */}
-
+            {/* STEP 6: BUSINESS TYPE */}
             {step === subTypeStepNumber && sector && (
               <div>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
                     {selectedSector ? px(selectedSector.label) : null}
                   </div>
-
                   <p className="text-xs leading-5 text-muted-foreground">
                     {tx(
                       "Cette précision adapte les seuils d'alerte à votre métier",
@@ -1768,9 +1491,7 @@ export function OnboardingView({
                         <div
                           className={cn(
                             "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
-                            active
-                              ? "bg-background/15"
-                              : "bg-muted"
+                            active ? "bg-background/15" : "bg-muted"
                           )}
                         >
                           <Icon className="h-4.5 w-4.5" />
@@ -1788,7 +1509,6 @@ export function OnboardingView({
                               <span className="truncate text-sm font-semibold">
                                 {px(item.label)}
                               </span>
-
                               {item.maturity && (
                                 <span
                                   className={cn(
@@ -1806,7 +1526,6 @@ export function OnboardingView({
                                 </span>
                               )}
                             </div>
-
                             {active && (
                               <Check className="h-4 w-4 shrink-0" />
                             )}
@@ -1836,14 +1555,12 @@ export function OnboardingView({
                         {subTypes2.length > 1
                           ? tx("Activités retenues : ", "Activities chosen: ")
                           : tx("Activité retenue : ", "Activity chosen: ")}
-
                         <span className="font-semibold text-foreground">
                           {subTypes2
                             .map((id) => {
                               const found = subTypes.find(
                                 (item) => item.id === id
                               )
-
                               return found ? px(found.label) : id
                             })
                             .join(", ")}
@@ -1861,7 +1578,6 @@ export function OnboardingView({
                       )
                     )}
                   </span>
-
                   <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
                     {tx("Modifiable plus tard", "Changeable later")}
                   </span>
@@ -1876,20 +1592,14 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* ---------------------------------------------------------------- */}
-            {/* STEP 3: MONITORING PRIORITIES                                    */}
-            {/* ---------------------------------------------------------------- */}
-
+            {/* STEP 7: MONITORING PRIORITIES */}
             {step === equipmentStepNumber && sector && (
               <div>
                 <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
                   {selectedSector ? px(selectedSector.label) : null}
                   {subType && (
                     <>
-                      <span className="text-muted-foreground/50">
-                        /
-                      </span>
-
+                      <span className="text-muted-foreground/50">/</span>
                       {px(
                         subTypes.find((item) => item.id === subType)?.label
                       )}
@@ -1913,18 +1623,14 @@ export function OnboardingView({
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   {equipment.map((item, index) => {
                     const Icon = item.icon
-                    const active =
-                      selectedEquipment.includes(item.id)
+                    const active = selectedEquipment.includes(item.id)
                     const disabled = Boolean(item.comingSoon)
 
                     return (
                       <button
                         key={item.id}
                         type="button"
-                        onClick={() =>
-                          !disabled &&
-                          toggleEquipment(item.id)
-                        }
+                        onClick={() => !disabled && toggleEquipment(item.id)}
                         disabled={disabled}
                         className={cn(
                           "relative flex flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all",
@@ -1944,7 +1650,6 @@ export function OnboardingView({
 
                         <div className="flex w-full items-center justify-between">
                           <Icon className="h-5 w-5" />
-
                           {!disabled && active && (
                             <Check className="h-4 w-4" />
                           )}
@@ -1975,10 +1680,7 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* ---------------------------------------------------------------- */}
-            {/* STEP 4: DATA SOURCES                                             */}
-            {/* ---------------------------------------------------------------- */}
-
+            {/* STEP 8: DATA SOURCES */}
             {step === sourcesStepNumber && (
               <div>
                 <BulkSelect
@@ -1999,8 +1701,7 @@ export function OnboardingView({
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                   {DATA_SOURCES.map((source) => {
                     const Icon = source.icon
-                    const active =
-                      selectedSources.includes(source.id)
+                    const active = selectedSources.includes(source.id)
 
                     return (
                       <button
@@ -2016,10 +1717,7 @@ export function OnboardingView({
                       >
                         <div className="flex w-full items-center justify-between">
                           <Icon className="h-5 w-5" />
-
-                          {active && (
-                            <Check className="h-4 w-4" />
-                          )}
+                          {active && <Check className="h-4 w-4" />}
                         </div>
 
                         <span className="mt-2 text-sm font-semibold">
@@ -2059,7 +1757,6 @@ export function OnboardingView({
                         className="mt-0.5 h-4 w-4 shrink-0 text-accent-foreground"
                         aria-hidden="true"
                       />
-
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold">
                           {tx(
@@ -2067,7 +1764,6 @@ export function OnboardingView({
                             "Import your file now"
                           )}
                         </p>
-
                         <p className="mt-1 text-xs leading-5 text-muted-foreground">
                           {tx(
                             "Chaque activité attend ses propres colonnes. Pour",
@@ -2113,7 +1809,6 @@ export function OnboardingView({
                           )}
                         >
                           <Upload className="h-4 w-4" aria-hidden="true" />
-
                           {csvUploading
                             ? tx("Import en cours...", "Importing...")
                             : csvDone
@@ -2125,7 +1820,6 @@ export function OnboardingView({
                                   "Choisir un fichier CSV",
                                   "Choose a CSV file"
                                 )}
-
                           <input
                             type="file"
                             accept=".csv"
@@ -2169,16 +1863,12 @@ export function OnboardingView({
                 >
                   <Clock3 className="h-4 w-4" />
                   {tx("Configurer plus tard", "Set this up later")}
-
-                  {configureLater && (
-                    <Check className="h-4 w-4" />
-                  )}
+                  {configureLater && <Check className="h-4 w-4" />}
                 </button>
 
                 <div className="mt-4 rounded-xl border border-border bg-background px-4 py-3">
                   <div className="flex items-start gap-3">
                     <Activity className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-
                     <div>
                       <p className="text-xs font-semibold text-foreground">
                         {tx(
@@ -2186,7 +1876,6 @@ export function OnboardingView({
                           "No connection is needed right now"
                         )}
                       </p>
-
                       <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
                         {tx(
                           "SentrIA pourra être configuré avec votre ERP, vos capteurs ou vos fichiers CSV / Excel depuis votre espace, à tout moment.",
@@ -2199,9 +1888,6 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* The same alert preview the side panel carries, for the
-                widths where there is no side panel. It only appears once
-                there is a sector to build one from. */}
             {step >= sectorStepNumber && (
               <div className="rounded-3xl bg-foreground p-4 text-background xl:hidden">
                 <AlertPreview
@@ -2215,16 +1901,9 @@ export function OnboardingView({
           </div>
         </div>
 
-        {/* ACTION BAR
-            Pinned to the bottom of the column rather than sitting after
-            the last card. On the priorities step there are twelve cards,
-            and "Continue" was below all of them. */}
+        {/* ACTION BAR */}
         <footer className="shrink-0 border-t border-border bg-card/85 px-5 py-4 backdrop-blur-sm md:px-8">
           <div className="mx-auto w-full max-w-3xl">
-            {/* A greyed-out button with no reason beside it reads as a
-                broken page. This says which answer is missing, on its
-                own line so a phone does not have to fit it between two
-                buttons. */}
             {!canContinue && blockedReason && (
               <p className="mb-3 text-xs leading-5 text-muted-foreground">
                 {blockedReason}
@@ -2245,30 +1924,29 @@ export function OnboardingView({
               )}
 
               {step < totalSteps ? (
-              <button
-                type="button"
-                onClick={nextStep}
-                disabled={!canContinue}
-                className="inline-flex shrink-0 items-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {tx("Continuer", "Continue")}
-                <ChevronRight className="h-4 w-4" aria-hidden="true" />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={finish}
-                className="inline-flex shrink-0 items-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                {tx("Ouvrir mon dashboard", "Open my dashboard")}
-                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-              </button>
+                <button
+                  type="button"
+                  onClick={nextStep}
+                  disabled={!canContinue}
+                  className="inline-flex shrink-0 items-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {tx("Continuer", "Continue")}
+                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={finish}
+                  className="inline-flex shrink-0 items-center gap-2 rounded-full bg-brand px-6 py-3 text-sm font-semibold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  {tx("Ouvrir mon dashboard", "Open my dashboard")}
+                  <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                </button>
               )}
             </div>
           </div>
         </footer>
       </div>
-
     </div>
   )
 }
