@@ -1111,22 +1111,20 @@ export function OnboardingView({
               </div>
             </div>
 
-            {/* STEP 1: LANGUAGE (GLOSSY MODERN DESIGN) */}
+            {/* STEP 1: LANGUAGE - GLOSSY MODERN STYLE */}
             {step === langStepNumber && (
-              <div className="flex flex-col items-center justify-center py-8">
-                {/* Glossy Panel Container */}
-                <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/90 shadow-2xl backdrop-blur-xl ring-1 ring-black/5">
-                  
-                  {/* Header Strip */}
-                  <div className="flex items-center justify-between border-b border-white/5 bg-black/20 px-6 py-4">
+              <div className="mx-auto w-full max-w-md">
+                <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-900/80 shadow-2xl backdrop-blur-xl">
+                  {/* Header mimicking the reference image */}
+                  <div className="flex items-center justify-between border-b border-white/5 px-6 py-4">
                     <span className="text-sm font-medium text-zinc-400">
                       {tx("Language", "Language")}
                     </span>
                     <Languages className="h-4 w-4 text-zinc-500" />
                   </div>
-
+                  
                   {/* Options List */}
-                  <div className="flex flex-col divide-y divide-white/5">
+                  <div className="divide-y divide-white/5">
                     {LANGUAGES.filter(l => l.code === 'fr' || l.code === 'en').map((item) => {
                       const active = language === item.code
                       return (
@@ -1134,57 +1132,49 @@ export function OnboardingView({
                           key={item.code}
                           type="button"
                           onClick={() => chooseLanguage(item.code)}
+                          aria-pressed={active}
                           className={cn(
-                            "group relative flex items-center justify-between px-6 py-5 text-left transition-all duration-300",
-                            "hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500/50 focus-visible:ring-inset"
+                            "group relative flex w-full items-center justify-between px-6 py-5 text-left transition-all duration-200",
+                            "hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand",
+                            active ? "bg-white/10" : "bg-transparent"
                           )}
                         >
-                          {/* Active Indicator Bar (Left side) */}
-                          <div 
-                            className={cn(
-                              "absolute left-0 top-0 bottom-0 w-1 transition-all duration-300",
-                              active ? "bg-lime-500 shadow-[0_0_12px_rgba(132,204,22,0.6)]" : "bg-transparent"
-                            )} 
-                          />
-
-                          <div className="flex flex-col gap-1 pl-2">
-                            <span 
-                              className={cn(
-                                "text-lg font-medium tracking-wide transition-colors duration-300",
-                                active ? "text-lime-400 drop-shadow-[0_0_8px_rgba(163,230,53,0.3)]" : "text-zinc-300 group-hover:text-white"
-                              )}
-                            >
+                          <div className="flex flex-col">
+                            <span className={cn(
+                              "text-lg font-semibold tracking-tight transition-colors",
+                              active ? "text-lime-400" : "text-zinc-200 group-hover:text-white"
+                            )}>
                               {item.label}
                             </span>
-                            
-                            {/* Subtle region hint, only visible when not active to keep it clean */}
-                            {!active && (
-                              <span className="text-[10px] text-zinc-600">
-                                {px(item.region)}
-                              </span>
-                            )}
+                            <span className="mt-0.5 text-xs text-zinc-500">
+                              {px(item.region)}
+                            </span>
                           </div>
 
-                          {/* Active Checkmark / Glow */}
+                          {/* Active Indicator */}
                           {active && (
-                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-lime-500/20 text-lime-400">
+                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-lime-400 text-zinc-950 shadow-[0_0_12px_rgba(163,230,53,0.4)]">
                               <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                            </div>
+                          )}
+                          
+                          {/* Hover cursor hint for inactive */}
+                          {!active && (
+                            <div className="opacity-0 transition-opacity group-hover:opacity-100">
+                               <div className="h-4 w-4 rounded-full border border-zinc-600" />
                             </div>
                           )}
                         </button>
                       )
                     })}
                   </div>
-
-                  {/* Bottom decorative glow */}
-                  <div className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 h-12 w-3/4 bg-lime-500/10 blur-2xl rounded-full" />
+                  
+                  {/* Bottom accent bar */}
+                  <div className="h-1.5 w-full bg-gradient-to-r from-lime-500 via-lime-400 to-lime-500 opacity-80" />
                 </div>
-
-                <p className="mt-6 text-center text-xs text-muted-foreground max-w-sm">
-                  {tx(
-                    "SentrIA s'adaptera à votre choix pour toutes les interactions futures.",
-                    "SentrIA will adapt to your choice for all future interactions."
-                  )}
+                
+                <p className="mt-4 text-center text-xs text-muted-foreground">
+                  {tx("Cette préférence sera appliquée immédiatement.", "This preference will be applied immediately.")}
                 </p>
               </div>
             )}
