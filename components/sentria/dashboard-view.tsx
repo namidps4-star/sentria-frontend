@@ -56,8 +56,6 @@ import {
   type SingleOpsType,
 } from "@/lib/activities"
 
-
-
 const SECTORS: { key: string; label: Localized }[] = [
   { key: "all", label: localized("Tous", "All") },
   { key: "industry", label: localized("Industrie", "Industry") },
@@ -144,13 +142,11 @@ function dailySeries(
 
   return Array.from({ length: days }, (_, i) => {
     const day = new Date()
-
     day.setHours(0, 0, 0, 0)
     day.setDate(day.getDate() - (days - 1 - i))
 
     return scoped.filter((a) => {
       const at = new Date(a.date)
-
       return (
         at.getFullYear() === day.getFullYear() &&
         at.getMonth() === day.getMonth() &&
@@ -399,7 +395,6 @@ function alertBreakdown(
 
   for (const a of alerts) {
     const parts = (a.alert_key ?? "").split(".")
-
     if (parts.length < 2 || !parts[1]) continue
 
     const family = parts[1]
@@ -1569,6 +1564,7 @@ export function DashboardView({
     setUploadFailed(false)
 
     const form = new FormData()
+    /* Field name MUST match the FastAPI parameter `file`. */
     form.append("file", file)
 
     try {
@@ -1582,6 +1578,8 @@ export function DashboardView({
       const chosenBusinessType =
         uploadSector === "logistics" ? businessType : uploadActivity ?? businessType
 
+      /* Do NOT set Content-Type manually: fetch must add the multipart
+         boundary itself, otherwise the backend cannot parse the body. */
       const res = await fetch(
         `${API}/upload?sector=${toApiSector(uploadSector)}&lang=fr` +
           (chosenOpsType ? `&ops_type=${chosenOpsType}` : "") +
@@ -1598,13 +1596,55 @@ export function DashboardView({
         }
       )
 
-      if (!res.ok) {
-        throw new Error("Upload failed")
+      /* Read the body as text first so a non-JSON error body cannot
+         throw inside response.json() and lose the real HTTP status. */
+      const rawBody = await res.text()
+
+      let data: any = null
+
+      if (rawBody) {
+        try {
+          data = JSON.parse(rawBody)
+        } catch {
+          data = null
+        }
       }
 
-      const data = await res.json()
+      console.log("[SentrIA] /upload response", {
+        ok: res.ok,
+        status: res.status,
+        body: data ?? rawBody,
+      })
 
-      setUploadMsg(data.message ?? tx("Fichier traité.", "File processed."))
+      /* Success is decided by HTTP status AND data.success when the
+         backend sends it. The message string is NEVER compared to a
+         hard-coded value: the backend returns sentences such as
+         "Processed 10 rows, 3 alert(s) fired." which is a description,
+         not a status flag. */
+      const backendSucceeded =
+        res.ok && (data === null || data.success !== false)
+
+      if (!backendSucceeded) {
+        const backendMessage =
+          (data && typeof data.message === "string" && data.message) ||
+          (data && typeof data.error === "string" && data.error) ||
+          (typeof rawBody === "string" && rawBody) ||
+          ""
+
+        throw new Error(
+          backendMessage ||
+            tx(
+              "Erreur lors de l'import. Vérifiez la console du navigateur.",
+              "The import failed. Check the browser console."
+            )
+        )
+      }
+
+      /* Success: show the backend message verbatim if it sent one. */
+      setUploadMsg(
+        (data && typeof data.message === "string" && data.message) ||
+          tx("Fichier traité.", "File processed.")
+      )
 
       await new Promise((r) => setTimeout(r, 1500))
 
@@ -1618,13 +1658,16 @@ export function DashboardView({
       setFilterSector(uploadSector)
       localStorage.setItem("sentria_sector", uploadSector)
     } catch (error) {
-      console.error(error)
+      console.error("[SentrIA] upload failed:", error)
+
       setUploadFailed(true)
       setUploadMsg(
-        tx(
-          "Erreur lors de l'upload. Vérifiez la console du navigateur.",
-          "The upload failed. Check the browser console."
-        )
+        error instanceof Error && error.message
+          ? error.message
+          : tx(
+              "Erreur lors de l'import. Vérifiez la console du navigateur.",
+              "The import failed. Check the browser console."
+            )
       )
     } finally {
       setUploading(false)
@@ -1902,8 +1945,8 @@ export function DashboardView({
     filterSector !== "all"
       ? filterSector
       : activeSectors.length === 1
-        ? activeSectors[0]
-        : null
+      ? activeSectors[0]
+      : null
 
   const onboardedSectorLabel = sectorName(onboardedSectorKey)
 
