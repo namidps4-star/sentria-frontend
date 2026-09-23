@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -1114,10 +1115,7 @@ export function OnboardingView({
             {/* STEP 1: LANGUAGE (GLOSSY MODERN DESIGN) */}
             {step === langStepNumber && (
               <div className="flex flex-col items-center justify-center py-8">
-                {/* Glossy Panel Container */}
                 <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/90 shadow-2xl backdrop-blur-xl ring-1 ring-black/5">
-                  
-                  {/* Header Strip */}
                   <div className="flex items-center justify-between border-b border-white/5 bg-black/20 px-6 py-4">
                     <span className="text-sm font-medium text-zinc-400">
                       {tx("Language", "Language")}
@@ -1125,7 +1123,6 @@ export function OnboardingView({
                     <Languages className="h-4 w-4 text-zinc-500" />
                   </div>
 
-                  {/* Options List */}
                   <div className="flex flex-col divide-y divide-white/5">
                     {LANGUAGES.filter(l => l.code === 'fr' || l.code === 'en').map((item) => {
                       const active = language === item.code
@@ -1139,7 +1136,6 @@ export function OnboardingView({
                             "hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500/50 focus-visible:ring-inset"
                           )}
                         >
-                          {/* Active Indicator Bar (Left side) */}
                           <div 
                             className={cn(
                               "absolute left-0 top-0 bottom-0 w-1 transition-all duration-300",
@@ -1156,8 +1152,6 @@ export function OnboardingView({
                             >
                               {item.label}
                             </span>
-                            
-                            {/* Subtle region hint, only visible when not active to keep it clean */}
                             {!active && (
                               <span className="text-[10px] text-zinc-600">
                                 {px(item.region)}
@@ -1165,7 +1159,6 @@ export function OnboardingView({
                             )}
                           </div>
 
-                          {/* Active Checkmark / Glow */}
                           {active && (
                             <div className="flex h-6 w-6 items-center justify-center rounded-full bg-lime-500/20 text-lime-400">
                               <Check className="h-3.5 w-3.5" strokeWidth={3} />
@@ -1175,8 +1168,6 @@ export function OnboardingView({
                       )
                     })}
                   </div>
-
-                  {/* Bottom decorative glow */}
                   <div className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 h-12 w-3/4 bg-lime-500/10 blur-2xl rounded-full" />
                 </div>
 
@@ -1192,10 +1183,7 @@ export function OnboardingView({
             {/* STEP 2: COUNTRY (GLOSSY MODERN DESIGN) */}
             {step === countryStepNumber && (
               <div className="flex flex-col items-center justify-center py-8">
-                {/* Glossy Panel Container */}
                 <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/90 shadow-2xl backdrop-blur-xl ring-1 ring-black/5">
-                  
-                  {/* Header Strip */}
                   <div className="flex items-center justify-between border-b border-white/5 bg-black/20 px-6 py-4">
                     <span className="text-sm font-medium text-zinc-400">
                       {tx("Country & Currency", "Country & Currency")}
@@ -1203,7 +1191,6 @@ export function OnboardingView({
                     <Globe2 className="h-4 w-4 text-zinc-500" />
                   </div>
 
-                  {/* Options List - Scrollable if needed */}
                   <div className="max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
                     <div className="flex flex-col divide-y divide-white/5">
                       {COUNTRIES.map((item) => {
@@ -1222,7 +1209,6 @@ export function OnboardingView({
                               "hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500/50 focus-visible:ring-inset"
                             )}
                           >
-                            {/* Active Indicator Bar */}
                             <div 
                               className={cn(
                                 "absolute left-0 top-0 bottom-0 w-1 transition-all duration-300",
@@ -1244,7 +1230,6 @@ export function OnboardingView({
                               </span>
                             </div>
 
-                            {/* Currency Symbol Display */}
                             <div className="flex flex-col items-end gap-1">
                               <span 
                                 className={cn(
@@ -1265,8 +1250,6 @@ export function OnboardingView({
                       })}
                     </div>
                   </div>
-
-                  {/* Bottom decorative glow */}
                   <div className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 h-12 w-3/4 bg-lime-500/10 blur-2xl rounded-full" />
                 </div>
 
@@ -1279,41 +1262,78 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 3: TIMEZONE */}
+            {/* STEP 3: TIMEZONE (GLOSSY MODERN DESIGN) */}
             {step === zoneStepNumber && (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {TIMEZONES.map((zone) => {
-                  const active = timezoneId === zone.id
-                  const suggested =
-                    countryFor(countryCode)?.timezoneId === zone.id
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/90 shadow-2xl backdrop-blur-xl ring-1 ring-black/5">
+                  <div className="flex items-center justify-between border-b border-white/5 bg-black/20 px-6 py-4">
+                    <span className="text-sm font-medium text-zinc-400">
+                      {tx("Time Zone", "Time Zone")}
+                    </span>
+                    <Clock3 className="h-4 w-4 text-zinc-500" />
+                  </div>
 
-                  return (
-                    <button
-                      key={zone.id}
-                      type="button"
-                      onClick={() => setTimezoneId(zone.id)}
-                      aria-pressed={active}
-                      className={cn(CHOICE_CARD, active && CHOICE_ACTIVE)}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <p className="min-w-0 font-heading text-base font-bold leading-snug">
-                          {zone.label}
-                        </p>
-                        {active && <CardTick />}
-                      </div>
-                      {suggested && (
-                        <p
-                          className={cn(
-                            "mt-3 text-[10px] font-semibold uppercase tracking-wider",
-                            active ? "text-accent" : "text-muted-foreground"
-                          )}
-                        >
-                          {tx("Déduit de votre pays", "From your country")}
-                        </p>
-                      )}
-                    </button>
-                  )
-                })}
+                  <div className="max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
+                    <div className="flex flex-col divide-y divide-white/5">
+                      {TIMEZONES.map((zone) => {
+                        const active = timezoneId === zone.id
+                        const suggested =
+                          countryFor(countryCode)?.timezoneId === zone.id
+
+                        return (
+                          <button
+                            key={zone.id}
+                            type="button"
+                            onClick={() => setTimezoneId(zone.id)}
+                            aria-pressed={active}
+                            className={cn(
+                              "group relative flex items-center justify-between px-6 py-4 text-left transition-all duration-300",
+                              "hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500/50 focus-visible:ring-inset"
+                            )}
+                          >
+                            <div 
+                              className={cn(
+                                "absolute left-0 top-0 bottom-0 w-1 transition-all duration-300",
+                                active ? "bg-lime-500 shadow-[0_0_12px_rgba(132,204,22,0.6)]" : "bg-transparent"
+                              )} 
+                            />
+
+                            <div className="flex flex-col gap-0.5 pl-2">
+                              <span 
+                                className={cn(
+                                  "text-base font-medium transition-colors duration-300",
+                                  active ? "text-lime-400 drop-shadow-[0_0_8px_rgba(163,230,53,0.3)]" : "text-zinc-200 group-hover:text-white"
+                                )}
+                              >
+                                {zone.label}
+                              </span>
+                              
+                              {suggested && (
+                                <span className="text-[10px] text-lime-500/80 font-medium">
+                                  {tx("Déduit de votre pays", "From your country")}
+                                </span>
+                              )}
+                            </div>
+
+                            {active && (
+                              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-lime-500/20 text-lime-400">
+                                <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                              </div>
+                            )}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <div className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 h-12 w-3/4 bg-lime-500/10 blur-2xl rounded-full" />
+                </div>
+
+                <p className="mt-6 text-center text-xs text-muted-foreground max-w-sm">
+                  {tx(
+                    "Vos seuils sont en heures : ils doivent suivre votre journée locale.",
+                    "Your thresholds are in hours, so they have to follow your local day."
+                  )}
+                </p>
               </div>
             )}
 
@@ -1360,14 +1380,15 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 5: SECTOR */}
+            {/* STEP 5: SECTOR (MUSEUM NEON STYLE) */}
             {step === sectorStepNumber && (
               <>
-                <div className="flex flex-wrap justify-center gap-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {SECTORS.map((item) => {
                     const Icon = item.icon
                     const active = sector === item.id
                     const secondary = extraSectors.includes(item.id)
+                    const isSelected = active || secondary
 
                     return (
                       <button
@@ -1378,75 +1399,77 @@ export function OnboardingView({
                             ? toggleExtraSector(item.id)
                             : chooseSector(item.id)
                         }
-                        aria-pressed={active || secondary}
+                        aria-pressed={isSelected}
                         className={cn(
-                          "relative flex w-[calc(50%-6px)] flex-col items-start gap-1 rounded-3xl border p-5 text-left shadow-sm transition-all sm:w-[calc(33.333%-8px)] lg:w-[calc(25%-9px)]",
-                          item.recommended &&
-                            !active &&
-                            !secondary &&
-                            "border-accent/50 ring-1 ring-accent/30",
-                          active
-                            ? "border-foreground bg-foreground text-background"
-                            : secondary
-                              ? "border-foreground bg-muted"
-                              : "border-border hover:border-accent/60 hover:bg-accent/10"
+                          "group relative flex flex-col items-center justify-between rounded-3xl border p-6 text-center transition-all duration-300",
+                          "h-[280px] w-full",
+                          // Base styling matching the museum aesthetic
+                          "border-lime-500/30 bg-zinc-950/80 hover:border-lime-400 hover:bg-zinc-900",
+                          // Active state: solid glow
+                          isSelected && "border-lime-400 bg-lime-500/10 shadow-[0_0_30px_-5px_rgba(132,204,22,0.15)]",
+                          // Recommended state
+                          item.recommended && !isSelected && "border-lime-500/60 ring-1 ring-lime-500/20"
                         )}
                       >
+                        {/* Maturity Badge */}
                         {item.maturity && (
                           <span
                             className={cn(
-                              "absolute right-3 top-3 whitespace-nowrap rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider",
-                              item.recommended
-                                ? active
-                                  ? "bg-accent text-accent-foreground"
-                                  : "bg-accent/20 text-accent-foreground"
-                                : active
-                                  ? "bg-background/20 text-background/70"
-                                  : "bg-muted text-muted-foreground"
+                              "absolute right-4 top-4 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                              isSelected
+                                ? "bg-lime-500 text-zinc-950"
+                                : "bg-lime-500/10 text-lime-400 border border-lime-500/20"
                             )}
                           >
                             {maturityLabel(item.maturity, tx)}
                           </span>
                         )}
 
-                        {(active || secondary) && (
-                          <span
-                            className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-accent-foreground ring-2 ring-background"
-                            aria-hidden="true"
+                        {/* Icon Area - Large Neon Style */}
+                        <div className="flex flex-1 flex-col items-center justify-center pt-4">
+                          <div 
+                            className={cn(
+                              "flex h-24 w-24 items-center justify-center rounded-2xl transition-all duration-300 mb-4",
+                              isSelected 
+                                ? "bg-lime-500/20 text-lime-400 scale-105" 
+                                : "bg-zinc-900/50 text-zinc-500 group-hover:text-lime-400/80 group-hover:bg-zinc-900"
+                            )}
                           >
-                            <Check className="h-3 w-3" strokeWidth={3} />
+                            <Icon className="h-12 w-12 stroke-[1.5]" />
+                          </div>
+                          
+                          <span 
+                            className={cn(
+                              "text-lg font-bold tracking-tight transition-colors duration-300",
+                              isSelected ? "text-lime-400" : "text-zinc-200 group-hover:text-white"
+                            )}
+                          >
+                            {px(item.label)}
                           </span>
-                        )}
+                        </div>
 
+                        {/* Description */}
                         <span
                           className={cn(
-                            "flex h-9 w-9 items-center justify-center rounded-xl",
-                            active
-                              ? "bg-background/15"
-                              : "bg-accent/15 text-accent-foreground"
-                          )}
-                        >
-                          <Icon className="h-4.5 w-4.5" />
-                        </span>
-
-                        <span className="mt-2.5 text-sm font-semibold">
-                          {px(item.label)}
-                        </span>
-
-                        <span
-                          className={cn(
-                            "text-xs leading-5",
-                            active
-                              ? "text-background/70"
-                              : "text-muted-foreground"
+                            "mt-2 text-xs leading-relaxed transition-colors duration-300",
+                            isSelected
+                              ? "text-lime-200/70"
+                              : "text-zinc-500 group-hover:text-zinc-400"
                           )}
                         >
                           {px(item.description)}
                         </span>
 
-                        {secondary && (
-                          <span className="mt-1.5 rounded-full bg-foreground px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-background">
-                            {tx("Secteur secondaire", "Secondary sector")}
+                        {/* Selection Indicator Dot */}
+                        {isSelected && (
+                          <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-lime-500 text-zinc-950 ring-2 ring-zinc-950">
+                            <Check className="h-3 w-3" strokeWidth={3} />
+                          </span>
+                        )}
+
+                        {secondary && !active && (
+                          <span className="absolute bottom-4 rounded-full bg-zinc-800 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-zinc-400">
+                            {tx("Secondaire", "Secondary")}
                           </span>
                         )}
                       </button>
@@ -1454,7 +1477,8 @@ export function OnboardingView({
                   })}
                 </div>
 
-                <div className="rounded-2xl border border-border bg-background p-4">
+                {/* Multi-sector Toggle - Styled to match */}
+                <div className="mt-4 rounded-2xl border border-lime-500/20 bg-zinc-950/50 p-4">
                   <label className="flex cursor-pointer items-start gap-3">
                     <input
                       type="checkbox"
@@ -1463,30 +1487,30 @@ export function OnboardingView({
                         setMultiSector(event.target.checked)
                         if (!event.target.checked) setExtraSectors([])
                       }}
-                      className="mt-0.5 h-4 w-4 shrink-0 accent-foreground"
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-lime-500"
                     />
                     <span>
-                      <span className="block text-sm font-semibold">
+                      <span className="block text-sm font-semibold text-zinc-200">
                         {tx(
                           "Mon entreprise couvre plusieurs secteurs",
                           "My company covers more than one sector"
                         )}
                       </span>
-                      <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
+                      <span className="mt-0.5 block text-xs leading-5 text-zinc-500">
                         {tx(
-                          "Par exemple une usine avec son propre entrepôt. Le secteur choisi ci-dessus reste le principal, et les autres s'ajoutent au tableau de bord.",
-                          "A factory with its own warehouse, for instance. The sector chosen above stays the main one, and the others are added to the dashboard."
+                          "Par exemple une usine avec son propre entrepôt. Le secteur choisi ci-dessus reste le principal.",
+                          "A factory with its own warehouse, for instance. The sector chosen above stays the main one."
                         )}
                       </span>
                     </span>
                   </label>
 
                   {multiSector && (
-                    <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">
+                    <p className="mt-3 border-t border-white/5 pt-3 text-xs text-zinc-400">
                       {extraSectors.length > 0 ? (
                         <>
                           {tx("Secteurs :", "Sectors:")}{" "}
-                          <span className="font-semibold text-foreground">
+                          <span className="font-semibold text-lime-400">
                             {allSectors
                               .map((id) => sectorName(id))
                               .join(", ")}
@@ -1494,8 +1518,8 @@ export function OnboardingView({
                         </>
                       ) : sector ? (
                         tx(
-                          "Touchez un autre secteur pour l'ajouter. Le premier reste le principal.",
-                          "Tap another sector to add it. The first stays the main one."
+                          "Touchez un autre secteur pour l'ajouter.",
+                          "Tap another sector to add it."
                         )
                       ) : (
                         tx(
