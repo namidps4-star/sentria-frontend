@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -1380,10 +1379,10 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 5: SECTOR (MUSEUM NEON STYLE) */}
+            {/* STEP 5: SECTOR (MUSEUM NEON STYLE - SPACED OUT) */}
             {step === sectorStepNumber && (
               <>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {SECTORS.map((item) => {
                     const Icon = item.icon
                     const active = sector === item.id
@@ -1401,12 +1400,12 @@ export function OnboardingView({
                         }
                         aria-pressed={isSelected}
                         className={cn(
-                          "group relative flex flex-col items-center justify-between rounded-3xl border p-6 text-center transition-all duration-300",
-                          "h-[280px] w-full",
+                          "group relative flex flex-col items-center justify-between rounded-3xl border p-8 text-center transition-all duration-300",
+                          "min-h-[320px] w-full",
                           // Base styling matching the museum aesthetic
                           "border-lime-500/30 bg-zinc-950/80 hover:border-lime-400 hover:bg-zinc-900",
                           // Active state: solid glow
-                          isSelected && "border-lime-400 bg-lime-500/10 shadow-[0_0_30px_-5px_rgba(132,204,22,0.15)]",
+                          isSelected && "border-lime-400 bg-lime-500/10 shadow-[0_0_40px_-8px_rgba(132,204,22,0.2)]",
                           // Recommended state
                           item.recommended && !isSelected && "border-lime-500/60 ring-1 ring-lime-500/20"
                         )}
@@ -1415,7 +1414,7 @@ export function OnboardingView({
                         {item.maturity && (
                           <span
                             className={cn(
-                              "absolute right-4 top-4 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                              "absolute right-5 top-5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
                               isSelected
                                 ? "bg-lime-500 text-zinc-950"
                                 : "bg-lime-500/10 text-lime-400 border border-lime-500/20"
@@ -1426,21 +1425,21 @@ export function OnboardingView({
                         )}
 
                         {/* Icon Area - Large Neon Style */}
-                        <div className="flex flex-1 flex-col items-center justify-center pt-4">
+                        <div className="flex flex-1 flex-col items-center justify-center pt-6">
                           <div 
                             className={cn(
-                              "flex h-24 w-24 items-center justify-center rounded-2xl transition-all duration-300 mb-4",
+                              "flex h-28 w-28 items-center justify-center rounded-2xl transition-all duration-300 mb-6",
                               isSelected 
                                 ? "bg-lime-500/20 text-lime-400 scale-105" 
                                 : "bg-zinc-900/50 text-zinc-500 group-hover:text-lime-400/80 group-hover:bg-zinc-900"
                             )}
                           >
-                            <Icon className="h-12 w-12 stroke-[1.5]" />
+                            <Icon className="h-14 w-14 stroke-[1.5]" />
                           </div>
                           
                           <span 
                             className={cn(
-                              "text-lg font-bold tracking-tight transition-colors duration-300",
+                              "text-xl font-bold tracking-tight transition-colors duration-300",
                               isSelected ? "text-lime-400" : "text-zinc-200 group-hover:text-white"
                             )}
                           >
@@ -1451,7 +1450,7 @@ export function OnboardingView({
                         {/* Description */}
                         <span
                           className={cn(
-                            "mt-2 text-xs leading-relaxed transition-colors duration-300",
+                            "mt-4 text-sm leading-relaxed transition-colors duration-300",
                             isSelected
                               ? "text-lime-200/70"
                               : "text-zinc-500 group-hover:text-zinc-400"
@@ -1462,13 +1461,13 @@ export function OnboardingView({
 
                         {/* Selection Indicator Dot */}
                         {isSelected && (
-                          <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-lime-500 text-zinc-950 ring-2 ring-zinc-950">
-                            <Check className="h-3 w-3" strokeWidth={3} />
+                          <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-lime-500 text-zinc-950 ring-2 ring-zinc-950">
+                            <Check className="h-3.5 w-3.5" strokeWidth={3} />
                           </span>
                         )}
 
                         {secondary && !active && (
-                          <span className="absolute bottom-4 rounded-full bg-zinc-800 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-zinc-400">
+                          <span className="absolute bottom-5 rounded-full bg-zinc-800 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-zinc-400">
                             {tx("Secondaire", "Secondary")}
                           </span>
                         )}
@@ -1478,7 +1477,7 @@ export function OnboardingView({
                 </div>
 
                 {/* Multi-sector Toggle - Styled to match */}
-                <div className="mt-4 rounded-2xl border border-lime-500/20 bg-zinc-950/50 p-4">
+                <div className="mt-8 rounded-2xl border border-lime-500/20 bg-zinc-950/50 p-5">
                   <label className="flex cursor-pointer items-start gap-3">
                     <input
                       type="checkbox"
@@ -1506,7 +1505,7 @@ export function OnboardingView({
                   </label>
 
                   {multiSector && (
-                    <p className="mt-3 border-t border-white/5 pt-3 text-xs text-zinc-400">
+                    <p className="mt-4 border-t border-white/5 pt-4 text-xs text-zinc-400">
                       {extraSectors.length > 0 ? (
                         <>
                           {tx("Secteurs :", "Sectors:")}{" "}
