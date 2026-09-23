@@ -28,25 +28,8 @@ import {
 import { sectorLabel } from "@/lib/priorities"
 import { localized, useTx, type Localized } from "@/lib/i18n"
 
-/* --------------------------------------------------------------------------
- * What's on the calendar, and where it comes from
- *
- * Every event here is one of the board's own recommendation cards, placed
- * on a real date:
- *
- *  - An assignment with a deadline (an admin's own date, set on the board)
- *    places the event on that date, as a "deadline" — or "resolved" once
- *    its status is done.
- *  - Anything else places the event on the alert's own timestamp: CRITICAL
- *    reads as an incident, WARNING as a threshold.
- *
- * "Who's assigned" is the same contractor_ids the board reads, resolved to
- * names and roles. Nothing here is invented: a task with nobody on it says
- * so, and a card with no real date to place it on is left off the
- * calendar rather than pinned to a guess.
- * -------------------------------------------------------------------------- */
-
 type EventKind = "incident" | "threshold" | "deadline" | "resolved"
+type ViewMode = "week" | "month"
 
 type Recommendation = {
   id: string
@@ -65,9 +48,6 @@ type Recommendation = {
 type CalendarEvent = {
   id: string
   date: Date
-  /** Real time-of-day only exists for incident/threshold events, taken
-   *  from the alert's own timestamp. A deadline is a plain date — an
-   *  admin picked a day, not an hour. */
   hasTime: boolean
   kind: EventKind
   severity: string
@@ -125,7 +105,7 @@ function addDays(date: Date, days: number): Date {
 
 function mondayOf(date: Date): Date {
   const copy = startOfDay(date)
-  const day = copy.getDay() // 0 = Sunday
+  const day = copy.getDay()
   const diff = day === 0 ? -6 : 1 - day
   return addDays(copy, diff)
 }
@@ -138,6 +118,14 @@ function sameDay(a: Date, b: Date): boolean {
   )
 }
 
+function firstOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1)
+}
+
+function lastOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0)
+}
+
 function getInitials(name: string) {
   return name
     .trim()
@@ -148,17 +136,6 @@ function getInitials(name: string) {
     .join("")
 }
 
-/** Joins recommendations to their assignment (by task_key === rec.id) and
- *  to the contractors on it, then places each on a real date. A card with
- *  neither a deadline nor a readable alert timestamp is dropped rather
- *  than guessed at. */
-/** The backend answers with `alert_id`, never `id` — the dashboard and
- *  board both derive a stable id from the alert's own fields instead,
- *  and the board saves assignments keyed against that derived id. Using
- *  `rec.id` unmodified here would leave every event's id undefined,
- *  silently breaking both the assignment join and React's keys. Same
- *  algorithm as the dashboard, so a task saved from the board lands on
- *  the same id here. */
 function normalizeRecommendations(
   raw: (Partial<Recommendation> & { id?: string | null })[]
 ): Recommendation[] {
@@ -269,9 +246,12 @@ export function CalendarView() {
   const [loaded, setLoaded] = useState(false)
 
   const [weekOffset, setWeekOffset] = useState(0)
+  const [monthOffset, setMonthOffset] = useState(0)
+  const [viewMode, setViewMode] = useState<ViewMode>("week")
   const [activeSector, setActiveSector] = useState<string | null>(null)
   const [activeRole, setActiveRole] = useState<string | null>(null)
   const [selected, setSelected] = useState<string | null>(null)
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -324,21 +304,53 @@ export function CalendarView() {
     [monday]
   )
 
+  const currentMonth = useMemo(() => {
+    const base = new Date()
+    base.setMonth(base.getMonth() + monthOffset)
+    return base
+  }, [monthOffset])
+
+  const monthStart = useMemo(() => firstOfMonth(currentMonth), [currentMonth])
+  const monthEnd = useMemo(() => lastOfMonth(currentMonth), [currentMonth])
+
+  const monthGrid = useMemo(() => {
+    const firstDay = monthStart.getDay()
+    const offset = firstDay === 0 ? 6 : firstDay - 1
+    const gridStart = addDays(monthStart, -offset)
+    const rows: Date[][] = []
+    let current = gridStart
+    for (let r = 0; r < 6; r++) {
+      const row: Date[] = []
+      for (let c = 0; c < 7; c++) {
+        row.push(current)
+        current = addDays(current, 1)
+      }
+      rows.push(row)
+    }
+    return rows
+  }, [monthStart])
+
   const weekEvents = useMemo(
-    () =>
-      allEvents.filter((e) =>
-        weekDates.some((d) => sameDay(d, e.date))
-      ),
+    () => allEvents.filter((e) => weekDates.some((d) => sameDay(d, e.date))),
     [allEvents, weekDates]
   )
 
+  const monthEvents = useMemo(
+    () =>
+      allEvents.filter(
+        (e) => e.date >= startOfDay(monthStart) && e.date <= startOfDay(monthEnd)
+      ),
+    [allEvents, monthStart, monthEnd]
+  )
+
   const sectorKeys = useMemo(() => {
+    const source = viewMode === "month" ? monthEvents : weekEvents
     const seen: string[] = []
-    for (const e of weekEvents) {
+    for (const e of source) {
       if (e.sector && !seen.includes(e.sector)) seen.push(e.sector)
     }
     return seen
-  }, [weekEvents])
+  }, [viewMode, weekEvents, monthEvents])
 
   const roleKeys = useMemo(() => {
     const seen: string[] = []
@@ -349,7 +361,7 @@ export function CalendarView() {
     return seen
   }, [contractors])
 
-  const visibleEvents = weekEvents.filter((e) => {
+  const visibleEvents = (viewMode === "month" ? monthEvents : weekEvents).filter((e) => {
     if (activeSector && e.sector !== activeSector) return false
     if (activeRole) {
       const roles = e.assignees.map((a) => a.role?.trim() || NO_ROLE)
@@ -365,7 +377,7 @@ export function CalendarView() {
     thresholds: visibleEvents.filter((e) => e.kind === "threshold").length,
   }
 
-  const equipmentCount = new Set(weekEvents.map((e) => e.equipment)).size
+  const equipmentCount = new Set(visibleEvents.map((e) => e.equipment)).size
 
   const weekLabel = tx("fr-FR", "en-GB")
   const rangeLabel = `${new Intl.DateTimeFormat(weekLabel, {
@@ -377,7 +389,14 @@ export function CalendarView() {
     year: "numeric",
   }).format(weekDates[6])}`
 
+  const monthName = new Intl.DateTimeFormat(weekLabel, {
+    month: "long",
+  }).format(currentMonth)
+
+  const monthYear = currentMonth.getFullYear()
+
   const dayLabelFormatter = new Intl.DateTimeFormat(weekLabel, { weekday: "short" })
+  const dayLabelShort = new Intl.DateTimeFormat(weekLabel, { weekday: "narrow" })
   const timeFormatter = new Intl.DateTimeFormat(weekLabel, {
     hour: "2-digit",
     minute: "2-digit",
@@ -385,10 +404,63 @@ export function CalendarView() {
 
   const today = startOfDay(new Date())
 
+  const eventsByDay = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>()
+    for (const e of visibleEvents) {
+      const key = e.date.toISOString().split("T")[0]
+      const list = map.get(key) ?? []
+      list.push(e)
+      map.set(key, list)
+    }
+    return map
+  }, [visibleEvents])
+
+  const selectedDayEvents = useMemo(() => {
+    if (!selectedDay) return []
+    return (eventsByDay.get(selectedDay.toISOString().split("T")[0]) ?? []).sort(
+      (a, b) => a.date.getTime() - b.date.getTime()
+    )
+  }, [selectedDay, eventsByDay])
+
+  // Compact month overview: only today + next 4 days with events (max 5 days)
+  const upcomingDays = useMemo(() => {
+    const daysWithEvents: Array<{ date: Date; events: CalendarEvent[] }> = []
+    const todayKey = today.toISOString().split("T")[0]
+
+    // Check today + next 14 days, collect first 5 days that have events
+    for (let i = 0; i < 14 && daysWithEvents.length < 5; i++) {
+      const checkDay = addDays(today, i)
+      const key = checkDay.toISOString().split("T")[0]
+      const dayEvts = eventsByDay.get(key) ?? []
+      if (dayEvts.length > 0) {
+        daysWithEvents.push({ date: checkDay, events: dayEvts })
+      }
+    }
+
+    // If today has no events, still show it as empty for context
+    if (daysWithEvents.length === 0 || !sameDay(daysWithEvents[0].date, today)) {
+      daysWithEvents.unshift({ date: today, events: eventsByDay.get(todayKey) ?? [] })
+    }
+
+    return daysWithEvents.slice(0, 5)
+  }, [eventsByDay, today])
+
+  const selectedDayCounts = useMemo(() => {
+    const counts: Record<EventKind, number> = {
+      incident: 0,
+      threshold: 0,
+      deadline: 0,
+      resolved: 0,
+    }
+    for (const e of selectedDayEvents) {
+      counts[e.kind] += 1
+    }
+    return counts
+  }, [selectedDayEvents])
+
   return (
     <div className="flex flex-col gap-6">
-      {/* BANNER — same treatment as the Dashboard hero, so the calendar
-          opens with the same visual signature as the rest of the app. */}
+      {/* BANNER */}
       <div className="flex flex-col gap-4 rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-xl">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
@@ -438,40 +510,102 @@ export function CalendarView() {
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="font-heading text-3xl font-black leading-tight tracking-tight text-foreground sm:text-4xl">
-            {rangeLabel}
+            {viewMode === "week" ? rangeLabel : `${monthName} ${monthYear}`}
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            {tx("Semaine de travail", "Work week")}
+            {viewMode === "week"
+              ? tx("Semaine de travail", "Work week")
+              : tx("Vue mensuelle", "Monthly view")}
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setWeekOffset((w) => w - 1)}
-            aria-label={tx("Semaine précédente", "Previous week")}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:bg-muted"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
+          <div className="flex items-center rounded-xl border border-border bg-card p-1">
+            <button
+              type="button"
+              onClick={() => setViewMode("week")}
+              className={cn(
+                "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
+                viewMode === "week"
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              {tx("Semaine", "Week")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("month")}
+              className={cn(
+                "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
+                viewMode === "month"
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:bg-muted"
+              )}
+            >
+              {tx("Mois", "Month")}
+            </button>
+          </div>
 
-          <button
-            type="button"
-            onClick={() => setWeekOffset(0)}
-            disabled={weekOffset === 0}
-            className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {tx("Aujourd'hui", "Today")}
-          </button>
+          {viewMode === "week" ? (
+            <>
+              <button
+                type="button"
+                onClick={() => setWeekOffset((w) => w - 1)}
+                aria-label={tx("Semaine précédente", "Previous week")}
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:bg-muted"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
 
-          <button
-            type="button"
-            onClick={() => setWeekOffset((w) => w + 1)}
-            aria-label={tx("Semaine suivante", "Next week")}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:bg-muted"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
+              <button
+                type="button"
+                onClick={() => setWeekOffset(0)}
+                disabled={weekOffset === 0}
+                className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {tx("Aujourd'hui", "Today")}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setWeekOffset((w) => w + 1)}
+                aria-label={tx("Semaine suivante", "Next week")}
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:bg-muted"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => setMonthOffset((m) => m - 1)}
+                aria-label={tx("Mois précédent", "Previous month")}
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:bg-muted"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMonthOffset(0)}
+                disabled={monthOffset === 0}
+                className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {tx("Ce mois", "This month")}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMonthOffset((m) => m + 1)}
+                aria-label={tx("Mois suivant", "Next month")}
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:bg-muted"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </>
+          )}
 
           <span className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-medium text-primary-foreground">
             <Wrench className="h-3.5 w-3.5 text-accent" />
@@ -484,46 +618,155 @@ export function CalendarView() {
       </div>
 
       {/* STATS */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="flex flex-col items-center rounded-2xl bg-accent p-4 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-accent-foreground/70">
-            {tx("Échéances", "Deadlines")}
-          </p>
-          <p className="mt-1 font-heading text-4xl font-black leading-none text-accent-foreground">
-            {loaded ? stats.deadlines : "—"}
-          </p>
-          <p className="mt-1.5 text-[10px] text-accent-foreground/60">
-            {tx("à traiter cette semaine", "due this week")}
-          </p>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div
+          className="relative flex flex-col justify-between overflow-hidden rounded-3xl p-6"
+          style={{
+            background: "linear-gradient(135deg, #d9f36e 0%, #b8d84a 100%)",
+            minHeight: "180px",
+          }}
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <p
+                className="text-[10px] font-bold uppercase tracking-wider"
+                style={{ color: "#1d1d1b", opacity: 0.6 }}
+              >
+                {tx("Échéances", "Deadlines")}
+              </p>
+              <p
+                className="mt-1 text-sm font-semibold"
+                style={{ color: "#1d1d1b" }}
+              >
+                {tx("à traiter cette semaine", "due this week")}
+              </p>
+            </div>
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-full"
+              style={{ backgroundColor: "rgba(29, 29, 27, 0.1)" }}
+            >
+              <CalendarClock
+                className="h-5 w-5"
+                style={{ color: "#1d1d1b" }}
+              />
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <p
+              className="font-heading text-6xl font-black leading-none tracking-tight"
+              style={{ color: "#1d1d1b" }}
+            >
+              {loaded ? stats.deadlines : "—"}
+            </p>
+          </div>
+
+          <div
+            className="absolute -right-6 -bottom-6 h-24 w-24 rounded-full opacity-20"
+            style={{ backgroundColor: "#1d1d1b" }}
+          />
         </div>
 
-        <div className="flex flex-col items-center rounded-2xl bg-primary p-4 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-primary-foreground/50">
-            {tx("Incidents actifs", "Active incidents")}
-          </p>
-          <p className="mt-1 font-heading text-4xl font-black leading-none text-blue-400">
-            {loaded ? stats.incidents : "—"}
-          </p>
-          <p className="mt-1.5 text-[10px] text-primary-foreground/40">
-            {tx("détectés cette semaine", "detected this week")}
-          </p>
+        <div
+          className="relative flex flex-col justify-between overflow-hidden rounded-3xl p-6"
+          style={{
+            background: "#0f1a14",
+            border: "1px solid rgba(217, 243, 110, 0.2)",
+            minHeight: "180px",
+          }}
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <p
+                className="text-[10px] font-bold uppercase tracking-wider"
+                style={{ color: "#d9f36e", opacity: 0.7 }}
+              >
+                {tx("Incidents actifs", "Active incidents")}
+              </p>
+              <p
+                className="mt-1 text-sm font-semibold"
+                style={{ color: "#e8e8e6" }}
+              >
+                {tx("détectés cette semaine", "detected this week")}
+              </p>
+            </div>
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-full"
+              style={{ backgroundColor: "rgba(217, 243, 110, 0.15)" }}
+            >
+              <AlertTriangle
+                className="h-5 w-5"
+                style={{ color: "#d9f36e" }}
+              />
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <p
+              className="font-heading text-6xl font-black leading-none tracking-tight"
+              style={{ color: "#d9f36e" }}
+            >
+              {loaded ? stats.incidents : "—"}
+            </p>
+          </div>
+
+          <div
+            className="absolute -right-6 -bottom-6 h-24 w-24 rounded-full opacity-10"
+            style={{ backgroundColor: "#d9f36e" }}
+          />
         </div>
 
-        <div className="flex flex-col items-center rounded-2xl bg-primary p-4 text-center">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-primary-foreground/50">
-            {tx("Seuils critiques", "Critical thresholds")}
-          </p>
-          <p className="mt-1 font-heading text-4xl font-black leading-none text-red-400">
-            {loaded ? stats.thresholds : "—"}
-          </p>
-          <p className="mt-1.5 text-[10px] text-primary-foreground/40">
-            {tx("à risque de dépassement", "at risk of being breached")}
-          </p>
+        <div
+          className="relative flex flex-col justify-between overflow-hidden rounded-3xl p-6"
+          style={{
+            background: "#0f1a14",
+            border: "1px solid rgba(239, 68, 68, 0.2)",
+            minHeight: "180px",
+          }}
+        >
+          <div className="flex items-start justify-between">
+            <div>
+              <p
+                className="text-[10px] font-bold uppercase tracking-wider"
+                style={{ color: "#ef4444", opacity: 0.8 }}
+              >
+                {tx("Seuils critiques", "Critical thresholds")}
+              </p>
+              <p
+                className="mt-1 text-sm font-semibold"
+                style={{ color: "#e8e8e6" }}
+              >
+                {tx("à risque de dépassement", "at risk of being breached")}
+              </p>
+            </div>
+            <div
+              className="flex h-10 w-10 items-center justify-center rounded-full"
+              style={{ backgroundColor: "rgba(239, 68, 68, 0.15)" }}
+            >
+              <Timer
+                className="h-5 w-5"
+                style={{ color: "#ef4444" }}
+              />
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <p
+              className="font-heading text-6xl font-black leading-none tracking-tight"
+              style={{ color: "#ef4444" }}
+            >
+              {loaded ? stats.thresholds : "—"}
+            </p>
+          </div>
+
+          <div
+            className="absolute -right-6 -bottom-6 h-24 w-24 rounded-full opacity-10"
+            style={{ backgroundColor: "#ef4444" }}
+          />
         </div>
       </div>
 
-      {/* FILTERS — only real sectors/roles present this week, and only
-          shown once there's more than one real choice to make. */}
+      {/* FILTERS */}
       {(sectorKeys.length > 1 || roleKeys.length > 1) && (
         <div className="flex flex-wrap items-center gap-2 rounded-3xl border border-border bg-card p-4">
           {sectorKeys.length > 1 && (
@@ -602,229 +845,598 @@ export function CalendarView() {
         </div>
       )}
 
-      {/* WEEK AGENDA — a day-by-day list rather than an hourly grid, because
-          a deadline is a date an admin picked, not an hour. Only an
-          incident/threshold carries a real timestamp. */}
-      <div id="calendar-grid" className="rounded-3xl border border-border bg-card p-4 shadow-sm">
-        {!loaded ? (
-          <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            {tx("Chargement du calendrier…", "Loading the calendar…")}
-          </div>
-        ) : allEvents.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 py-16 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
-              <Inbox className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
-            </div>
-            <h3 className="font-heading text-base font-bold">
-              {tx("Rien à afficher", "Nothing to show")}
-            </h3>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              {tx(
-                "Le calendrier se remplit dès qu'une alerte est détectée ou qu'une échéance est fixée sur le tableau des priorités.",
-                "The calendar fills in as soon as an alert is detected or a deadline is set on the priorities board."
-              )}
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-7">
-            {weekDates.map((day) => {
-              const isToday = sameDay(day, today)
-              const dayEvents = visibleEvents
-                .filter((e) => sameDay(e.date, day))
-                .sort((a, b) => a.date.getTime() - b.date.getTime())
+      {/* MONTH VIEW */}
+      {viewMode === "month" && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px]">
+          {/* October-style calendar */}
+          <div className="overflow-hidden rounded-3xl border border-border bg-white">
+            <div
+              className="px-6 pt-6 pb-4"
+              style={{
+                background: "linear-gradient(135deg, #d9f36e 0%, #c8e06a 100%)",
+              }}
+            >
+              <div className="flex items-center justify-end mb-4">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setMonthOffset((m) => m - 1)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-[#1d1d1b]/20 bg-white/40 text-[#1d1d1b] transition-colors hover:bg-white/60"
+                    aria-label={tx("Mois précédent", "Previous month")}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMonthOffset(0)}
+                    disabled={monthOffset === 0}
+                    className="rounded-full border border-[#1d1d1b]/20 bg-white/40 px-3 py-1.5 text-xs font-semibold text-[#1d1d1b] transition-colors hover:bg-white/60 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {tx("Aujourd'hui", "Today")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMonthOffset((m) => m + 1)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full border border-[#1d1d1b]/20 bg-white/40 text-[#1d1d1b] transition-colors hover:bg-white/60"
+                    aria-label={tx("Mois suivant", "Next month")}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
 
-              return (
-                <div key={day.toISOString()} className="min-w-[150px]">
+              <h1
+                className="font-heading leading-none tracking-tighter"
+                style={{
+                  fontSize: "clamp(3rem, 8vw, 5rem)",
+                  fontWeight: 900,
+                  color: "#1d1d1b",
+                  letterSpacing: "-0.04em",
+                }}
+              >
+                {monthName}
+              </h1>
+            </div>
+
+            <div className="grid grid-cols-7 border-b border-[#1d1d1b]/10 bg-white">
+              {Array.from({ length: 7 }, (_, i) => {
+                const d = addDays(mondayOf(new Date()), i)
+                return (
                   <div
+                    key={i}
+                    className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-[#1d1d1b]/60"
+                  >
+                    {dayLabelShort.format(d)}
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="bg-white px-4 py-2 text-center border-b border-[#1d1d1b]/5">
+              <span className="text-xs font-semibold text-[#1d1d1b]/70">
+                {monthName} {monthYear}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-7 bg-white">
+              {monthGrid.flat().map((day, idx) => {
+                const isCurrentMonth = day.getMonth() === currentMonth.getMonth()
+                const isToday = sameDay(day, today)
+                const isSelected =
+                  selectedDay !== null && sameDay(day, selectedDay)
+                const key = day.toISOString().split("T")[0]
+                const dayEvts = eventsByDay.get(key) ?? []
+                const hasEvents = dayEvts.length > 0
+                const hasDeadline = dayEvts.some((e) => e.kind === "deadline")
+
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() =>
+                      setSelectedDay(isSelected ? null : day)
+                    }
                     className={cn(
-                      "mb-2 flex items-center justify-between rounded-xl px-2.5 py-1.5",
-                      isToday && "bg-primary text-primary-foreground"
+                      "relative flex min-h-[90px] flex-col border-b border-r border-[#1d1d1b]/8 p-1.5 text-left transition-all",
+                      !isCurrentMonth && "bg-[#f5f5f0] opacity-40",
+                      isSelected && "bg-[#2563eb]/5",
+                      hasDeadline && !isSelected && "bg-[#2563eb]/3"
                     )}
                   >
-                    <span className="text-[10px] font-semibold uppercase tracking-wide opacity-70">
-                      {dayLabelFormatter.format(day)}
-                    </span>
-                    <span className="font-heading text-sm font-bold">
-                      {day.getDate()}
-                    </span>
-                  </div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span
+                        className={cn(
+                          "text-[11px] font-bold",
+                          isToday
+                            ? "flex h-5 w-5 items-center justify-center rounded-full bg-[#1d1d1b] text-[#d9f36e]"
+                            : isSelected
+                            ? "text-[#2563eb]"
+                            : "text-[#1d1d1b]/70"
+                        )}
+                      >
+                        {day.getDate()}
+                      </span>
+                      {hasEvents && (
+                        <span
+                          className="flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[8px] font-black"
+                          style={{
+                            backgroundColor: "#d9f36e",
+                            color: "#1d1d1b",
+                          }}
+                        >
+                          {dayEvts.length}X
+                        </span>
+                      )}
+                    </div>
 
-                  <div className="space-y-1.5">
-                    {dayEvents.length === 0 && (
-                      <p className="rounded-xl border border-dashed border-border/60 px-2 py-3 text-center text-[10px] text-muted-foreground">
-                        {tx("Rien", "Nothing")}
-                      </p>
-                    )}
-
-                    {dayEvents.map((event) => {
-                      const Icon = TYPE_ICON[event.kind]
-                      const isOpen = selected === event.id
-
-                      return (
-                        <div key={event.id} className="relative">
+                    <div className="flex flex-col gap-0.5">
+                      {dayEvts.slice(0, 2).map((event) => {
+                        const Icon = TYPE_ICON[event.kind]
+                        return (
                           <div
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => setSelected(isOpen ? null : event.id)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault()
-                                setSelected(isOpen ? null : event.id)
-                              }
-                            }}
-                            className={cn(
-                              "flex cursor-pointer flex-col gap-0.5 rounded-xl px-2.5 py-1.5 text-left shadow-sm transition-transform hover:-translate-y-0.5",
-                              TYPE_TONE[event.kind]
-                            )}
+                            key={event.id}
+                            className="flex items-center gap-1 rounded-md bg-[#1d1d1b] px-1.5 py-1 shadow-sm"
                           >
-                            <div className="flex items-center gap-1">
-                              <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />
-                              <span className="truncate text-[10px] font-bold">
-                                {event.title}
+                            <Icon className="h-2 w-2 shrink-0 text-[#d9f36e]" />
+                            <span className="truncate text-[8px] font-bold leading-tight text-white">
+                              {event.title}
+                            </span>
+                            <span
+                              className="ml-auto shrink-0 rounded-sm px-1 py-0.5 text-[7px] font-black"
+                              style={{
+                                backgroundColor: "#d9f36e",
+                                color: "#1d1d1b",
+                              }}
+                            >
+                              2X
+                            </span>
+                          </div>
+                        )
+                      })}
+                      {dayEvts.length > 2 && (
+                        <span className="text-[8px] font-bold text-[#1d1d1b]/50">
+                          +{dayEvts.length - 2}
+                        </span>
+                      )}
+                    </div>
+
+                    {hasDeadline && (
+                      <div
+                        className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
+                        style={{ backgroundColor: "#2563eb" }}
+                      />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* RIGHT PANEL — Compact Wegrow-style, limited to 5 upcoming days */}
+          <div
+            className="rounded-3xl overflow-hidden flex flex-col"
+            style={{
+              background: "#0a2a1a",
+              border: "1px solid rgba(200, 224, 106, 0.15)",
+            }}
+          >
+            {/* Panel header */}
+            <div className="px-5 pt-5 pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="h-7 w-7 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: "#c8e06a" }}
+                  >
+                    <CalendarClock className="h-3.5 w-3.5" style={{ color: "#0a2a1a" }} />
+                  </div>
+                  <span
+                    className="text-sm font-semibold"
+                    style={{ color: "#c8e06a" }}
+                  >
+                    {tx("Upcoming", "À venir")}
+                  </span>
+                </div>
+
+                <span
+                  className="text-[10px] font-bold uppercase tracking-wider"
+                  style={{ color: "#c8e06a", opacity: 0.6 }}
+                >
+                  {monthName} {monthYear}
+                </span>
+              </div>
+            </div>
+
+            {/* Compact day list — max 5 days */}
+            <div className="px-5 pb-5 flex flex-col gap-2.5">
+              {upcomingDays.map(({ date, events: dayEvts }) => {
+                const isToday = sameDay(date, today)
+                const eventMonth = new Intl.DateTimeFormat(weekLabel, {
+                  month: "short",
+                }).format(date)
+                const eventDay = date.getDate()
+
+                return (
+                  <div
+                    key={date.toISOString()}
+                    className="rounded-2xl p-3"
+                    style={{ backgroundColor: "#c8e06a" }}
+                  >
+                    {/* Day header */}
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-col items-center">
+                          <span
+                            className="text-[9px] font-bold uppercase tracking-wider"
+                            style={{ color: "#0a2a1a", opacity: 0.7 }}
+                          >
+                            {eventMonth}
+                          </span>
+                          <span
+                            className="font-heading text-lg font-black leading-none"
+                            style={{ color: "#0a2a1a" }}
+                          >
+                            {eventDay}
+                          </span>
+                        </div>
+
+                        {isToday && (
+                          <span
+                            className="rounded-full px-1.5 py-0.5 text-[7px] font-bold uppercase"
+                            style={{
+                              backgroundColor: "#0a2a1a",
+                              color: "#c8e06a",
+                            }}
+                          >
+                            {tx("Today", "Aujourd'hui")}
+                          </span>
+                        )}
+                      </div>
+
+                      {dayEvts.length > 0 && (
+                        <span
+                          className="rounded-full px-2 py-0.5 text-[9px] font-bold"
+                          style={{
+                            backgroundColor: "rgba(10, 42, 26, 0.15)",
+                            color: "#0a2a1a",
+                          }}
+                        >
+                          {dayEvts.length}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Events — max 2 per day to keep compact */}
+                    {dayEvts.length === 0 ? (
+                      <p
+                        className="text-[10px] font-semibold italic"
+                        style={{ color: "#0a2a1a", opacity: 0.5 }}
+                      >
+                        {tx("Nothing", "Rien")}
+                      </p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {dayEvts.slice(0, 2).map((event) => {
+                          const Icon = TYPE_ICON[event.kind]
+                          return (
+                            <button
+                              key={event.id}
+                              type="button"
+                              onClick={() => setSelected(event.id)}
+                              className="w-full rounded-xl p-2 text-left transition-transform hover:-translate-y-0.5"
+                              style={{
+                                backgroundColor: "rgba(10, 42, 26, 0.08)",
+                              }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                                  style={{
+                                    backgroundColor:
+                                      event.kind === "deadline"
+                                        ? "#0a2a1a"
+                                        : event.kind === "incident"
+                                        ? "#2563eb"
+                                        : event.kind === "threshold"
+                                        ? "#ef4444"
+                                        : "rgba(10, 42, 26, 0.2)",
+                                  }}
+                                >
+                                  <Icon
+                                    className="h-2.5 w-2.5"
+                                    style={{
+                                      color:
+                                        event.kind === "deadline"
+                                          ? "#c8e06a"
+                                          : event.kind === "incident" ||
+                                            event.kind === "threshold"
+                                          ? "#ffffff"
+                                          : "#0a2a1a",
+                                    }}
+                                  />
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                  <p
+                                    className="text-[10px] font-bold leading-tight truncate"
+                                    style={{ color: "#0a2a1a" }}
+                                  >
+                                    {event.title}
+                                  </p>
+                                  <p
+                                    className="text-[9px] font-semibold truncate"
+                                    style={{
+                                      color: "#0a2a1a",
+                                      opacity: 0.7,
+                                    }}
+                                  >
+                                    {event.equipment}
+                                  </p>
+                                </div>
+                              </div>
+                            </button>
+                          )
+                        })}
+                        {dayEvts.length > 2 && (
+                          <p
+                            className="text-[9px] font-bold text-center"
+                            style={{ color: "#0a2a1a", opacity: 0.6 }}
+                          >
+                            +{dayEvts.length - 2}{" "}
+                            {tx("more", "autres")}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+
+              {/* Summary pill at bottom */}
+              <div
+                className="rounded-full px-4 py-2 flex items-center justify-between"
+                style={{
+                  backgroundColor: "rgba(200, 224, 106, 0.15)",
+                  border: "1px solid rgba(200, 224, 106, 0.25)",
+                }}
+              >
+                <span
+                  className="text-[10px] font-semibold"
+                  style={{ color: "#c8e06a" }}
+                >
+                  {tx("This month", "Ce mois")}
+                </span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="text-[10px] font-bold"
+                    style={{ color: "#c8e06a" }}
+                  >
+                    {visibleEvents.length} {tx("events", "événements")}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* WEEK AGENDA */}
+      {viewMode === "week" && (
+        <div id="calendar-grid" className="rounded-3xl border border-border bg-card p-4 shadow-sm">
+          {!loaded ? (
+            <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              {tx("Chargement du calendrier…", "Loading the calendar…")}
+            </div>
+          ) : allEvents.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 py-16 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
+                <Inbox className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+              </div>
+              <h3 className="font-heading text-base font-bold">
+                {tx("Rien à afficher", "Nothing to show")}
+              </h3>
+              <p className="max-w-sm text-sm text-muted-foreground">
+                {tx(
+                  "Le calendrier se remplit dès qu'une alerte est détectée ou qu'une échéance est fixée sur le tableau des priorités.",
+                  "The calendar fills in as soon as an alert is detected or a deadline is set on the priorities board."
+                )}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-7">
+              {weekDates.map((day) => {
+                const isToday = sameDay(day, today)
+                const dayEvents = visibleEvents
+                  .filter((e) => sameDay(e.date, day))
+                  .sort((a, b) => a.date.getTime() - b.date.getTime())
+
+                return (
+                  <div key={day.toISOString()} className="min-w-[150px]">
+                    <div
+                      className={cn(
+                        "mb-2 flex items-center justify-between rounded-xl px-2.5 py-1.5",
+                        isToday && "bg-primary text-primary-foreground"
+                      )}
+                    >
+                      <span className="text-[10px] font-semibold uppercase tracking-wide opacity-70">
+                        {dayLabelFormatter.format(day)}
+                      </span>
+                      <span className="font-heading text-sm font-bold">
+                        {day.getDate()}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      {dayEvents.length === 0 && (
+                        <p className="rounded-xl border border-dashed border-border/60 px-2 py-3 text-center text-[10px] text-muted-foreground">
+                          {tx("Rien", "Nothing")}
+                        </p>
+                      )}
+
+                      {dayEvents.map((event) => {
+                        const Icon = TYPE_ICON[event.kind]
+                        const isOpen = selected === event.id
+
+                        return (
+                          <div key={event.id} className="relative">
+                            <div
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => setSelected(isOpen ? null : event.id)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault()
+                                  setSelected(isOpen ? null : event.id)
+                                }
+                              }}
+                              className={cn(
+                                "flex cursor-pointer flex-col gap-0.5 rounded-xl px-2.5 py-1.5 text-left shadow-sm transition-transform hover:-translate-y-0.5",
+                                TYPE_TONE[event.kind]
+                              )}
+                            >
+                              <div className="flex items-center gap-1">
+                                <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />
+                                <span className="truncate text-[10px] font-bold">
+                                  {event.title}
+                                </span>
+                              </div>
+
+                              <span className="truncate text-[9px] opacity-80">
+                                {event.hasTime
+                                  ? timeFormatter.format(event.date)
+                                  : tx("Toute la journée", "All day")}
                               </span>
+
+                              {event.overdue && (
+                                <span className="text-[9px] font-bold">
+                                  {tx("En retard", "Overdue")}
+                                </span>
+                              )}
                             </div>
 
-                            <span className="truncate text-[9px] opacity-80">
-                              {event.hasTime
-                                ? timeFormatter.format(event.date)
-                                : tx("Toute la journée", "All day")}
-                            </span>
+                            {isOpen && (
+                              <div
+                                className="absolute left-0 top-full z-40 mt-2 w-64 rounded-3xl bg-popover p-4 text-foreground shadow-xl"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <div className="flex items-start justify-between gap-2">
+                                  <span
+                                    className={cn(
+                                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                                      TYPE_TONE[event.kind]
+                                    )}
+                                  >
+                                    <Icon className="h-3 w-3" aria-hidden="true" />
+                                    {tx(TYPE_LABEL[event.kind].fr, TYPE_LABEL[event.kind].en)}
+                                  </span>
 
-                            {event.overdue && (
-                              <span className="text-[9px] font-bold">
-                                {tx("En retard", "Overdue")}
-                              </span>
-                            )}
-                          </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelected(null)}
+                                    className="rounded-md p-0.5 text-muted-foreground hover:bg-muted"
+                                    aria-label={tx("Fermer", "Close")}
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
 
-                          {isOpen && (
-                            <div
-                              className="absolute left-0 top-full z-40 mt-2 w-64 rounded-3xl bg-popover p-4 text-foreground shadow-xl"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <div className="flex items-start justify-between gap-2">
-                                <span
-                                  className={cn(
-                                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider",
-                                    TYPE_TONE[event.kind]
+                                <p className="mt-2.5 text-sm font-bold leading-snug">
+                                  {event.detail}
+                                </p>
+
+                                <div className="mt-2 rounded-xl bg-muted/60 px-2.5 py-2">
+                                  <p className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+                                    {tx("Recommandation", "Recommendation")}
+                                  </p>
+                                  <p className="mt-0.5 text-[11px] leading-4 text-foreground">
+                                    {event.recommendedAction ??
+                                      tx(
+                                        "Aucune recommandation disponible.",
+                                        "No recommendation available."
+                                      )}
+                                  </p>
+                                </div>
+
+                                <div className="mt-2 flex gap-1.5">
+                                  <div className="flex-1 rounded-xl border border-border px-2.5 py-1.5 text-center">
+                                    <p className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">
+                                      {tx("Risque", "Risk")}
+                                    </p>
+                                    <p className="text-xs font-bold tabular-nums">
+                                      {event.riskScore != null ? `${event.riskScore}/100` : "—"}
+                                    </p>
+                                  </div>
+                                  <div className="flex-1 rounded-xl border border-border px-2.5 py-1.5 text-center">
+                                    <p className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">
+                                      {tx("Confiance", "Confidence")}
+                                    </p>
+                                    <p className="text-xs font-bold tabular-nums">
+                                      {event.confidence != null ? `${event.confidence}%` : "—"}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                  <span className="rounded-full bg-muted px-2.5 py-1 text-[9px] font-semibold text-foreground/80">
+                                    {event.equipment}
+                                  </span>
+                                  {event.sector && (
+                                    <span className="rounded-full bg-muted px-2.5 py-1 text-[9px] font-semibold text-foreground/80">
+                                      {sectorLabel(event.sector, tx)}
+                                    </span>
                                   )}
-                                >
-                                  <Icon className="h-3 w-3" aria-hidden="true" />
-                                  {tx(TYPE_LABEL[event.kind].fr, TYPE_LABEL[event.kind].en)}
-                                </span>
+                                  <span className="rounded-full bg-muted px-2.5 py-1 text-[9px] font-semibold text-foreground/80">
+                                    {event.hasTime
+                                      ? timeFormatter.format(event.date)
+                                      : tx("Toute la journée", "All day")}
+                                  </span>
+                                </div>
+
+                                <div className="mt-3 flex items-center gap-2">
+                                  <p className="text-[10px] font-medium text-muted-foreground">
+                                    {tx("Assigné à", "Assigned to")}
+                                  </p>
+
+                                  {event.assignees.length > 0 ? (
+                                    <div className="flex -space-x-1.5">
+                                      {event.assignees.map((person) => (
+                                        <span
+                                          key={person.id}
+                                          title={`${person.name}${person.role ? ` — ${person.role}` : ""}`}
+                                          className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-popover bg-accent text-[9px] font-bold text-accent-foreground"
+                                        >
+                                          {getInitials(person.name)}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <span className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-border text-muted-foreground">
+                                      <UserRound className="h-3 w-3" />
+                                    </span>
+                                  )}
+                                </div>
 
                                 <button
                                   type="button"
                                   onClick={() => setSelected(null)}
-                                  className="rounded-md p-0.5 text-muted-foreground hover:bg-muted"
-                                  aria-label={tx("Fermer", "Close")}
+                                  className="mt-3 w-full rounded-xl bg-accent px-3 py-2.5 text-xs font-bold text-accent-foreground transition-colors hover:bg-accent/90"
                                 >
-                                  <X className="h-3.5 w-3.5" />
+                                  {tx("Fermer", "Close")}
                                 </button>
                               </div>
-
-                              <p className="mt-2.5 text-sm font-bold leading-snug">
-                                {event.detail}
-                              </p>
-
-                              {/* Always shown, never conditional: an
-                                  operator deciding what to do next needs
-                                  the same three answers every time —
-                                  what to do, how risky it is, how sure
-                                  the system is. A null score says so
-                                  honestly rather than being hidden. */}
-                              <div className="mt-2 rounded-xl bg-muted/60 px-2.5 py-2">
-                                <p className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
-                                  {tx("Recommandation", "Recommendation")}
-                                </p>
-                                <p className="mt-0.5 text-[11px] leading-4 text-foreground">
-                                  {event.recommendedAction ??
-                                    tx(
-                                      "Aucune recommandation disponible.",
-                                      "No recommendation available."
-                                    )}
-                                </p>
-                              </div>
-
-                              <div className="mt-2 flex gap-1.5">
-                                <div className="flex-1 rounded-xl border border-border px-2.5 py-1.5 text-center">
-                                  <p className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">
-                                    {tx("Risque", "Risk")}
-                                  </p>
-                                  <p className="text-xs font-bold tabular-nums">
-                                    {event.riskScore != null ? `${event.riskScore}/100` : "—"}
-                                  </p>
-                                </div>
-                                <div className="flex-1 rounded-xl border border-border px-2.5 py-1.5 text-center">
-                                  <p className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">
-                                    {tx("Confiance", "Confidence")}
-                                  </p>
-                                  <p className="text-xs font-bold tabular-nums">
-                                    {event.confidence != null ? `${event.confidence}%` : "—"}
-                                  </p>
-                                </div>
-                              </div>
-
-                              <div className="mt-2 flex flex-wrap gap-1.5">
-                                <span className="rounded-full bg-muted px-2.5 py-1 text-[9px] font-semibold text-foreground/80">
-                                  {event.equipment}
-                                </span>
-                                {event.sector && (
-                                  <span className="rounded-full bg-muted px-2.5 py-1 text-[9px] font-semibold text-foreground/80">
-                                    {sectorLabel(event.sector, tx)}
-                                  </span>
-                                )}
-                                <span className="rounded-full bg-muted px-2.5 py-1 text-[9px] font-semibold text-foreground/80">
-                                  {event.hasTime
-                                    ? timeFormatter.format(event.date)
-                                    : tx("Toute la journée", "All day")}
-                                </span>
-                              </div>
-
-                              <div className="mt-3 flex items-center gap-2">
-                                <p className="text-[10px] font-medium text-muted-foreground">
-                                  {tx("Assigné à", "Assigned to")}
-                                </p>
-
-                                {event.assignees.length > 0 ? (
-                                  <div className="flex -space-x-1.5">
-                                    {event.assignees.map((person) => (
-                                      <span
-                                        key={person.id}
-                                        title={`${person.name}${person.role ? ` — ${person.role}` : ""}`}
-                                        className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-popover bg-accent text-[9px] font-bold text-accent-foreground"
-                                      >
-                                        {getInitials(person.name)}
-                                      </span>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <span className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-border text-muted-foreground">
-                                    <UserRound className="h-3 w-3" />
-                                  </span>
-                                )}
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={() => setSelected(null)}
-                                className="mt-3 w-full rounded-xl bg-accent px-3 py-2.5 text-xs font-bold text-accent-foreground transition-colors hover:bg-accent/90"
-                              >
-                                {tx("Fermer", "Close")}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* LEGEND */}
       <div className="flex flex-wrap items-center gap-4 px-1 text-[11px] text-muted-foreground">
@@ -841,3 +1453,5 @@ export function CalendarView() {
     </div>
   )
 }
+
+
