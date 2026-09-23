@@ -13,4 +13,4 @@
  * pointing the UI at a local backend while debugging).
  */
 export const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ?? "https://sentria-8btn.onrender.com"
+  process.env.NEXT_PUBLIC_API_URL ?? 'https://retail-nqu5.onrender.com'
