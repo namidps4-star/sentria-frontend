@@ -1080,7 +1080,7 @@ export function OnboardingView({
 
         {/* THE QUESTION */}
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-7 md:px-8 md:py-10">
-          <div className="mx-auto flex w-full max-w-3xl flex-col gap-7">
+          <div className="mx-auto flex w-full max-w-5xl flex-col gap-7">
             <div
               key={step}
               className="flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out motion-reduce:animate-none"
@@ -1379,15 +1379,22 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 5: SECTOR (MUSEUM NEON STYLE - SPACED OUT) */}
+            {/* STEP 5: SECTOR (MUSEUM NEON STYLE - WIDER CARDS, EVEN GRID) */}
             {step === sectorStepNumber && (
               <>
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {SECTORS.map((item) => {
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {SECTORS.map((item, index) => {
                     const Icon = item.icon
                     const active = sector === item.id
                     const secondary = extraSectors.includes(item.id)
                     const isSelected = active || secondary
+
+                    /* 7 cards in a 3-column grid leaves one card alone on the
+                       last row. Make the last card span the full row so the
+                       grid looks balanced instead of trailing a single card. */
+                    const isLastOdd =
+                      SECTORS.length % 3 === 1 &&
+                      index === SECTORS.length - 1
 
                     return (
                       <button
@@ -1400,17 +1407,14 @@ export function OnboardingView({
                         }
                         aria-pressed={isSelected}
                         className={cn(
-                          "group relative flex flex-col items-center justify-between rounded-3xl border p-8 text-center transition-all duration-300",
-                          "min-h-[320px] w-full",
-                          // Base styling matching the museum aesthetic
+                          "group relative flex flex-col items-center justify-between rounded-3xl border p-7 text-center transition-all duration-300",
+                          "min-h-[340px] w-full",
                           "border-lime-500/30 bg-zinc-950/80 hover:border-lime-400 hover:bg-zinc-900",
-                          // Active state: solid glow
                           isSelected && "border-lime-400 bg-lime-500/10 shadow-[0_0_40px_-8px_rgba(132,204,22,0.2)]",
-                          // Recommended state
-                          item.recommended && !isSelected && "border-lime-500/60 ring-1 ring-lime-500/20"
+                          item.recommended && !isSelected && "border-lime-500/60 ring-1 ring-lime-500/20",
+                          isLastOdd && "sm:col-span-2 lg:col-span-3 lg:mx-auto lg:max-w-md"
                         )}
                       >
-                        {/* Maturity Badge */}
                         {item.maturity && (
                           <span
                             className={cn(
@@ -1424,22 +1428,21 @@ export function OnboardingView({
                           </span>
                         )}
 
-                        {/* Icon Area - Large Neon Style */}
                         <div className="flex flex-1 flex-col items-center justify-center pt-6">
-                          <div 
+                          <div
                             className={cn(
-                              "flex h-28 w-28 items-center justify-center rounded-2xl transition-all duration-300 mb-6",
-                              isSelected 
-                                ? "bg-lime-500/20 text-lime-400 scale-105" 
+                              "flex h-32 w-32 items-center justify-center rounded-2xl transition-all duration-300 mb-7",
+                              isSelected
+                                ? "bg-lime-500/20 text-lime-400 scale-105"
                                 : "bg-zinc-900/50 text-zinc-500 group-hover:text-lime-400/80 group-hover:bg-zinc-900"
                             )}
                           >
-                            <Icon className="h-14 w-14 stroke-[1.5]" />
+                            <Icon className="h-16 w-16 stroke-[1.5]" />
                           </div>
-                          
-                          <span 
+
+                          <span
                             className={cn(
-                              "text-xl font-bold tracking-tight transition-colors duration-300",
+                              "text-2xl font-bold tracking-tight transition-colors duration-300",
                               isSelected ? "text-lime-400" : "text-zinc-200 group-hover:text-white"
                             )}
                           >
@@ -1447,10 +1450,9 @@ export function OnboardingView({
                           </span>
                         </div>
 
-                        {/* Description */}
                         <span
                           className={cn(
-                            "mt-4 text-sm leading-relaxed transition-colors duration-300",
+                            "mt-4 max-w-[22ch] text-sm leading-relaxed transition-colors duration-300",
                             isSelected
                               ? "text-lime-200/70"
                               : "text-zinc-500 group-hover:text-zinc-400"
@@ -1459,7 +1461,6 @@ export function OnboardingView({
                           {px(item.description)}
                         </span>
 
-                        {/* Selection Indicator Dot */}
                         {isSelected && (
                           <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-lime-500 text-zinc-950 ring-2 ring-zinc-950">
                             <Check className="h-3.5 w-3.5" strokeWidth={3} />
@@ -1476,7 +1477,6 @@ export function OnboardingView({
                   })}
                 </div>
 
-                {/* Multi-sector Toggle - Styled to match */}
                 <div className="mt-8 rounded-2xl border border-lime-500/20 bg-zinc-950/50 p-5">
                   <label className="flex cursor-pointer items-start gap-3">
                     <input
@@ -1990,7 +1990,7 @@ export function OnboardingView({
 
         {/* ACTION BAR */}
         <footer className="shrink-0 border-t border-border bg-card/85 px-5 py-4 backdrop-blur-sm md:px-8">
-          <div className="mx-auto w-full max-w-3xl">
+          <div className="mx-auto w-full max-w-5xl">
             {!canContinue && blockedReason && (
               <p className="mb-3 text-xs leading-5 text-muted-foreground">
                 {blockedReason}
