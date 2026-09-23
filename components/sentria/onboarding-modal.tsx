@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -1112,48 +1111,81 @@ export function OnboardingView({
               </div>
             </div>
 
-            {/* STEP 1: LANGUAGE */}
+            {/* STEP 1: LANGUAGE (GLOSSY MODERN DESIGN) */}
             {step === langStepNumber && (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {LANGUAGES.filter(l => l.code === 'fr' || l.code === 'en').map((item) => {
-                  const active = language === item.code
-                  return (
-                    <button
-                      key={item.code}
-                      type="button"
-                      onClick={() => chooseLanguage(item.code)}
-                      aria-pressed={active}
-                      className={cn(CHOICE_CARD, active && CHOICE_ACTIVE)}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-heading text-lg font-bold tracking-tight">
-                            {item.label}
-                          </p>
-                          <p
+              <div className="flex flex-col items-center justify-center py-8">
+                {/* Glossy Panel Container */}
+                <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/90 shadow-2xl backdrop-blur-xl ring-1 ring-black/5">
+                  
+                  {/* Header Strip */}
+                  <div className="flex items-center justify-between border-b border-white/5 bg-black/20 px-6 py-4">
+                    <span className="text-sm font-medium text-zinc-400">
+                      {tx("Language", "Language")}
+                    </span>
+                    <Languages className="h-4 w-4 text-zinc-500" />
+                  </div>
+
+                  {/* Options List */}
+                  <div className="flex flex-col divide-y divide-white/5">
+                    {LANGUAGES.filter(l => l.code === 'fr' || l.code === 'en').map((item) => {
+                      const active = language === item.code
+                      return (
+                        <button
+                          key={item.code}
+                          type="button"
+                          onClick={() => chooseLanguage(item.code)}
+                          className={cn(
+                            "group relative flex items-center justify-between px-6 py-5 text-left transition-all duration-300",
+                            "hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500/50 focus-visible:ring-inset"
+                          )}
+                        >
+                          {/* Active Indicator Bar (Left side) */}
+                          <div 
                             className={cn(
-                              "mt-0.5 text-xs",
-                              active
-                                ? "text-background/60"
-                                : "text-muted-foreground"
+                              "absolute left-0 top-0 bottom-0 w-1 transition-all duration-300",
+                              active ? "bg-lime-500 shadow-[0_0_12px_rgba(132,204,22,0.6)]" : "bg-transparent"
+                            )} 
+                          />
+
+                          <div className="flex flex-col gap-1 pl-2">
+                            <span 
+                              className={cn(
+                                "text-lg font-medium tracking-wide transition-colors duration-300",
+                                active ? "text-lime-400 drop-shadow-[0_0_8px_rgba(163,230,53,0.3)]" : "text-zinc-300 group-hover:text-white"
+                              )}
+                            >
+                              {item.label}
+                            </span>
+                            
+                            {/* Subtle region hint, only visible when not active to keep it clean */}
+                            {!active && (
+                              <span className="text-[10px] text-zinc-600">
+                                {px(item.region)}
+                              </span>
                             )}
-                          >
-                            {px(item.region)}
-                          </p>
-                        </div>
-                        {active && <CardTick />}
-                      </div>
-                      <p
-                        className={cn(
-                          "mt-4 text-[11px] leading-4",
-                          active ? "text-background/70" : "text-muted-foreground"
-                        )}
-                      >
-                        {languagePromise(item, tx)}
-                      </p>
-                    </button>
-                  )
-                })}
+                          </div>
+
+                          {/* Active Checkmark / Glow */}
+                          {active && (
+                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-lime-500/20 text-lime-400">
+                              <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                            </div>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+
+                  {/* Bottom decorative glow */}
+                  <div className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 h-12 w-3/4 bg-lime-500/10 blur-2xl rounded-full" />
+                </div>
+
+                <p className="mt-6 text-center text-xs text-muted-foreground max-w-sm">
+                  {tx(
+                    "SentrIA s'adaptera à votre choix pour toutes les interactions futures.",
+                    "SentrIA will adapt to your choice for all future interactions."
+                  )}
+                </p>
               </div>
             )}
 
