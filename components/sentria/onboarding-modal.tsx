@@ -555,7 +555,7 @@ export function OnboardingView({
   const [companyName, setCompanyName] = useState("")
   const [timezoneId, setTimezoneId] = useState(TIMEZONES[0].id)
   const [countryCode, setCountryCode] = useState("")
-  
+
   // Only French and English allowed
   const [language, setLanguage] = useState("fr")
 
@@ -1135,15 +1135,15 @@ export function OnboardingView({
                             "hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500/50 focus-visible:ring-inset"
                           )}
                         >
-                          <div 
+                          <div
                             className={cn(
                               "absolute left-0 top-0 bottom-0 w-1 transition-all duration-300",
                               active ? "bg-lime-500 shadow-[0_0_12px_rgba(132,204,22,0.6)]" : "bg-transparent"
-                            )} 
+                            )}
                           />
 
                           <div className="flex flex-col gap-1 pl-2">
-                            <span 
+                            <span
                               className={cn(
                                 "text-lg font-medium tracking-wide transition-colors duration-300",
                                 active ? "text-lime-400 drop-shadow-[0_0_8px_rgba(163,230,53,0.3)]" : "text-zinc-300 group-hover:text-white"
@@ -1208,15 +1208,15 @@ export function OnboardingView({
                               "hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500/50 focus-visible:ring-inset"
                             )}
                           >
-                            <div 
+                            <div
                               className={cn(
                                 "absolute left-0 top-0 bottom-0 w-1 transition-all duration-300",
                                 active ? "bg-lime-500 shadow-[0_0_12px_rgba(132,204,22,0.6)]" : "bg-transparent"
-                              )} 
+                              )}
                             />
 
                             <div className="flex flex-col gap-0.5 pl-2">
-                              <span 
+                              <span
                                 className={cn(
                                   "text-base font-medium transition-colors duration-300",
                                   active ? "text-lime-400 drop-shadow-[0_0_8px_rgba(163,230,53,0.3)]" : "text-zinc-200 group-hover:text-white"
@@ -1230,7 +1230,7 @@ export function OnboardingView({
                             </div>
 
                             <div className="flex flex-col items-end gap-1">
-                              <span 
+                              <span
                                 className={cn(
                                   "text-lg font-bold tabular-nums transition-colors duration-300",
                                   active ? "text-lime-400" : "text-zinc-400 group-hover:text-zinc-200"
@@ -1290,15 +1290,15 @@ export function OnboardingView({
                               "hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500/50 focus-visible:ring-inset"
                             )}
                           >
-                            <div 
+                            <div
                               className={cn(
                                 "absolute left-0 top-0 bottom-0 w-1 transition-all duration-300",
                                 active ? "bg-lime-500 shadow-[0_0_12px_rgba(132,204,22,0.6)]" : "bg-transparent"
-                              )} 
+                              )}
                             />
 
                             <div className="flex flex-col gap-0.5 pl-2">
-                              <span 
+                              <span
                                 className={cn(
                                   "text-base font-medium transition-colors duration-300",
                                   active ? "text-lime-400 drop-shadow-[0_0_8px_rgba(163,230,53,0.3)]" : "text-zinc-200 group-hover:text-white"
@@ -1306,7 +1306,7 @@ export function OnboardingView({
                               >
                                 {zone.label}
                               </span>
-                              
+
                               {suggested && (
                                 <span className="text-[10px] text-lime-500/80 font-medium">
                                   {tx("Déduit de votre pays", "From your country")}
@@ -1379,22 +1379,23 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 5: SECTOR (MUSEUM NEON STYLE - WIDER CARDS, EVEN GRID) */}
+            {/* STEP 5: SECTOR (MUSEUM NEON STYLE - 4 TOP, 3 CENTERED BELOW) */}
             {step === sectorStepNumber && (
               <>
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-12">
                   {SECTORS.map((item, index) => {
                     const Icon = item.icon
                     const active = sector === item.id
                     const secondary = extraSectors.includes(item.id)
                     const isSelected = active || secondary
 
-                    /* 7 cards in a 3-column grid leaves one card alone on the
-                       last row. Make the last card span the full row so the
-                       grid looks balanced instead of trailing a single card. */
-                    const isLastOdd =
-                      SECTORS.length % 3 === 1 &&
-                      index === SECTORS.length - 1
+                    /* 4 cards on the top row (3 cols each), 3 cards on the
+                       bottom row (4 cols each) so the bottom row is centered
+                       under the top row. */
+                    const isTopRow = index < 4
+                    const colSpan = isTopRow
+                      ? "lg:col-span-3"
+                      : "lg:col-span-4"
 
                     return (
                       <button
@@ -1407,18 +1408,18 @@ export function OnboardingView({
                         }
                         aria-pressed={isSelected}
                         className={cn(
-                          "group relative flex flex-col items-center justify-between rounded-3xl border p-7 text-center transition-all duration-300",
-                          "min-h-[340px] w-full",
+                          "group relative flex flex-col items-center justify-between rounded-3xl border p-6 text-center transition-all duration-300",
+                          "min-h-[260px] w-full",
+                          colSpan,
                           "border-lime-500/30 bg-zinc-950/80 hover:border-lime-400 hover:bg-zinc-900",
                           isSelected && "border-lime-400 bg-lime-500/10 shadow-[0_0_40px_-8px_rgba(132,204,22,0.2)]",
-                          item.recommended && !isSelected && "border-lime-500/60 ring-1 ring-lime-500/20",
-                          isLastOdd && "sm:col-span-2 lg:col-span-3 lg:mx-auto lg:max-w-md"
+                          item.recommended && !isSelected && "border-lime-500/60 ring-1 ring-lime-500/20"
                         )}
                       >
                         {item.maturity && (
                           <span
                             className={cn(
-                              "absolute right-5 top-5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                              "absolute right-4 top-4 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
                               isSelected
                                 ? "bg-lime-500 text-zinc-950"
                                 : "bg-lime-500/10 text-lime-400 border border-lime-500/20"
@@ -1428,21 +1429,21 @@ export function OnboardingView({
                           </span>
                         )}
 
-                        <div className="flex flex-1 flex-col items-center justify-center pt-6">
+                        <div className="flex flex-1 flex-col items-center justify-center pt-5">
                           <div
                             className={cn(
-                              "flex h-32 w-32 items-center justify-center rounded-2xl transition-all duration-300 mb-7",
+                              "flex h-20 w-20 items-center justify-center rounded-2xl transition-all duration-300 mb-5",
                               isSelected
                                 ? "bg-lime-500/20 text-lime-400 scale-105"
                                 : "bg-zinc-900/50 text-zinc-500 group-hover:text-lime-400/80 group-hover:bg-zinc-900"
                             )}
                           >
-                            <Icon className="h-16 w-16 stroke-[1.5]" />
+                            <Icon className="h-10 w-10 stroke-[1.5]" />
                           </div>
 
                           <span
                             className={cn(
-                              "text-2xl font-bold tracking-tight transition-colors duration-300",
+                              "text-lg font-bold tracking-tight transition-colors duration-300",
                               isSelected ? "text-lime-400" : "text-zinc-200 group-hover:text-white"
                             )}
                           >
@@ -1452,7 +1453,7 @@ export function OnboardingView({
 
                         <span
                           className={cn(
-                            "mt-4 max-w-[22ch] text-sm leading-relaxed transition-colors duration-300",
+                            "mt-3 max-w-[22ch] text-xs leading-relaxed transition-colors duration-300",
                             isSelected
                               ? "text-lime-200/70"
                               : "text-zinc-500 group-hover:text-zinc-400"
@@ -1468,7 +1469,7 @@ export function OnboardingView({
                         )}
 
                         {secondary && !active && (
-                          <span className="absolute bottom-5 rounded-full bg-zinc-800 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-zinc-400">
+                          <span className="absolute bottom-4 rounded-full bg-zinc-800 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-zinc-400">
                             {tx("Secondaire", "Secondary")}
                           </span>
                         )}
