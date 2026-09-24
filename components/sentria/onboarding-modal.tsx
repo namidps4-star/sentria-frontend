@@ -127,7 +127,7 @@ const SECTORS: SectorConfig[] = [
       "Stock, cold chain and products"
     ),
     icon: HeartPulse,
-    image: "/health.avif",
+    image: "/health.png",
     maturity: "early",
   },
   {
