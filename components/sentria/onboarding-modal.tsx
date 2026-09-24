@@ -104,7 +104,7 @@ const SECTORS: SectorConfig[] = [
       "Port, warehouse, transport and flows"
     ),
     icon: Ship,
-    image: "/logistics.avif",
+    image: "/logistics.png",
     recommended: true,
     maturity: "pilot",
   },
@@ -116,7 +116,7 @@ const SECTORS: SectorConfig[] = [
       "Machines, production and maintenance"
     ),
     icon: Factory,
-    image: "/industry.avif",
+    image: "/industry.png",
     maturity: "early",
   },
   {
@@ -138,7 +138,7 @@ const SECTORS: SectorConfig[] = [
       "Harvests, storage and transport"
     ),
     icon: Wheat,
-    image: "/agriculture.avif",
+    image: "/agriculture.png",
     maturity: "early",
   },
   {
@@ -149,7 +149,7 @@ const SECTORS: SectorConfig[] = [
       "Fleet, engines and maintenance"
     ),
     icon: Truck,
-    image: "/transportation.avif",
+    image: "/transportation.png",
     maturity: "early",
   },
   {
@@ -160,7 +160,7 @@ const SECTORS: SectorConfig[] = [
       "Generators, fuel and temperature"
     ),
     icon: Zap,
-    image: "/energy.avif",
+    image: "/energy.png",
     maturity: "early",
   },
   {
@@ -171,7 +171,7 @@ const SECTORS: SectorConfig[] = [
       "Stock, shelves and replenishment"
     ),
     icon: Store,
-    image: "/retail.avif",
+    image: "/retail.png",
     maturity: "early",
   },
 ]
@@ -1387,7 +1387,7 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 5: SECTOR (MUSEUM NEON STYLE - 4 TOP, 3 CENTERED BELOW) */}
+            {/* STEP 5: SECTOR (WHITE CARDS, DARK TEXT, 4 TOP / 3 CENTERED BELOW) */}
             {step === sectorStepNumber && (
               <>
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-12">
@@ -1419,9 +1419,12 @@ export function OnboardingView({
                           "group relative flex flex-col items-center justify-between rounded-3xl border p-6 text-center transition-all duration-300",
                           "min-h-[260px] w-full",
                           colSpan,
-                          "border-lime-500/30 bg-zinc-950/80 hover:border-lime-400 hover:bg-zinc-900",
-                          isSelected && "border-lime-400 bg-lime-500/10 shadow-[0_0_40px_-8px_rgba(132,204,22,0.2)]",
-                          item.recommended && !isSelected && "border-lime-500/60 ring-1 ring-lime-500/20"
+                          /* White card, dark text, visible on any theme */
+                          "border-neutral-200 bg-white shadow-sm hover:-translate-y-0.5 hover:border-lime-500 hover:shadow-md",
+                          /* Selected: lime border + soft lime tint, text stays dark */
+                          isSelected && "border-lime-500 bg-lime-50 shadow-md",
+                          /* Recommended (not yet selected): stronger lime outline */
+                          item.recommended && !isSelected && "border-lime-500 ring-1 ring-lime-500/30"
                         )}
                       >
                         {item.maturity && (
@@ -1429,8 +1432,8 @@ export function OnboardingView({
                             className={cn(
                               "absolute right-4 top-4 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
                               isSelected
-                                ? "bg-lime-500 text-zinc-950"
-                                : "bg-lime-500/10 text-lime-400 border border-lime-500/20"
+                                ? "bg-lime-500 text-white"
+                                : "bg-lime-100 text-lime-700 border border-lime-200"
                             )}
                           >
                             {maturityLabel(item.maturity, tx)}
@@ -1439,7 +1442,7 @@ export function OnboardingView({
 
                         <div className="flex flex-1 flex-col items-center justify-center pt-5">
                           {item.image ? (
-                            <div className="mb-5 flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl bg-white/5">
+                            <div className="mb-5 flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl bg-neutral-100">
                               <img
                                 src={item.image}
                                 alt=""
@@ -1454,8 +1457,8 @@ export function OnboardingView({
                               className={cn(
                                 "flex h-20 w-20 items-center justify-center rounded-2xl transition-all duration-300 mb-5",
                                 isSelected
-                                  ? "bg-lime-500/20 text-lime-400 scale-105"
-                                  : "bg-zinc-900/50 text-zinc-500 group-hover:text-lime-400/80 group-hover:bg-zinc-900"
+                                  ? "bg-lime-100 text-lime-700 scale-105"
+                                  : "bg-neutral-100 text-neutral-500 group-hover:text-lime-600"
                               )}
                             >
                               <Icon className="h-10 w-10 stroke-[1.5]" />
@@ -1465,7 +1468,7 @@ export function OnboardingView({
                           <span
                             className={cn(
                               "text-lg font-bold tracking-tight transition-colors duration-300",
-                              isSelected ? "text-lime-400" : "text-zinc-200 group-hover:text-white"
+                              isSelected ? "text-lime-700" : "text-neutral-900 group-hover:text-neutral-950"
                             )}
                           >
                             {px(item.label)}
@@ -1476,21 +1479,21 @@ export function OnboardingView({
                           className={cn(
                             "mt-3 max-w-[22ch] text-xs leading-relaxed transition-colors duration-300",
                             isSelected
-                              ? "text-lime-200/70"
-                              : "text-zinc-500 group-hover:text-zinc-400"
+                              ? "text-lime-800/80"
+                              : "text-neutral-500 group-hover:text-neutral-600"
                           )}
                         >
                           {px(item.description)}
                         </span>
 
                         {isSelected && (
-                          <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-lime-500 text-zinc-950 ring-2 ring-zinc-950">
+                          <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-lime-500 text-white ring-2 ring-white">
                             <Check className="h-3.5 w-3.5" strokeWidth={3} />
                           </span>
                         )}
 
                         {secondary && !active && (
-                          <span className="absolute bottom-4 rounded-full bg-zinc-800 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-zinc-400">
+                          <span className="absolute bottom-4 rounded-full bg-neutral-200 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neutral-600">
                             {tx("Secondaire", "Secondary")}
                           </span>
                         )}
@@ -1499,7 +1502,7 @@ export function OnboardingView({
                   })}
                 </div>
 
-                <div className="mt-8 rounded-2xl border border-lime-500/20 bg-zinc-950/50 p-5">
+                <div className="mt-8 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
                   <label className="flex cursor-pointer items-start gap-3">
                     <input
                       type="checkbox"
@@ -1511,13 +1514,13 @@ export function OnboardingView({
                       className="mt-0.5 h-4 w-4 shrink-0 accent-lime-500"
                     />
                     <span>
-                      <span className="block text-sm font-semibold text-zinc-200">
+                      <span className="block text-sm font-semibold text-neutral-900">
                         {tx(
                           "Mon entreprise couvre plusieurs secteurs",
                           "My company covers more than one sector"
                         )}
                       </span>
-                      <span className="mt-0.5 block text-xs leading-5 text-zinc-500">
+                      <span className="mt-0.5 block text-xs leading-5 text-neutral-500">
                         {tx(
                           "Par exemple une usine avec son propre entrepôt. Le secteur choisi ci-dessus reste le principal.",
                           "A factory with its own warehouse, for instance. The sector chosen above stays the main one."
@@ -1527,11 +1530,11 @@ export function OnboardingView({
                   </label>
 
                   {multiSector && (
-                    <p className="mt-4 border-t border-white/5 pt-4 text-xs text-zinc-400">
+                    <p className="mt-4 border-t border-neutral-200 pt-4 text-xs text-neutral-500">
                       {extraSectors.length > 0 ? (
                         <>
                           {tx("Secteurs :", "Sectors:")}{" "}
-                          <span className="font-semibold text-lime-400">
+                          <span className="font-semibold text-lime-700">
                             {allSectors
                               .map((id) => sectorName(id))
                               .join(", ")}
