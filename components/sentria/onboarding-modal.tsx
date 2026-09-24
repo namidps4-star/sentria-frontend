@@ -104,7 +104,7 @@ const SECTORS: SectorConfig[] = [
       "Port, warehouse, transport and flows"
     ),
     icon: Ship,
-    image: "/container-crane.avif",
+    image: "/logistics.avif",
     recommended: true,
     maturity: "pilot",
   },
@@ -116,6 +116,7 @@ const SECTORS: SectorConfig[] = [
       "Machines, production and maintenance"
     ),
     icon: Factory,
+    image: "/industry.avif",
     maturity: "early",
   },
   {
@@ -126,6 +127,7 @@ const SECTORS: SectorConfig[] = [
       "Stock, cold chain and products"
     ),
     icon: HeartPulse,
+    image: "/health.avif",
     maturity: "early",
   },
   {
@@ -136,6 +138,7 @@ const SECTORS: SectorConfig[] = [
       "Harvests, storage and transport"
     ),
     icon: Wheat,
+    image: "/agriculture.avif",
     maturity: "early",
   },
   {
@@ -146,6 +149,7 @@ const SECTORS: SectorConfig[] = [
       "Fleet, engines and maintenance"
     ),
     icon: Truck,
+    image: "/transportation.avif",
     maturity: "early",
   },
   {
@@ -156,6 +160,7 @@ const SECTORS: SectorConfig[] = [
       "Generators, fuel and temperature"
     ),
     icon: Zap,
+    image: "/energy.avif",
     maturity: "early",
   },
   {
@@ -166,6 +171,7 @@ const SECTORS: SectorConfig[] = [
       "Stock, shelves and replenishment"
     ),
     icon: Store,
+    image: "/retail.avif",
     maturity: "early",
   },
 ]
