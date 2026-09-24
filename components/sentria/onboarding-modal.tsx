@@ -71,6 +71,7 @@ type SectorConfig = {
   label: Localized
   description: Localized
   icon: React.ElementType
+  image?: string
   recommended?: boolean
   maturity?: "pilot" | "early"
 }
@@ -103,6 +104,7 @@ const SECTORS: SectorConfig[] = [
       "Port, warehouse, transport and flows"
     ),
     icon: Ship,
+    image: "/images/containers/container-crane.png",
     recommended: true,
     maturity: "pilot",
   },
@@ -1430,16 +1432,29 @@ export function OnboardingView({
                         )}
 
                         <div className="flex flex-1 flex-col items-center justify-center pt-5">
-                          <div
-                            className={cn(
-                              "flex h-20 w-20 items-center justify-center rounded-2xl transition-all duration-300 mb-5",
-                              isSelected
-                                ? "bg-lime-500/20 text-lime-400 scale-105"
-                                : "bg-zinc-900/50 text-zinc-500 group-hover:text-lime-400/80 group-hover:bg-zinc-900"
-                            )}
-                          >
-                            <Icon className="h-10 w-10 stroke-[1.5]" />
-                          </div>
+                          {item.image ? (
+                            <div className="mb-5 flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl bg-white/5">
+                              <img
+                                src={item.image}
+                                alt=""
+                                className={cn(
+                                  "h-full w-full object-contain transition-transform duration-300",
+                                  isSelected ? "scale-110" : "group-hover:scale-105"
+                                )}
+                              />
+                            </div>
+                          ) : (
+                            <div
+                              className={cn(
+                                "flex h-20 w-20 items-center justify-center rounded-2xl transition-all duration-300 mb-5",
+                                isSelected
+                                  ? "bg-lime-500/20 text-lime-400 scale-105"
+                                  : "bg-zinc-900/50 text-zinc-500 group-hover:text-lime-400/80 group-hover:bg-zinc-900"
+                              )}
+                            >
+                              <Icon className="h-10 w-10 stroke-[1.5]" />
+                            </div>
+                          )}
 
                           <span
                             className={cn(
