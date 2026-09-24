@@ -104,7 +104,7 @@ const SECTORS: SectorConfig[] = [
       "Port, warehouse, transport and flows"
     ),
     icon: Ship,
-    image: "/images/containers/container-crane.png",
+    image: "/container-crane.avif",
     recommended: true,
     maturity: "pilot",
   },
