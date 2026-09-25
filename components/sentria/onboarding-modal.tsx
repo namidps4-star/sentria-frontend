@@ -1413,46 +1413,65 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 4: COMPANY */}
+            {/* STEP 4: COMPANY - AESTHETIC LIME CAPSULE DESIGN */}
             {step === companyStepNumber && (
-              <div className="max-w-xl">
-                <label className="block">
-                  <span className="text-sm font-medium">
-                    {tx("Nom de votre entreprise", "Your company name")}
-                  </span>
-                  <input
-                    value={companyName}
-                    onChange={(event) => setCompanyName(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" && companyName.trim()) {
-                        event.preventDefault()
-                        nextStep()
-                      }
-                    }}
-                    placeholder={tx(
-                      "Ex. Terminal Atlantique SA",
-                      "e.g. Atlantic Terminal Ltd"
-                    )}
-                    autoComplete="organization"
-                    className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-4 font-heading text-xl font-bold tracking-tight outline-none transition-colors focus:border-ring md:text-2xl"
-                  />
-                </label>
-                <div className="mt-5 rounded-2xl border border-border bg-background p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    {tx("Ce que SentrIA dira", "What SentrIA will say")}
-                  </p>
-                  <p className="mt-2 text-sm">
-                    <span className="text-muted-foreground">
-                      {tx("Bonjour ", "Hello ")}
-                    </span>
-                    <span className="font-bold">
-                      {companyName.trim() || "…"}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {tx(". Je suis SentrIA.", ". I am SentrIA.")}
-                    </span>
-                  </p>
+              <div className="flex flex-col items-center justify-center py-8">
+                
+                {/* Main Lime Capsule Container */}
+                <div className="relative w-full max-w-xl">
+                  
+                  {/* Decorative Stars */}
+                  <Sparkles className="absolute -left-8 -top-8 h-8 w-8 text-lime-400 rotate-12 opacity-80" />
+                  <Sparkles className="absolute -right-6 -bottom-6 h-6 w-6 text-lime-400 -rotate-12 opacity-80" />
+
+                  {/* The Lime Input Box */}
+                  <div className="relative rounded-[2.5rem] bg-lime-400 p-2 shadow-[0_12px_30px_-8px_rgba(163,230,53,0.4)] transition-transform duration-300 hover:scale-[1.01]">
+                    
+                    {/* Inner Dark Background for contrast */}
+                    <div className="flex items-center gap-4 rounded-[2rem] bg-zinc-950 px-6 py-5">
+                      
+                      {/* Icon Placeholder */}
+                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-zinc-900 text-lime-400">
+                        <Building2 className="h-7 w-7 stroke-[1.5]" />
+                      </div>
+
+                      {/* Input Field */}
+                      <div className="min-w-0 flex-1">
+                        <label htmlFor="company-name" className="sr-only">
+                          {tx("Nom de votre entreprise", "Your company name")}
+                        </label>
+                        <input
+                          id="company-name"
+                          value={companyName}
+                          onChange={(event) => setCompanyName(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" && companyName.trim()) {
+                              event.preventDefault()
+                              nextStep()
+                            }
+                          }}
+                          placeholder={tx(
+                            "Ex. Terminal Atlantique SA",
+                            "e.g. Atlantic Terminal Ltd"
+                          )}
+                          autoComplete="organization"
+                          className="w-full bg-transparent text-lg font-bold text-white placeholder:text-zinc-500 outline-none md:text-xl"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Shadow Layer for extra depth */}
+                  <div className="absolute -bottom-4 left-4 right-4 -z-10 rounded-[2.5rem] bg-lime-600/20 blur-xl" />
                 </div>
+
+                {/* Helper Text */}
+                <p className="mt-8 text-center text-xs text-muted-foreground max-w-sm">
+                  {tx(
+                    "Ce nom sera utilisé dans vos rapports et par l'assistant IA.",
+                    "This name will be used in your reports and by the AI assistant."
+                  )}
+                </p>
               </div>
             )}
 
