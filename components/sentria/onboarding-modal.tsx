@@ -177,6 +177,63 @@ const SECTORS: SectorConfig[] = [
 ]
 
 /* -------------------------------------------------------------------------- */
+/* ACTIVITY (DEPARTMENT) IMAGES                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Per-activity illustrations.
+ *
+ * One slug per activity id, resolved from /public/<id>.png. A missing
+ * file falls back to the lucide icon, so dropping only the artwork you
+ * already have is safe: nothing breaks, nothing 404s visibly.
+ */
+const ACTIVITY_IMAGES: Record<string, string> = {
+  // Logistics
+  "port-conteneurs": "/port-conteneurs.png",
+  "entrepot-manutention": "/entrepot-manutention.png",
+  "transport-distribution": "/transport-distribution.png",
+  "preparation-expedition": "/preparation-expedition.png",
+  "chaine-froid": "/chaine-froid.png",
+
+  // Industry
+  "usine-production": "/usine-production.png",
+  "atelier-soustraitance": "/atelier-soustraitance.png",
+  "usine-agroalimentaire": "/usine-agroalimentaire.png",
+
+  // Health
+  "pharmacie": "/pharmacie.png",
+  "laboratoire": "/laboratoire.png",
+  "clinique-hopital": "/clinique-hopital.png",
+  "grossiste-pharma": "/grossiste-pharma.png",
+
+  // Agriculture
+  "exploitation-agricole": "/exploitation-agricole.png",
+  "cooperative-agricole": "/cooperative-agricole.png",
+  "silo-stockage": "/silo-stockage.png",
+
+  // Transportation
+  "transporteur-routier": "/transporteur-routier.png",
+  "flotte-entreprise": "/flotte-entreprise.png",
+  "location-vehicules": "/location-vehicules.png",
+
+  // Energy
+  "centrale-production": "/centrale-production.png",
+  "generateurs-secours": "/generateurs-secours.png",
+  "distribution-energetique": "/distribution-energetique.png",
+
+  // Retail
+  "supermarche-hypermarche": "/supermarche-hypermarche.png",
+  "epicerie-proximite": "/epicerie-proximite.png",
+  "chaine-magasins": "/chaine-magasins.png",
+  "grossiste-distributeur": "/grossiste-distributeur.png",
+}
+
+function imageForActivity(activityId: string | undefined): string | undefined {
+  if (!activityId) return undefined
+  return ACTIVITY_IMAGES[activityId]
+}
+
+/* -------------------------------------------------------------------------- */
 /* DATA SOURCES                                                               */
 /* -------------------------------------------------------------------------- */
 
@@ -273,7 +330,7 @@ const CSV_COLUMNS: Record<string, string[]> = {
 }
 
 /* -------------------------------------------------------------------------- */
-/* LOGISTICS PREVIEW                                                          */
+/* HELPERS                                                                    */
 /* -------------------------------------------------------------------------- */
 
 function isWideCard(index: number, total: number) {
@@ -1557,7 +1614,7 @@ export function OnboardingView({
               </>
             )}
 
-            {/* STEP 6: BUSINESS TYPE */}
+            {/* STEP 6: BUSINESS TYPE (ACTIVITY) — IMAGE PER DEPARTMENT */}
             {step === subTypeStepNumber && sector && (
               <div>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -1586,6 +1643,7 @@ export function OnboardingView({
                     const Icon = item.icon
                     const active = subTypes2.includes(item.id)
                     const wide = isWideCard(index, shownSubTypes.length)
+                    const img = imageForActivity(item.id)
 
                     return (
                       <button
@@ -1600,14 +1658,29 @@ export function OnboardingView({
                             : "border-border hover:border-accent/60 hover:bg-accent/10"
                         )}
                       >
-                        <div
-                          className={cn(
-                            "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
-                            active ? "bg-background/15" : "bg-muted"
-                          )}
-                        >
-                          <Icon className="h-4.5 w-4.5" />
-                        </div>
+                        {img ? (
+                          <div
+                            className={cn(
+                              "flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl",
+                              active ? "bg-background/15" : "bg-muted"
+                            )}
+                          >
+                            <img
+                              src={img}
+                              alt=""
+                              className="h-full w-full object-contain"
+                            />
+                          </div>
+                        ) : (
+                          <div
+                            className={cn(
+                              "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+                              active ? "bg-background/15" : "bg-muted"
+                            )}
+                          >
+                            <Icon className="h-4.5 w-4.5" />
+                          </div>
+                        )}
 
                         <div
                           className={cn(
