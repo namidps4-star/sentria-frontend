@@ -233,7 +233,15 @@ function imageForActivity(activityId: string | undefined): string | undefined {
 function activityColSpan(index: number, total: number): string {
   if (total === 3) return "lg:col-span-4"
   if (total === 4) return "lg:col-span-3"
-  if (total === 5) return index < 3 ? "lg:col-span-4" : "lg:col-span-6"
+  if (total === 5) {
+    // All 5 cards must be the SAME size (lg:col-span-4). The first 3 fill
+    // the top row (3 x 4 = 12). The last 2 are centered on the row below by
+    // offsetting the first of the pair with col-start-3 (cols 3-6 and 7-10),
+    // instead of stretching them to col-span-6, which made them bigger.
+    if (index < 3) return "lg:col-span-4"
+    if (index === 3) return "lg:col-span-4 lg:col-start-3"
+    return "lg:col-span-4"
+  }
   return "lg:col-span-3"
 }
 
@@ -1686,7 +1694,7 @@ export function OnboardingView({
                         {/* Image / Icon Area - STANDARD SIZE FOR ALL (enlarged) */}
                         <div className="flex flex-1 flex-col items-center justify-center w-full pt-2">
                           {img ? (
-                            <div className="mb-3 flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
+                            <div className="mb-3 flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
                               <img
                                 src={img}
                                 alt=""
@@ -1699,13 +1707,13 @@ export function OnboardingView({
                           ) : (
                             <div
                               className={cn(
-                                "flex h-16 w-16 items-center justify-center rounded-xl transition-all duration-300 mb-3",
+                                "flex h-20 w-20 items-center justify-center rounded-xl transition-all duration-300 mb-3",
                                 active
                                   ? "bg-lime-100 text-lime-700 scale-105"
                                   : "bg-neutral-100 text-neutral-500 group-hover:text-lime-600"
                               )}
                             >
-                              <Icon className="h-8 w-8 stroke-[1.5]" />
+                              <Icon className="h-10 w-10 stroke-[1.5]" />
                             </div>
                           )}
 
