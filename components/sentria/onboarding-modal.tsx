@@ -76,7 +76,6 @@ type SectorConfig = {
   maturity?: "pilot" | "early"
 }
 
-/** The badge wording for a maturity key. */
 function maturityLabel(maturity: "pilot" | "early", tx: Tx): string {
   return maturity === "pilot"
     ? tx("Pilote recommandé", "Recommended pilot")
@@ -180,13 +179,6 @@ const SECTORS: SectorConfig[] = [
 /* ACTIVITY (DEPARTMENT) IMAGES                                               */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Per-activity illustrations.
- *
- * One slug per activity id, resolved from /public/<id>.png. A missing
- * file falls back to the lucide icon, so dropping only the artwork you
- * already have is safe: nothing breaks, nothing 404s visibly.
- */
 const ACTIVITY_IMAGES: Record<string, string> = {
   // Logistics
   "port-conteneurs": "/port-conteneurs.png",
@@ -236,14 +228,12 @@ function imageForActivity(activityId: string | undefined): string | undefined {
 /**
  * Activity grid layout.
  *
- * Uses the same 12-column trick as the sector grid so an odd count
- * still ends with a centered row instead of a lone trailing card.
+ * Same 12-column trick as the sector grid so an odd count still ends
+ * with a centered final row instead of a lone trailing card.
  *
- *  - 3 items  -> 1 row of 3 x 4 cols
- *  - 4 items  -> 1 row of 4 x 3 cols
- *  - 5 items  -> 1 row of 3 + 1 centered row of 2
- *
- * Any other count falls back to 4 x 3 cols.
+ *   3 items -> 1 row of 3 x 4 cols
+ *   4 items -> 1 row of 4 x 3 cols
+ *   5 items -> 1 row of 3 + 1 centered row of 2
  */
 function activityColSpan(index: number, total: number): string {
   if (total === 3) return "lg:col-span-4"
@@ -300,7 +290,6 @@ const DATA_SOURCES: DataSource[] = [
 
 /** Columns each activity's CSV must carry. */
 const CSV_COLUMNS: Record<string, string[]> = {
-  // Health
   "pharmacie": [
     "medicine_name", "stock_qty", "min_stock",
     "sales_last_30_days", "unit_cost", "expiry_date",
@@ -317,7 +306,6 @@ const CSV_COLUMNS: Record<string, string[]> = {
     "qty_shipped_last_period", "qty_reordered_this_period",
     "days_since_last_shipment", "unit_cost",
   ],
-  // Sector fallbacks
   "health": ["medicine_name", "stock_qty", "min_stock"],
   "industry": [
     "Product ID", "Torque [Nm]", "Tool wear [min]",
@@ -327,7 +315,6 @@ const CSV_COLUMNS: Record<string, string[]> = {
   "agriculture": ["batch_id", "days_stored", "storage_temp"],
   "transportation": ["vehicle_id", "km_since_service", "engine_temp"],
   "energy": ["generator_id", "fuel_level", "coolant_temp"],
-  /* Retail */
   "supermarche-hypermarche": [
     "product_name", "stock_qty", "min_stock",
     "unit_cost", "expiry_date", "last_sale_date",
@@ -541,15 +528,6 @@ const SAMPLE_ALERTS: Record<Sector, Localized> = {
   ),
 }
 
-const CHOICE_CARD = [
-  "group relative w-full rounded-2xl border border-border bg-background p-4 text-left",
-  "transition-all duration-200 hover:-translate-y-0.5 hover:border-ring hover:shadow-sm",
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-  "motion-reduce:transition-none motion-reduce:hover:translate-y-0",
-].join(" ")
-
-const CHOICE_ACTIVE = "border-foreground bg-foreground text-background shadow-sm"
-
 function CardTick() {
   return (
     <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground">
@@ -640,7 +618,6 @@ export function OnboardingView({
   const [timezoneId, setTimezoneId] = useState(TIMEZONES[0].id)
   const [countryCode, setCountryCode] = useState("")
 
-  // Only French and English allowed
   const [language, setLanguage] = useState("fr")
 
   function chooseLanguage(code: string) {
@@ -651,7 +628,6 @@ export function OnboardingView({
   useEffect(() => {
     setTimezoneId(detectTimezoneId())
     const detected = detectLanguage()
-    // Ensure we default to fr or en only
     const safeLang = detected === "en" ? "en" : "fr"
     setLanguage(safeLang)
     writeLanguage(safeLang)
@@ -1463,23 +1439,15 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 5: SECTOR (WHITE CARDS, DARK TEXT, 4 TOP / 3 CENTERED BELOW) */}
+            {/* STEP 5: SECTOR — UNO-STYLE CARDS (TALL NARROW RECTANGLES) */}
             {step === sectorStepNumber && (
               <>
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-12">
-                  {SECTORS.map((item, index) => {
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+                  {SECTORS.map((item) => {
                     const Icon = item.icon
                     const active = sector === item.id
                     const secondary = extraSectors.includes(item.id)
                     const isSelected = active || secondary
-
-                    /* 4 cards on the top row (3 cols each), 3 cards on the
-                       bottom row (4 cols each) so the bottom row is centered
-                       under the top row. */
-                    const isTopRow = index < 4
-                    const colSpan = isTopRow
-                      ? "lg:col-span-3"
-                      : "lg:col-span-4"
 
                     return (
                       <button
@@ -1492,9 +1460,7 @@ export function OnboardingView({
                         }
                         aria-pressed={isSelected}
                         className={cn(
-                          "group relative flex flex-col items-center justify-between rounded-3xl border p-6 text-center transition-all duration-300",
-                          "min-h-[260px] w-full",
-                          colSpan,
+                          "group relative flex aspect-[2/3] w-full flex-col items-center justify-between rounded-2xl border p-3 text-center transition-all duration-300",
                           "border-neutral-200 bg-white shadow-sm hover:-translate-y-0.5 hover:border-lime-500 hover:shadow-md",
                           isSelected && "border-lime-500 bg-lime-50 shadow-md",
                           item.recommended && !isSelected && "border-lime-500 ring-1 ring-lime-500/30"
@@ -1503,7 +1469,7 @@ export function OnboardingView({
                         {item.maturity && (
                           <span
                             className={cn(
-                              "absolute right-4 top-4 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                              "absolute right-2 top-2 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider",
                               isSelected
                                 ? "bg-lime-500 text-white"
                                 : "bg-lime-100 text-lime-700 border border-lime-200"
@@ -1513,9 +1479,9 @@ export function OnboardingView({
                           </span>
                         )}
 
-                        <div className="flex flex-1 flex-col items-center justify-center pt-5">
+                        <div className="flex flex-1 flex-col items-center justify-center pt-4">
                           {item.image ? (
-                            <div className="mb-5 flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl bg-neutral-100">
+                            <div className="mb-3 flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
                               <img
                                 src={item.image}
                                 alt=""
@@ -1528,19 +1494,19 @@ export function OnboardingView({
                           ) : (
                             <div
                               className={cn(
-                                "flex h-20 w-20 items-center justify-center rounded-2xl transition-all duration-300 mb-5",
+                                "mb-3 flex h-16 w-16 items-center justify-center rounded-xl transition-all duration-300",
                                 isSelected
                                   ? "bg-lime-100 text-lime-700 scale-105"
                                   : "bg-neutral-100 text-neutral-500 group-hover:text-lime-600"
                               )}
                             >
-                              <Icon className="h-10 w-10 stroke-[1.5]" />
+                              <Icon className="h-8 w-8 stroke-[1.5]" />
                             </div>
                           )}
 
                           <span
                             className={cn(
-                              "text-lg font-bold tracking-tight transition-colors duration-300",
+                              "text-sm font-bold tracking-tight transition-colors duration-300",
                               isSelected ? "text-lime-700" : "text-neutral-900 group-hover:text-neutral-950"
                             )}
                           >
@@ -1550,7 +1516,7 @@ export function OnboardingView({
 
                         <span
                           className={cn(
-                            "mt-3 max-w-[22ch] text-xs leading-relaxed transition-colors duration-300",
+                            "mt-2 line-clamp-3 text-[10px] leading-snug transition-colors duration-300",
                             isSelected
                               ? "text-lime-800/80"
                               : "text-neutral-500 group-hover:text-neutral-600"
@@ -1560,14 +1526,14 @@ export function OnboardingView({
                         </span>
 
                         {isSelected && (
-                          <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-lime-500 text-white ring-2 ring-white">
-                            <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                          <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-lime-500 text-white ring-2 ring-white">
+                            <Check className="h-3 w-3" strokeWidth={3} />
                           </span>
                         )}
 
                         {secondary && !active && (
-                          <span className="absolute bottom-4 rounded-full bg-neutral-200 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neutral-600">
-                            {tx("Secondaire", "Secondary")}
+                          <span className="absolute bottom-2 rounded-full bg-neutral-200 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-neutral-600">
+                            {tx("2nd", "2nd")}
                           </span>
                         )}
                       </button>
@@ -1630,8 +1596,8 @@ export function OnboardingView({
               </>
             )}
 
-            {/* STEP 6: BUSINESS TYPE (ACTIVITY) — RECTANGULAR CARDS,
-                ODD-COUNT CENTERED, SAME 12-COLUMN TRICK AS SECTORS */}
+            {/* STEP 6: ACTIVITY — UNO-STYLE CARDS, 12-COLUMN GRID WITH
+                ODD-COUNT CENTERING */}
             {step === subTypeStepNumber && sector && (
               <div>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -1655,17 +1621,12 @@ export function OnboardingView({
                   </p>
                 )}
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12">
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-12">
                   {shownSubTypes.map((item, index) => {
                     const Icon = item.icon
                     const active = subTypes2.includes(item.id)
                     const img = imageForActivity(item.id)
                     const total = shownSubTypes.length
-
-                    /* Same 12-column trick as the sector grid: the col
-                       span per card is chosen so an odd total ends with
-                       a centered final row instead of a lone trailing
-                       card. */
                     const colSpan = activityColSpan(index, total)
 
                     return (
@@ -1675,80 +1636,79 @@ export function OnboardingView({
                         onClick={() => chooseSubType(item.id)}
                         aria-pressed={active}
                         className={cn(
-                          "group relative flex w-full items-start gap-4 rounded-2xl border p-5 text-left transition-all duration-300",
+                          "group relative flex aspect-[2/3] w-full flex-col items-center justify-between rounded-2xl border p-3 text-center transition-all duration-300",
+                          "sm:col-span-1",
                           colSpan,
                           "border-neutral-200 bg-white shadow-sm hover:-translate-y-0.5 hover:border-lime-500 hover:shadow-md",
                           active && "border-lime-500 bg-lime-50 shadow-md"
                         )}
                       >
-                        {img ? (
-                          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
-                            <img
-                              src={img}
-                              alt=""
-                              className={cn(
-                                "h-full w-full object-contain transition-transform duration-300",
-                                active ? "scale-105" : "group-hover:scale-105"
-                              )}
-                            />
-                          </div>
-                        ) : (
-                          <div
+                        {item.maturity && (
+                          <span
                             className={cn(
-                              "flex h-16 w-16 shrink-0 items-center justify-center rounded-xl transition-colors duration-300",
-                              active
-                                ? "bg-lime-100 text-lime-700"
-                                : "bg-neutral-100 text-neutral-500 group-hover:text-lime-600"
+                              "absolute right-2 top-2 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider",
+                              item.maturity === "pilot"
+                                ? active
+                                  ? "bg-lime-500 text-white"
+                                  : "bg-lime-100 text-lime-700 border border-lime-200"
+                                : active
+                                  ? "bg-lime-500/15 text-lime-700"
+                                  : "bg-neutral-100 text-neutral-500"
                             )}
                           >
-                            <Icon className="h-7 w-7" />
-                          </div>
+                            {maturityLabel(item.maturity, tx)}
+                          </span>
                         )}
 
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span
+                        <div className="flex flex-1 flex-col items-center justify-center pt-4">
+                          {img ? (
+                            <div className="mb-3 flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
+                              <img
+                                src={img}
+                                alt=""
+                                className={cn(
+                                  "h-full w-full object-contain transition-transform duration-300",
+                                  active ? "scale-110" : "group-hover:scale-105"
+                                )}
+                              />
+                            </div>
+                          ) : (
+                            <div
                               className={cn(
-                                "text-sm font-bold tracking-tight",
-                                active ? "text-lime-700" : "text-neutral-900"
+                                "mb-3 flex h-16 w-16 items-center justify-center rounded-xl transition-all duration-300",
+                                active
+                                  ? "bg-lime-100 text-lime-700 scale-105"
+                                  : "bg-neutral-100 text-neutral-500 group-hover:text-lime-600"
                               )}
                             >
-                              {px(item.label)}
-                            </span>
+                              <Icon className="h-8 w-8 stroke-[1.5]" />
+                            </div>
+                          )}
 
-                            {item.maturity && (
-                              <span
-                                className={cn(
-                                  "shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider",
-                                  item.maturity === "pilot"
-                                    ? active
-                                      ? "bg-lime-500 text-white"
-                                      : "bg-lime-100 text-lime-700 border border-lime-200"
-                                    : active
-                                      ? "bg-lime-500/15 text-lime-700"
-                                      : "bg-neutral-100 text-neutral-500"
-                                )}
-                              >
-                                {maturityLabel(item.maturity, tx)}
-                              </span>
-                            )}
-                          </div>
-
-                          <p
+                          <span
                             className={cn(
-                              "mt-1 text-xs leading-5",
-                              active
-                                ? "text-lime-800/80"
-                                : "text-neutral-500 group-hover:text-neutral-600"
+                              "text-sm font-bold tracking-tight transition-colors duration-300",
+                              active ? "text-lime-700" : "text-neutral-900 group-hover:text-neutral-950"
                             )}
                           >
-                            {px(item.description)}
-                          </p>
+                            {px(item.label)}
+                          </span>
                         </div>
 
+                        <span
+                          className={cn(
+                            "mt-2 line-clamp-3 text-[10px] leading-snug transition-colors duration-300",
+                            active
+                              ? "text-lime-800/80"
+                              : "text-neutral-500 group-hover:text-neutral-600"
+                          )}
+                        >
+                          {px(item.description)}
+                        </span>
+
                         {active && (
-                          <span className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-lime-500 text-white ring-2 ring-white">
-                            <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                          <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-lime-500 text-white ring-2 ring-white">
+                            <Check className="h-3 w-3" strokeWidth={3} />
                           </span>
                         )}
                       </button>
