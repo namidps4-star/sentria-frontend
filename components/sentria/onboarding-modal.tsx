@@ -1642,7 +1642,7 @@ export function OnboardingView({
                 {/* 
                   UNO CARD GRID:
                   - Uses 12-column layout for perfect centering of odd rows.
-                  - Cards are vertical rectangles (aspect-ratio ~2:3).
+                  - Cards are vertical rectangles (aspect-ratio ~2/3).
                   - STANDARD SIZING FOR ALL SECTORS (Logistics, Health, Industry, etc.)
                 */}
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-12">
@@ -2144,4 +2144,3 @@ export function OnboardingView({
     </div>
   )
 }
-
