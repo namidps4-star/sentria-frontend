@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
+  ArrowRight,
   ArrowUpRight,
   Check,
   ChevronRight,
@@ -1413,56 +1414,59 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 4: COMPANY - AESTHETIC LIME CAPSULE DESIGN */}
+            {/* STEP 4: COMPANY - AGEEVA SPLIT BUTTON STYLE */}
             {step === companyStepNumber && (
               <div className="flex flex-col items-center justify-center py-8">
                 
-                {/* Main Lime Capsule Container */}
-                <div className="relative w-full max-w-xl">
+                {/* Split Button Container */}
+                <div className="relative w-full max-w-xl group">
                   
-                  {/* Decorative Stars */}
-                  <Sparkles className="absolute -left-8 -top-8 h-8 w-8 text-lime-400 rotate-12 opacity-80" />
-                  <Sparkles className="absolute -right-6 -bottom-6 h-6 w-6 text-lime-400 -rotate-12 opacity-80" />
-
-                  {/* The Lime Input Box */}
-                  <div className="relative rounded-[2.5rem] bg-lime-400 p-2 shadow-[0_12px_30px_-8px_rgba(163,230,53,0.4)] transition-transform duration-300 hover:scale-[1.01]">
+                  {/* Decorative Stars (Optional aesthetic touch matching previous steps) */}
+                  <Sparkles className="absolute -left-8 -top-8 h-6 w-6 text-lime-400 rotate-12 opacity-60 hidden sm:block" />
+                  
+                  <div className="flex w-full items-stretch rounded-[2rem] overflow-hidden shadow-xl transition-transform duration-300 hover:scale-[1.01]">
                     
-                    {/* Inner Dark Background for contrast */}
-                    <div className="flex items-center gap-4 rounded-[2rem] bg-zinc-950 px-6 py-5">
-                      
-                      {/* Icon Placeholder */}
-                      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-zinc-900 text-lime-400">
-                        <Building2 className="h-7 w-7 stroke-[1.5]" />
-                      </div>
-
-                      {/* Input Field */}
-                      <div className="min-w-0 flex-1">
-                        <label htmlFor="company-name" className="sr-only">
-                          {tx("Nom de votre entreprise", "Your company name")}
-                        </label>
-                        <input
-                          id="company-name"
-                          value={companyName}
-                          onChange={(event) => setCompanyName(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter" && companyName.trim()) {
-                              event.preventDefault()
-                              nextStep()
-                            }
-                          }}
-                          placeholder={tx(
-                            "Ex. Terminal Atlantique SA",
-                            "e.g. Atlantic Terminal Ltd"
-                          )}
-                          autoComplete="organization"
-                          className="w-full bg-transparent text-lg font-bold text-white placeholder:text-zinc-500 outline-none md:text-xl"
-                        />
-                      </div>
+                    {/* Left Side: Text Input (Dark Background) */}
+                    <div className="flex-1 bg-zinc-900 px-6 py-5 flex items-center">
+                      <label htmlFor="company-name" className="sr-only">
+                        {tx("Nom de votre entreprise", "Your company name")}
+                      </label>
+                      <input
+                        id="company-name"
+                        value={companyName}
+                        onChange={(event) => setCompanyName(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" && companyName.trim()) {
+                            event.preventDefault()
+                            nextStep()
+                          }
+                        }}
+                        placeholder={tx(
+                          "Ex. Terminal Atlantique SA",
+                          "e.g. Atlantic Terminal Ltd"
+                        )}
+                        autoComplete="organization"
+                        className="w-full bg-transparent text-lg font-bold text-white placeholder:text-zinc-500 outline-none md:text-xl"
+                      />
                     </div>
-                  </div>
 
-                  {/* Bottom Shadow Layer for extra depth */}
-                  <div className="absolute -bottom-4 left-4 right-4 -z-10 rounded-[2.5rem] bg-lime-600/20 blur-xl" />
+                    {/* Right Side: Action Button (Lime Green) */}
+                    <button
+                      type="button"
+                      onClick={nextStep}
+                      disabled={!canContinue}
+                      className={cn(
+                        "flex w-20 shrink-0 items-center justify-center bg-lime-400 transition-colors duration-300",
+                        "hover:bg-lime-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500 focus-visible:ring-inset",
+                        !canContinue && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      <ArrowRight className="h-8 w-8 text-zinc-900 stroke-[2.5]" />
+                    </button>
+                  </div>
+                  
+                  {/* Subtle Bottom Shadow for depth */}
+                  <div className="absolute -bottom-4 left-4 right-4 -z-10 rounded-[2rem] bg-lime-400/20 blur-xl" />
                 </div>
 
                 {/* Helper Text */}
