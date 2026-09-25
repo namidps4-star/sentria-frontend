@@ -1686,6 +1686,29 @@ export function OnboardingView({
                         {/* Image / Icon Area - STANDARD SIZE FOR ALL */}
                         <div className="flex flex-1 flex-col items-center justify-center w-full pt-2">
                           {img ? (
+                            <div className="mb-3 flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
+                              <img
+                                src={img}
+                                alt=""
+                                className={cn(
+                                  "h-full w-full object-contain transition-transform duration-300",
+                                  active ? "scale-110" : "group-hover:scale-105"
+                                )}
+                              />
+                            </div>
+                          ) : (
+                            <div
+                              className={cn(
+                                "flex h-16 w-16 items-center justify-center rounded-xl transition-all duration-300 mb-3",
+                                active
+                                  ? "bg-lime-100 text-lime-700 scale-105"
+                                  : "bg-neutral-100 text-neutral-500 group-hover:text-lime-600"
+                              )}
+                            >
+                              <Icon className="h-8 w-8 stroke-[1.5]" />
+                            </div>
+                          )}<div className="flex flex-1 flex-col items-center justify-center w-full pt-2">
+                          {img ? (
                             <div className="mb-3 flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
                               <img
                                 src={img}
@@ -1740,7 +1763,7 @@ export function OnboardingView({
                       </button>
                     )
                   })}
-                </div>
+                  </div>
 
                 <div className="mt-4 flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
                   <span className="text-xs text-muted-foreground">
