@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -1644,8 +1643,8 @@ export function OnboardingView({
                   UNO CARD GRID:
                   - Uses 12-column layout for perfect centering of odd rows.
                   - Cards are vertical rectangles (aspect-ratio ~2:3).
-                  - Compact padding and smaller images for density.
-                  - INDUSTRY SPECIFIC: Larger icons (h-20 w-20) inside the card.
+                  - LOGISTICS SPECIFIC: Larger icons (h-20 w-20) inside the card.
+                  - HEALTH SPECIFIC: Standard sizing maintained.
                 */}
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-12">
                   {shownSubTypes.map((item, index) => {
@@ -1653,7 +1652,9 @@ export function OnboardingView({
                     const active = subTypes2.includes(item.id)
                     const img = imageForActivity(item.id)
                     const total = shownSubTypes.length
-                    const isIndustry = sector === "industry"
+                    
+                    // Specific check for Logistics to apply larger icons
+                    const isLogisticsSector = sector === "logistics"
 
                     const colSpan = activityColSpan(index, total)
 
@@ -1665,7 +1666,7 @@ export function OnboardingView({
                         aria-pressed={active}
                         className={cn(
                           "group relative flex flex-col items-center justify-between rounded-2xl border p-4 text-center transition-all duration-300",
-                          // Aspect ratio control for "Uno card" feel
+                          // Aspect ratio control for "Uno card" feel - SAME FOR ALL
                           "aspect-[2/3] w-full", 
                           colSpan,
                           "border-neutral-200 bg-white shadow-sm hover:-translate-y-1 hover:border-lime-500 hover:shadow-md",
@@ -1691,7 +1692,8 @@ export function OnboardingView({
                           {img ? (
                             <div className={cn(
                               "mb-3 flex items-center justify-center overflow-hidden rounded-xl bg-neutral-100",
-                              isIndustry ? "h-20 w-20" : "h-16 w-16"
+                              // Make Logistics icons BIGGER
+                              isLogisticsSector ? "h-20 w-20" : "h-16 w-16"
                             )}>
                               <img
                                 src={img}
@@ -1706,7 +1708,8 @@ export function OnboardingView({
                             <div
                               className={cn(
                                 "flex items-center justify-center rounded-xl transition-all duration-300 mb-3",
-                                isIndustry ? "h-20 w-20" : "h-14 w-14",
+                                // Make Logistics icons BIGGER
+                                isLogisticsSector ? "h-20 w-20" : "h-14 w-14",
                                 active
                                   ? "bg-lime-100 text-lime-700 scale-105"
                                   : "bg-neutral-100 text-neutral-500 group-hover:text-lime-600"
@@ -1714,7 +1717,8 @@ export function OnboardingView({
                             >
                               <Icon className={cn(
                                 "stroke-[1.5]",
-                                isIndustry ? "h-10 w-10" : "h-7 w-7"
+                                // Make Logistics icons BIGGER
+                                isLogisticsSector ? "h-10 w-10" : "h-7 w-7"
                               )} />
                             </div>
                           )}
