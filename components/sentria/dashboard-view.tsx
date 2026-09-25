@@ -243,6 +243,24 @@ const SUBTYPE_KPI_LABELS: Record<string, Localized[]> = {
     localized("Lignes surveillées", "Lines monitored"),
     localized("Total alertes", "Total alerts"),
   ],
+  "transporteur-routier": [
+    localized("Livraisons à risque critique", "Deliveries at critical risk"),
+    localized("Retards & incidents", "Delays & incidents"),
+    localized("Camions en tournée", "Trucks on route"),
+    localized("Alertes moteur", "Engine alerts"),
+  ],
+  "flotte-entreprise": [
+    localized("Véhicules à risque critique", "Vehicles at critical risk"),
+    localized("Comportement à surveiller", "Behaviour to watch"),
+    localized("Véhicules de flotte", "Fleet vehicles"),
+    localized("Alertes moteur", "Engine alerts"),
+  ],
+  "location-vehicules": [
+    localized("Véhicules à risque critique", "Vehicles at critical risk"),
+    localized("Retours à traiter", "Returns to handle"),
+    localized("Véhicules en parc", "Vehicles in fleet"),
+    localized("Alertes moteur", "Engine alerts"),
+  ],
 }
 
 const SUBTYPE_CHART_TITLES: Record<string, Localized> = {
@@ -254,6 +272,12 @@ const SUBTYPE_CHART_TITLES: Record<string, Localized> = {
     "Alertes réseau · 7 jours", "Network alerts · 7 days"),
   "usine-agroalimentaire": localized(
     "Alertes sanitaires · 7 jours", "Hygiene alerts · 7 days"),
+  "transporteur-routier": localized(
+    "Alertes tournées · 7 jours", "Route alerts · 7 days"),
+  "flotte-entreprise": localized(
+    "Alertes flotte interne · 7 jours", "Internal fleet alerts · 7 days"),
+  "location-vehicules": localized(
+    "Alertes location · 7 jours", "Rental alerts · 7 days"),
 }
 
 /** Which activity produced this alert.
@@ -328,6 +352,13 @@ const KEY_FAMILY_LABELS: Record<string, Localized> = {
   fuel: localized("Carburant", "Fuel"),
   fuel_low: localized("Carburant bas", "Low fuel"),
   tires: localized("Pneus", "Tyres"),
+  delay: localized("Retards", "Delays"),
+  border_wait: localized("Attente frontière", "Border wait"),
+  loading_wait: localized("Attente chargement", "Loading wait"),
+  fuel_efficiency: localized("Consommation", "Fuel efficiency"),
+  driver: localized("Conduite", "Driving"),
+  fleet: localized("Flotte", "Fleet"),
+  rental: localized("Location", "Rental"),
   // energy
   coolant: localized("Refroidissement", "Coolant"),
   load: localized("Charge", "Load"),
