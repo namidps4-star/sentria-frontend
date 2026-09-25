@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -228,12 +229,7 @@ function imageForActivity(activityId: string | undefined): string | undefined {
 
 /**
  * Activity grid layout using the same 12-column trick as sectors.
- *
- *  - 3 items  -> 1 row of 3 x 4 cols
- *  - 4 items  -> 1 row of 4 x 3 cols
- *  - 5 items  -> 1 row of 3 + 1 centered row of 2
- *
- * Any other count falls back to 4 x 3 cols.
+ * Ensures odd counts are centered.
  */
 function activityColSpan(index: number, total: number): string {
   if (total === 3) return "lg:col-span-4"
@@ -1620,8 +1616,7 @@ export function OnboardingView({
               </>
             )}
 
-            {/* STEP 6: BUSINESS TYPE (ACTIVITY) — RECTANGULAR CARDS,
-                ODD-COUNT CENTERED, SAME 12-COLUMN TRICK AS SECTORS */}
+            {/* STEP 6: BUSINESS TYPE (ACTIVITY) — UNO CARD STYLE RECTANGULAR */}
             {step === subTypeStepNumber && sector && (
               <div>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -1645,17 +1640,19 @@ export function OnboardingView({
                   </p>
                 )}
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-12">
+                {/* 
+                  UNO CARD GRID:
+                  - Uses 12-column layout for perfect centering of odd rows.
+                  - Cards are vertical rectangles (aspect-ratio ~2:3).
+                  - Compact padding and smaller images for density.
+                */}
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-12">
                   {shownSubTypes.map((item, index) => {
                     const Icon = item.icon
                     const active = subTypes2.includes(item.id)
                     const img = imageForActivity(item.id)
                     const total = shownSubTypes.length
 
-                    /* Same 12-column trick as the sector grid: the col
-                       span per card is chosen so an odd total ends with
-                       a centered final row instead of a lone trailing
-                       card. */
                     const colSpan = activityColSpan(index, total)
 
                     return (
@@ -1665,80 +1662,80 @@ export function OnboardingView({
                         onClick={() => chooseSubType(item.id)}
                         aria-pressed={active}
                         className={cn(
-                          "group relative flex w-full items-start gap-4 rounded-2xl border p-5 text-left transition-all duration-300",
+                          "group relative flex flex-col items-center justify-between rounded-2xl border p-4 text-center transition-all duration-300",
+                          // Aspect ratio control for "Uno card" feel
+                          "aspect-[2/3] w-full", 
                           colSpan,
-                          "border-neutral-200 bg-white shadow-sm hover:-translate-y-0.5 hover:border-lime-500 hover:shadow-md",
-                          active && "border-lime-500 bg-lime-50 shadow-md"
+                          "border-neutral-200 bg-white shadow-sm hover:-translate-y-1 hover:border-lime-500 hover:shadow-md",
+                          active && "border-lime-500 bg-lime-50 shadow-md ring-1 ring-lime-500/20"
                         )}
                       >
-                        {img ? (
-                          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
-                            <img
-                              src={img}
-                              alt=""
-                              className={cn(
-                                "h-full w-full object-contain transition-transform duration-300",
-                                active ? "scale-105" : "group-hover:scale-105"
-                              )}
-                            />
-                          </div>
-                        ) : (
-                          <div
+                        {/* Maturity Badge */}
+                        {item.maturity && (
+                          <span
                             className={cn(
-                              "flex h-16 w-16 shrink-0 items-center justify-center rounded-xl transition-colors duration-300",
+                              "absolute right-2 top-2 whitespace-nowrap rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider",
                               active
-                                ? "bg-lime-100 text-lime-700"
-                                : "bg-neutral-100 text-neutral-500 group-hover:text-lime-600"
+                                ? "bg-lime-500 text-white"
+                                : "bg-lime-100 text-lime-700 border border-lime-200"
                             )}
                           >
-                            <Icon className="h-7 w-7" />
-                          </div>
+                            {maturityLabel(item.maturity, tx)}
+                          </span>
                         )}
 
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span
+                        {/* Image / Icon Area */}
+                        <div className="flex flex-1 flex-col items-center justify-center w-full pt-2">
+                          {img ? (
+                            <div className="mb-3 flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
+                              <img
+                                src={img}
+                                alt=""
+                                className={cn(
+                                  "h-full w-full object-contain transition-transform duration-300",
+                                  active ? "scale-110" : "group-hover:scale-105"
+                                )}
+                              />
+                            </div>
+                          ) : (
+                            <div
                               className={cn(
-                                "text-sm font-bold tracking-tight",
-                                active ? "text-lime-700" : "text-neutral-900"
+                                "flex h-14 w-14 items-center justify-center rounded-xl transition-all duration-300 mb-3",
+                                active
+                                  ? "bg-lime-100 text-lime-700 scale-105"
+                                  : "bg-neutral-100 text-neutral-500 group-hover:text-lime-600"
                               )}
                             >
-                              {px(item.label)}
-                            </span>
+                              <Icon className="h-7 w-7 stroke-[1.5]" />
+                            </div>
+                          )}
 
-                            {item.maturity && (
-                              <span
-                                className={cn(
-                                  "shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider",
-                                  item.maturity === "pilot"
-                                    ? active
-                                      ? "bg-lime-500 text-white"
-                                      : "bg-lime-100 text-lime-700 border border-lime-200"
-                                    : active
-                                      ? "bg-lime-500/15 text-lime-700"
-                                      : "bg-neutral-100 text-neutral-500"
-                                )}
-                              >
-                                {maturityLabel(item.maturity, tx)}
-                              </span>
-                            )}
-                          </div>
-
-                          <p
+                          <span
                             className={cn(
-                              "mt-1 text-xs leading-5",
-                              active
-                                ? "text-lime-800/80"
-                                : "text-neutral-500 group-hover:text-neutral-600"
+                              "text-sm font-bold tracking-tight leading-tight transition-colors duration-300 line-clamp-2",
+                              active ? "text-lime-700" : "text-neutral-900 group-hover:text-neutral-950"
                             )}
                           >
-                            {px(item.description)}
-                          </p>
+                            {px(item.label)}
+                          </span>
                         </div>
 
+                        {/* Description (Optional, kept very small for card density) */}
+                        <span
+                          className={cn(
+                            "mt-2 max-w-[18ch] text-[10px] leading-3.5 transition-colors duration-300 line-clamp-2",
+                            active
+                              ? "text-lime-800/80"
+                              : "text-neutral-500 group-hover:text-neutral-600"
+                          )}
+                        >
+                          {px(item.description)}
+                        </span>
+
+                        {/* Selection Indicator */}
                         {active && (
-                          <span className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-lime-500 text-white ring-2 ring-white">
-                            <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                          <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-lime-500 text-white ring-2 ring-white shadow-sm">
+                            <Check className="h-3 w-3" strokeWidth={3} />
                           </span>
                         )}
                       </button>
