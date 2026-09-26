@@ -245,6 +245,26 @@ function imageForPriority(priorityId: string | undefined): string | undefined {
   return LOGISTICS_PRIORITY_IMAGES[priorityId]
 }
 
+/* -------------------------------------------------------------------------- */
+/* INDUSTRY PRIORITY IMAGES                                                   */
+/* -------------------------------------------------------------------------- */
+
+const INDUSTRY_PRIORITY_IMAGES: Record<string, string> = {
+  machines: "/machines.png",
+  motors: "/motors.png",
+  temperature: "/temperature.png",
+  pressure: "/pressure.png",
+  production: "/production.png",
+  maintenance: "/maintenance.png",
+}
+
+function imageForIndustryPriority(
+  priorityId: string | undefined
+): string | undefined {
+  if (!priorityId) return undefined
+  return INDUSTRY_PRIORITY_IMAGES[priorityId]
+}
+
 /**
  * Activity grid layout using the same 12-column trick as sectors.
  * Ensures odd counts are centered.
@@ -258,6 +278,11 @@ function activityColSpan(index: number, total: number): string {
     return "lg:col-span-4"
   }
   return "lg:col-span-3"
+}
+
+/** Industry priorities use a 12-col grid too: 6 cards = two rows of 3. */
+function industryPriorityColSpan(_index: number, _total: number): string {
+  return "lg:col-span-4"
 }
 
 /* -------------------------------------------------------------------------- */
@@ -545,23 +570,6 @@ const SAMPLE_ALERTS: Record<Sector, Localized> = {
   ),
 }
 
-const CHOICE_CARD = [
-  "group relative w-full rounded-2xl border border-border bg-background p-4 text-left",
-  "transition-all duration-200 hover:-translate-y-0.5 hover:border-ring hover:shadow-sm",
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-  "motion-reduce:transition-none motion-reduce:hover:translate-y-0",
-].join(" ")
-
-const CHOICE_ACTIVE = "border-foreground bg-foreground text-background shadow-sm"
-
-function CardTick() {
-  return (
-    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground">
-      <Check className="h-3.5 w-3.5" aria-hidden="true" />
-    </span>
-  )
-}
-
 function AlertPreview({
   tx,
   company,
@@ -710,6 +718,7 @@ export function OnboardingView({
   )
 
   const isLogistics = sector === "logistics"
+  const isIndustry = sector === "industry"
 
   const langStepNumber = 1
   const countryStepNumber = 2
@@ -1642,7 +1651,7 @@ export function OnboardingView({
               </>
             )}
 
-            {/* STEP 6: BUSINESS TYPE (ACTIVITY) — UNO CARD STYLE */}
+            {/* STEP 6: BUSINESS TYPE (ACTIVITY) */}
             {step === subTypeStepNumber && sector && (
               <div>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -1802,7 +1811,7 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 7: MONITORING PRIORITIES — UNO CARDS WITH PRIORITY IMAGES */}
+            {/* STEP 7: MONITORING PRIORITIES */}
             {step === equipmentStepNumber && sector && (
               <div>
                 <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
@@ -1830,13 +1839,27 @@ export function OnboardingView({
                   }
                 />
 
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                  {equipment.map((item) => {
+                <div
+                  className={cn(
+                    "grid grid-cols-2 gap-4 sm:grid-cols-3",
+                    isIndustry
+                      ? "lg:grid-cols-12"
+                      : "lg:grid-cols-4 xl:grid-cols-5"
+                  )}
+                >
+                  {equipment.map((item, index) => {
                     const Icon = item.icon
                     const active = selectedEquipment.includes(item.id)
                     const disabled = Boolean(item.comingSoon)
+
                     const img = isLogistics
                       ? imageForPriority(item.id)
+                      : isIndustry
+                        ? imageForIndustryPriority(item.id)
+                        : undefined
+
+                    const colSpan = isIndustry
+                      ? industryPriorityColSpan(index, equipment.length)
                       : undefined
 
                     return (
@@ -1848,6 +1871,7 @@ export function OnboardingView({
                         className={cn(
                           "group relative flex flex-col items-center justify-between rounded-2xl border p-4 text-center transition-all duration-300",
                           "aspect-[2/3] w-full",
+                          colSpan,
                           disabled
                             ? "cursor-not-allowed border-neutral-200 bg-white opacity-60"
                             : active
