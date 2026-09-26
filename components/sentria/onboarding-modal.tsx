@@ -1,7 +1,9 @@
+
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
+  ArrowRight,
   ArrowUpRight,
   Check,
   ChevronRight,
@@ -76,6 +78,7 @@ type SectorConfig = {
   maturity?: "pilot" | "early"
 }
 
+/** The badge wording for a maturity key. */
 function maturityLabel(maturity: "pilot" | "early", tx: Tx): string {
   return maturity === "pilot"
     ? tx("Pilote recommandé", "Recommended pilot")
@@ -180,33 +183,40 @@ const SECTORS: SectorConfig[] = [
 /* -------------------------------------------------------------------------- */
 
 const ACTIVITY_IMAGES: Record<string, string> = {
+  // Logistics
   "port-conteneurs": "/port-conteneurs.png",
   "entrepot-manutention": "/entrepot-manutention.png",
   "transport-distribution": "/transport-distribution.png",
   "preparation-expedition": "/preparation-expedition.png",
   "chaine-froid": "/chaine-froid.png",
 
+  // Industry
   "usine-production": "/usine-production.png",
   "atelier-soustraitance": "/atelier-soustraitance.png",
   "usine-agroalimentaire": "/usine-agroalimentaire.png",
 
+  // Health
   "pharmacie": "/pharmacie.png",
   "laboratoire": "/laboratoire.png",
   "clinique-hopital": "/clinique-hopital.png",
   "grossiste-pharma": "/grossiste-pharma.png",
 
+  // Agriculture
   "exploitation-agricole": "/exploitation-agricole.png",
   "cooperative-agricole": "/cooperative-agricole.png",
   "silo-stockage": "/silo-stockage.png",
 
+  // Transportation
   "transporteur-routier": "/transporteur-routier.png",
   "flotte-entreprise": "/flotte-entreprise.png",
   "location-vehicules": "/location-vehicules.png",
 
+  // Energy
   "centrale-production": "/centrale-production.png",
   "generateurs-secours": "/generateurs-secours.png",
   "distribution-energetique": "/distribution-energetique.png",
 
+  // Retail
   "supermarche-hypermarche": "/supermarche-hypermarche.png",
   "epicerie-proximite": "/epicerie-proximite.png",
   "chaine-magasins": "/chaine-magasins.png",
@@ -222,13 +232,6 @@ function imageForActivity(activityId: string | undefined): string | undefined {
 /* LOGISTICS PRIORITY IMAGES                                                  */
 /* -------------------------------------------------------------------------- */
 
-/**
- * One illustration per logistics priority, resolved from
- * /public/<id>.png. A missing file falls back to the lucide icon.
- *
- * These are the five priorities the logistics dashboard exposes:
- *   blockages, wait, cost, anticipate, recommend.
- */
 const LOGISTICS_PRIORITY_IMAGES: Record<string, string> = {
   blockages: "/blockage.png",
   wait: "/waiting.png",
@@ -242,10 +245,18 @@ function imageForPriority(priorityId: string | undefined): string | undefined {
   return LOGISTICS_PRIORITY_IMAGES[priorityId]
 }
 
+/**
+ * Activity grid layout using the same 12-column trick as sectors.
+ * Ensures odd counts are centered.
+ */
 function activityColSpan(index: number, total: number): string {
   if (total === 3) return "lg:col-span-4"
   if (total === 4) return "lg:col-span-3"
-  if (total === 5) return index < 3 ? "lg:col-span-4" : "lg:col-span-6"
+  if (total === 5) {
+    if (index < 3) return "lg:col-span-4"
+    if (index === 3) return "lg:col-span-4 lg:col-start-3"
+    return "lg:col-span-4"
+  }
   return "lg:col-span-3"
 }
 
@@ -532,6 +543,23 @@ const SAMPLE_ALERTS: Record<Sector, Localized> = {
     "Rayon frais : rupture sur 7 références.",
     "Chilled aisle: 7 lines out of stock."
   ),
+}
+
+const CHOICE_CARD = [
+  "group relative w-full rounded-2xl border border-border bg-background p-4 text-left",
+  "transition-all duration-200 hover:-translate-y-0.5 hover:border-ring hover:shadow-sm",
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+  "motion-reduce:transition-none motion-reduce:hover:translate-y-0",
+].join(" ")
+
+const CHOICE_ACTIVE = "border-foreground bg-foreground text-background shadow-sm"
+
+function CardTick() {
+  return (
+    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground">
+      <Check className="h-3.5 w-3.5" aria-hidden="true" />
+    </span>
+  )
 }
 
 function AlertPreview({
@@ -1396,56 +1424,74 @@ export function OnboardingView({
 
             {/* STEP 4: COMPANY */}
             {step === companyStepNumber && (
-              <div className="max-w-xl">
-                <label className="block">
-                  <span className="text-sm font-medium">
-                    {tx("Nom de votre entreprise", "Your company name")}
-                  </span>
-                  <input
-                    value={companyName}
-                    onChange={(event) => setCompanyName(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" && companyName.trim()) {
-                        event.preventDefault()
-                        nextStep()
-                      }
-                    }}
-                    placeholder={tx(
-                      "Ex. Terminal Atlantique SA",
-                      "e.g. Atlantic Terminal Ltd"
-                    )}
-                    autoComplete="organization"
-                    className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-4 font-heading text-xl font-bold tracking-tight outline-none transition-colors focus:border-ring md:text-2xl"
-                  />
-                </label>
-                <div className="mt-5 rounded-2xl border border-border bg-background p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    {tx("Ce que SentrIA dira", "What SentrIA will say")}
-                  </p>
-                  <p className="mt-2 text-sm">
-                    <span className="text-muted-foreground">
-                      {tx("Bonjour ", "Hello ")}
-                    </span>
-                    <span className="font-bold">
-                      {companyName.trim() || "…"}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {tx(". Je suis SentrIA.", ". I am SentrIA.")}
-                    </span>
-                  </p>
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="relative w-full max-w-xl group">
+                  <Sparkles className="absolute -left-8 -top-8 h-6 w-6 text-lime-400 rotate-12 opacity-60 hidden sm:block" />
+
+                  <div className="flex w-full items-stretch rounded-[2rem] overflow-hidden shadow-xl transition-transform duration-300 hover:scale-[1.01]">
+                    <div className="flex-1 bg-zinc-900 px-6 py-5 flex items-center">
+                      <label htmlFor="company-name" className="sr-only">
+                        {tx("Nom de votre entreprise", "Your company name")}
+                      </label>
+                      <input
+                        id="company-name"
+                        value={companyName}
+                        onChange={(event) => setCompanyName(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" && companyName.trim()) {
+                            event.preventDefault()
+                            nextStep()
+                          }
+                        }}
+                        placeholder={tx(
+                          "Ex. Terminal Atlantique SA",
+                          "e.g. Atlantic Terminal Ltd"
+                        )}
+                        autoComplete="organization"
+                        className="w-full bg-transparent text-lg font-bold text-white placeholder:text-zinc-500 outline-none md:text-xl"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={nextStep}
+                      disabled={!canContinue}
+                      className={cn(
+                        "flex w-20 shrink-0 items-center justify-center bg-lime-400 transition-colors duration-300",
+                        "hover:bg-lime-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500 focus-visible:ring-inset",
+                        !canContinue && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      <ArrowRight className="h-8 w-8 text-zinc-900 stroke-[2.5]" />
+                    </button>
+                  </div>
+
+                  <div className="absolute -bottom-4 left-4 right-4 -z-10 rounded-[2rem] bg-lime-400/20 blur-xl" />
                 </div>
+
+                <p className="mt-8 text-center text-xs text-muted-foreground max-w-sm">
+                  {tx(
+                    "Ce nom sera utilisé dans vos rapports et par l'assistant IA.",
+                    "This name will be used in your reports and by the AI assistant."
+                  )}
+                </p>
               </div>
             )}
 
-            {/* STEP 5: SECTOR — UNO-STYLE CARDS */}
+            {/* STEP 5: SECTOR */}
             {step === sectorStepNumber && (
               <>
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-                  {SECTORS.map((item) => {
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-12">
+                  {SECTORS.map((item, index) => {
                     const Icon = item.icon
                     const active = sector === item.id
                     const secondary = extraSectors.includes(item.id)
                     const isSelected = active || secondary
+
+                    const isTopRow = index < 4
+                    const colSpan = isTopRow
+                      ? "lg:col-span-3"
+                      : "lg:col-span-4"
 
                     return (
                       <button
@@ -1458,7 +1504,9 @@ export function OnboardingView({
                         }
                         aria-pressed={isSelected}
                         className={cn(
-                          "group relative flex aspect-[2/3] w-full flex-col items-center justify-between rounded-2xl border p-3 text-center transition-all duration-300",
+                          "group relative flex flex-col items-center justify-between rounded-3xl border p-6 text-center transition-all duration-300",
+                          "min-h-[260px] w-full",
+                          colSpan,
                           "border-neutral-200 bg-white shadow-sm hover:-translate-y-0.5 hover:border-lime-500 hover:shadow-md",
                           isSelected && "border-lime-500 bg-lime-50 shadow-md",
                           item.recommended && !isSelected && "border-lime-500 ring-1 ring-lime-500/30"
@@ -1467,7 +1515,7 @@ export function OnboardingView({
                         {item.maturity && (
                           <span
                             className={cn(
-                              "absolute right-2 top-2 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider",
+                              "absolute right-4 top-4 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
                               isSelected
                                 ? "bg-lime-500 text-white"
                                 : "bg-lime-100 text-lime-700 border border-lime-200"
@@ -1477,9 +1525,9 @@ export function OnboardingView({
                           </span>
                         )}
 
-                        <div className="flex flex-1 flex-col items-center justify-center pt-4">
+                        <div className="flex flex-1 flex-col items-center justify-center pt-5">
                           {item.image ? (
-                            <div className="mb-3 flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
+                            <div className="mb-5 flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl bg-neutral-100">
                               <img
                                 src={item.image}
                                 alt=""
@@ -1492,19 +1540,19 @@ export function OnboardingView({
                           ) : (
                             <div
                               className={cn(
-                                "mb-3 flex h-16 w-16 items-center justify-center rounded-xl transition-all duration-300",
+                                "flex h-20 w-20 items-center justify-center rounded-2xl transition-all duration-300 mb-5",
                                 isSelected
                                   ? "bg-lime-100 text-lime-700 scale-105"
                                   : "bg-neutral-100 text-neutral-500 group-hover:text-lime-600"
                               )}
                             >
-                              <Icon className="h-8 w-8 stroke-[1.5]" />
+                              <Icon className="h-10 w-10 stroke-[1.5]" />
                             </div>
                           )}
 
                           <span
                             className={cn(
-                              "text-sm font-bold tracking-tight transition-colors duration-300",
+                              "text-lg font-bold tracking-tight transition-colors duration-300",
                               isSelected ? "text-lime-700" : "text-neutral-900 group-hover:text-neutral-950"
                             )}
                           >
@@ -1514,7 +1562,7 @@ export function OnboardingView({
 
                         <span
                           className={cn(
-                            "mt-2 line-clamp-3 text-[10px] leading-snug transition-colors duration-300",
+                            "mt-3 max-w-[22ch] text-xs leading-relaxed transition-colors duration-300",
                             isSelected
                               ? "text-lime-800/80"
                               : "text-neutral-500 group-hover:text-neutral-600"
@@ -1524,14 +1572,14 @@ export function OnboardingView({
                         </span>
 
                         {isSelected && (
-                          <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-lime-500 text-white ring-2 ring-white">
-                            <Check className="h-3 w-3" strokeWidth={3} />
+                          <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-lime-500 text-white ring-2 ring-white">
+                            <Check className="h-3.5 w-3.5" strokeWidth={3} />
                           </span>
                         )}
 
                         {secondary && !active && (
-                          <span className="absolute bottom-2 rounded-full bg-neutral-200 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-neutral-600">
-                            {tx("2nd", "2nd")}
+                          <span className="absolute bottom-4 rounded-full bg-neutral-200 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neutral-600">
+                            {tx("Secondaire", "Secondary")}
                           </span>
                         )}
                       </button>
@@ -1594,7 +1642,7 @@ export function OnboardingView({
               </>
             )}
 
-            {/* STEP 6: ACTIVITY — UNO-STYLE CARDS, 12-COLUMN GRID */}
+            {/* STEP 6: BUSINESS TYPE (ACTIVITY) — UNO CARD STYLE */}
             {step === subTypeStepNumber && sector && (
               <div>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -1624,6 +1672,7 @@ export function OnboardingView({
                     const active = subTypes2.includes(item.id)
                     const img = imageForActivity(item.id)
                     const total = shownSubTypes.length
+
                     const colSpan = activityColSpan(index, total)
 
                     return (
@@ -1633,33 +1682,29 @@ export function OnboardingView({
                         onClick={() => chooseSubType(item.id)}
                         aria-pressed={active}
                         className={cn(
-                          "group relative flex aspect-[2/3] w-full flex-col items-center justify-between rounded-2xl border p-3 text-center transition-all duration-300",
-                          "sm:col-span-1",
+                          "group relative flex flex-col items-center justify-between rounded-2xl border p-4 text-center transition-all duration-300",
+                          "aspect-[2/3] w-full",
                           colSpan,
-                          "border-neutral-200 bg-white shadow-sm hover:-translate-y-0.5 hover:border-lime-500 hover:shadow-md",
-                          active && "border-lime-500 bg-lime-50 shadow-md"
+                          "border-neutral-200 bg-white shadow-sm hover:-translate-y-1 hover:border-lime-500 hover:shadow-md",
+                          active && "border-lime-500 bg-lime-50 shadow-md ring-1 ring-lime-500/20"
                         )}
                       >
                         {item.maturity && (
                           <span
                             className={cn(
-                              "absolute right-2 top-2 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider",
-                              item.maturity === "pilot"
-                                ? active
-                                  ? "bg-lime-500 text-white"
-                                  : "bg-lime-100 text-lime-700 border border-lime-200"
-                                : active
-                                  ? "bg-lime-500/15 text-lime-700"
-                                  : "bg-neutral-100 text-neutral-500"
+                              "absolute right-2 top-2 whitespace-nowrap rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider",
+                              active
+                                ? "bg-lime-500 text-white"
+                                : "bg-lime-100 text-lime-700 border border-lime-200"
                             )}
                           >
                             {maturityLabel(item.maturity, tx)}
                           </span>
                         )}
 
-                        <div className="flex flex-1 flex-col items-center justify-center pt-4">
+                        <div className="flex flex-1 flex-col items-center justify-center w-full pt-2">
                           {img ? (
-                            <div className="mb-3 flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
+                            <div className="mb-3 flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
                               <img
                                 src={img}
                                 alt=""
@@ -1672,19 +1717,19 @@ export function OnboardingView({
                           ) : (
                             <div
                               className={cn(
-                                "mb-3 flex h-16 w-16 items-center justify-center rounded-xl transition-all duration-300",
+                                "flex h-20 w-20 items-center justify-center rounded-xl transition-all duration-300 mb-3",
                                 active
                                   ? "bg-lime-100 text-lime-700 scale-105"
                                   : "bg-neutral-100 text-neutral-500 group-hover:text-lime-600"
                               )}
                             >
-                              <Icon className="h-8 w-8 stroke-[1.5]" />
+                              <Icon className="h-10 w-10 stroke-[1.5]" />
                             </div>
                           )}
 
                           <span
                             className={cn(
-                              "text-sm font-bold tracking-tight transition-colors duration-300",
+                              "text-sm font-bold tracking-tight leading-tight transition-colors duration-300 line-clamp-2",
                               active ? "text-lime-700" : "text-neutral-900 group-hover:text-neutral-950"
                             )}
                           >
@@ -1694,7 +1739,7 @@ export function OnboardingView({
 
                         <span
                           className={cn(
-                            "mt-2 line-clamp-3 text-[10px] leading-snug transition-colors duration-300",
+                            "mt-2 max-w-[18ch] text-[10px] leading-3.5 transition-colors duration-300 line-clamp-2",
                             active
                               ? "text-lime-800/80"
                               : "text-neutral-500 group-hover:text-neutral-600"
@@ -1704,7 +1749,7 @@ export function OnboardingView({
                         </span>
 
                         {active && (
-                          <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-lime-500 text-white ring-2 ring-white">
+                          <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-lime-500 text-white ring-2 ring-white shadow-sm">
                             <Check className="h-3 w-3" strokeWidth={3} />
                           </span>
                         )}
@@ -1757,7 +1802,7 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 7: MONITORING PRIORITIES — UNO-STYLE CARDS WITH IMAGES */}
+            {/* STEP 7: MONITORING PRIORITIES — UNO CARDS WITH PRIORITY IMAGES */}
             {step === equipmentStepNumber && sector && (
               <div>
                 <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
@@ -1801,23 +1846,24 @@ export function OnboardingView({
                         onClick={() => !disabled && toggleEquipment(item.id)}
                         disabled={disabled}
                         className={cn(
-                          "group relative flex aspect-[2/3] w-full flex-col items-center justify-between rounded-2xl border p-3 text-center transition-all duration-300",
+                          "group relative flex flex-col items-center justify-between rounded-2xl border p-4 text-center transition-all duration-300",
+                          "aspect-[2/3] w-full",
                           disabled
                             ? "cursor-not-allowed border-neutral-200 bg-white opacity-60"
                             : active
-                              ? "border-lime-500 bg-lime-50 shadow-md"
-                              : "border-neutral-200 bg-white shadow-sm hover:-translate-y-0.5 hover:border-lime-500 hover:shadow-md"
+                              ? "border-lime-500 bg-lime-50 shadow-md ring-1 ring-lime-500/20"
+                              : "border-neutral-200 bg-white shadow-sm hover:-translate-y-1 hover:border-lime-500 hover:shadow-md"
                         )}
                       >
                         {disabled && (
-                          <span className="absolute right-2 top-2 whitespace-nowrap rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wider text-amber-700">
+                          <span className="absolute right-2 top-2 whitespace-nowrap rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-amber-700">
                             {tx("Bientôt", "Soon")}
                           </span>
                         )}
 
-                        <div className="flex flex-1 flex-col items-center justify-center pt-4">
+                        <div className="flex flex-1 flex-col items-center justify-center w-full pt-2">
                           {img ? (
-                            <div className="mb-3 flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
+                            <div className="mb-3 flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
                               <img
                                 src={img}
                                 alt=""
@@ -1830,19 +1876,19 @@ export function OnboardingView({
                           ) : (
                             <div
                               className={cn(
-                                "mb-3 flex h-16 w-16 items-center justify-center rounded-xl transition-all duration-300",
+                                "flex h-20 w-20 items-center justify-center rounded-xl transition-all duration-300 mb-3",
                                 active
                                   ? "bg-lime-100 text-lime-700 scale-105"
                                   : "bg-neutral-100 text-neutral-500 group-hover:text-lime-600"
                               )}
                             >
-                              <Icon className="h-8 w-8 stroke-[1.5]" />
+                              <Icon className="h-10 w-10 stroke-[1.5]" />
                             </div>
                           )}
 
                           <span
                             className={cn(
-                              "text-sm font-bold tracking-tight transition-colors duration-300",
+                              "text-sm font-bold tracking-tight leading-tight transition-colors duration-300 line-clamp-2",
                               active ? "text-lime-700" : "text-neutral-900 group-hover:text-neutral-950"
                             )}
                           >
@@ -1852,7 +1898,7 @@ export function OnboardingView({
 
                         <span
                           className={cn(
-                            "mt-2 line-clamp-3 text-[10px] leading-snug transition-colors duration-300",
+                            "mt-2 max-w-[18ch] text-[10px] leading-3.5 transition-colors duration-300 line-clamp-2",
                             active
                               ? "text-lime-800/80"
                               : "text-neutral-500 group-hover:text-neutral-600"
@@ -1862,7 +1908,7 @@ export function OnboardingView({
                         </span>
 
                         {active && !disabled && (
-                          <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-lime-500 text-white ring-2 ring-white">
+                          <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-lime-500 text-white ring-2 ring-white shadow-sm">
                             <Check className="h-3 w-3" strokeWidth={3} />
                           </span>
                         )}
