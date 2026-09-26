@@ -1,7 +1,6 @@
-
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   Activity,
   Cpu,
@@ -947,6 +946,8 @@ export function DashboardView({
     return found ? px(found.label) : null
   }
 
+  const scrollRef = useRef<HTMLDivElement>(null)
+
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [recommendations, setRecommendations] = useState<
     Recommendation[]
@@ -1382,8 +1383,9 @@ export function DashboardView({
     e: React.ChangeEvent<HTMLInputElement>
   ) {
     const file = e.target.files?.[0]
-
     if (!file) return
+
+    const savedScrollTop = scrollRef.current?.scrollTop ?? 0
 
     setUploading(true)
     setUploadMsg("")
@@ -1407,15 +1409,10 @@ export function DashboardView({
           (chosenBusinessType
             ? `&business_type=${encodeURIComponent(chosenBusinessType)}`
             : ""),
-        {
-          method: "POST",
-          body: form,
-        }
+        { method: "POST", body: form }
       )
 
-      if (!res.ok) {
-        throw new Error("Upload failed")
-      }
+      if (!res.ok) throw new Error("Upload failed")
 
       const data = await res.json()
 
@@ -1444,6 +1441,9 @@ export function DashboardView({
     } finally {
       setUploading(false)
       e.target.value = ""
+      requestAnimationFrame(() => {
+        if (scrollRef.current) scrollRef.current.scrollTop = savedScrollTop
+      })
     }
   }
 
@@ -2124,7 +2124,7 @@ export function DashboardView({
 
   return (
     <div className="flex h-full min-h-0 w-full flex-1 flex-col gap-6 overflow-hidden">
-      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto pr-1">
         <div className="space-y-6">
           <div className="flex flex-col gap-4 rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
             <div className="max-w-xl">
