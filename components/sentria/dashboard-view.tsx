@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect, useState } from "react"
@@ -56,8 +57,6 @@ import {
   type SingleOpsType,
 } from "@/lib/activities"
 
-
-
 const SECTORS: { key: string; label: Localized }[] = [
   { key: "all", label: localized("Tous", "All") },
   { key: "industry", label: localized("Industrie", "Industry") },
@@ -76,13 +75,8 @@ type Alert = {
   severity: "WARNING" | "CRITICAL" | string
   date: string
   sector?: string | null
-  /** Set by the backend once it records which activity produced the row. */
   business_type?: string | null
-  /** Namespaced key such as "lab.tests_remaining.critical". Used to infer
-   *  the activity for rows written before business_type was recorded. */
   alert_key?: string | null
-  /** 0-100 composite score the backend computed for this row. The
-   *  logistics views read it instead of asserting a risk of their own. */
   risk_score?: number | null
 }
 
@@ -98,11 +92,6 @@ type Recommendation = {
   business_type?: string | null
   recommended_action: string
   action_category: string
-  /**
-   * The backend doesn't send these yet. Once it does, this type already
-   * has room for them and the UI will use the real value automatically
-   * (see estimateConfidence / reasoningFor below).
-   */
   confidence?: number | null
   reasoning?: string | null
 }
@@ -130,11 +119,6 @@ type IndustryPriority =
   | "production"
   | "maintenance"
 
-/** Count alerts per day over the last `days` days, oldest first.
- *
- *  Every sparkline and the area chart read from this, so a card's trend
- *  line and its number always describe the same alerts. Replaces the
- *  invented arrays that used to be drawn as if they were history. */
 function dailySeries(
   alerts: Alert[],
   days = 7,
@@ -160,32 +144,25 @@ function dailySeries(
   })
 }
 
-/** Human label for each onboarded subtype, shown on the dashboard so the
- *  user can see which business the numbers describe. */
 const BUSINESS_TYPE_LABELS: Record<string, Localized> = {
-  // Industry
   "usine-production": localized("Usine de production", "Production plant"),
   "atelier-soustraitance": localized(
     "Atelier / sous-traitance", "Workshop / subcontracting"),
   "usine-agroalimentaire": localized(
     "Usine agroalimentaire", "Food processing plant"),
-  // Health
   "pharmacie": localized("Pharmacie", "Pharmacy"),
   "grossiste-pharma": localized(
     "Grossiste-répartiteur pharmaceutique", "Pharmaceutical wholesaler"),
   "clinique-hopital": localized("Clinique / Hôpital", "Clinic / Hospital"),
   "laboratoire": localized("Laboratoire", "Laboratory"),
-  // Agriculture
   "exploitation-agricole": localized("Exploitation agricole", "Farm"),
   "cooperative-agricole": localized(
     "Coopérative agricole", "Agricultural cooperative"),
   "silo-stockage": localized(
     "Silo / stockage de récolte", "Silo / harvest storage"),
-  // Transportation
   "transporteur-routier": localized("Transporteur routier", "Road haulier"),
   "flotte-entreprise": localized("Flotte d'entreprise", "Company fleet"),
   "location-vehicules": localized("Location de véhicules", "Vehicle rental"),
-  // Logistics
   "port-conteneurs": localized("Port & conteneurs", "Port & containers"),
   "entrepot-manutention": localized(
     "Entrepôt & manutention", "Warehouse & handling"),
@@ -195,13 +172,11 @@ const BUSINESS_TYPE_LABELS: Record<string, Localized> = {
     "Préparation & expédition", "Picking & dispatch"),
   "chaine-froid": localized("Chaîne du froid", "Cold chain"),
   "plusieurs-activites": localized("Plusieurs activités", "Several activities"),
-  // Energy
   "centrale-production": localized("Centrale de production", "Power plant"),
   "generateurs-secours": localized(
     "Générateurs de secours", "Backup generators"),
   "distribution-energetique": localized(
     "Distribution énergétique", "Power distribution"),
-  // Commerce
   "grossiste-distributeur": localized(
     "Grossiste / distributeur", "Wholesaler / distributor"),
   "supermarche-hypermarche": localized(
@@ -211,13 +186,6 @@ const BUSINESS_TYPE_LABELS: Record<string, Localized> = {
     "Épicerie / commerce de proximité", "Grocery / convenience store"),
 }
 
-/** Per-subtype label overrides, keyed by business_type.
- *
- *  Only the wording changes. A laboratory counts tests and reagents, a
- *  hospital counts unsubstitutable supplies, a wholesaler counts client
- *  pharmacies. Showing all three "Medicaments concernes" made the
- *  dashboard look like it was built for a pharmacy no matter what was
- *  onboarded. */
 const SUBTYPE_KPI_LABELS: Record<string, Localized[]> = {
   "laboratoire": [
     localized("Analyses bloquées", "Tests blocked"),
@@ -280,13 +248,6 @@ const SUBTYPE_CHART_TITLES: Record<string, Localized> = {
     "Alertes location · 7 jours", "Rental alerts · 7 days"),
 }
 
-/** Which activity produced this alert.
- *
- *  Prefers the recorded business_type. Falls back to the alert_key
- *  namespace, since those keys are written per activity and already exist
- *  on rows saved before business_type was stored. Returns null when
- *  neither can say, and a null is never filtered out: hiding a real alert
- *  because we cannot classify it would be worse than showing it. */
 function activityOf(row: {
   business_type?: string | null
   alert_key?: string | null
@@ -302,30 +263,17 @@ function activityOf(row: {
   return null
 }
 
-/** Label for each alert_key family, the middle segment of a key such as
- *  the "cold_chain" in "health.cold_chain.broken". Extracted from every
- *  key the backend fires, so the breakdown covers all of them.
- *
- *  An unlisted family still charts, under its own raw name, which is how
- *  a family added to the backend later shows up without a frontend
- *  release. That was the flaw in the old approach: the three new health
- *  activities were invisible because nobody updated a hardcoded list. */
 const KEY_FAMILY_LABELS: Record<string, Localized> = {
-  // health
   stock: localized("Stock", "Stock"),
   reorder: localized("Réappro", "Reorder"),
   cold_chain: localized("Chaîne du froid", "Cold chain"),
   expiry: localized("Péremption", "Expiry"),
   slow_mover: localized("Rotation faible", "Slow movers"),
   deadstock: localized("Invendus", "Deadstock"),
-  // lab
   tests_remaining: localized("Analyses", "Tests"),
   reagent: localized("Réactifs", "Reagents"),
-  // hospital
   critical_supply: localized("Sans alternative", "No substitute"),
-  // wholesaler
   rebalance: localized("Transferts", "Transfers"),
-  // industry
   torque: localized("Couple", "Torque"),
   wear: localized("Usure", "Wear"),
   failure: localized("Panne", "Failure"),
@@ -336,17 +284,12 @@ const KEY_FAMILY_LABELS: Record<string, Localized> = {
   maintenance: localized("Maintenance", "Maintenance"),
   food_temp: localized("Température alim.", "Food temp."),
   hygiene: localized("Hygiène", "Hygiene"),
-  // logistics
   cycles: localized("Cycles", "Cycles"),
   wait: localized("Attente", "Waiting"),
   service: localized("Entretien", "Servicing"),
   risk: localized("Risque", "Risk"),
-  // port: the gate stages. Without these the chart fell back to the raw
-  // key family and printed "arrival" and "customs" in English next to
-  // French labels.
   arrival: localized("Arrivée", "Arrival"),
   customs: localized("Douane", "Customs"),
-  // transport
   engine: localized("Moteur", "Engine"),
   oil: localized("Huile", "Oil"),
   fuel: localized("Carburant", "Fuel"),
@@ -359,37 +302,21 @@ const KEY_FAMILY_LABELS: Record<string, Localized> = {
   driver: localized("Conduite", "Driving"),
   fleet: localized("Flotte", "Fleet"),
   rental: localized("Location", "Rental"),
-  // energy
   coolant: localized("Refroidissement", "Coolant"),
   load: localized("Charge", "Load"),
   output: localized("Production", "Output"),
-  // agri
   storage: localized("Stockage", "Storage"),
   temp: localized("Température", "Temperature"),
-  // retail
   pos: localized("Caisse", "Checkout"),
   sales: localized("Ventes", "Sales"),
   shrinkage: localized("Démarque", "Shrinkage"),
   staffing: localized("Personnel", "Staffing"),
-  // supplier
   delivery: localized("Livraisons", "Deliveries"),
   lead_time: localized("Délais", "Lead time"),
   fill_rate: localized("Taux de service", "Fill rate"),
   reliability: localized("Fiabilité", "Reliability"),
 }
 
-/** Breakdown of alerts by what they are about, grouped on the alert_key
- *  family rather than by searching the message text.
- *
- *  The previous version matched French words such as "rupture" and
- *  "froid" inside the message. That failed three ways at once: a
- *  laboratory and a wholesaler use none of those words, so their chart
- *  was always empty; a hospital matched only some; and in English almost
- *  nothing matched for anybody, because the words being searched for only
- *  exist in the French translations. The key is language-independent.
- *
- *  Rows with no alert_key fall back to a severity split, so legacy data
- *  still charts as something rather than nothing. */
 function alertBreakdown(
   alerts: Alert[],
   tx: Tx
@@ -440,8 +367,6 @@ const SECTOR_META: Record<
       value: string
       delta: Localized
       up: boolean
-      /** Optional subset this card counts, so its sparkline tracks the
-       *  same alerts as its number. Omitted means every alert in view. */
       match?: (alert: Alert) => boolean
     }[]
     chartTitle: Localized
@@ -849,13 +774,6 @@ const LOGISTICS_OPS_META: Record<
   multi: SECTOR_META.logistics,
 }
 
-/** Read the priorities picked during onboarding, for any sector.
- *
- *  All sectors write to the same `sentria_equipment` key, so one reader
- *  serves all of them. Ids are returned in catalog order rather than
- *  click order, and anything the catalog no longer knows about is
- *  dropped, so a stale id from an older build cannot render as a chip
- *  with no label. */
 function getSavedPriorities(sector: string): string[] {
   if (typeof window === "undefined") return []
 
@@ -868,11 +786,6 @@ function getSavedPriorities(sector: string): string[] {
 
     if (!Array.isArray(stored)) return []
 
-    /* No default priority. The readers used to fall back to the first
-       entry in the sector's catalog, which meant a pharmacist who never
-       configured industry still saw "Priorités industrie : Machines de
-       production" on their dashboard. An empty list renders the real
-       empty state instead. */
     return orderPriorities(
       sector,
       stored.filter((value): value is string => typeof value === "string")
@@ -942,20 +855,6 @@ function getRecommendationContext(
   return contexts[sector] ?? contexts.all
 }
 
-/*
- * SentrIA should behave like a decision system, not a dashboard: every
- * priority a human sees should answer six questions, in this order —
- * what did we see (evidence), how sure are we (confidence), what does
- * it cost (impact — see getRecommendationContext above), why do we think
- * this (reasoning), what should be done (recommended_action, already
- * shown), and what happened after someone acted (outcome — see
- * ActionRecord + recordAction in the component below).
- *
- * Confidence is computed by the shared, documented formula in
- * lib/confidence.ts — not invented ad hoc per screen. The backend
- * doesn't send a real confidence value yet, so this stays a labelled
- * estimate; the moment it does, this wrapper uses that instead.
- */
 function estimateConfidence(
   rec: Recommendation,
   recurrence: number,
@@ -973,13 +872,6 @@ function estimateConfidence(
   })
 }
 
-/**
- * The confidence formula's most SentrIA-specific ingredient: has this
- * deployment's own team historically acted on this category of alert,
- * or dismissed it? That's the part a generic dashboard-plus-AI can't
- * copy — it only exists because SentrIA closes the loop with real
- * human decisions (see actionsLog / recordAction below).
- */
 function trackRecordForCategory(
   category: string,
   recs: Recommendation[],
@@ -1006,10 +898,6 @@ function reasoningFor(
   recurrence: number,
   tx: Tx
 ): string {
-  /* The backend writes this one, already rendered in the language it was
-     fired in. Translating it here would mean re-deriving a sentence from
-     text, so it is left as it came: see PASSATION.md, read-time alert
-     translation. */
   if (rec.reasoning) return rec.reasoning
 
   const parts: string[] = []
@@ -1038,7 +926,6 @@ function reasoningFor(
   return parts.join(" ")
 }
 
-/** How many times this equipment already triggered an alert. */
 function recurrenceOf(equipment: string, alerts: Alert[]): number {
   return alerts.filter((a) => a.equipment === equipment).length
 }
@@ -1050,26 +937,10 @@ export function DashboardView({
 }) {
   const tx = useTx()
 
-  /** Resolve a module-level fr/en pair into the language on screen.
-   *
-   *  The label catalogues at the top of this file are built outside
-   *  React, so they hold pairs rather than strings. This is the one place
-   *  a pair becomes a single language. */
   const px = (text: Localized | undefined) => resolve(text, tx)
 
-  /** The locale every date and time on this screen is formatted in.
-   *
-   *  Hardcoded "fr-FR" meant an English dashboard still printed
-   *  "18/09/2026 14:30" with French month names in the long formats. It
-   *  goes through tx() like any other string, because the right locale
-   *  is a function of the same choice. */
   const dateLocale = tx("fr-FR", "en-GB")
 
-  /** The display name of a sector key, or null when the key is unknown.
-   *
-   *  Null rather than the raw key: a caller that wants the key as a
-   *  fallback says so, and the ones that want "this activity" instead
-   *  can have it. */
   const sectorName = (key: string | null | undefined) => {
     const found = SECTORS.find((item) => item.key === key)
 
@@ -1083,23 +954,10 @@ export function DashboardView({
 
   const [uploadSector, setUploadSector] = useState("industry")
 
-  /* These five start at their server value and are filled in from
-     localStorage by the mount effect below. Reading storage in the
-     initializer made the client's first render differ from the server's
-     HTML ("Logistique" against "Industrie" in the header), which React
-     reports as a hydration mismatch and then re-renders the whole tree
-     to recover from. */
   const [filterSector, setFilterSector] = useState("all")
 
-  /* Which activity the next import is tagged with. It used to be
-     invisible: the panel only offered a sector, the activity came from
-     whatever onboarding had stored, and nothing on screen said which one
-     would be sent. Changing it meant editing localStorage by hand. */
   const [uploadActivity, setUploadActivity] = useState<string | null>(null)
 
-  /* Every logistics activity this deployment runs. The flow chain is the
-     union of exactly these, instead of one activity or, for the old
-     "multi", all five. */
   const [opsTypes, setOpsTypes] = useState<SingleOpsType[]>([])
 
   const [uploading, setUploading] = useState(false)
@@ -1127,9 +985,6 @@ export function DashboardView({
   const [selectedIndustryPriorities, setSelectedIndustryPriorities] =
     useState<IndustryPriority[]>([])
 
-  /* Health, commerce, agriculture and the rest pick priorities during
-     onboarding too, but have no per-priority screens yet. They still get
-     to see what they configured, as static chips. */
   const [selectedSectorPriorities, setSelectedSectorPriorities] = useState<
     string[]
   >([])
@@ -1138,9 +993,6 @@ export function DashboardView({
     setSelectedSectorPriorities(getSavedPriorities(filterSector))
   }, [filterSector])
 
-  /* Default the import activity to whatever this sector is configured
-     for, and fall back to the sector's first activity so the panel is
-     never sending an activity it is not showing. */
   useEffect(() => {
     const options = activitiesFor(uploadSector)
 
@@ -1164,10 +1016,6 @@ export function DashboardView({
     setUploadActivity(match?.id ?? options[0].id)
   }, [uploadSector, opsType, businessType])
 
-  /* Mount-only: pull the stored configuration in once, now that the
-     initializers above no longer do it. Runs before the browser paints
-     the committed frame, so the stored sector and priorities are what
-     the user sees rather than a visible flip from the defaults. */
   useEffect(() => {
     try {
       const storedSectors = JSON.parse(
@@ -1191,8 +1039,6 @@ export function DashboardView({
 
     const savedSector = localStorage.getItem("sentria_sector")
 
-    /* "logistics" is reached through the sector chip rather than
-       restored, which is why it maps back to "all" here. */
     if (savedSector && savedSector !== "logistics") {
       setFilterSector(savedSector)
     }
@@ -1213,11 +1059,6 @@ export function DashboardView({
     null
   )
 
-  /** The panel's own lookup for when the clicked alert isn't in the
-   *  top-20 `recommendations` already in memory — most alerts aren't,
-   *  since that list is a global shortlist across every sector. Keyed
-   *  by equipment so switching between two open alerts for the same
-   *  equipment doesn't refetch. */
   const [fetchedRecommendation, setFetchedRecommendation] =
     useState<Recommendation | null>(null)
   const [fetchingRecommendationFor, setFetchingRecommendationFor] =
@@ -1228,12 +1069,6 @@ export function DashboardView({
   const [selectedRecommendation, setSelectedRecommendation] =
     useState<Recommendation | null>(null)
 
-  /*
-   * Closing the decision loop: once someone acts on a priority (marks it
-   * handled or dismisses it), SentrIA remembers that and shows it back —
-   * otherwise every session starts from zero and nobody can tell what
-   * the system has actually helped with.
-   */
   const [actionsLog, setActionsLog] = useState<
     Record<string, ActionRecord>
   >(() => {
@@ -1402,9 +1237,6 @@ export function DashboardView({
   }, [])
 
   function refreshRecommendations() {
-    /* The backend renders recommended_action and reasoning itself and
-       takes a lang, so asking it for French while the screen is in
-       English put two French sentences on every card. */
     fetch(
       `${API}/recommendations?limit=20&lang=${tx("fr", "en")}`
     )
@@ -1466,10 +1298,6 @@ export function DashboardView({
       })
   }
 
-  /* Refetched when the language changes, not only on mount. The action
-     and the reasoning on every card are rendered by the backend, so
-     switching to English and leaving this alone would keep showing the
-     French it was asked for at mount. */
   const recommendationsLang = tx("fr", "en")
 
   useEffect(() => {
@@ -1508,9 +1336,6 @@ export function DashboardView({
     localStorage.setItem("sentria_sector", "all")
   }
 
-  /** Is the chosen import activity the one the dashboard is configured
-   *  for? When it is not, the panel says so rather than letting the user
-   *  wonder why their import does not show up. */
   function isConfiguredActivity(sector: string, activityId: string) {
     if (sector === "logistics") {
       return normalizeOpsType(activityId) === normalizeOpsType(opsType)
@@ -1534,9 +1359,6 @@ export function DashboardView({
     )
   }
 
-  /** Point the dashboard at the activity being imported, which is what
-   *  the user almost always wants right after importing it. Writes the
-   *  same keys onboarding does, so the views pick it up. */
   function applyActivityToDashboard(sector: string, activityId: string) {
     if (sector === "logistics") {
       const normalized = normalizeOpsType(activityId)
@@ -1571,8 +1393,6 @@ export function DashboardView({
     form.append("file", file)
 
     try {
-      /* The activity chosen in the panel, normalized: the backend
-         branches on "port", never on onboarding's "port-conteneurs". */
       const chosenOpsType =
         uploadSector === "logistics"
           ? normalizeOpsType(uploadActivity) ?? normalizeOpsType(opsType)
@@ -1584,10 +1404,6 @@ export function DashboardView({
       const res = await fetch(
         `${API}/upload?sector=${toApiSector(uploadSector)}&lang=fr` +
           (chosenOpsType ? `&ops_type=${chosenOpsType}` : "") +
-          // Sent for every sector. check_industry and check_health branch
-          // on it, and every sector needs it recorded on the alert so the
-          // dashboard can separate activities. A value that does not
-          // belong to the chosen sector is ignored safely by the backend.
           (chosenBusinessType
             ? `&business_type=${encodeURIComponent(chosenBusinessType)}`
             : ""),
@@ -1631,18 +1447,6 @@ export function DashboardView({
     }
   }
 
-  // Separate the activities inside a sector, not just the sectors. A
-  // laboratory and a pharmacy both write sector "health", so this is what
-  // stops one activity's alerts appearing under another.
-  //
-  // This has to hold in the "Tous" view too. An account is onboarded for
-  // one activity, so another activity's rows are never its own, and
-  // exempting "Tous" was what made the separation look like it had never
-  // happened: the view the dashboard opens on mixed every activity back
-  // together.
-  //
-  // Which sectors have labelled rows, so an unlabelled row is judged
-  // against its own sector rather than against the whole table.
   const sectorsWithRecordedActivity = new Set(
     alerts
       .filter((a) => Boolean(a.business_type))
@@ -1660,9 +1464,6 @@ export function DashboardView({
 
     if (activity !== null) return activity === businessType
 
-    // Unclassifiable. Exclude it only when its own sector has labelled
-    // rows to compare against, otherwise show it rather than blank the
-    // view.
     return !sectorsWithRecordedActivity.has(a.sector ?? "")
   }
 
@@ -1686,36 +1487,10 @@ export function DashboardView({
       )
     })
 
-  /* What the logistics priority views read. Scoped to the logistics
-     sector and to the user's own activity, so a port operator never
-     sees a cold-chain reading, but deliberately not narrowed by the
-     alert table's own search box: those controls belong to the table
-     below, not to a view the user opened from a priority card. */
   const logisticsViewAlerts = alerts
     .filter((a) => a.sector === "logistics")
     .filter(matchesActivity)
 
-  /* A recommendation is filtered on what is KNOWN about its activity,
-     never on what is missing.
-
-     matchesActivity ends with "an unlabelled row is judged against its
-     own sector": if that sector has labelled rows elsewhere, the
-     unlabelled one is assumed to belong to a different activity and is
-     dropped. That is right for an alert, where a missing business_type
-     really does mean the row was never labelled.
-
-     It was wrong here. /recommendations did not return business_type at
-     all, so every recommendation looked unlabelled, and in any sector
-     with labelled alerts - which is every sector, once onboarding has
-     run - all five were dropped and the panel vanished. The backend now
-     sends the field, but an API that has not been redeployed yet still
-     does not, and the top of the dashboard is not something to lose to
-     a deploy order.
-
-     So: drop a recommendation only when its activity is known AND
-     different. Unknown means show it. The cost is that an operator may
-     see a neighbouring activity's priority against an old API; the cost
-     of the other choice was an empty dashboard. */
   const recommendationMatchesActivity = (r: {
     business_type?: string | null
     alert_key?: string | null
@@ -1839,9 +1614,6 @@ export function DashboardView({
         : null))
     : null
 
-  /* The in-memory shortlist missed this alert — ask for it by name
-     instead of showing "not computed" for data that was in fact
-     computed, just not in a global top-20. */
   useEffect(() => {
     if (!expandedAlert || expandedRecommendation) return
     if (fetchingRecommendationFor === expandedAlert.equipment) return
@@ -1874,29 +1646,17 @@ export function DashboardView({
         SECTOR_META.all
       : SECTOR_META[filterSector] ?? SECTOR_META.all
 
-  // The onboarded subtype relabels the cards so the dashboard describes
-  // the business that was actually set up, not whichever one the sector
-  // defaults to. Sector views only: the "Tous" cards count across
-  // sectors, and a laboratory wording on a cross-sector count would be a
-  // claim the number does not support.
   const subtypeLabels =
     businessType && filterSector !== "all"
       ? SUBTYPE_KPI_LABELS[businessType]
       : undefined
 
-  // The activity this account was onboarded for. Taken from the saved
-  // onboarding choice rather than from the current filter, so it is
-  // stated in every view including "Tous". Tying it to the filter meant
-  // the view the dashboard opens on named no activity at all.
   const subtypeName = businessType
     ? BUSINESS_TYPE_LABELS[businessType]
       ? px(BUSINESS_TYPE_LABELS[businessType])
       : undefined
     : undefined
 
-  // The sector that goes with it. In a sector view that is the filter;
-  // in "Tous" it is the onboarded sector, which is a single one because
-  // onboarding saves exactly one.
   const onboardedSectorKey =
     filterSector !== "all"
       ? filterSector
@@ -1906,17 +1666,10 @@ export function DashboardView({
 
   const onboardedSectorLabel = sectorName(onboardedSectorKey)
 
-  // "Santé · Laboratoire". Null only when nothing was onboarded, in
-  // which case there is no activity to name.
   const departmentLabel =
     [onboardedSectorLabel, subtypeName].filter(Boolean).join(" · ") ||
     null
 
-  // Can the activity filter actually separate anything yet? Only once a
-  // row in this sector carries an activity, by recorded business_type or
-  // by alert_key namespace. Until then every unclassified row stays
-  // visible, so saying the view is limited to one activity would be a
-  // claim the data does not support.
   const activitySeparationActive =
     Boolean(businessType) &&
     alerts.some(
@@ -1941,10 +1694,6 @@ export function DashboardView({
       meta.chartTitle
   )
 
-  // No rows for this sector means nothing has been uploaded for it yet.
-  // Showing four zeroes and a flat line reads as "all clear", which is a
-  // very different claim from "we have no data", so the cards and charts
-  // are replaced by a panel that says which is true.
   const hasNoDataForSector =
     filteredAlerts.length === 0 && !alertsError
 
@@ -2119,9 +1868,6 @@ export function DashboardView({
   }
 
   if (filterSector === "logistics") {
-    /* Prefer the stored set: it says which activities are actually run,
-       where the single value can only say "multi", which used to mean
-       every chain at once. */
     const normalizedOpsType =
       opsTypes.length > 0 ? opsTypeFor(opsTypes) : normalizeOpsType(opsType)
 
@@ -2377,371 +2123,112 @@ export function DashboardView({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
-        <div className="max-w-xl">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
-              <Zap className="h-3.5 w-3.5" />
-              {tx("Temps réel", "Live")}
-            </span>
+    <div className="flex h-full min-h-0 w-full flex-1 flex-col gap-6 overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+        <div className="space-y-6">
+          <div className="flex flex-col gap-4 rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
+            <div className="max-w-xl">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+                  <Zap className="h-3.5 w-3.5" />
+                  {tx("Temps réel", "Live")}
+                </span>
 
-            {/* Which business this dashboard is for. Stated here, in
-                every view, because the department was the one thing the
-                dashboard never said out loud. */}
-            {departmentLabel && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-sidebar-foreground/25 bg-sidebar-foreground/10 px-3 py-1 text-xs font-semibold text-sidebar-foreground">
-                <Shield className="h-3.5 w-3.5" aria-hidden="true" />
-                {departmentLabel}
-              </span>
-            )}
-          </div>
-
-          <h2 className="mt-3 text-balance font-heading text-2xl font-bold leading-tight md:text-3xl">
-            {tx(
-              "Qu'est-ce qui a besoin de votre attention maintenant ?",
-              "What needs your attention right now?"
-            )}
-          </h2>
-
-          <p className="mt-2 text-pretty text-sm text-sidebar-foreground/70">
-            {tx(
-              "SentrIA ne se contente pas d'alerter : chaque priorité montre sa preuve, sa confiance et son impact, puis garde en mémoire ce que vous en avez fait.",
-              "SentrIA does more than alert: every priority shows its evidence, its confidence and its impact, then remembers what you did about it."
-            )}
-          </p>
-
-          {subtypeName && (
-            <p className="mt-3 text-xs leading-5 text-sidebar-foreground/60">
-              {activitySeparationActive ? (
-                <>
-                  {tx(
-                    "Vue limitée à votre activité :",
-                    "Limited to your activity:"
-                  )}{" "}
-                  <span className="font-bold text-sidebar-foreground">
-                    {subtypeName}
+                {departmentLabel && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-sidebar-foreground/25 bg-sidebar-foreground/10 px-3 py-1 text-xs font-semibold text-sidebar-foreground">
+                    <Shield className="h-3.5 w-3.5" aria-hidden="true" />
+                    {departmentLabel}
                   </span>
-                  {tx(
-                    ". Les alertes des autres activités ne sont pas affichées.",
-                    ". Alerts from other activities are not shown."
-                  )}
-                </>
-              ) : (
-                <>
-                  {tx("Activité configurée :", "Configured activity:")}{" "}
-                  <span className="font-bold text-sidebar-foreground">
-                    {subtypeName}
-                  </span>
-                  {tx(
-                    ". Aucune alerte importée ne porte encore d'activité, elles sont donc toutes affichées.",
-                    ". No imported alert carries an activity yet, so all of them are shown."
-                  )}
-                </>
-              )}
-            </p>
-          )}
-        </div>
-
-        <button
-          type="button"
-          onClick={() =>
-            document
-              .getElementById("alerts-table")
-              ?.scrollIntoView({
-                behavior: "smooth",
-              })
-          }
-          className="inline-flex items-center gap-2 self-start rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02]"
-        >
-          {tx("Voir les alertes", "See the alerts")}
-          <ArrowUpRight className="h-4 w-4" />
-        </button>
-      </div>
-
-      <RecommendationsPanel
-        recommendations={filteredRecommendations}
-        totalRecommendationsCount={recommendations.length}
-        alerts={alerts}
-        opsType={opsType}
-      />
-
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={returnToDashboard}
-          className={cn(
-            "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
-            filterSector === "all"
-              ? "border-foreground bg-foreground text-background"
-              : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
-          )}
-        >
-          {tx("Tous", "All")}
-
-          <span className="ml-1.5 text-[10px] opacity-60">
-            {alerts.filter(matchesActivity).length}
-          </span>
-        </button>
-
-        {SECTORS.filter(
-          (s) =>
-            s.key !== "all" &&
-            activeSectors.includes(s.key)
-        ).map((s) => (
-          <button
-            key={s.key}
-            type="button"
-            onClick={() => {
-              if (s.key === "logistics") {
-                openLogisticsOverview()
-                return
-              }
-
-              if (s.key === "industry") {
-                openIndustryOverview()
-                return
-              }
-
-              setLogisticsPriority(null)
-              setIndustryPriority(null)
-              setFilterSector(s.key)
-              localStorage.setItem(
-                "sentria_sector",
-                s.key
-              )
-            }}
-            className={cn(
-              "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
-              filterSector === s.key
-                ? "border-foreground bg-foreground text-background"
-                : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
-            )}
-          >
-            {px(s.label)}
-
-            <span className="ml-1.5 text-[10px] opacity-60">
-              {
-                alerts
-                  .filter((a) => a.sector === s.key)
-                  .filter(matchesActivity).length
-              }
-            </span>
-          </button>
-        ))}
-
-      </div>
-
-      {/* The same chip row as inside a priority, rather than the bespoke
-          capsule that used to hang off the filter row and only ever showed
-          logistics. On a single sector with no per-priority screens the
-          chips are static: the user sees their configuration without
-          anything pretending to be a link. */}
-      {filterSector === "all" ? (
-        <>
-          {activeSectors.includes("logistics") && (
-            <PriorityPills
-              sector="logistics"
-              ids={selectedLogisticsPriorities}
-              label={tx("Priorités logistique", "Logistics priorities")}
-              onOpen={(id) =>
-                openLogisticsPriority(id as LogisticsPriority)
-              }
-            />
-          )}
-
-          {activeSectors.includes("industry") && (
-            <PriorityPills
-              sector="industry"
-              ids={selectedIndustryPriorities}
-              label={tx("Priorités industrie", "Industry priorities")}
-              onOpen={(id) =>
-                openIndustryPriority(id as IndustryPriority)
-              }
-            />
-          )}
-        </>
-      ) : (
-        <PriorityPills
-          sector={filterSector}
-          ids={selectedSectorPriorities}
-          label={tx("Vos priorités", "Your priorities")}
-        />
-      )}
-
-      {filterSector === "logistics" &&
-        opsType &&
-        LOGISTICS_OPS_META[opsType] && (
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-[11px] font-medium text-muted-foreground">
-            <Shield className="h-3 w-3" aria-hidden="true" />
-            {px(OPS_TYPE_LABEL[opsType])}
-          </div>
-        )}
-
-      {hasNoDataForSector ? (
-        <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
-            <Upload className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
-          </div>
-
-          <h3 className="mt-4 font-heading text-lg font-bold">
-            {tx("Aucune donnée pour", "No data for")}{" "}
-            {departmentLabel ??
-              sectorName(filterSector) ??
-              tx("cette activité", "this activity")}
-          </h3>
-
-          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-            {tx(
-              "Rien n'a encore été importé pour cette activité. Les indicateurs restent vides jusqu'au premier fichier : afficher des zéros donnerait l'impression que tout va bien, ce qui n'est pas la même chose.",
-              "Nothing has been imported for this activity yet. The figures stay empty until the first file: showing zeroes would read as all clear, which is a different claim."
-            )}
-          </p>
-
-          <p className="mt-3 text-xs text-muted-foreground">
-            {tx(
-              "Chaque activité attend ses propres colonnes. Importez le CSV correspondant à",
-              "Each activity expects its own columns. Import the CSV for"
-            )}{" "}
-            <span className="font-semibold text-foreground">
-              {subtypeName ??
-                sectorName(filterSector) ??
-                tx("votre activité", "your activity")}
-            </span>{" "}
-            {tx(
-              "via le bouton Importer CSV ci-dessus.",
-              "using the Import CSV button above."
-            )}
-          </p>
-        </div>
-      ) : (
-        <>
-      {/* Context for the priorities above, not the headline */}
-      <p className="text-[11px] font-bold uppercase tracking-[0.13em] text-muted-foreground">
-        {tx("Contexte général", "General context")}
-      </p>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {kpis.map((k) => (
-          <div
-            key={k.label}
-            className="rounded-3xl border border-border bg-card p-5"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-sm text-muted-foreground">
-                {k.label}
-              </span>
-
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
-                  k.up
-                    ? "bg-accent/25 text-accent-foreground"
-                    : "bg-destructive/10 text-destructive"
                 )}
-              >
-                {k.up ? (
-                  <TrendingUp className="h-3 w-3" />
-                ) : (
-                  <TrendingDown className="h-3 w-3" />
+              </div>
+
+              <h2 className="mt-3 text-balance font-heading text-2xl font-bold leading-tight md:text-3xl">
+                {tx(
+                  "Qu'est-ce qui a besoin de votre attention maintenant ?",
+                  "What needs your attention right now?"
                 )}
+              </h2>
 
-                {k.delta}
-              </span>
-            </div>
-
-            <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
-              {k.value}
-            </p>
-
-            <Sparkline
-              data={dailySeries(filteredAlerts, 7, k.match)}
-              className={cn(
-                "mt-2 h-9 w-full",
-                k.up ? "text-accent" : "text-destructive"
-              )}
-            />
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-heading text-lg font-bold">
-                {chartTitle}
-              </h3>
-
-              <p className="text-sm text-muted-foreground">
-                {tx("7 derniers jours", "Last 7 days")}
+              <p className="mt-2 text-pretty text-sm text-sidebar-foreground/70">
+                {tx(
+                  "SentrIA ne se contente pas d'alerter : chaque priorité montre sa preuve, sa confiance et son impact, puis garde en mémoire ce que vous en avez fait.",
+                  "SentrIA does more than alert: every priority shows its evidence, its confidence and its impact, then remembers what you did about it."
+                )}
               </p>
+
+              {subtypeName && (
+                <p className="mt-3 text-xs leading-5 text-sidebar-foreground/60">
+                  {activitySeparationActive ? (
+                    <>
+                      {tx(
+                        "Vue limitée à votre activité :",
+                        "Limited to your activity:"
+                      )}{" "}
+                      <span className="font-bold text-sidebar-foreground">
+                        {subtypeName}
+                      </span>
+                      {tx(
+                        ". Les alertes des autres activités ne sont pas affichées.",
+                        ". Alerts from other activities are not shown."
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      {tx("Activité configurée :", "Configured activity:")}{" "}
+                      <span className="font-bold text-sidebar-foreground">
+                        {subtypeName}
+                      </span>
+                      {tx(
+                        ". Aucune alerte importée ne porte encore d'activité, elles sont donc toutes affichées.",
+                        ". No imported alert carries an activity yet, so all of them are shown."
+                      )}
+                    </>
+                  )}
+                </p>
+              )}
             </div>
 
             <button
               type="button"
-              className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
-              aria-label={tx("Options", "Options")}
+              onClick={() =>
+                document
+                  .getElementById("alerts-table")
+                  ?.scrollIntoView({
+                    behavior: "smooth",
+                  })
+              }
+              className="inline-flex items-center gap-2 self-start rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02]"
             >
-              <MoreHorizontal className="h-5 w-5" />
+              {tx("Voir les alertes", "See the alerts")}
+              <ArrowUpRight className="h-4 w-4" />
             </button>
           </div>
 
-          <AreaChart
-            data={chartData}
-            className="mt-6 h-52 w-full"
+          <RecommendationsPanel
+            recommendations={filteredRecommendations}
+            totalRecommendationsCount={recommendations.length}
+            alerts={alerts}
+            opsType={opsType}
           />
-        </div>
 
-        <div className="rounded-3xl border border-border bg-card p-6">
-          <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-accent-foreground" />
-
-            <h3 className="font-heading text-lg font-bold">
-              {tx("Répartition", "Breakdown")}
-            </h3>
-          </div>
-
-          {breakdown.labels.length > 0 ? (
-            <>
-              <p className="text-sm text-muted-foreground">
-                {breakdown.labels.join(" · ")}
-              </p>
-
-              <BarChart
-                data={breakdown.values}
-                labels={breakdown.labels}
-                className="mt-6"
-                height={180}
-              />
-            </>
-          ) : (
-            <p className="mt-6 text-sm text-muted-foreground">
-              {tx(
-                "Rien à répartir pour cette activité sur la période sélectionnée.",
-                "Nothing to break down for this activity over the selected period."
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={returnToDashboard}
+              className={cn(
+                "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
+                filterSector === "all"
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
               )}
-            </p>
-          )}
-        </div>
-      </div>
-        </>
-      )}
+            >
+              {tx("Tous", "All")}
 
-      <div className="rounded-3xl border border-border bg-card p-6">
-        <h3 className="font-heading text-lg font-bold">
-          {tx("Importer des données", "Import data")}
-        </h3>
+              <span className="ml-1.5 text-[10px] opacity-60">
+                {alerts.filter(matchesActivity).length}
+              </span>
+            </button>
 
-        <p className="mt-1 text-sm text-muted-foreground">
-          {tx(
-            "Choisissez un secteur puis importez votre CSV.",
-            "Choose a sector, then import your CSV."
-          )}
-        </p>
-
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <div className="flex flex-wrap gap-2">
             {SECTORS.filter(
               (s) =>
                 s.key !== "all" &&
@@ -2750,831 +2237,1075 @@ export function DashboardView({
               <button
                 key={s.key}
                 type="button"
-                onClick={() => setUploadSector(s.key)}
-                aria-pressed={uploadSector === s.key}
+                onClick={() => {
+                  if (s.key === "logistics") {
+                    openLogisticsOverview()
+                    return
+                  }
+
+                  if (s.key === "industry") {
+                    openIndustryOverview()
+                    return
+                  }
+
+                  setLogisticsPriority(null)
+                  setIndustryPriority(null)
+                  setFilterSector(s.key)
+                  localStorage.setItem(
+                    "sentria_sector",
+                    s.key
+                  )
+                }}
                 className={cn(
-                  "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                  uploadSector === s.key
+                  "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
+                  filterSector === s.key
                     ? "border-foreground bg-foreground text-background"
                     : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
                 )}
               >
                 {px(s.label)}
+
+                <span className="ml-1.5 text-[10px] opacity-60">
+                  {
+                    alerts
+                      .filter((a) => a.sector === s.key)
+                      .filter(matchesActivity).length
+                  }
+                </span>
               </button>
             ))}
+
           </div>
 
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90 focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-            <Upload className="h-4 w-4" aria-hidden="true" />
-
-            {uploading
-              ? tx("Traitement...", "Processing...")
-              : tx("Importer CSV", "Import CSV")}
-
-            <input
-              type="file"
-              accept=".csv"
-              className="sr-only"
-              onChange={handleUpload}
-              disabled={uploading}
-              aria-label={tx("Importer un fichier CSV", "Import a CSV file")}
-            />
-          </label>
-        </div>
-
-        {uploadMsg && (
-          <p
-            role={uploadFailed ? "alert" : "status"}
-            className={cn(
-              "mt-3 text-sm font-medium",
-              uploadFailed ? "text-destructive" : "text-green-600"
-            )}
-          >
-            {uploadMsg}
-          </p>
-        )}
-
-        {/* The activity the file will be tagged with. The panel used to
-            offer a sector only and send whatever onboarding had stored,
-            so a port CSV could be read with the warehouse rules and
-            nothing on screen explained why. */}
-        {activitiesFor(uploadSector).length > 0 && (
-          <div className="mt-4 border-t border-border pt-4">
-            <p className="text-xs font-semibold">
-              {tx("Activité de ce fichier", "Activity for this file")}
-            </p>
-
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {tx(
-                "Elle décide des contrôles appliqués et de la chaîne affichée. Changez-la ici pour importer un fichier d'une autre activité.",
-                "It decides which checks run and which chain is shown. Change it here to import a file for a different activity."
-              )}
-            </p>
-
-            <div className="mt-2.5 flex flex-wrap gap-2">
-              {activitiesFor(uploadSector).map((activity) => (
-                <button
-                  key={activity.id}
-                  type="button"
-                  onClick={() => setUploadActivity(activity.id)}
-                  aria-pressed={uploadActivity === activity.id}
-                  title={px(activity.description)}
-                  className={cn(
-                    "rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
-                    uploadActivity === activity.id
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
-                  )}
-                >
-                  {px(activity.label)}
-                </button>
-              ))}
-            </div>
-
-            {uploadActivity &&
-              !isConfiguredActivity(uploadSector, uploadActivity) && (
-                <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-brand/40 bg-brand/10 px-3 py-2">
-                  <p className="text-xs">
-                    {tx(
-                      "Vous importez une activité différente de celle configurée",
-                      "You are importing an activity other than the configured one"
-                    )}
-                    {configuredActivityLabel(uploadSector)
-                      ? ` (${configuredActivityLabel(uploadSector)})`
-                      : ""}
-                    {tx(
-                      ". Le tableau de bord continue d'afficher l'activité configurée.",
-                      ". The dashboard keeps showing the configured activity."
-                    )}
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      applyActivityToDashboard(uploadSector, uploadActivity)
-                    }
-                    className="rounded-full border border-foreground bg-foreground px-3 py-1 text-[11px] font-semibold text-background transition-opacity hover:opacity-90"
-                  >
-                    {tx(
-                      "Basculer le tableau de bord dessus",
-                      "Switch the dashboard to it"
-                    )}
-                  </button>
-                </div>
-              )}
-          </div>
-        )}
-
-        <p className="mt-3 text-xs text-muted-foreground">
-          {tx("Envoyé :", "Sent:")}{" "}
-          <span className="font-semibold text-foreground">
-            {sectorName(uploadSector)}
-          </span>
-
-          {uploadActivity && (
+          {filterSector === "all" ? (
             <>
-              {" · "}
-              <span className="font-semibold text-foreground">
-                {activityLabel(uploadSector, uploadActivity, tx) ??
-                  uploadActivity}
-              </span>
+              {activeSectors.includes("logistics") && (
+                <PriorityPills
+                  sector="logistics"
+                  ids={selectedLogisticsPriorities}
+                  label={tx("Priorités logistique", "Logistics priorities")}
+                  onOpen={(id) =>
+                    openLogisticsPriority(id as LogisticsPriority)
+                  }
+                />
+              )}
+
+              {activeSectors.includes("industry") && (
+                <PriorityPills
+                  sector="industry"
+                  ids={selectedIndustryPriorities}
+                  label={tx("Priorités industrie", "Industry priorities")}
+                  onOpen={(id) =>
+                    openIndustryPriority(id as IndustryPriority)
+                  }
+                />
+              )}
+            </>
+          ) : (
+            <PriorityPills
+              sector={filterSector}
+              ids={selectedSectorPriorities}
+              label={tx("Vos priorités", "Your priorities")}
+            />
+          )}
+
+          {filterSector === "logistics" &&
+            opsType &&
+            LOGISTICS_OPS_META[opsType] && (
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-[11px] font-medium text-muted-foreground">
+                <Shield className="h-3 w-3" aria-hidden="true" />
+                {px(OPS_TYPE_LABEL[opsType])}
+              </div>
+            )}
+
+          {hasNoDataForSector ? (
+            <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
+                <Upload className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+              </div>
+
+              <h3 className="mt-4 font-heading text-lg font-bold">
+                {tx("Aucune donnée pour", "No data for")}{" "}
+                {departmentLabel ??
+                  sectorName(filterSector) ??
+                  tx("cette activité", "this activity")}
+              </h3>
+
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+                {tx(
+                  "Rien n'a encore été importé pour cette activité. Les indicateurs restent vides jusqu'au premier fichier : afficher des zéros donnerait l'impression que tout va bien, ce qui n'est pas la même chose.",
+                  "Nothing has been imported for this activity yet. The figures stay empty until the first file: showing zeroes would read as all clear, which is a different claim."
+                )}
+              </p>
+
+              <p className="mt-3 text-xs text-muted-foreground">
+                {tx(
+                  "Chaque activité attend ses propres colonnes. Importez le CSV correspondant à",
+                  "Each activity expects its own columns. Import the CSV for"
+                )}{" "}
+                <span className="font-semibold text-foreground">
+                  {subtypeName ??
+                    sectorName(filterSector) ??
+                    tx("votre activité", "your activity")}
+                </span>{" "}
+                {tx(
+                  "via le bouton Importer CSV ci-dessus.",
+                  "using the Import CSV button above."
+                )}
+              </p>
+            </div>
+          ) : (
+            <>
+              <p className="text-[11px] font-bold uppercase tracking-[0.13em] text-muted-foreground">
+                {tx("Contexte général", "General context")}
+              </p>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {kpis.map((k) => (
+                  <div
+                    key={k.label}
+                    className="rounded-3xl border border-border bg-card p-5"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm text-muted-foreground">
+                        {k.label}
+                      </span>
+
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
+                          k.up
+                            ? "bg-accent/25 text-accent-foreground"
+                            : "bg-destructive/10 text-destructive"
+                        )}
+                      >
+                        {k.up ? (
+                          <TrendingUp className="h-3 w-3" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3" />
+                        )}
+
+                        {k.delta}
+                      </span>
+                    </div>
+
+                    <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
+                      {k.value}
+                    </p>
+
+                    <Sparkline
+                      data={dailySeries(filteredAlerts, 7, k.match)}
+                      className={cn(
+                        "mt-2 h-9 w-full",
+                        k.up ? "text-accent" : "text-destructive"
+                      )}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-heading text-lg font-bold">
+                        {chartTitle}
+                      </h3>
+
+                      <p className="text-sm text-muted-foreground">
+                        {tx("7 derniers jours", "Last 7 days")}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
+                      aria-label={tx("Options", "Options")}
+                    >
+                      <MoreHorizontal className="h-5 w-5" />
+                    </button>
+                  </div>
+
+                  <AreaChart
+                    data={chartData}
+                    className="mt-6 h-52 w-full"
+                  />
+                </div>
+
+                <div className="rounded-3xl border border-border bg-card p-6">
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-accent-foreground" />
+
+                    <h3 className="font-heading text-lg font-bold">
+                      {tx("Répartition", "Breakdown")}
+                    </h3>
+                  </div>
+
+                  {breakdown.labels.length > 0 ? (
+                    <>
+                      <p className="text-sm text-muted-foreground">
+                        {breakdown.labels.join(" · ")}
+                      </p>
+
+                      <BarChart
+                        data={breakdown.values}
+                        labels={breakdown.labels}
+                        className="mt-6"
+                        height={180}
+                      />
+                    </>
+                  ) : (
+                    <p className="mt-6 text-sm text-muted-foreground">
+                      {tx(
+                        "Rien à répartir pour cette activité sur la période sélectionnée.",
+                        "Nothing to break down for this activity over the selected period."
+                      )}
+                    </p>
+                  )}
+                </div>
+              </div>
             </>
           )}
-        </p>
-      </div>
 
-      <div
-        id="alerts-table"
-        className="rounded-3xl border border-border bg-card"
-      >
-        <div className="flex items-center justify-between p-6 pb-4">
-          <div className="flex items-center gap-2">
-            <Cpu className="h-5 w-5" />
-
+          <div className="rounded-3xl border border-border bg-card p-6">
             <h3 className="font-heading text-lg font-bold">
-              {tx("Alertes", "Alerts")} ·{" "}
-              {sectorName(filterSector)}
+              {tx("Importer des données", "Import data")}
             </h3>
 
-            <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-semibold text-muted-foreground">
-              {tableAlerts.length}
-            </span>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              setExpandedAlertKey(null)
-              clearAlertFilters()
-            }}
-            className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90"
-          >
-            {tx("Tout voir", "See all")}
-            <ArrowUpRight className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-3">
-          <select
-            value={statusFilter}
-            onChange={(e) =>
-              setStatusFilter(
-                e.target.value as
-                  | "all"
-                  | "critical"
-                  | "warning"
-              )
-            }
-            className={cn(
-              "rounded-full border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-              statusFilter !== "all"
-                ? "border-foreground ring-1 ring-foreground/20"
-                : "border-border"
-            )}
-          >
-            <option value="all">
-              {tx("Tous les statuts", "All statuses")}
-            </option>
-            <option value="critical">{tx("Critiques", "Critical")}</option>
-            <option value="warning">{tx("Warnings", "Warnings")}</option>
-          </select>
-
-          <select
-            value={periodPreset}
-            onChange={(e) => {
-              const value = e.target.value as
-                | "all"
-                | "7"
-                | "30"
-                | "90"
-                | "custom"
-
-              setPeriodPreset(value)
-
-              if (value !== "custom") {
-                setCustomFrom("")
-                setCustomTo("")
-              }
-            }}
-            className={cn(
-              "rounded-full border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-              periodPreset !== "all"
-                ? "border-foreground ring-1 ring-foreground/20"
-                : "border-border"
-            )}
-          >
-            <option value="all">{tx("Toutes les dates", "All dates")}</option>
-            <option value="7">{tx("7 derniers jours", "Last 7 days")}</option>
-            <option value="30">{tx("30 derniers jours", "Last 30 days")}</option>
-            <option value="90">{tx("90 derniers jours", "Last 90 days")}</option>
-            <option value="custom">
-              {tx("Dates personnalisées", "Custom dates")}
-            </option>
-          </select>
-
-          {periodPreset === "custom" && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <input
-                type="date"
-                value={customFrom}
-                onChange={(e) => setCustomFrom(e.target.value)}
-                className={cn(
-                  "rounded-full border bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring",
-                  invalidCustomRange
-                    ? "border-destructive"
-                    : "border-border"
-                )}
-              />
-
-              <span className="text-xs text-muted-foreground">
-                →
-              </span>
-
-              <input
-                type="date"
-                value={customTo}
-                min={customFrom || undefined}
-                onChange={(e) => setCustomTo(e.target.value)}
-                className={cn(
-                  "rounded-full border bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring",
-                  invalidCustomRange
-                    ? "border-destructive"
-                    : "border-border"
-                )}
-              />
-            </div>
-          )}
-
-          <div className="relative ml-auto">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-
-            <input
-              type="text"
-              value={alertSearch}
-              onChange={(e) => setAlertSearch(e.target.value)}
-              placeholder={tx(
-                "Rechercher une alerte...",
-                "Search an alert..."
-              )}
-              className={cn(
-                "w-52 rounded-full border bg-background py-1.5 pl-9 pr-4 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-colors hover:bg-accent focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-                alertSearch.trim()
-                  ? "border-foreground ring-1 ring-foreground/20"
-                  : "border-border"
-              )}
-            />
-          </div>
-
-          {activeFilterCount > 0 && (
-            <button
-              type="button"
-              onClick={clearAlertFilters}
-              className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background transition-opacity hover:opacity-90"
-            >
-              <X className="h-3 w-3" />
-              {tx("Effacer les filtres", "Clear filters")}
-
-              <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[10px]">
-                {activeFilterCount}
-              </span>
-            </button>
-          )}
-        </div>
-
-        {periodPreset === "custom" && invalidCustomRange && (
-          <div className="border-t border-border px-6 py-2">
-            <p className="text-xs font-medium text-destructive">
+            <p className="mt-1 text-sm text-muted-foreground">
               {tx(
-                "La date de début doit être antérieure ou égale à la date de fin.",
-                "The start date must be on or before the end date."
+                "Choisissez un secteur puis importez votre CSV.",
+                "Choose a sector, then import your CSV."
+              )}
+            </p>
+
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap gap-2">
+                {SECTORS.filter(
+                  (s) =>
+                    s.key !== "all" &&
+                    activeSectors.includes(s.key)
+                ).map((s) => (
+                  <button
+                    key={s.key}
+                    type="button"
+                    onClick={() => setUploadSector(s.key)}
+                    aria-pressed={uploadSector === s.key}
+                    className={cn(
+                      "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                      uploadSector === s.key
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
+                    )}
+                  >
+                    {px(s.label)}
+                  </button>
+                ))}
+              </div>
+
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90 focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+                <Upload className="h-4 w-4" aria-hidden="true" />
+
+                {uploading
+                  ? tx("Traitement...", "Processing...")
+                  : tx("Importer CSV", "Import CSV")}
+
+                <input
+                  type="file"
+                  accept=".csv"
+                  className="sr-only"
+                  onChange={handleUpload}
+                  disabled={uploading}
+                  aria-label={tx("Importer un fichier CSV", "Import a CSV file")}
+                />
+              </label>
+            </div>
+
+            {uploadMsg && (
+              <p
+                role={uploadFailed ? "alert" : "status"}
+                className={cn(
+                  "mt-3 text-sm font-medium",
+                  uploadFailed ? "text-destructive" : "text-green-600"
+                )}
+              >
+                {uploadMsg}
+              </p>
+            )}
+
+            {activitiesFor(uploadSector).length > 0 && (
+              <div className="mt-4 border-t border-border pt-4">
+                <p className="text-xs font-semibold">
+                  {tx("Activité de ce fichier", "Activity for this file")}
+                </p>
+
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {tx(
+                    "Elle décide des contrôles appliqués et de la chaîne affichée. Changez-la ici pour importer un fichier d'une autre activité.",
+                    "It decides which checks run and which chain is shown. Change it here to import a file for a different activity."
+                  )}
+                </p>
+
+                <div className="mt-2.5 flex flex-wrap gap-2">
+                  {activitiesFor(uploadSector).map((activity) => (
+                    <button
+                      key={activity.id}
+                      type="button"
+                      onClick={() => setUploadActivity(activity.id)}
+                      aria-pressed={uploadActivity === activity.id}
+                      title={px(activity.description)}
+                      className={cn(
+                        "rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
+                        uploadActivity === activity.id
+                          ? "border-foreground bg-foreground text-background"
+                          : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
+                      )}
+                    >
+                      {px(activity.label)}
+                    </button>
+                  ))}
+                </div>
+
+                {uploadActivity &&
+                  !isConfiguredActivity(uploadSector, uploadActivity) && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-brand/40 bg-brand/10 px-3 py-2">
+                      <p className="text-xs">
+                        {tx(
+                          "Vous importez une activité différente de celle configurée",
+                          "You are importing an activity other than the configured one"
+                        )}
+                        {configuredActivityLabel(uploadSector)
+                          ? ` (${configuredActivityLabel(uploadSector)})`
+                          : ""}
+                        {tx(
+                          ". Le tableau de bord continue d'afficher l'activité configurée.",
+                          ". The dashboard keeps showing the configured activity."
+                        )}
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          applyActivityToDashboard(uploadSector, uploadActivity)
+                        }
+                        className="rounded-full border border-foreground bg-foreground px-3 py-1 text-[11px] font-semibold text-background transition-opacity hover:opacity-90"
+                      >
+                        {tx(
+                          "Basculer le tableau de bord dessus",
+                          "Switch the dashboard to it"
+                        )}
+                      </button>
+                    </div>
+                  )}
+              </div>
+            )}
+
+            <p className="mt-3 text-xs text-muted-foreground">
+              {tx("Envoyé :", "Sent:")}{" "}
+              <span className="font-semibold text-foreground">
+                {sectorName(uploadSector)}
+              </span>
+
+              {uploadActivity && (
+                <>
+                  {" · "}
+                  <span className="font-semibold text-foreground">
+                    {activityLabel(uploadSector, uploadActivity, tx) ??
+                      uploadActivity}
+                  </span>
+                </>
               )}
             </p>
           </div>
-        )}
 
-        {activeFilterCount > 0 && (
-          <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-2.5">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              {tx("Filtres actifs", "Active filters")}
-            </span>
+          <div
+            id="alerts-table"
+            className="rounded-3xl border border-border bg-card"
+          >
+            <div className="flex items-center justify-between p-6 pb-4">
+              <div className="flex items-center gap-2">
+                <Cpu className="h-5 w-5" />
 
-            {statusFilter !== "all" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-foreground/10 px-2.5 py-1 text-[11px] font-semibold text-foreground">
-                {statusFilter === "critical"
-                  ? tx("Critiques", "Critical")
-                  : tx("Warnings", "Warnings")}
-              </span>
-            )}
+                <h3 className="font-heading text-lg font-bold">
+                  {tx("Alertes", "Alerts")} ·{" "}
+                  {sectorName(filterSector)}
+                </h3>
 
-            {periodPreset !== "all" && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-foreground/10 px-2.5 py-1 text-[11px] font-semibold text-foreground">
-                {periodPreset === "7"
-                  ? tx("7 derniers jours", "Last 7 days")
-                  : periodPreset === "30"
-                  ? tx("30 derniers jours", "Last 30 days")
-                  : periodPreset === "90"
-                  ? tx("90 derniers jours", "Last 90 days")
-                  : `${customFrom || tx("Début", "Start")} → ${
-                      customTo || tx("Fin", "End")
-                    }`}
-              </span>
-            )}
+                <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-semibold text-muted-foreground">
+                  {tableAlerts.length}
+                </span>
+              </div>
 
-            {alertSearch.trim() && (
-              <span className="inline-flex max-w-[220px] items-center gap-1 truncate rounded-full bg-foreground/10 px-2.5 py-1 text-[11px] font-semibold text-foreground">
-                {tx("Recherche :", "Search:")} {alertSearch}
-              </span>
-            )}
-
-            <span className="ml-auto text-[11px] font-medium text-muted-foreground">
-              {tableAlerts.length}{" "}
-              {tableAlerts.length === 1
-                ? tx("alerte", "alert")
-                : tx("alertes", "alerts")}
-            </span>
-          </div>
-        )}
-
-        <div
-          className={cn(
-            "grid gap-4 p-4 md:p-6",
-            expandedAlert
-              ? "grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.75fr)]"
-              : "grid-cols-1"
-          )}
-        >
-          <div className="min-w-0 overflow-hidden rounded-3xl border border-border">
-            <div className="max-h-[600px] overflow-x-auto overflow-y-auto">
-              <table className="w-full border-separate border-spacing-0 text-sm">
-                <thead className="sticky top-0 z-10 bg-card">
-                  <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">
-                    <th className="border-b border-border px-4 py-3 font-medium">
-                      {tx("Actif", "Asset")}
-                    </th>
-
-                    <th className="border-b border-border px-4 py-3 font-medium">
-                      {tx("Message", "Message")}
-                    </th>
-
-                    <th className="border-b border-border px-4 py-3 font-medium">
-                      {tx("Secteur", "Sector")}
-                    </th>
-
-                    <th className="border-b border-border px-4 py-3 font-medium">
-                      {tx("Sévérité", "Severity")}
-                    </th>
-
-                    <th className="border-b border-border px-4 py-3 font-medium">
-                      {tx("Date", "Date")}
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {tableAlerts.map((alert, i) => {
-                    const key = `${alert.equipment}-${alert.date}`
-                    const isSelected =
-                      expandedAlertKey === key
-
-                    return (
-                      <tr
-                        key={`${key}-${i}`}
-                        onClick={() =>
-                          setExpandedAlertKey(
-                            isSelected ? null : key
-                          )
-                        }
-                        className={cn(
-                          "cursor-pointer transition-colors",
-                          isSelected
-                            ? "bg-foreground text-background"
-                            : "hover:bg-accent/15"
-                        )}
-                      >
-                        <td
-                          className={cn(
-                            "px-4 py-4 font-semibold",
-                            isSelected
-                              ? "rounded-l-2xl"
-                              : "border-b border-border"
-                          )}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={cn(
-                                "h-1.5 w-1.5 shrink-0 rounded-full",
-                                alert.severity === "CRITICAL"
-                                  ? "bg-destructive"
-                                  : "bg-brand"
-                              )}
-                            />
-
-                            {alert.equipment}
-                          </div>
-                        </td>
-
-                        <td
-                          className={cn(
-                            "max-w-[280px] truncate px-4 py-4",
-                            isSelected
-                              ? "text-background/70"
-                              : "border-b border-border text-muted-foreground"
-                          )}
-                        >
-                          {alert.message}
-                        </td>
-
-                        <td
-                          className={cn(
-                            "px-4 py-4 capitalize",
-                            isSelected
-                              ? "text-background/70"
-                              : "border-b border-border text-muted-foreground"
-                          )}
-                        >
-                          {getSectorLabel(alert.sector, tx)}
-                        </td>
-
-                        <td
-                          className={cn(
-                            "px-4 py-4",
-                            !isSelected &&
-                              "border-b border-border"
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
-                              alert.severity === "CRITICAL"
-                                ? "bg-destructive/10 text-destructive"
-                                : "bg-amber-500/15 text-amber-600"
-                            )}
-                          >
-                            {alert.severity}
-                          </span>
-                        </td>
-
-                        <td
-                          className={cn(
-                            "px-4 py-4",
-                            isSelected
-                              ? "rounded-r-2xl text-background/70"
-                              : "border-b border-border text-muted-foreground"
-                          )}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            {new Date(
-                              alert.date
-                            ).toLocaleString(dateLocale)}
-
-                            <ChevronRight
-                              className={cn(
-                                "h-4 w-4 shrink-0 transition-all",
-                                isSelected
-                                  ? "rotate-90 text-brand"
-                                  : "text-muted-foreground"
-                              )}
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
-
-                  {tableAlerts.length === 0 && (
-                    <tr>
-                      <td
-                        className="px-4 py-8 text-muted-foreground"
-                        colSpan={5}
-                      >
-                        {alertsError ? (
-                          <span
-                            role="alert"
-                            className="text-destructive"
-                          >
-                            {tx(
-                              "Impossible de charger les alertes",
-                              "Cannot load the alerts"
-                            )}
-                            {` (${alertsError}). `}
-                            {tx(
-                              "L'API est peut-être hors service : rechargez la page ou vérifiez la console du navigateur.",
-                              "The API may be down: reload the page, or check the browser console."
-                            )}
-                          </span>
-                        ) : (
-                          tx(
-                            "Aucune alerte pour ces filtres. Importez un CSV ou élargissez la période.",
-                            "No alerts match these filters. Import a CSV, or widen the period."
-                          )
-                        )}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+              <button
+                type="button"
+                onClick={() => {
+                  setExpandedAlertKey(null)
+                  clearAlertFilters()
+                }}
+                className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90"
+              >
+                {tx("Tout voir", "See all")}
+                <ArrowUpRight className="h-4 w-4" />
+              </button>
             </div>
-          </div>
 
-          {expandedAlert && (
-            <div className="min-w-0 self-start rounded-3xl bg-sidebar p-5 text-sidebar-foreground shadow-lg ring-1 ring-sidebar-border lg:sticky lg:top-6">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-accent">
-                    {tx("Détails de l'alerte", "Alert detail")}
-                  </p>
+            <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-3">
+              <select
+                value={statusFilter}
+                onChange={(e) =>
+                  setStatusFilter(
+                    e.target.value as
+                      | "all"
+                      | "critical"
+                      | "warning"
+                  )
+                }
+                className={cn(
+                  "rounded-full border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+                  statusFilter !== "all"
+                    ? "border-foreground ring-1 ring-foreground/20"
+                    : "border-border"
+                )}
+              >
+                <option value="all">
+                  {tx("Tous les statuts", "All statuses")}
+                </option>
+                <option value="critical">{tx("Critiques", "Critical")}</option>
+                <option value="warning">{tx("Warnings", "Warnings")}</option>
+              </select>
 
-                  <h4 className="mt-1.5 truncate font-heading text-xl font-bold tracking-tight">
-                    {expandedAlert.equipment}
-                  </h4>
+              <select
+                value={periodPreset}
+                onChange={(e) => {
+                  const value = e.target.value as
+                    | "all"
+                    | "7"
+                    | "30"
+                    | "90"
+                    | "custom"
 
-                  <p className="mt-0.5 text-xs text-sidebar-foreground/50">
-                    {new Date(
-                      expandedAlert.date
-                    ).toLocaleString(dateLocale)}
-                  </p>
-                </div>
+                  setPeriodPreset(value)
 
-                <div className="flex shrink-0 items-center gap-2">
-                  <span
+                  if (value !== "custom") {
+                    setCustomFrom("")
+                    setCustomTo("")
+                  }
+                }}
+                className={cn(
+                  "rounded-full border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+                  periodPreset !== "all"
+                    ? "border-foreground ring-1 ring-foreground/20"
+                    : "border-border"
+                )}
+              >
+                <option value="all">{tx("Toutes les dates", "All dates")}</option>
+                <option value="7">{tx("7 derniers jours", "Last 7 days")}</option>
+                <option value="30">{tx("30 derniers jours", "Last 30 days")}</option>
+                <option value="90">{tx("90 derniers jours", "Last 90 days")}</option>
+                <option value="custom">
+                  {tx("Dates personnalisées", "Custom dates")}
+                </option>
+              </select>
+
+              {periodPreset === "custom" && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <input
+                    type="date"
+                    value={customFrom}
+                    onChange={(e) => setCustomFrom(e.target.value)}
                     className={cn(
-                      "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
-                      expandedAlert.severity === "CRITICAL"
-                        ? "bg-destructive/10 text-destructive"
-                        : "bg-amber-500/15 text-amber-600"
+                      "rounded-full border bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring",
+                      invalidCustomRange
+                        ? "border-destructive"
+                        : "border-border"
                     )}
-                  >
-                    {expandedAlert.severity}
+                  />
+
+                  <span className="text-xs text-muted-foreground">
+                    →
                   </span>
 
-                  <button
-                    type="button"
-                    onClick={() => setExpandedAlertKey(null)}
-                    aria-label={tx("Fermer les détails", "Close the detail")}
-                    className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-sidebar-foreground/60 ring-1 ring-white/10 transition-colors hover:bg-accent hover:text-accent-foreground hover:ring-transparent"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-4 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-sidebar-foreground/40">
-                  {tx("Message", "Message")}
-                </p>
-
-                <p className="mt-1 text-sm leading-5 text-sidebar-foreground/90">
-                  {expandedAlert.message}
-                </p>
-              </div>
-
-              <div className="mt-3 grid grid-cols-2 gap-2 rounded-2xl bg-white/[0.06] p-4 ring-1 ring-white/10">
-                <div>
-                  <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
-                    {tx("Secteur", "Sector")}
-                  </p>
-
-                  <p className="mt-1 text-sm font-semibold capitalize">
-                    {getSectorLabel(expandedAlert.sector, tx)}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
-                    {tx("Statut", "Status")}
-                  </p>
-
-                  <span
+                  <input
+                    type="date"
+                    value={customTo}
+                    min={customFrom || undefined}
+                    onChange={(e) => setCustomTo(e.target.value)}
                     className={cn(
-                      "mt-1 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
-                      expandedAlert.severity === "CRITICAL"
-                        ? "bg-destructive/10 text-destructive"
-                        : "bg-amber-500/15 text-amber-600"
+                      "rounded-full border bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring",
+                      invalidCustomRange
+                        ? "border-destructive"
+                        : "border-border"
                     )}
-                  >
-                    {expandedAlert.severity}
-                  </span>
-                </div>
-
-                <div>
-                  <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
-                    {tx("Score de risque", "Risk score")}
-                  </p>
-
-                  <p
-                    className={cn(
-                      "mt-1 text-sm font-semibold",
-                      typeof expandedRecommendation?.risk_score === "number"
-                        ? "text-accent"
-                        : "text-sidebar-foreground/40"
-                    )}
-                    title={
-                      typeof expandedRecommendation?.risk_score === "number"
-                        ? tx(
-                            "Gravité du problème lui-même, calculée à partir des mesures brutes",
-                            "How severe the problem itself is, computed from the raw measurements"
-                          )
-                        : tx(
-                            "Ce secteur ne calcule pas encore de score de risque pour cette alerte",
-                            "This sector does not compute a risk score for this alert yet"
-                          )
-                    }
-                  >
-                    {typeof expandedRecommendation?.risk_score === "number"
-                      ? `${expandedRecommendation.risk_score} / 100`
-                      : tx("Non calculé", "Not computed")}
-                  </p>
-                </div>
-
-                {/*
-                  Confidence is a SEPARATE measure from risk and gets its own
-                  labelled cell: risk = "how bad is this problem", confidence =
-                  "how sure are we this deserves attention". Sharing one label
-                  made them read as a single number.
-                */}
-                <div>
-                  <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
-                    {tx("Confiance", "Confidence")}
-                  </p>
-
-                  {expandedRecommendation ? (
-                    <p
-                      className="mt-1 inline-flex items-center gap-1 text-sm font-semibold"
-                      title={tx(
-                        "À quel point SentrIA est sûr que cette alerte mérite votre attention",
-                        "How sure SentrIA is that this alert deserves your attention"
-                      )}
-                    >
-                      <Gauge className="h-3 w-3 shrink-0 text-sidebar-foreground/50" />
-                      {estimateConfidence(
-                        expandedRecommendation,
-                        recurrenceOf(
-                          expandedRecommendation.equipment,
-                          alerts
-                        ),
-                        trackRecordForCategory(
-                          expandedRecommendation.action_category,
-                          recommendations,
-                          actionsLog
-                        )
-                      )}
-                      %
-                    </p>
-                  ) : (
-                    <p className="mt-1 text-sm font-semibold text-sidebar-foreground/40">
-                      {tx("Non mesuré", "Not measured")}
-                    </p>
-                  )}
-                </div>
-
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
-                    {tx("Catégorie", "Category")}
-                  </p>
-
-                  <p className="mt-1 truncate text-sm font-semibold capitalize">
-                    {expandedRecommendation?.action_category ?? "N/A"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-3 rounded-2xl border border-accent/20 bg-accent/5 px-4 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-accent">
-                  {tx("Recommandation", "Recommendation")}
-                </p>
-
-                <p className="mt-1.5 text-sm font-medium leading-5 text-sidebar-foreground/90">
-                  {expandedRecommendation?.recommended_action ??
-                    tx(
-                      "Analyse en cours, recommandation bientôt disponible.",
-                      "Analysis in progress, a recommendation is coming."
-                    )}
-                </p>
-              </div>
-
-              {expandedRecommendation && (
-                <div className="mt-3 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
-                    {tx("Pourquoi", "Why")}
-                  </p>
-
-                  <p className="mt-1.5 text-xs leading-5 text-sidebar-foreground/70">
-                    {reasoningFor(
-                      expandedRecommendation,
-                      recurrenceOf(
-                        expandedRecommendation.equipment,
-                        alerts
-                      ),
-                      tx
-                    )}
-                  </p>
+                  />
                 </div>
               )}
 
-              <div className="mt-3 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
-                  {tx("Contexte sectoriel", "Sector context")}
-                </p>
+              <div className="relative ml-auto">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
 
-                <p className="mt-1.5 text-xs leading-5 text-sidebar-foreground/70">
-                  {expandedRecommendation
-                    ? getRecommendationContext(
-                        expandedRecommendation,
-                        tx
-                      )
-                    : tx(
-                        "SentrIA analyse cette alerte afin d'identifier l'action opérationnelle la plus pertinente.",
-                        "SentrIA is working out the most useful operational action for this alert."
-                      )}
-                </p>
+                <input
+                  type="text"
+                  value={alertSearch}
+                  onChange={(e) => setAlertSearch(e.target.value)}
+                  placeholder={tx(
+                    "Rechercher une alerte...",
+                    "Search an alert..."
+                  )}
+                  className={cn(
+                    "w-52 rounded-full border bg-background py-1.5 pl-9 pr-4 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-colors hover:bg-accent focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+                    alertSearch.trim()
+                      ? "border-foreground ring-1 ring-foreground/20"
+                      : "border-border"
+                  )}
+                />
               </div>
 
-              {expandedRecommendation &&
-                (() => {
-                  const actionKey = `${expandedRecommendation.equipment}-${
-                    expandedRecommendation.alert_key ??
-                    expandedRecommendation.id
-                  }`
-                  const action = actionsLog[actionKey]
-
-                  return !action || action.status === "pending" ? (
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          recordAction(actionKey, "done")
-                        }}
-                        className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground transition-opacity hover:opacity-90"
-                      >
-                        <Check className="h-3.5 w-3.5" />
-                        {tx("Marquer traité", "Mark handled")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          recordAction(actionKey, "dismissed")
-                        }}
-                        className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-sidebar-foreground/70 transition-colors hover:bg-white/5"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                        {tx("Ignorer", "Dismiss")}
-                      </button>
-                    </div>
-                  ) : (
-                    <div
-                      className={cn(
-                        "mt-3 rounded-xl px-3 py-2.5 ring-1",
-                        action.status === "done"
-                          ? "bg-emerald-500/10 ring-emerald-500/30"
-                          : "bg-white/5 ring-white/10"
-                      )}
-                    >
-                      <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-sidebar-foreground/60">
-                        {tx("Résultat", "Outcome")}
-                      </p>
-                      <p className="mt-1 text-[11px] leading-4 text-sidebar-foreground/80">
-                        {action.status === "done"
-                          ? tx(
-                              `Traité à ${action.at}. SentrIA continue de surveiller cet actif pour confirmer l'effet.`,
-                              `Handled at ${action.at}. SentrIA keeps watching this asset to confirm the effect.`
-                            )
-                          : tx(
-                              `Écarté à ${action.at}. Réapparaîtra si le signal s'aggrave.`,
-                              `Dismissed at ${action.at}. It will come back if the signal worsens.`
-                            )}
-                      </p>
-                    </div>
-                  )
-                })()}
-
-              <div className="mt-4 flex items-center justify-end">
+              {activeFilterCount > 0 && (
                 <button
                   type="button"
-                  disabled={!expandedRecommendation}
-                  onClick={(e) => {
-                    e.stopPropagation()
-
-                    if (expandedRecommendation) {
-                      setSelectedRecommendation(
-                        expandedRecommendation
-                      )
-                    }
-                  }}
-                  className={cn(
-                    "inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition-transform",
-                    expandedRecommendation
-                      ? "bg-accent text-accent-foreground hover:scale-[1.02]"
-                      : "cursor-not-allowed bg-white/10 text-sidebar-foreground/40"
-                  )}
+                  onClick={clearAlertFilters}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background transition-opacity hover:opacity-90"
                 >
-                  {tx("Voir la recommandation", "See the recommendation")}
-                  <ArrowUpRight className="h-3.5 w-3.5" />
+                  <X className="h-3 w-3" />
+                  {tx("Effacer les filtres", "Clear filters")}
+
+                  <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[10px]">
+                    {activeFilterCount}
+                  </span>
                 </button>
-              </div>
+              )}
             </div>
-          )}
+
+            {periodPreset === "custom" && invalidCustomRange && (
+              <div className="border-t border-border px-6 py-2">
+                <p className="text-xs font-medium text-destructive">
+                  {tx(
+                    "La date de début doit être antérieure ou égale à la date de fin.",
+                    "The start date must be on or before the end date."
+                  )}
+                </p>
+              </div>
+            )}
+
+            {activeFilterCount > 0 && (
+              <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-2.5">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {tx("Filtres actifs", "Active filters")}
+                </span>
+
+                {statusFilter !== "all" && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-foreground/10 px-2.5 py-1 text-[11px] font-semibold text-foreground">
+                    {statusFilter === "critical"
+                      ? tx("Critiques", "Critical")
+                      : tx("Warnings", "Warnings")}
+                  </span>
+                )}
+
+                {periodPreset !== "all" && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-foreground/10 px-2.5 py-1 text-[11px] font-semibold text-foreground">
+                    {periodPreset === "7"
+                      ? tx("7 derniers jours", "Last 7 days")
+                      : periodPreset === "30"
+                      ? tx("30 derniers jours", "Last 30 days")
+                      : periodPreset === "90"
+                      ? tx("90 derniers jours", "Last 90 days")
+                      : `${customFrom || tx("Début", "Start")} → ${
+                          customTo || tx("Fin", "End")
+                        }`}
+                  </span>
+                )}
+
+                {alertSearch.trim() && (
+                  <span className="inline-flex max-w-[220px] items-center gap-1 truncate rounded-full bg-foreground/10 px-2.5 py-1 text-[11px] font-semibold text-foreground">
+                    {tx("Recherche :", "Search:")} {alertSearch}
+                  </span>
+                )}
+
+                <span className="ml-auto text-[11px] font-medium text-muted-foreground">
+                  {tableAlerts.length}{" "}
+                  {tableAlerts.length === 1
+                    ? tx("alerte", "alert")
+                    : tx("alertes", "alerts")}
+                </span>
+              </div>
+            )}
+
+            <div
+              className={cn(
+                "grid gap-4 p-4 md:p-6",
+                expandedAlert
+                  ? "grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.75fr)]"
+                  : "grid-cols-1"
+              )}
+            >
+              <div className="min-w-0 overflow-hidden rounded-3xl border border-border">
+                <div className="max-h-[600px] overflow-x-auto overflow-y-auto">
+                  <table className="w-full border-separate border-spacing-0 text-sm">
+                    <thead className="sticky top-0 z-10 bg-card">
+                      <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">
+                        <th className="border-b border-border px-4 py-3 font-medium">
+                          {tx("Actif", "Asset")}
+                        </th>
+
+                        <th className="border-b border-border px-4 py-3 font-medium">
+                          {tx("Message", "Message")}
+                        </th>
+
+                        <th className="border-b border-border px-4 py-3 font-medium">
+                          {tx("Secteur", "Sector")}
+                        </th>
+
+                        <th className="border-b border-border px-4 py-3 font-medium">
+                          {tx("Sévérité", "Severity")}
+                        </th>
+
+                        <th className="border-b border-border px-4 py-3 font-medium">
+                          {tx("Date", "Date")}
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {tableAlerts.map((alert, i) => {
+                        const key = `${alert.equipment}-${alert.date}`
+                        const isSelected =
+                          expandedAlertKey === key
+
+                        return (
+                          <tr
+                            key={`${key}-${i}`}
+                            onClick={() =>
+                              setExpandedAlertKey(
+                                isSelected ? null : key
+                              )
+                            }
+                            className={cn(
+                              "cursor-pointer transition-colors",
+                              isSelected
+                                ? "bg-foreground text-background"
+                                : "hover:bg-accent/15"
+                            )}
+                          >
+                            <td
+                              className={cn(
+                                "px-4 py-4 font-semibold",
+                                isSelected
+                                  ? "rounded-l-2xl"
+                                  : "border-b border-border"
+                              )}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={cn(
+                                    "h-1.5 w-1.5 shrink-0 rounded-full",
+                                    alert.severity === "CRITICAL"
+                                      ? "bg-destructive"
+                                      : "bg-brand"
+                                  )}
+                                />
+
+                                {alert.equipment}
+                              </div>
+                            </td>
+
+                            <td
+                              className={cn(
+                                "max-w-[280px] truncate px-4 py-4",
+                                isSelected
+                                  ? "text-background/70"
+                                  : "border-b border-border text-muted-foreground"
+                              )}
+                            >
+                              {alert.message}
+                            </td>
+
+                            <td
+                              className={cn(
+                                "px-4 py-4 capitalize",
+                                isSelected
+                                  ? "text-background/70"
+                                  : "border-b border-border text-muted-foreground"
+                              )}
+                            >
+                              {getSectorLabel(alert.sector, tx)}
+                            </td>
+
+                            <td
+                              className={cn(
+                                "px-4 py-4",
+                                !isSelected &&
+                                  "border-b border-border"
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
+                                  alert.severity === "CRITICAL"
+                                    ? "bg-destructive/10 text-destructive"
+                                    : "bg-amber-500/15 text-amber-600"
+                                )}
+                              >
+                                {alert.severity}
+                              </span>
+                            </td>
+
+                            <td
+                              className={cn(
+                                "px-4 py-4",
+                                isSelected
+                                  ? "rounded-r-2xl text-background/70"
+                                  : "border-b border-border text-muted-foreground"
+                              )}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                {new Date(
+                                  alert.date
+                                ).toLocaleString(dateLocale)}
+
+                                <ChevronRight
+                                  className={cn(
+                                    "h-4 w-4 shrink-0 transition-all",
+                                    isSelected
+                                      ? "rotate-90 text-brand"
+                                      : "text-muted-foreground"
+                                  )}
+                                />
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}
+
+                      {tableAlerts.length === 0 && (
+                        <tr>
+                          <td
+                            className="px-4 py-8 text-muted-foreground"
+                            colSpan={5}
+                          >
+                            {alertsError ? (
+                              <span
+                                role="alert"
+                                className="text-destructive"
+                              >
+                                {tx(
+                                  "Impossible de charger les alertes",
+                                  "Cannot load the alerts"
+                                )}
+                                {` (${alertsError}). `}
+                                {tx(
+                                  "L'API est peut-être hors service : rechargez la page ou vérifiez la console du navigateur.",
+                                  "The API may be down: reload the page, or check the browser console."
+                                )}
+                              </span>
+                            ) : (
+                              tx(
+                                "Aucune alerte pour ces filtres. Importez un CSV ou élargissez la période.",
+                                "No alerts match these filters. Import a CSV, or widen the period."
+                              )
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {expandedAlert && (
+                <div className="min-w-0 self-start rounded-3xl bg-sidebar p-5 text-sidebar-foreground shadow-lg ring-1 ring-sidebar-border lg:sticky lg:top-6">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-accent">
+                        {tx("Détails de l'alerte", "Alert detail")}
+                      </p>
+
+                      <h4 className="mt-1.5 truncate font-heading text-xl font-bold tracking-tight">
+                        {expandedAlert.equipment}
+                      </h4>
+
+                      <p className="mt-0.5 text-xs text-sidebar-foreground/50">
+                        {new Date(
+                          expandedAlert.date
+                        ).toLocaleString(dateLocale)}
+                      </p>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span
+                        className={cn(
+                          "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
+                          expandedAlert.severity === "CRITICAL"
+                            ? "bg-destructive/10 text-destructive"
+                            : "bg-amber-500/15 text-amber-600"
+                        )}
+                      >
+                        {expandedAlert.severity}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => setExpandedAlertKey(null)}
+                        aria-label={tx("Fermer les détails", "Close the detail")}
+                        className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-sidebar-foreground/60 ring-1 ring-white/10 transition-colors hover:bg-accent hover:text-accent-foreground hover:ring-transparent"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-sidebar-foreground/40">
+                      {tx("Message", "Message")}
+                    </p>
+
+                    <p className="mt-1 text-sm leading-5 text-sidebar-foreground/90">
+                      {expandedAlert.message}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 rounded-2xl bg-white/[0.06] p-4 ring-1 ring-white/10">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
+                        {tx("Secteur", "Sector")}
+                      </p>
+
+                      <p className="mt-1 text-sm font-semibold capitalize">
+                        {getSectorLabel(expandedAlert.sector, tx)}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
+                        {tx("Statut", "Status")}
+                      </p>
+
+                      <span
+                        className={cn(
+                          "mt-1 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
+                          expandedAlert.severity === "CRITICAL"
+                            ? "bg-destructive/10 text-destructive"
+                            : "bg-amber-500/15 text-amber-600"
+                        )}
+                      >
+                        {expandedAlert.severity}
+                      </span>
+                    </div>
+
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
+                        {tx("Score de risque", "Risk score")}
+                      </p>
+
+                      <p
+                        className={cn(
+                          "mt-1 text-sm font-semibold",
+                          typeof expandedRecommendation?.risk_score === "number"
+                            ? "text-accent"
+                            : "text-sidebar-foreground/40"
+                        )}
+                        title={
+                          typeof expandedRecommendation?.risk_score === "number"
+                            ? tx(
+                                "Gravité du problème lui-même, calculée à partir des mesures brutes",
+                                "How severe the problem itself is, computed from the raw measurements"
+                              )
+                            : tx(
+                                "Ce secteur ne calcule pas encore de score de risque pour cette alerte",
+                                "This sector does not compute a risk score for this alert yet"
+                              )
+                        }
+                      >
+                        {typeof expandedRecommendation?.risk_score === "number"
+                          ? `${expandedRecommendation.risk_score} / 100`
+                          : tx("Non calculé", "Not computed")}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
+                        {tx("Confiance", "Confidence")}
+                      </p>
+
+                      {expandedRecommendation ? (
+                        <p
+                          className="mt-1 inline-flex items-center gap-1 text-sm font-semibold"
+                          title={tx(
+                            "À quel point SentrIA est sûr que cette alerte mérite votre attention",
+                            "How sure SentrIA is that this alert deserves your attention"
+                          )}
+                        >
+                          <Gauge className="h-3 w-3 shrink-0 text-sidebar-foreground/50" />
+                          {estimateConfidence(
+                            expandedRecommendation,
+                            recurrenceOf(
+                              expandedRecommendation.equipment,
+                              alerts
+                            ),
+                            trackRecordForCategory(
+                              expandedRecommendation.action_category,
+                              recommendations,
+                              actionsLog
+                            )
+                          )}
+                          %
+                        </p>
+                      ) : (
+                        <p className="mt-1 text-sm font-semibold text-sidebar-foreground/40">
+                          {tx("Non mesuré", "Not measured")}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
+                        {tx("Catégorie", "Category")}
+                      </p>
+
+                      <p className="mt-1 truncate text-sm font-semibold capitalize">
+                        {expandedRecommendation?.action_category ?? "N/A"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 rounded-2xl border border-accent/20 bg-accent/5 px-4 py-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-accent">
+                      {tx("Recommandation", "Recommendation")}
+                    </p>
+
+                    <p className="mt-1.5 text-sm font-medium leading-5 text-sidebar-foreground/90">
+                      {expandedRecommendation?.recommended_action ??
+                        tx(
+                          "Analyse en cours, recommandation bientôt disponible.",
+                          "Analysis in progress, a recommendation is coming."
+                        )}
+                    </p>
+                  </div>
+
+                  {expandedRecommendation && (
+                    <div className="mt-3 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
+                        {tx("Pourquoi", "Why")}
+                      </p>
+
+                      <p className="mt-1.5 text-xs leading-5 text-sidebar-foreground/70">
+                        {reasoningFor(
+                          expandedRecommendation,
+                          recurrenceOf(
+                            expandedRecommendation.equipment,
+                            alerts
+                          ),
+                          tx
+                        )}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="mt-3 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
+                      {tx("Contexte sectoriel", "Sector context")}
+                    </p>
+
+                    <p className="mt-1.5 text-xs leading-5 text-sidebar-foreground/70">
+                      {expandedRecommendation
+                        ? getRecommendationContext(
+                            expandedRecommendation,
+                            tx
+                          )
+                        : tx(
+                            "SentrIA analyse cette alerte afin d'identifier l'action opérationnelle la plus pertinente.",
+                            "SentrIA is working out the most useful operational action for this alert."
+                          )}
+                    </p>
+                  </div>
+
+                  {expandedRecommendation &&
+                    (() => {
+                      const actionKey = `${expandedRecommendation.equipment}-${
+                        expandedRecommendation.alert_key ??
+                        expandedRecommendation.id
+                      }`
+                      const action = actionsLog[actionKey]
+
+                      return !action || action.status === "pending" ? (
+                        <div className="mt-3 flex gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              recordAction(actionKey, "done")
+                            }}
+                            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground transition-opacity hover:opacity-90"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                            {tx("Marquer traité", "Mark handled")}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              recordAction(actionKey, "dismissed")
+                            }}
+                            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-sidebar-foreground/70 transition-colors hover:bg-white/5"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                            {tx("Ignorer", "Dismiss")}
+                          </button>
+                        </div>
+                      ) : (
+                        <div
+                          className={cn(
+                            "mt-3 rounded-xl px-3 py-2.5 ring-1",
+                            action.status === "done"
+                              ? "bg-emerald-500/10 ring-emerald-500/30"
+                              : "bg-white/5 ring-white/10"
+                          )}
+                        >
+                          <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-sidebar-foreground/60">
+                            {tx("Résultat", "Outcome")}
+                          </p>
+                          <p className="mt-1 text-[11px] leading-4 text-sidebar-foreground/80">
+                            {action.status === "done"
+                              ? tx(
+                                  `Traité à ${action.at}. SentrIA continue de surveiller cet actif pour confirmer l'effet.`,
+                                  `Handled at ${action.at}. SentrIA keeps watching this asset to confirm the effect.`
+                                )
+                              : tx(
+                                  `Écarté à ${action.at}. Réapparaîtra si le signal s'aggrave.`,
+                                  `Dismissed at ${action.at}. It will come back if the signal worsens.`
+                                )}
+                          </p>
+                        </div>
+                      )
+                    })()}
+
+                  <div className="mt-4 flex items-center justify-end">
+                    <button
+                      type="button"
+                      disabled={!expandedRecommendation}
+                      onClick={(e) => {
+                        e.stopPropagation()
+
+                        if (expandedRecommendation) {
+                          setSelectedRecommendation(
+                            expandedRecommendation
+                          )
+                        }
+                      }}
+                      className={cn(
+                        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition-transform",
+                        expandedRecommendation
+                          ? "bg-accent text-accent-foreground hover:scale-[1.02]"
+                          : "cursor-not-allowed bg-white/10 text-sidebar-foreground/40"
+                      )}
+                    >
+                      {tx("Voir la recommandation", "See the recommendation")}
+                      <ArrowUpRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
