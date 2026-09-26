@@ -252,11 +252,11 @@ const INDUSTRY_PRIORITY_IMAGES: Record<string, string> = {
 }
 
 const HEALTH_PRIORITY_IMAGES: Record<string, string> = {
-  stock: "/stock.png",
+  stock: "/stocks.png",
   coldchain: "/cold-chain.png",
   temperature: "/temperature.png",
   expiry: "/expiry.png",
-  medicines: "/medicines.png",
+  medications: "medications.png",
   medicine: "/medicines.png",
   storage: "/storage.png",
 }
