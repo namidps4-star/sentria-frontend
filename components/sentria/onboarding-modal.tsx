@@ -78,7 +78,6 @@ type SectorConfig = {
   maturity?: "pilot" | "early"
 }
 
-/** The badge wording for a maturity key. */
 function maturityLabel(maturity: "pilot" | "early", tx: Tx): string {
   return maturity === "pilot"
     ? tx("Pilote recommandé", "Recommended pilot")
@@ -265,6 +264,27 @@ function imageForIndustryPriority(
   return INDUSTRY_PRIORITY_IMAGES[priorityId]
 }
 
+/* -------------------------------------------------------------------------- */
+/* HEALTH PRIORITY IMAGES                                                     */
+/* -------------------------------------------------------------------------- */
+
+const HEALTH_PRIORITY_IMAGES: Record<string, string> = {
+  stock: "/stock.png",
+  "cold-chain": "/cold-chain.png",
+  cold_chain: "/cold-chain.png",
+  temperature: "/temperature.png",
+  expiry: "/expiry.png",
+  medicines: "/medicines.png",
+  storage: "/storage.png",
+}
+
+function imageForHealthPriority(
+  priorityId: string | undefined
+): string | undefined {
+  if (!priorityId) return undefined
+  return HEALTH_PRIORITY_IMAGES[priorityId]
+}
+
 /**
  * Activity grid layout using the same 12-column trick as sectors.
  * Ensures odd counts are centered.
@@ -280,7 +300,7 @@ function activityColSpan(index: number, total: number): string {
   return "lg:col-span-3"
 }
 
-/** Industry priorities use a 12-col grid too: 6 cards = two rows of 3. */
+/** Industry + Health priorities: 6 cards = two centered rows of 3. */
 function industryPriorityColSpan(_index: number, _total: number): string {
   return "lg:col-span-4"
 }
@@ -719,6 +739,7 @@ export function OnboardingView({
 
   const isLogistics = sector === "logistics"
   const isIndustry = sector === "industry"
+  const isHealth = sector === "health"
 
   const langStepNumber = 1
   const countryStepNumber = 2
@@ -1842,7 +1863,7 @@ export function OnboardingView({
                 <div
                   className={cn(
                     "grid grid-cols-2 gap-4 sm:grid-cols-3",
-                    isIndustry
+                    isIndustry || isHealth
                       ? "lg:grid-cols-12"
                       : "lg:grid-cols-4 xl:grid-cols-5"
                   )}
@@ -1856,11 +1877,14 @@ export function OnboardingView({
                       ? imageForPriority(item.id)
                       : isIndustry
                         ? imageForIndustryPriority(item.id)
-                        : undefined
+                        : isHealth
+                          ? imageForHealthPriority(item.id)
+                          : undefined
 
-                    const colSpan = isIndustry
-                      ? industryPriorityColSpan(index, equipment.length)
-                      : undefined
+                    const colSpan =
+                      isIndustry || isHealth
+                        ? industryPriorityColSpan(index, equipment.length)
+                        : undefined
 
                     return (
                       <button
