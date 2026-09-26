@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -181,40 +182,33 @@ const SECTORS: SectorConfig[] = [
 /* -------------------------------------------------------------------------- */
 
 const ACTIVITY_IMAGES: Record<string, string> = {
-  // Logistics
   "port-conteneurs": "/port-conteneurs.png",
   "entrepot-manutention": "/entrepot-manutention.png",
   "transport-distribution": "/transport-distribution.png",
   "preparation-expedition": "/preparation-expedition.png",
   "chaine-froid": "/chaine-froid.png",
 
-  // Industry
   "usine-production": "/usine-production.png",
   "atelier-soustraitance": "/atelier-soustraitance.png",
   "usine-agroalimentaire": "/usine-agroalimentaire.png",
 
-  // Health
   "pharmacie": "/pharmacie.png",
   "laboratoire": "/laboratoire.png",
   "clinique-hopital": "/clinique-hopital.png",
   "grossiste-pharma": "/grossiste-pharma.png",
 
-  // Agriculture
   "exploitation-agricole": "/exploitation-agricole.png",
   "cooperative-agricole": "/cooperative-agricole.png",
   "silo-stockage": "/silo-stockage.png",
 
-  // Transportation
   "transporteur-routier": "/transporteur-routier.png",
   "flotte-entreprise": "/flotte-entreprise.png",
   "location-vehicules": "/location-vehicules.png",
 
-  // Energy
   "centrale-production": "/centrale-production.png",
   "generateurs-secours": "/generateurs-secours.png",
   "distribution-energetique": "/distribution-energetique.png",
 
-  // Retail
   "supermarche-hypermarche": "/supermarche-hypermarche.png",
   "epicerie-proximite": "/epicerie-proximite.png",
   "chaine-magasins": "/chaine-magasins.png",
@@ -227,8 +221,18 @@ function imageForActivity(activityId: string | undefined): string | undefined {
 }
 
 /* -------------------------------------------------------------------------- */
-/* LOGISTICS PRIORITY IMAGES                                                  */
+/* PRIORITY IMAGES                                                            */
 /* -------------------------------------------------------------------------- */
+
+/**
+ * Fuzzy key: lowercase, strip dashes and underscores. So `cold_chain`,
+ * `cold-chain`, `Cold-Chain` and `coldchain` all resolve to the same
+ * entry. This is what lets the map survive whatever naming the priority
+ * catalogue happens to use.
+ */
+function normalizeKey(id: string): string {
+  return id.toLowerCase().replace(/[-_\s]/g, "")
+}
 
 const LOGISTICS_PRIORITY_IMAGES: Record<string, string> = {
   blockages: "/blockage.png",
@@ -237,15 +241,6 @@ const LOGISTICS_PRIORITY_IMAGES: Record<string, string> = {
   anticipate: "/warned.png",
   recommend: "/recommendations.png",
 }
-
-function imageForPriority(priorityId: string | undefined): string | undefined {
-  if (!priorityId) return undefined
-  return LOGISTICS_PRIORITY_IMAGES[priorityId]
-}
-
-/* -------------------------------------------------------------------------- */
-/* INDUSTRY PRIORITY IMAGES                                                   */
-/* -------------------------------------------------------------------------- */
 
 const INDUSTRY_PRIORITY_IMAGES: Record<string, string> = {
   machines: "/machines.png",
@@ -256,38 +251,45 @@ const INDUSTRY_PRIORITY_IMAGES: Record<string, string> = {
   maintenance: "/maintenance.png",
 }
 
-function imageForIndustryPriority(
-  priorityId: string | undefined
-): string | undefined {
-  if (!priorityId) return undefined
-  return INDUSTRY_PRIORITY_IMAGES[priorityId]
-}
-
-/* -------------------------------------------------------------------------- */
-/* HEALTH PRIORITY IMAGES                                                     */
-/* -------------------------------------------------------------------------- */
-
 const HEALTH_PRIORITY_IMAGES: Record<string, string> = {
   stock: "/stock.png",
-  "cold-chain": "/cold-chain.png",
-  cold_chain: "/cold-chain.png",
+  coldchain: "/cold-chain.png",
   temperature: "/temperature.png",
   expiry: "/expiry.png",
   medicines: "/medicines.png",
+  medicine: "/medicines.png",
   storage: "/storage.png",
+}
+
+function lookupImage(
+  map: Record<string, string>,
+  id: string | undefined
+): string | undefined {
+  if (!id) return undefined
+  if (map[id]) return map[id]
+  return map[normalizeKey(id)]
+}
+
+function imageForPriority(priorityId: string | undefined): string | undefined {
+  return lookupImage(LOGISTICS_PRIORITY_IMAGES, priorityId)
+}
+
+function imageForIndustryPriority(
+  priorityId: string | undefined
+): string | undefined {
+  return lookupImage(INDUSTRY_PRIORITY_IMAGES, priorityId)
 }
 
 function imageForHealthPriority(
   priorityId: string | undefined
 ): string | undefined {
-  if (!priorityId) return undefined
-  return HEALTH_PRIORITY_IMAGES[priorityId]
+  return lookupImage(HEALTH_PRIORITY_IMAGES, priorityId)
 }
 
-/**
- * Activity grid layout using the same 12-column trick as sectors.
- * Ensures odd counts are centered.
- */
+/* -------------------------------------------------------------------------- */
+/* GRID COLUMN SPANS                                                          */
+/* -------------------------------------------------------------------------- */
+
 function activityColSpan(index: number, total: number): string {
   if (total === 3) return "lg:col-span-4"
   if (total === 4) return "lg:col-span-3"
@@ -299,8 +301,7 @@ function activityColSpan(index: number, total: number): string {
   return "lg:col-span-3"
 }
 
-/** Industry + Health priorities: 6 cards = two centered rows of 3. */
-function industryPriorityColSpan(_index: number, _total: number): string {
+function sixCardColSpan(_index: number, _total: number): string {
   return "lg:col-span-4"
 }
 
@@ -1123,7 +1124,6 @@ export function OnboardingView({
       className="fixed inset-0 z-[100] flex animate-in fade-in bg-background duration-200 ease-out motion-reduce:animate-none"
     >
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* HEADER */}
         <header className="shrink-0 border-b border-border bg-card/85 px-5 pb-4 pt-5 backdrop-blur-sm md:px-8 md:pt-6">
           <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
             <div className="flex items-center justify-between gap-4">
@@ -1193,7 +1193,6 @@ export function OnboardingView({
           </div>
         </header>
 
-        {/* THE QUESTION */}
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-7 md:px-8 md:py-10">
           <div className="mx-auto flex w-full max-w-5xl flex-col gap-7">
             <div
@@ -1226,7 +1225,6 @@ export function OnboardingView({
               </div>
             </div>
 
-            {/* STEP 1: LANGUAGE */}
             {step === langStepNumber && (
               <div className="flex flex-col items-center justify-center py-8">
                 <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/90 shadow-2xl backdrop-blur-xl ring-1 ring-black/5">
@@ -1294,7 +1292,6 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 2: COUNTRY */}
             {step === countryStepNumber && (
               <div className="flex flex-col items-center justify-center py-8">
                 <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/90 shadow-2xl backdrop-blur-xl ring-1 ring-black/5">
@@ -1376,7 +1373,6 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 3: TIMEZONE */}
             {step === zoneStepNumber && (
               <div className="flex flex-col items-center justify-center py-8">
                 <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/90 shadow-2xl backdrop-blur-xl ring-1 ring-black/5">
@@ -1451,7 +1447,6 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 4: COMPANY */}
             {step === companyStepNumber && (
               <div className="flex flex-col items-center justify-center py-8">
                 <div className="relative w-full max-w-xl group">
@@ -1507,7 +1502,6 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 5: SECTOR */}
             {step === sectorStepNumber && (
               <>
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-12">
@@ -1671,7 +1665,6 @@ export function OnboardingView({
               </>
             )}
 
-            {/* STEP 6: BUSINESS TYPE (ACTIVITY) */}
             {step === subTypeStepNumber && sector && (
               <div>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -1831,7 +1824,6 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 7: MONITORING PRIORITIES */}
             {step === equipmentStepNumber && sector && (
               <div>
                 <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
@@ -1882,7 +1874,7 @@ export function OnboardingView({
 
                     const colSpan =
                       isIndustry || isHealth
-                        ? industryPriorityColSpan(index, equipment.length)
+                        ? sixCardColSpan(index, equipment.length)
                         : undefined
 
                     return (
@@ -1970,7 +1962,6 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 8: DATA SOURCES */}
             {step === sourcesStepNumber && (
               <div>
                 <BulkSelect
@@ -2191,7 +2182,6 @@ export function OnboardingView({
           </div>
         </div>
 
-        {/* ACTION BAR */}
         <footer className="shrink-0 border-t border-border bg-card/85 px-5 py-4 backdrop-blur-sm md:px-8">
           <div className="mx-auto w-full max-w-5xl">
             {!canContinue && blockedReason && (
