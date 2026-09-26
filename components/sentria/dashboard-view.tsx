@@ -55,6 +55,13 @@ import {
   writeOpsTypes,
   type SingleOpsType,
 } from "@/lib/activities"
+import { useCompanyIdentity } from "@/lib/company"
+import {
+  contractorIdsOf,
+  fetchAssignments,
+  saveAssignment,
+  type Assignment,
+} from "@/lib/crm"
 
 const SECTORS: { key: string; label: Localized }[] = [
   { key: "all", label: localized("Tous", "All") },
@@ -93,13 +100,6 @@ type Recommendation = {
   action_category: string
   confidence?: number | null
   reasoning?: string | null
-}
-
-type ActionStatus = "pending" | "done" | "dismissed"
-
-type ActionRecord = {
-  status: ActionStatus
-  at: string
 }
 
 type LogisticsPriority =
@@ -872,22 +872,20 @@ function estimateConfidence(
 function trackRecordForCategory(
   category: string,
   recs: Recommendation[],
-  log: Record<string, ActionRecord>
+  taskMap: Record<string, Assignment>
 ): { done: number; dismissed: number } {
   let done = 0
-  let dismissed = 0
 
   for (const rec of recs) {
     if (rec.action_category !== category) continue
 
     const key = `${rec.equipment}-${rec.alert_key ?? rec.id}`
-    const action = log[key]
+    const row = taskMap[key]
 
-    if (action?.status === "done") done += 1
-    else if (action?.status === "dismissed") dismissed += 1
+    if (row?.status === "done") done += 1
   }
 
-  return { done, dismissed }
+  return { done, dismissed: 0 }
 }
 
 function reasoningFor(
@@ -938,6 +936,8 @@ export function DashboardView({
 
   const dateLocale = tx("fr-FR", "en-GB")
 
+  const { name: companyName } = useCompanyIdentity()
+
   const sectorName = (key: string | null | undefined) => {
     const found = SECTORS.find((item) => item.key === key)
 
@@ -987,6 +987,8 @@ export function DashboardView({
   >([])
 
   const scrollRef = useRef<HTMLDivElement | null>(null)
+
+  const [taskMap, setTaskMap] = useState<Record<string, Assignment>>({})
 
   useEffect(() => {
     setSelectedSectorPriorities(getSavedPriorities(filterSector))
@@ -1043,6 +1045,41 @@ export function DashboardView({
     }
   }, [])
 
+  useEffect(() => {
+    if (!companyName) return
+
+    let cancelled = false
+
+    fetchAssignments(companyName).then((result) => {
+      if (cancelled) return
+
+      if (!result.ok) {
+        console.error(
+          "[SentrIA] Dashboard could not load assignments.",
+          result.code
+        )
+        return
+      }
+
+      const map: Record<string, Assignment> = {}
+
+      for (const row of result.data) {
+        if (!row?.task_key) continue
+
+        map[row.task_key] = {
+          ...row,
+          contractor_ids: contractorIdsOf(row),
+        }
+      }
+
+      setTaskMap(map)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [companyName])
+
   const [statusFilter, setStatusFilter] = useState<
     "all" | "critical" | "warning"
   >("all")
@@ -1068,41 +1105,48 @@ export function DashboardView({
   const [selectedRecommendation, setSelectedRecommendation] =
     useState<Recommendation | null>(null)
 
-  const [actionsLog, setActionsLog] = useState<
-    Record<string, ActionRecord>
-  >(() => {
-    if (typeof window === "undefined") return {}
+  const [actionError, setActionError] = useState<string | null>(null)
 
-    try {
-      return JSON.parse(
-        localStorage.getItem("sentria_actions_log") || "{}"
-      )
-    } catch {
-      return {}
-    }
-  })
-
-  function recordAction(key: string, status: ActionStatus) {
-    setActionsLog((current) => {
-      const next = {
-        ...current,
-        [key]: {
-          status,
-          at: new Date().toLocaleTimeString(dateLocale, {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        },
-      }
-
-      if (typeof window !== "undefined") {
-        localStorage.setItem(
-          "sentria_actions_log",
-          JSON.stringify(next)
+  function markHandled(taskKey: string) {
+    if (!companyName) {
+      setActionError(
+        tx(
+          "Aucun nom d'entreprise renseigné : le changement ne peut pas être enregistré. Renseignez-le dans les Paramètres.",
+          "No company name is set, so the change cannot be saved. Set it in Settings."
         )
+      )
+      return
+    }
+
+    const existing = taskMap[taskKey]
+
+    const next: Assignment = {
+      task_key: taskKey,
+      status: "done",
+      priority: existing?.priority ?? "medium",
+      deadline: existing?.deadline ?? null,
+      contractor_ids: existing?.contractor_ids ?? [],
+    }
+
+    setTaskMap((current) => ({ ...current, [taskKey]: next }))
+    setActionError(null)
+
+    saveAssignment(companyName, next).then((result) => {
+      if (result.ok) {
+        setTaskMap((current) => ({ ...current, [taskKey]: result.data }))
+        return
       }
 
-      return next
+      setActionError(px(result.detail))
+
+      setTaskMap((current) => {
+        const rolledBack = { ...current }
+
+        if (existing) rolledBack[taskKey] = existing
+        else delete rolledBack[taskKey]
+
+        return rolledBack
+      })
     })
   }
 
@@ -1384,11 +1428,6 @@ export function DashboardView({
 
     if (!file) return
 
-    // Anchor on the alerts table's on-screen position, not a raw
-    // scrollTop number: the KPI cards, the "no data" panel and the
-    // charts change height between uploads, so restoring a number
-    // points at different content. Restoring the table's top offset
-    // keeps it pinned to the same pixel on screen regardless.
     const anchor = document.getElementById("alerts-table")
     const beforeTop = anchor?.getBoundingClientRect().top ?? null
 
@@ -1452,10 +1491,6 @@ export function DashboardView({
       setUploading(false)
       e.target.value = ""
 
-      // Two frames: one for React to commit the new tree, a second
-      // for layout to settle before getBoundingClientRect() is read.
-      // One frame alone measures a stale position and the correction
-      // is wrong, which is what made the single-frame version drift.
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           if (beforeTop === null) return
@@ -1466,8 +1501,6 @@ export function DashboardView({
           const delta = afterTop - beforeTop
           if (delta === 0) return
 
-          // The dashboard itself scrolls, not an inner ref. Fall back
-          // to the document scrolling element when no scrollRef exists.
           const scroller =
             (scrollRef.current as HTMLElement | null) ??
             (document.scrollingElement as HTMLElement | null)
@@ -3175,7 +3208,7 @@ export function DashboardView({
                         trackRecordForCategory(
                           expandedRecommendation.action_category,
                           recommendations,
-                          actionsLog
+                          taskMap
                         )
                       )}
                       %
@@ -3255,55 +3288,41 @@ export function DashboardView({
                     expandedRecommendation.alert_key ??
                     expandedRecommendation.id
                   }`
-                  const action = actionsLog[actionKey]
+                  const row = taskMap[actionKey]
 
-                  return !action || action.status === "pending" ? (
-                    <div className="mt-3 flex gap-2">
+                  return !row || row.status !== "done" ? (
+                    <div className="mt-3">
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation()
-                          recordAction(actionKey, "done")
+                          markHandled(actionKey)
                         }}
-                        className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground transition-opacity hover:opacity-90"
+                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground transition-opacity hover:opacity-90"
                       >
                         <Check className="h-3.5 w-3.5" />
                         {tx("Marquer traité", "Mark handled")}
                       </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          recordAction(actionKey, "dismissed")
-                        }}
-                        className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-sidebar-foreground/70 transition-colors hover:bg-white/5"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                        {tx("Ignorer", "Dismiss")}
-                      </button>
+
+                      {actionError && (
+                        <p
+                          role="alert"
+                          className="mt-2 text-[11px] leading-4 text-destructive"
+                        >
+                          {actionError}
+                        </p>
+                      )}
                     </div>
                   ) : (
-                    <div
-                      className={cn(
-                        "mt-3 rounded-xl px-3 py-2.5 ring-1",
-                        action.status === "done"
-                          ? "bg-emerald-500/10 ring-emerald-500/30"
-                          : "bg-white/5 ring-white/10"
-                      )}
-                    >
+                    <div className="mt-3 rounded-xl bg-emerald-500/10 px-3 py-2.5 ring-1 ring-emerald-500/30">
                       <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-sidebar-foreground/60">
                         {tx("Résultat", "Outcome")}
                       </p>
                       <p className="mt-1 text-[11px] leading-4 text-sidebar-foreground/80">
-                        {action.status === "done"
-                          ? tx(
-                              `Traité à ${action.at}. SentrIA continue de surveiller cet actif pour confirmer l'effet.`,
-                              `Handled at ${action.at}. SentrIA keeps watching this asset to confirm the effect.`
-                            )
-                          : tx(
-                              `Écarté à ${action.at}. Réapparaîtra si le signal s'aggrave.`,
-                              `Dismissed at ${action.at}. It will come back if the signal worsens.`
-                            )}
+                        {tx(
+                          "Traité. SentrIA continue de surveiller cet actif pour confirmer l'effet.",
+                          "Handled. SentrIA keeps watching this asset to confirm the effect."
+                        )}
                       </p>
                     </div>
                   )
@@ -3420,7 +3439,7 @@ export function DashboardView({
                         trackRecordForCategory(
                           selectedRecommendation.action_category,
                           recommendations,
-                          actionsLog
+                          taskMap
                         )
                       )
                       return tx(
@@ -3554,36 +3573,23 @@ export function DashboardView({
                   selectedRecommendation.alert_key ??
                   selectedRecommendation.id
                 }`
-                const action = actionsLog[actionKey]
+                const row = taskMap[actionKey]
 
-                if (!action || action.status === "pending") {
+                if (!row || row.status !== "done") {
                   return null
                 }
 
                 return (
-                  <div
-                    className={cn(
-                      "rounded-2xl border p-4",
-                      action.status === "done"
-                        ? "border-emerald-500/30 bg-emerald-500/10"
-                        : "border-border bg-muted/30"
-                    )}
-                  >
-                    <p
-                      className={cn(
-                        "text-[10px] font-semibold uppercase tracking-widest",
-                        action.status === "done"
-                          ? "text-emerald-700 dark:text-emerald-400"
-                          : "text-muted-foreground"
-                      )}
-                    >
+                  <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
                       {tx("Résultat", "Outcome")}
                     </p>
 
                     <p className="mt-1.5 text-sm leading-6 text-foreground/80">
-                      {action.status === "done"
-                        ? `Marqué traité à ${action.at}. SentrIA continue de surveiller cet actif pour confirmer l'effet.`
-                        : `Écarté à ${action.at}. Réapparaîtra si le signal s'aggrave.`}
+                      {tx(
+                        "Traité. SentrIA continue de surveiller cet actif pour confirmer l'effet.",
+                        "Handled. SentrIA keeps watching this asset to confirm the effect."
+                      )}
                     </p>
                   </div>
                 )
@@ -3608,23 +3614,7 @@ export function DashboardView({
                     selectedRecommendation.alert_key ??
                     selectedRecommendation.id
                   }`
-                  recordAction(actionKey, "dismissed")
-                  setSelectedRecommendation(null)
-                }}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2.5 text-xs font-bold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                <X className="h-3.5 w-3.5" />
-                {tx("Ignorer", "Dismiss")}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const actionKey = `${selectedRecommendation.equipment}-${
-                    selectedRecommendation.alert_key ??
-                    selectedRecommendation.id
-                  }`
-                  recordAction(actionKey, "done")
+                  markHandled(actionKey)
                   setSelectedRecommendation(null)
                 }}
                 className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-xs font-bold text-accent-foreground transition-transform hover:scale-[1.02]"
