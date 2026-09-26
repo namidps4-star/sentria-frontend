@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   Activity,
   Cpu,
@@ -127,13 +127,11 @@ function dailySeries(
 
   return Array.from({ length: days }, (_, i) => {
     const day = new Date()
-
     day.setHours(0, 0, 0, 0)
     day.setDate(day.getDate() - (days - 1 - i))
 
     return scoped.filter((a) => {
       const at = new Date(a.date)
-
       return (
         at.getFullYear() === day.getFullYear() &&
         at.getMonth() === day.getMonth() &&
@@ -210,23 +208,29 @@ const SUBTYPE_KPI_LABELS: Record<string, Localized[]> = {
     localized("Lignes surveillées", "Lines monitored"),
     localized("Total alertes", "Total alerts"),
   ],
-  "transporteur-routier": [
-    localized("Livraisons à risque critique", "Deliveries at critical risk"),
-    localized("Retards & incidents", "Delays & incidents"),
-    localized("Camions en tournée", "Trucks on route"),
-    localized("Alertes moteur", "Engine alerts"),
+  "epicerie-proximite": [
+    localized("Ruptures rayon", "Shelf stockouts"),
+    localized("Stocks bas", "Low stock"),
+    localized("Références concernées", "SKUs affected"),
+    localized("Alertes caisse", "Checkout alerts"),
   ],
-  "flotte-entreprise": [
-    localized("Véhicules à risque critique", "Vehicles at critical risk"),
-    localized("Comportement à surveiller", "Behaviour to watch"),
-    localized("Véhicules de flotte", "Fleet vehicles"),
-    localized("Alertes moteur", "Engine alerts"),
+  "supermarche-hypermarche": [
+    localized("Ruptures critiques", "Critical stockouts"),
+    localized("Surstock", "Overstock"),
+    localized("Références concernées", "SKUs affected"),
+    localized("Démarque", "Shrinkage"),
   ],
-  "location-vehicules": [
-    localized("Véhicules à risque critique", "Vehicles at critical risk"),
-    localized("Retours à traiter", "Returns to handle"),
-    localized("Véhicules en parc", "Vehicles in fleet"),
-    localized("Alertes moteur", "Engine alerts"),
+  "chaine-magasins": [
+    localized("Ruptures réseau", "Network stockouts"),
+    localized("Magasins concernés", "Stores affected"),
+    localized("Références concernées", "SKUs affected"),
+    localized("Démarque totale", "Total shrinkage"),
+  ],
+  "grossiste-distributeur": [
+    localized("Ruptures réseau", "Network stockouts"),
+    localized("Rééquilibrages suggérés", "Suggested transfers"),
+    localized("Produits concernés", "Products affected"),
+    localized("Invendus réseau", "Network deadstock"),
   ],
 }
 
@@ -239,12 +243,14 @@ const SUBTYPE_CHART_TITLES: Record<string, Localized> = {
     "Alertes réseau · 7 jours", "Network alerts · 7 days"),
   "usine-agroalimentaire": localized(
     "Alertes sanitaires · 7 jours", "Hygiene alerts · 7 days"),
-  "transporteur-routier": localized(
-    "Alertes tournées · 7 jours", "Route alerts · 7 days"),
-  "flotte-entreprise": localized(
-    "Alertes flotte interne · 7 jours", "Internal fleet alerts · 7 days"),
-  "location-vehicules": localized(
-    "Alertes location · 7 jours", "Rental alerts · 7 days"),
+  "epicerie-proximite": localized(
+    "Alertes stocks · 7 jours", "Stock alerts · 7 days"),
+  "supermarche-hypermarche": localized(
+    "Alertes stocks · 7 jours", "Stock alerts · 7 days"),
+  "chaine-magasins": localized(
+    "Alertes réseau · 7 jours", "Network alerts · 7 days"),
+  "grossiste-distributeur": localized(
+    "Alertes réseau · 7 jours", "Network alerts · 7 days"),
 }
 
 function activityOf(row: {
@@ -294,13 +300,6 @@ const KEY_FAMILY_LABELS: Record<string, Localized> = {
   fuel: localized("Carburant", "Fuel"),
   fuel_low: localized("Carburant bas", "Low fuel"),
   tires: localized("Pneus", "Tyres"),
-  delay: localized("Retards", "Delays"),
-  border_wait: localized("Attente frontière", "Border wait"),
-  loading_wait: localized("Attente chargement", "Loading wait"),
-  fuel_efficiency: localized("Consommation", "Fuel efficiency"),
-  driver: localized("Conduite", "Driving"),
-  fleet: localized("Flotte", "Fleet"),
-  rental: localized("Location", "Rental"),
   coolant: localized("Refroidissement", "Coolant"),
   load: localized("Charge", "Load"),
   output: localized("Production", "Output"),
@@ -324,7 +323,6 @@ function alertBreakdown(
 
   for (const a of alerts) {
     const parts = (a.alert_key ?? "").split(".")
-
     if (parts.length < 2 || !parts[1]) continue
 
     const family = parts[1]
@@ -946,8 +944,6 @@ export function DashboardView({
     return found ? px(found.label) : null
   }
 
-  const scrollRef = useRef<HTMLDivElement>(null)
-
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [recommendations, setRecommendations] = useState<
     Recommendation[]
@@ -989,6 +985,8 @@ export function DashboardView({
   const [selectedSectorPriorities, setSelectedSectorPriorities] = useState<
     string[]
   >([])
+
+  const scrollRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     setSelectedSectorPriorities(getSavedPriorities(filterSector))
@@ -1383,9 +1381,16 @@ export function DashboardView({
     e: React.ChangeEvent<HTMLInputElement>
   ) {
     const file = e.target.files?.[0]
+
     if (!file) return
 
-    const savedScrollTop = scrollRef.current?.scrollTop ?? 0
+    // Anchor on the alerts table's on-screen position, not a raw
+    // scrollTop number: the KPI cards, the "no data" panel and the
+    // charts change height between uploads, so restoring a number
+    // points at different content. Restoring the table's top offset
+    // keeps it pinned to the same pixel on screen regardless.
+    const anchor = document.getElementById("alerts-table")
+    const beforeTop = anchor?.getBoundingClientRect().top ?? null
 
     setUploading(true)
     setUploadMsg("")
@@ -1409,10 +1414,15 @@ export function DashboardView({
           (chosenBusinessType
             ? `&business_type=${encodeURIComponent(chosenBusinessType)}`
             : ""),
-        { method: "POST", body: form }
+        {
+          method: "POST",
+          body: form,
+        }
       )
 
-      if (!res.ok) throw new Error("Upload failed")
+      if (!res.ok) {
+        throw new Error("Upload failed")
+      }
 
       const data = await res.json()
 
@@ -1441,8 +1451,31 @@ export function DashboardView({
     } finally {
       setUploading(false)
       e.target.value = ""
+
+      // Two frames: one for React to commit the new tree, a second
+      // for layout to settle before getBoundingClientRect() is read.
+      // One frame alone measures a stale position and the correction
+      // is wrong, which is what made the single-frame version drift.
       requestAnimationFrame(() => {
-        if (scrollRef.current) scrollRef.current.scrollTop = savedScrollTop
+        requestAnimationFrame(() => {
+          if (beforeTop === null) return
+          const afterAnchor = document.getElementById("alerts-table")
+          const afterTop = afterAnchor?.getBoundingClientRect().top
+          if (afterTop === undefined) return
+
+          const delta = afterTop - beforeTop
+          if (delta === 0) return
+
+          // The dashboard itself scrolls, not an inner ref. Fall back
+          // to the document scrolling element when no scrollRef exists.
+          const scroller =
+            (scrollRef.current as HTMLElement | null) ??
+            (document.scrollingElement as HTMLElement | null)
+
+          if (!scroller) return
+
+          scroller.scrollTop += delta
+        })
       })
     }
   }
@@ -1661,8 +1694,8 @@ export function DashboardView({
     filterSector !== "all"
       ? filterSector
       : activeSectors.length === 1
-        ? activeSectors[0]
-        : null
+      ? activeSectors[0]
+      : null
 
   const onboardedSectorLabel = sectorName(onboardedSectorKey)
 
@@ -2123,112 +2156,362 @@ export function DashboardView({
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-1 flex-col gap-6 overflow-hidden">
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto pr-1">
-        <div className="space-y-6">
-          <div className="flex flex-col gap-4 rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
-            <div className="max-w-xl">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
-                  <Zap className="h-3.5 w-3.5" />
-                  {tx("Temps réel", "Live")}
-                </span>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
+        <div className="max-w-xl">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+              <Zap className="h-3.5 w-3.5" />
+              {tx("Temps réel", "Live")}
+            </span>
 
-                {departmentLabel && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-sidebar-foreground/25 bg-sidebar-foreground/10 px-3 py-1 text-xs font-semibold text-sidebar-foreground">
-                    <Shield className="h-3.5 w-3.5" aria-hidden="true" />
-                    {departmentLabel}
+            {departmentLabel && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-sidebar-foreground/25 bg-sidebar-foreground/10 px-3 py-1 text-xs font-semibold text-sidebar-foreground">
+                <Shield className="h-3.5 w-3.5" aria-hidden="true" />
+                {departmentLabel}
+              </span>
+            )}
+          </div>
+
+          <h2 className="mt-3 text-balance font-heading text-2xl font-bold leading-tight md:text-3xl">
+            {tx(
+              "Qu'est-ce qui a besoin de votre attention maintenant ?",
+              "What needs your attention right now?"
+            )}
+          </h2>
+
+          <p className="mt-2 text-pretty text-sm text-sidebar-foreground/70">
+            {tx(
+              "SentrIA ne se contente pas d'alerter : chaque priorité montre sa preuve, sa confiance et son impact, puis garde en mémoire ce que vous en avez fait.",
+              "SentrIA does more than alert: every priority shows its evidence, its confidence and its impact, then remembers what you did about it."
+            )}
+          </p>
+
+          {subtypeName && (
+            <p className="mt-3 text-xs leading-5 text-sidebar-foreground/60">
+              {activitySeparationActive ? (
+                <>
+                  {tx(
+                    "Vue limitée à votre activité :",
+                    "Limited to your activity:"
+                  )}{" "}
+                  <span className="font-bold text-sidebar-foreground">
+                    {subtypeName}
                   </span>
-                )}
-              </div>
-
-              <h2 className="mt-3 text-balance font-heading text-2xl font-bold leading-tight md:text-3xl">
-                {tx(
-                  "Qu'est-ce qui a besoin de votre attention maintenant ?",
-                  "What needs your attention right now?"
-                )}
-              </h2>
-
-              <p className="mt-2 text-pretty text-sm text-sidebar-foreground/70">
-                {tx(
-                  "SentrIA ne se contente pas d'alerter : chaque priorité montre sa preuve, sa confiance et son impact, puis garde en mémoire ce que vous en avez fait.",
-                  "SentrIA does more than alert: every priority shows its evidence, its confidence and its impact, then remembers what you did about it."
-                )}
-              </p>
-
-              {subtypeName && (
-                <p className="mt-3 text-xs leading-5 text-sidebar-foreground/60">
-                  {activitySeparationActive ? (
-                    <>
-                      {tx(
-                        "Vue limitée à votre activité :",
-                        "Limited to your activity:"
-                      )}{" "}
-                      <span className="font-bold text-sidebar-foreground">
-                        {subtypeName}
-                      </span>
-                      {tx(
-                        ". Les alertes des autres activités ne sont pas affichées.",
-                        ". Alerts from other activities are not shown."
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      {tx("Activité configurée :", "Configured activity:")}{" "}
-                      <span className="font-bold text-sidebar-foreground">
-                        {subtypeName}
-                      </span>
-                      {tx(
-                        ". Aucune alerte importée ne porte encore d'activité, elles sont donc toutes affichées.",
-                        ". No imported alert carries an activity yet, so all of them are shown."
-                      )}
-                    </>
+                  {tx(
+                    ". Les alertes des autres activités ne sont pas affichées.",
+                    ". Alerts from other activities are not shown."
                   )}
-                </p>
+                </>
+              ) : (
+                <>
+                  {tx("Activité configurée :", "Configured activity:")}{" "}
+                  <span className="font-bold text-sidebar-foreground">
+                    {subtypeName}
+                  </span>
+                  {tx(
+                    ". Aucune alerte importée ne porte encore d'activité, elles sont donc toutes affichées.",
+                    ". No imported alert carries an activity yet, so all of them are shown."
+                  )}
+                </>
               )}
+            </p>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={() =>
+            document
+              .getElementById("alerts-table")
+              ?.scrollIntoView({
+                behavior: "smooth",
+              })
+          }
+          className="inline-flex items-center gap-2 self-start rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02]"
+        >
+          {tx("Voir les alertes", "See the alerts")}
+          <ArrowUpRight className="h-4 w-4" />
+        </button>
+      </div>
+
+      <RecommendationsPanel
+        recommendations={filteredRecommendations}
+        totalRecommendationsCount={recommendations.length}
+        alerts={alerts}
+        opsType={opsType}
+      />
+
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={returnToDashboard}
+          className={cn(
+            "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
+            filterSector === "all"
+              ? "border-foreground bg-foreground text-background"
+              : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
+          )}
+        >
+          {tx("Tous", "All")}
+
+          <span className="ml-1.5 text-[10px] opacity-60">
+            {alerts.filter(matchesActivity).length}
+          </span>
+        </button>
+
+        {SECTORS.filter(
+          (s) =>
+            s.key !== "all" &&
+            activeSectors.includes(s.key)
+        ).map((s) => (
+          <button
+            key={s.key}
+            type="button"
+            onClick={() => {
+              if (s.key === "logistics") {
+                openLogisticsOverview()
+                return
+              }
+
+              if (s.key === "industry") {
+                openIndustryOverview()
+                return
+              }
+
+              setLogisticsPriority(null)
+              setIndustryPriority(null)
+              setFilterSector(s.key)
+              localStorage.setItem(
+                "sentria_sector",
+                s.key
+              )
+            }}
+            className={cn(
+              "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
+              filterSector === s.key
+                ? "border-foreground bg-foreground text-background"
+                : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
+            )}
+          >
+            {px(s.label)}
+
+            <span className="ml-1.5 text-[10px] opacity-60">
+              {
+                alerts
+                  .filter((a) => a.sector === s.key)
+                  .filter(matchesActivity).length
+              }
+            </span>
+          </button>
+        ))}
+
+      </div>
+
+      {filterSector === "all" ? (
+        <>
+          {activeSectors.includes("logistics") && (
+            <PriorityPills
+              sector="logistics"
+              ids={selectedLogisticsPriorities}
+              label={tx("Priorités logistique", "Logistics priorities")}
+              onOpen={(id) =>
+                openLogisticsPriority(id as LogisticsPriority)
+              }
+            />
+          )}
+
+          {activeSectors.includes("industry") && (
+            <PriorityPills
+              sector="industry"
+              ids={selectedIndustryPriorities}
+              label={tx("Priorités industrie", "Industry priorities")}
+              onOpen={(id) =>
+                openIndustryPriority(id as IndustryPriority)
+              }
+            />
+          )}
+        </>
+      ) : (
+        <PriorityPills
+          sector={filterSector}
+          ids={selectedSectorPriorities}
+          label={tx("Vos priorités", "Your priorities")}
+        />
+      )}
+
+      {filterSector === "logistics" &&
+        opsType &&
+        LOGISTICS_OPS_META[opsType] && (
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-[11px] font-medium text-muted-foreground">
+            <Shield className="h-3 w-3" aria-hidden="true" />
+            {px(OPS_TYPE_LABEL[opsType])}
+          </div>
+        )}
+
+      {hasNoDataForSector ? (
+        <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
+            <Upload className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
+          </div>
+
+          <h3 className="mt-4 font-heading text-lg font-bold">
+            {tx("Aucune donnée pour", "No data for")}{" "}
+            {departmentLabel ??
+              sectorName(filterSector) ??
+              tx("cette activité", "this activity")}
+          </h3>
+
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+            {tx(
+              "Rien n'a encore été importé pour cette activité. Les indicateurs restent vides jusqu'au premier fichier : afficher des zéros donnerait l'impression que tout va bien, ce qui n'est pas la même chose.",
+              "Nothing has been imported for this activity yet. The figures stay empty until the first file: showing zeroes would read as all clear, which is a different claim."
+            )}
+          </p>
+
+          <p className="mt-3 text-xs text-muted-foreground">
+            {tx(
+              "Chaque activité attend ses propres colonnes. Importez le CSV correspondant à",
+              "Each activity expects its own columns. Import the CSV for"
+            )}{" "}
+            <span className="font-semibold text-foreground">
+              {subtypeName ??
+                sectorName(filterSector) ??
+                tx("votre activité", "your activity")}
+            </span>{" "}
+            {tx(
+              "via le bouton Importer CSV ci-dessus.",
+              "using the Import CSV button above."
+            )}
+          </p>
+        </div>
+      ) : (
+        <>
+      <p className="text-[11px] font-bold uppercase tracking-[0.13em] text-muted-foreground">
+        {tx("Contexte général", "General context")}
+      </p>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {kpis.map((k) => (
+          <div
+            key={k.label}
+            className="rounded-3xl border border-border bg-card p-5"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm text-muted-foreground">
+                {k.label}
+              </span>
+
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
+                  k.up
+                    ? "bg-accent/25 text-accent-foreground"
+                    : "bg-destructive/10 text-destructive"
+                )}
+              >
+                {k.up ? (
+                  <TrendingUp className="h-3 w-3" />
+                ) : (
+                  <TrendingDown className="h-3 w-3" />
+                )}
+
+                {k.delta}
+              </span>
+            </div>
+
+            <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
+              {k.value}
+            </p>
+
+            <Sparkline
+              data={dailySeries(filteredAlerts, 7, k.match)}
+              className={cn(
+                "mt-2 h-9 w-full",
+                k.up ? "text-accent" : "text-destructive"
+              )}
+            />
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-heading text-lg font-bold">
+                {chartTitle}
+              </h3>
+
+              <p className="text-sm text-muted-foreground">
+                {tx("7 derniers jours", "Last 7 days")}
+              </p>
             </div>
 
             <button
               type="button"
-              onClick={() =>
-                document
-                  .getElementById("alerts-table")
-                  ?.scrollIntoView({
-                    behavior: "smooth",
-                  })
-              }
-              className="inline-flex items-center gap-2 self-start rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02]"
+              className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
+              aria-label={tx("Options", "Options")}
             >
-              {tx("Voir les alertes", "See the alerts")}
-              <ArrowUpRight className="h-4 w-4" />
+              <MoreHorizontal className="h-5 w-5" />
             </button>
           </div>
 
-          <RecommendationsPanel
-            recommendations={filteredRecommendations}
-            totalRecommendationsCount={recommendations.length}
-            alerts={alerts}
-            opsType={opsType}
+          <AreaChart
+            data={chartData}
+            className="mt-6 h-52 w-full"
           />
+        </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={returnToDashboard}
-              className={cn(
-                "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
-                filterSector === "all"
-                  ? "border-foreground bg-foreground text-background"
-                  : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
+        <div className="rounded-3xl border border-border bg-card p-6">
+          <div className="flex items-center gap-2">
+            <Activity className="h-5 w-5 text-accent-foreground" />
+
+            <h3 className="font-heading text-lg font-bold">
+              {tx("Répartition", "Breakdown")}
+            </h3>
+          </div>
+
+          {breakdown.labels.length > 0 ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                {breakdown.labels.join(" · ")}
+              </p>
+
+              <BarChart
+                data={breakdown.values}
+                labels={breakdown.labels}
+                className="mt-6"
+                height={180}
+              />
+            </>
+          ) : (
+            <p className="mt-6 text-sm text-muted-foreground">
+              {tx(
+                "Rien à répartir pour cette activité sur la période sélectionnée.",
+                "Nothing to break down for this activity over the selected period."
               )}
-            >
-              {tx("Tous", "All")}
+            </p>
+          )}
+        </div>
+      </div>
+        </>
+      )}
 
-              <span className="ml-1.5 text-[10px] opacity-60">
-                {alerts.filter(matchesActivity).length}
-              </span>
-            </button>
+      <div className="rounded-3xl border border-border bg-card p-6">
+        <h3 className="font-heading text-lg font-bold">
+          {tx("Importer des données", "Import data")}
+        </h3>
 
+        <p className="mt-1 text-sm text-muted-foreground">
+          {tx(
+            "Choisissez un secteur puis importez votre CSV.",
+            "Choose a sector, then import your CSV."
+          )}
+        </p>
+
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap gap-2">
             {SECTORS.filter(
               (s) =>
                 s.key !== "all" &&
@@ -2237,1075 +2520,821 @@ export function DashboardView({
               <button
                 key={s.key}
                 type="button"
-                onClick={() => {
-                  if (s.key === "logistics") {
-                    openLogisticsOverview()
-                    return
-                  }
-
-                  if (s.key === "industry") {
-                    openIndustryOverview()
-                    return
-                  }
-
-                  setLogisticsPriority(null)
-                  setIndustryPriority(null)
-                  setFilterSector(s.key)
-                  localStorage.setItem(
-                    "sentria_sector",
-                    s.key
-                  )
-                }}
+                onClick={() => setUploadSector(s.key)}
+                aria-pressed={uploadSector === s.key}
                 className={cn(
-                  "rounded-full border px-4 py-1.5 text-xs font-semibold transition-colors",
-                  filterSector === s.key
+                  "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  uploadSector === s.key
                     ? "border-foreground bg-foreground text-background"
                     : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
                 )}
               >
                 {px(s.label)}
-
-                <span className="ml-1.5 text-[10px] opacity-60">
-                  {
-                    alerts
-                      .filter((a) => a.sector === s.key)
-                      .filter(matchesActivity).length
-                  }
-                </span>
               </button>
             ))}
-
           </div>
 
-          {filterSector === "all" ? (
-            <>
-              {activeSectors.includes("logistics") && (
-                <PriorityPills
-                  sector="logistics"
-                  ids={selectedLogisticsPriorities}
-                  label={tx("Priorités logistique", "Logistics priorities")}
-                  onOpen={(id) =>
-                    openLogisticsPriority(id as LogisticsPriority)
-                  }
-                />
-              )}
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90 focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+            <Upload className="h-4 w-4" aria-hidden="true" />
 
-              {activeSectors.includes("industry") && (
-                <PriorityPills
-                  sector="industry"
-                  ids={selectedIndustryPriorities}
-                  label={tx("Priorités industrie", "Industry priorities")}
-                  onOpen={(id) =>
-                    openIndustryPriority(id as IndustryPriority)
-                  }
-                />
-              )}
-            </>
-          ) : (
-            <PriorityPills
-              sector={filterSector}
-              ids={selectedSectorPriorities}
-              label={tx("Vos priorités", "Your priorities")}
+            {uploading
+              ? tx("Traitement...", "Processing...")
+              : tx("Importer CSV", "Import CSV")}
+
+            <input
+              type="file"
+              accept=".csv"
+              className="sr-only"
+              onChange={handleUpload}
+              disabled={uploading}
+              aria-label={tx("Importer un fichier CSV", "Import a CSV file")}
             />
-          )}
+          </label>
+        </div>
 
-          {filterSector === "logistics" &&
-            opsType &&
-            LOGISTICS_OPS_META[opsType] && (
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-[11px] font-medium text-muted-foreground">
-                <Shield className="h-3 w-3" aria-hidden="true" />
-                {px(OPS_TYPE_LABEL[opsType])}
-              </div>
+        {uploadMsg && (
+          <p
+            role={uploadFailed ? "alert" : "status"}
+            className={cn(
+              "mt-3 text-sm font-medium",
+              uploadFailed ? "text-destructive" : "text-green-600"
             )}
+          >
+            {uploadMsg}
+          </p>
+        )}
 
-          {hasNoDataForSector ? (
-            <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
-                <Upload className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
-              </div>
+        {activitiesFor(uploadSector).length > 0 && (
+          <div className="mt-4 border-t border-border pt-4">
+            <p className="text-xs font-semibold">
+              {tx("Activité de ce fichier", "Activity for this file")}
+            </p>
 
-              <h3 className="mt-4 font-heading text-lg font-bold">
-                {tx("Aucune donnée pour", "No data for")}{" "}
-                {departmentLabel ??
-                  sectorName(filterSector) ??
-                  tx("cette activité", "this activity")}
-              </h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              {tx(
+                "Elle décide des contrôles appliqués et de la chaîne affichée. Changez-la ici pour importer un fichier d'une autre activité.",
+                "It decides which checks run and which chain is shown. Change it here to import a file for a different activity."
+              )}
+            </p>
 
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-                {tx(
-                  "Rien n'a encore été importé pour cette activité. Les indicateurs restent vides jusqu'au premier fichier : afficher des zéros donnerait l'impression que tout va bien, ce qui n'est pas la même chose.",
-                  "Nothing has been imported for this activity yet. The figures stay empty until the first file: showing zeroes would read as all clear, which is a different claim."
-                )}
-              </p>
-
-              <p className="mt-3 text-xs text-muted-foreground">
-                {tx(
-                  "Chaque activité attend ses propres colonnes. Importez le CSV correspondant à",
-                  "Each activity expects its own columns. Import the CSV for"
-                )}{" "}
-                <span className="font-semibold text-foreground">
-                  {subtypeName ??
-                    sectorName(filterSector) ??
-                    tx("votre activité", "your activity")}
-                </span>{" "}
-                {tx(
-                  "via le bouton Importer CSV ci-dessus.",
-                  "using the Import CSV button above."
-                )}
-              </p>
-            </div>
-          ) : (
-            <>
-              <p className="text-[11px] font-bold uppercase tracking-[0.13em] text-muted-foreground">
-                {tx("Contexte général", "General context")}
-              </p>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {kpis.map((k) => (
-                  <div
-                    key={k.label}
-                    className="rounded-3xl border border-border bg-card p-5"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm text-muted-foreground">
-                        {k.label}
-                      </span>
-
-                      <span
-                        className={cn(
-                          "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
-                          k.up
-                            ? "bg-accent/25 text-accent-foreground"
-                            : "bg-destructive/10 text-destructive"
-                        )}
-                      >
-                        {k.up ? (
-                          <TrendingUp className="h-3 w-3" />
-                        ) : (
-                          <TrendingDown className="h-3 w-3" />
-                        )}
-
-                        {k.delta}
-                      </span>
-                    </div>
-
-                    <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
-                      {k.value}
-                    </p>
-
-                    <Sparkline
-                      data={dailySeries(filteredAlerts, 7, k.match)}
-                      className={cn(
-                        "mt-2 h-9 w-full",
-                        k.up ? "text-accent" : "text-destructive"
-                      )}
-                    />
-                  </div>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-heading text-lg font-bold">
-                        {chartTitle}
-                      </h3>
-
-                      <p className="text-sm text-muted-foreground">
-                        {tx("7 derniers jours", "Last 7 days")}
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
-                      aria-label={tx("Options", "Options")}
-                    >
-                      <MoreHorizontal className="h-5 w-5" />
-                    </button>
-                  </div>
-
-                  <AreaChart
-                    data={chartData}
-                    className="mt-6 h-52 w-full"
-                  />
-                </div>
-
-                <div className="rounded-3xl border border-border bg-card p-6">
-                  <div className="flex items-center gap-2">
-                    <Activity className="h-5 w-5 text-accent-foreground" />
-
-                    <h3 className="font-heading text-lg font-bold">
-                      {tx("Répartition", "Breakdown")}
-                    </h3>
-                  </div>
-
-                  {breakdown.labels.length > 0 ? (
-                    <>
-                      <p className="text-sm text-muted-foreground">
-                        {breakdown.labels.join(" · ")}
-                      </p>
-
-                      <BarChart
-                        data={breakdown.values}
-                        labels={breakdown.labels}
-                        className="mt-6"
-                        height={180}
-                      />
-                    </>
-                  ) : (
-                    <p className="mt-6 text-sm text-muted-foreground">
-                      {tx(
-                        "Rien à répartir pour cette activité sur la période sélectionnée.",
-                        "Nothing to break down for this activity over the selected period."
-                      )}
-                    </p>
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {activitiesFor(uploadSector).map((activity) => (
+                <button
+                  key={activity.id}
+                  type="button"
+                  onClick={() => setUploadActivity(activity.id)}
+                  aria-pressed={uploadActivity === activity.id}
+                  title={px(activity.description)}
+                  className={cn(
+                    "rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
+                    uploadActivity === activity.id
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
                   )}
+                >
+                  {px(activity.label)}
+                </button>
+              ))}
+            </div>
+
+            {uploadActivity &&
+              !isConfiguredActivity(uploadSector, uploadActivity) && (
+                <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-brand/40 bg-brand/10 px-3 py-2">
+                  <p className="text-xs">
+                    {tx(
+                      "Vous importez une activité différente de celle configurée",
+                      "You are importing an activity other than the configured one"
+                    )}
+                    {configuredActivityLabel(uploadSector)
+                      ? ` (${configuredActivityLabel(uploadSector)})`
+                      : ""}
+                    {tx(
+                      ". Le tableau de bord continue d'afficher l'activité configurée.",
+                      ". The dashboard keeps showing the configured activity."
+                    )}
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      applyActivityToDashboard(uploadSector, uploadActivity)
+                    }
+                    className="rounded-full border border-foreground bg-foreground px-3 py-1 text-[11px] font-semibold text-background transition-opacity hover:opacity-90"
+                  >
+                    {tx(
+                      "Basculer le tableau de bord dessus",
+                      "Switch the dashboard to it"
+                    )}
+                  </button>
                 </div>
-              </div>
+              )}
+          </div>
+        )}
+
+        <p className="mt-3 text-xs text-muted-foreground">
+          {tx("Envoyé :", "Sent:")}{" "}
+          <span className="font-semibold text-foreground">
+            {sectorName(uploadSector)}
+          </span>
+
+          {uploadActivity && (
+            <>
+              {" · "}
+              <span className="font-semibold text-foreground">
+                {activityLabel(uploadSector, uploadActivity, tx) ??
+                  uploadActivity}
+              </span>
             </>
           )}
+        </p>
+      </div>
 
-          <div className="rounded-3xl border border-border bg-card p-6">
+      <div
+        id="alerts-table"
+        className="rounded-3xl border border-border bg-card"
+      >
+        <div className="flex items-center justify-between p-6 pb-4">
+          <div className="flex items-center gap-2">
+            <Cpu className="h-5 w-5" />
+
             <h3 className="font-heading text-lg font-bold">
-              {tx("Importer des données", "Import data")}
+              {tx("Alertes", "Alerts")} ·{" "}
+              {sectorName(filterSector)}
             </h3>
 
-            <p className="mt-1 text-sm text-muted-foreground">
-              {tx(
-                "Choisissez un secteur puis importez votre CSV.",
-                "Choose a sector, then import your CSV."
-              )}
-            </p>
+            <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-semibold text-muted-foreground">
+              {tableAlerts.length}
+            </span>
+          </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <div className="flex flex-wrap gap-2">
-                {SECTORS.filter(
-                  (s) =>
-                    s.key !== "all" &&
-                    activeSectors.includes(s.key)
-                ).map((s) => (
-                  <button
-                    key={s.key}
-                    type="button"
-                    onClick={() => setUploadSector(s.key)}
-                    aria-pressed={uploadSector === s.key}
-                    className={cn(
-                      "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                      uploadSector === s.key
-                        ? "border-foreground bg-foreground text-background"
-                        : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
-                    )}
-                  >
-                    {px(s.label)}
-                  </button>
-                ))}
-              </div>
+          <button
+            type="button"
+            onClick={() => {
+              setExpandedAlertKey(null)
+              clearAlertFilters()
+            }}
+            className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90"
+          >
+            {tx("Tout voir", "See all")}
+            <ArrowUpRight className="h-4 w-4" />
+          </button>
+        </div>
 
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90 focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-                <Upload className="h-4 w-4" aria-hidden="true" />
+        <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-3">
+          <select
+            value={statusFilter}
+            onChange={(e) =>
+              setStatusFilter(
+                e.target.value as
+                  | "all"
+                  | "critical"
+                  | "warning"
+              )
+            }
+            className={cn(
+              "rounded-full border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+              statusFilter !== "all"
+                ? "border-foreground ring-1 ring-foreground/20"
+                : "border-border"
+            )}
+          >
+            <option value="all">
+              {tx("Tous les statuts", "All statuses")}
+            </option>
+            <option value="critical">{tx("Critiques", "Critical")}</option>
+            <option value="warning">{tx("Warnings", "Warnings")}</option>
+          </select>
 
-                {uploading
-                  ? tx("Traitement...", "Processing...")
-                  : tx("Importer CSV", "Import CSV")}
+          <select
+            value={periodPreset}
+            onChange={(e) => {
+              const value = e.target.value as
+                | "all"
+                | "7"
+                | "30"
+                | "90"
+                | "custom"
 
-                <input
-                  type="file"
-                  accept=".csv"
-                  className="sr-only"
-                  onChange={handleUpload}
-                  disabled={uploading}
-                  aria-label={tx("Importer un fichier CSV", "Import a CSV file")}
-                />
-              </label>
-            </div>
+              setPeriodPreset(value)
 
-            {uploadMsg && (
-              <p
-                role={uploadFailed ? "alert" : "status"}
+              if (value !== "custom") {
+                setCustomFrom("")
+                setCustomTo("")
+              }
+            }}
+            className={cn(
+              "rounded-full border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+              periodPreset !== "all"
+                ? "border-foreground ring-1 ring-foreground/20"
+                : "border-border"
+            )}
+          >
+            <option value="all">{tx("Toutes les dates", "All dates")}</option>
+            <option value="7">{tx("7 derniers jours", "Last 7 days")}</option>
+            <option value="30">{tx("30 derniers jours", "Last 30 days")}</option>
+            <option value="90">{tx("90 derniers jours", "Last 90 days")}</option>
+            <option value="custom">
+              {tx("Dates personnalisées", "Custom dates")}
+            </option>
+          </select>
+
+          {periodPreset === "custom" && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <input
+                type="date"
+                value={customFrom}
+                onChange={(e) => setCustomFrom(e.target.value)}
                 className={cn(
-                  "mt-3 text-sm font-medium",
-                  uploadFailed ? "text-destructive" : "text-green-600"
+                  "rounded-full border bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring",
+                  invalidCustomRange
+                    ? "border-destructive"
+                    : "border-border"
                 )}
-              >
-                {uploadMsg}
-              </p>
-            )}
+              />
 
-            {activitiesFor(uploadSector).length > 0 && (
-              <div className="mt-4 border-t border-border pt-4">
-                <p className="text-xs font-semibold">
-                  {tx("Activité de ce fichier", "Activity for this file")}
-                </p>
-
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {tx(
-                    "Elle décide des contrôles appliqués et de la chaîne affichée. Changez-la ici pour importer un fichier d'une autre activité.",
-                    "It decides which checks run and which chain is shown. Change it here to import a file for a different activity."
-                  )}
-                </p>
-
-                <div className="mt-2.5 flex flex-wrap gap-2">
-                  {activitiesFor(uploadSector).map((activity) => (
-                    <button
-                      key={activity.id}
-                      type="button"
-                      onClick={() => setUploadActivity(activity.id)}
-                      aria-pressed={uploadActivity === activity.id}
-                      title={px(activity.description)}
-                      className={cn(
-                        "rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
-                        uploadActivity === activity.id
-                          ? "border-foreground bg-foreground text-background"
-                          : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
-                      )}
-                    >
-                      {px(activity.label)}
-                    </button>
-                  ))}
-                </div>
-
-                {uploadActivity &&
-                  !isConfiguredActivity(uploadSector, uploadActivity) && (
-                    <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-brand/40 bg-brand/10 px-3 py-2">
-                      <p className="text-xs">
-                        {tx(
-                          "Vous importez une activité différente de celle configurée",
-                          "You are importing an activity other than the configured one"
-                        )}
-                        {configuredActivityLabel(uploadSector)
-                          ? ` (${configuredActivityLabel(uploadSector)})`
-                          : ""}
-                        {tx(
-                          ". Le tableau de bord continue d'afficher l'activité configurée.",
-                          ". The dashboard keeps showing the configured activity."
-                        )}
-                      </p>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          applyActivityToDashboard(uploadSector, uploadActivity)
-                        }
-                        className="rounded-full border border-foreground bg-foreground px-3 py-1 text-[11px] font-semibold text-background transition-opacity hover:opacity-90"
-                      >
-                        {tx(
-                          "Basculer le tableau de bord dessus",
-                          "Switch the dashboard to it"
-                        )}
-                      </button>
-                    </div>
-                  )}
-              </div>
-            )}
-
-            <p className="mt-3 text-xs text-muted-foreground">
-              {tx("Envoyé :", "Sent:")}{" "}
-              <span className="font-semibold text-foreground">
-                {sectorName(uploadSector)}
+              <span className="text-xs text-muted-foreground">
+                →
               </span>
 
-              {uploadActivity && (
-                <>
-                  {" · "}
-                  <span className="font-semibold text-foreground">
-                    {activityLabel(uploadSector, uploadActivity, tx) ??
-                      uploadActivity}
-                  </span>
-                </>
+              <input
+                type="date"
+                value={customTo}
+                min={customFrom || undefined}
+                onChange={(e) => setCustomTo(e.target.value)}
+                className={cn(
+                  "rounded-full border bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring",
+                  invalidCustomRange
+                    ? "border-destructive"
+                    : "border-border"
+                )}
+              />
+            </div>
+          )}
+
+          <div className="relative ml-auto">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+
+            <input
+              type="text"
+              value={alertSearch}
+              onChange={(e) => setAlertSearch(e.target.value)}
+              placeholder={tx(
+                "Rechercher une alerte...",
+                "Search an alert..."
+              )}
+              className={cn(
+                "w-52 rounded-full border bg-background py-1.5 pl-9 pr-4 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-colors hover:bg-accent focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+                alertSearch.trim()
+                  ? "border-foreground ring-1 ring-foreground/20"
+                  : "border-border"
+              )}
+            />
+          </div>
+
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={clearAlertFilters}
+              className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background transition-opacity hover:opacity-90"
+            >
+              <X className="h-3 w-3" />
+              {tx("Effacer les filtres", "Clear filters")}
+
+              <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[10px]">
+                {activeFilterCount}
+              </span>
+            </button>
+          )}
+        </div>
+
+        {periodPreset === "custom" && invalidCustomRange && (
+          <div className="border-t border-border px-6 py-2">
+            <p className="text-xs font-medium text-destructive">
+              {tx(
+                "La date de début doit être antérieure ou égale à la date de fin.",
+                "The start date must be on or before the end date."
               )}
             </p>
           </div>
+        )}
 
-          <div
-            id="alerts-table"
-            className="rounded-3xl border border-border bg-card"
-          >
-            <div className="flex items-center justify-between p-6 pb-4">
-              <div className="flex items-center gap-2">
-                <Cpu className="h-5 w-5" />
+        {activeFilterCount > 0 && (
+          <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-2.5">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              {tx("Filtres actifs", "Active filters")}
+            </span>
 
-                <h3 className="font-heading text-lg font-bold">
-                  {tx("Alertes", "Alerts")} ·{" "}
-                  {sectorName(filterSector)}
-                </h3>
-
-                <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-semibold text-muted-foreground">
-                  {tableAlerts.length}
-                </span>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setExpandedAlertKey(null)
-                  clearAlertFilters()
-                }}
-                className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background transition-opacity hover:opacity-90"
-              >
-                {tx("Tout voir", "See all")}
-                <ArrowUpRight className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-3">
-              <select
-                value={statusFilter}
-                onChange={(e) =>
-                  setStatusFilter(
-                    e.target.value as
-                      | "all"
-                      | "critical"
-                      | "warning"
-                  )
-                }
-                className={cn(
-                  "rounded-full border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-                  statusFilter !== "all"
-                    ? "border-foreground ring-1 ring-foreground/20"
-                    : "border-border"
-                )}
-              >
-                <option value="all">
-                  {tx("Tous les statuts", "All statuses")}
-                </option>
-                <option value="critical">{tx("Critiques", "Critical")}</option>
-                <option value="warning">{tx("Warnings", "Warnings")}</option>
-              </select>
-
-              <select
-                value={periodPreset}
-                onChange={(e) => {
-                  const value = e.target.value as
-                    | "all"
-                    | "7"
-                    | "30"
-                    | "90"
-                    | "custom"
-
-                  setPeriodPreset(value)
-
-                  if (value !== "custom") {
-                    setCustomFrom("")
-                    setCustomTo("")
-                  }
-                }}
-                className={cn(
-                  "rounded-full border bg-background px-3 py-1.5 text-xs font-semibold text-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-                  periodPreset !== "all"
-                    ? "border-foreground ring-1 ring-foreground/20"
-                    : "border-border"
-                )}
-              >
-                <option value="all">{tx("Toutes les dates", "All dates")}</option>
-                <option value="7">{tx("7 derniers jours", "Last 7 days")}</option>
-                <option value="30">{tx("30 derniers jours", "Last 30 days")}</option>
-                <option value="90">{tx("90 derniers jours", "Last 90 days")}</option>
-                <option value="custom">
-                  {tx("Dates personnalisées", "Custom dates")}
-                </option>
-              </select>
-
-              {periodPreset === "custom" && (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <input
-                    type="date"
-                    value={customFrom}
-                    onChange={(e) => setCustomFrom(e.target.value)}
-                    className={cn(
-                      "rounded-full border bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring",
-                      invalidCustomRange
-                        ? "border-destructive"
-                        : "border-border"
-                    )}
-                  />
-
-                  <span className="text-xs text-muted-foreground">
-                    →
-                  </span>
-
-                  <input
-                    type="date"
-                    value={customTo}
-                    min={customFrom || undefined}
-                    onChange={(e) => setCustomTo(e.target.value)}
-                    className={cn(
-                      "rounded-full border bg-background px-3 py-1.5 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring",
-                      invalidCustomRange
-                        ? "border-destructive"
-                        : "border-border"
-                    )}
-                  />
-                </div>
-              )}
-
-              <div className="relative ml-auto">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-
-                <input
-                  type="text"
-                  value={alertSearch}
-                  onChange={(e) => setAlertSearch(e.target.value)}
-                  placeholder={tx(
-                    "Rechercher une alerte...",
-                    "Search an alert..."
-                  )}
-                  className={cn(
-                    "w-52 rounded-full border bg-background py-1.5 pl-9 pr-4 text-xs text-foreground placeholder:text-muted-foreground outline-none transition-colors hover:bg-accent focus:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
-                    alertSearch.trim()
-                      ? "border-foreground ring-1 ring-foreground/20"
-                      : "border-border"
-                  )}
-                />
-              </div>
-
-              {activeFilterCount > 0 && (
-                <button
-                  type="button"
-                  onClick={clearAlertFilters}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background transition-opacity hover:opacity-90"
-                >
-                  <X className="h-3 w-3" />
-                  {tx("Effacer les filtres", "Clear filters")}
-
-                  <span className="rounded-full bg-white/15 px-1.5 py-0.5 text-[10px]">
-                    {activeFilterCount}
-                  </span>
-                </button>
-              )}
-            </div>
-
-            {periodPreset === "custom" && invalidCustomRange && (
-              <div className="border-t border-border px-6 py-2">
-                <p className="text-xs font-medium text-destructive">
-                  {tx(
-                    "La date de début doit être antérieure ou égale à la date de fin.",
-                    "The start date must be on or before the end date."
-                  )}
-                </p>
-              </div>
+            {statusFilter !== "all" && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-foreground/10 px-2.5 py-1 text-[11px] font-semibold text-foreground">
+                {statusFilter === "critical"
+                  ? tx("Critiques", "Critical")
+                  : tx("Warnings", "Warnings")}
+              </span>
             )}
 
-            {activeFilterCount > 0 && (
-              <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-2.5">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {tx("Filtres actifs", "Active filters")}
-                </span>
-
-                {statusFilter !== "all" && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-foreground/10 px-2.5 py-1 text-[11px] font-semibold text-foreground">
-                    {statusFilter === "critical"
-                      ? tx("Critiques", "Critical")
-                      : tx("Warnings", "Warnings")}
-                  </span>
-                )}
-
-                {periodPreset !== "all" && (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-foreground/10 px-2.5 py-1 text-[11px] font-semibold text-foreground">
-                    {periodPreset === "7"
-                      ? tx("7 derniers jours", "Last 7 days")
-                      : periodPreset === "30"
-                      ? tx("30 derniers jours", "Last 30 days")
-                      : periodPreset === "90"
-                      ? tx("90 derniers jours", "Last 90 days")
-                      : `${customFrom || tx("Début", "Start")} → ${
-                          customTo || tx("Fin", "End")
-                        }`}
-                  </span>
-                )}
-
-                {alertSearch.trim() && (
-                  <span className="inline-flex max-w-[220px] items-center gap-1 truncate rounded-full bg-foreground/10 px-2.5 py-1 text-[11px] font-semibold text-foreground">
-                    {tx("Recherche :", "Search:")} {alertSearch}
-                  </span>
-                )}
-
-                <span className="ml-auto text-[11px] font-medium text-muted-foreground">
-                  {tableAlerts.length}{" "}
-                  {tableAlerts.length === 1
-                    ? tx("alerte", "alert")
-                    : tx("alertes", "alerts")}
-                </span>
-              </div>
+            {periodPreset !== "all" && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-foreground/10 px-2.5 py-1 text-[11px] font-semibold text-foreground">
+                {periodPreset === "7"
+                  ? tx("7 derniers jours", "Last 7 days")
+                  : periodPreset === "30"
+                  ? tx("30 derniers jours", "Last 30 days")
+                  : periodPreset === "90"
+                  ? tx("90 derniers jours", "Last 90 days")
+                  : `${customFrom || tx("Début", "Start")} → ${
+                      customTo || tx("Fin", "End")
+                    }`}
+              </span>
             )}
 
-            <div
-              className={cn(
-                "grid gap-4 p-4 md:p-6",
-                expandedAlert
-                  ? "grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.75fr)]"
-                  : "grid-cols-1"
-              )}
-            >
-              <div className="min-w-0 overflow-hidden rounded-3xl border border-border">
-                <div className="max-h-[600px] overflow-x-auto overflow-y-auto">
-                  <table className="w-full border-separate border-spacing-0 text-sm">
-                    <thead className="sticky top-0 z-10 bg-card">
-                      <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">
-                        <th className="border-b border-border px-4 py-3 font-medium">
-                          {tx("Actif", "Asset")}
-                        </th>
+            {alertSearch.trim() && (
+              <span className="inline-flex max-w-[220px] items-center gap-1 truncate rounded-full bg-foreground/10 px-2.5 py-1 text-[11px] font-semibold text-foreground">
+                {tx("Recherche :", "Search:")} {alertSearch}
+              </span>
+            )}
 
-                        <th className="border-b border-border px-4 py-3 font-medium">
-                          {tx("Message", "Message")}
-                        </th>
+            <span className="ml-auto text-[11px] font-medium text-muted-foreground">
+              {tableAlerts.length}{" "}
+              {tableAlerts.length === 1
+                ? tx("alerte", "alert")
+                : tx("alertes", "alerts")}
+            </span>
+          </div>
+        )}
 
-                        <th className="border-b border-border px-4 py-3 font-medium">
-                          {tx("Secteur", "Sector")}
-                        </th>
+        <div
+          className={cn(
+            "grid gap-4 p-4 md:p-6",
+            expandedAlert
+              ? "grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.75fr)]"
+              : "grid-cols-1"
+          )}
+        >
+          <div className="min-w-0 overflow-hidden rounded-3xl border border-border">
+            <div className="max-h-[600px] overflow-x-auto overflow-y-auto">
+              <table className="w-full border-separate border-spacing-0 text-sm">
+                <thead className="sticky top-0 z-10 bg-card">
+                  <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">
+                    <th className="border-b border-border px-4 py-3 font-medium">
+                      {tx("Actif", "Asset")}
+                    </th>
 
-                        <th className="border-b border-border px-4 py-3 font-medium">
-                          {tx("Sévérité", "Severity")}
-                        </th>
-
-                        <th className="border-b border-border px-4 py-3 font-medium">
-                          {tx("Date", "Date")}
-                        </th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {tableAlerts.map((alert, i) => {
-                        const key = `${alert.equipment}-${alert.date}`
-                        const isSelected =
-                          expandedAlertKey === key
-
-                        return (
-                          <tr
-                            key={`${key}-${i}`}
-                            onClick={() =>
-                              setExpandedAlertKey(
-                                isSelected ? null : key
-                              )
-                            }
-                            className={cn(
-                              "cursor-pointer transition-colors",
-                              isSelected
-                                ? "bg-foreground text-background"
-                                : "hover:bg-accent/15"
-                            )}
-                          >
-                            <td
-                              className={cn(
-                                "px-4 py-4 font-semibold",
-                                isSelected
-                                  ? "rounded-l-2xl"
-                                  : "border-b border-border"
-                              )}
-                            >
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className={cn(
-                                    "h-1.5 w-1.5 shrink-0 rounded-full",
-                                    alert.severity === "CRITICAL"
-                                      ? "bg-destructive"
-                                      : "bg-brand"
-                                  )}
-                                />
-
-                                {alert.equipment}
-                              </div>
-                            </td>
-
-                            <td
-                              className={cn(
-                                "max-w-[280px] truncate px-4 py-4",
-                                isSelected
-                                  ? "text-background/70"
-                                  : "border-b border-border text-muted-foreground"
-                              )}
-                            >
-                              {alert.message}
-                            </td>
-
-                            <td
-                              className={cn(
-                                "px-4 py-4 capitalize",
-                                isSelected
-                                  ? "text-background/70"
-                                  : "border-b border-border text-muted-foreground"
-                              )}
-                            >
-                              {getSectorLabel(alert.sector, tx)}
-                            </td>
-
-                            <td
-                              className={cn(
-                                "px-4 py-4",
-                                !isSelected &&
-                                  "border-b border-border"
-                              )}
-                            >
-                              <span
-                                className={cn(
-                                  "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
-                                  alert.severity === "CRITICAL"
-                                    ? "bg-destructive/10 text-destructive"
-                                    : "bg-amber-500/15 text-amber-600"
-                                )}
-                              >
-                                {alert.severity}
-                              </span>
-                            </td>
-
-                            <td
-                              className={cn(
-                                "px-4 py-4",
-                                isSelected
-                                  ? "rounded-r-2xl text-background/70"
-                                  : "border-b border-border text-muted-foreground"
-                              )}
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                {new Date(
-                                  alert.date
-                                ).toLocaleString(dateLocale)}
-
-                                <ChevronRight
-                                  className={cn(
-                                    "h-4 w-4 shrink-0 transition-all",
-                                    isSelected
-                                      ? "rotate-90 text-brand"
-                                      : "text-muted-foreground"
-                                  )}
-                                />
-                              </div>
-                            </td>
-                          </tr>
-                        )
-                      })}
-
-                      {tableAlerts.length === 0 && (
-                        <tr>
-                          <td
-                            className="px-4 py-8 text-muted-foreground"
-                            colSpan={5}
-                          >
-                            {alertsError ? (
-                              <span
-                                role="alert"
-                                className="text-destructive"
-                              >
-                                {tx(
-                                  "Impossible de charger les alertes",
-                                  "Cannot load the alerts"
-                                )}
-                                {` (${alertsError}). `}
-                                {tx(
-                                  "L'API est peut-être hors service : rechargez la page ou vérifiez la console du navigateur.",
-                                  "The API may be down: reload the page, or check the browser console."
-                                )}
-                              </span>
-                            ) : (
-                              tx(
-                                "Aucune alerte pour ces filtres. Importez un CSV ou élargissez la période.",
-                                "No alerts match these filters. Import a CSV, or widen the period."
-                              )
-                            )}
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {expandedAlert && (
-                <div className="min-w-0 self-start rounded-3xl bg-sidebar p-5 text-sidebar-foreground shadow-lg ring-1 ring-sidebar-border lg:sticky lg:top-6">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-semibold uppercase tracking-widest text-accent">
-                        {tx("Détails de l'alerte", "Alert detail")}
-                      </p>
-
-                      <h4 className="mt-1.5 truncate font-heading text-xl font-bold tracking-tight">
-                        {expandedAlert.equipment}
-                      </h4>
-
-                      <p className="mt-0.5 text-xs text-sidebar-foreground/50">
-                        {new Date(
-                          expandedAlert.date
-                        ).toLocaleString(dateLocale)}
-                      </p>
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-2">
-                      <span
-                        className={cn(
-                          "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
-                          expandedAlert.severity === "CRITICAL"
-                            ? "bg-destructive/10 text-destructive"
-                            : "bg-amber-500/15 text-amber-600"
-                        )}
-                      >
-                        {expandedAlert.severity}
-                      </span>
-
-                      <button
-                        type="button"
-                        onClick={() => setExpandedAlertKey(null)}
-                        aria-label={tx("Fermer les détails", "Close the detail")}
-                        className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-sidebar-foreground/60 ring-1 ring-white/10 transition-colors hover:bg-accent hover:text-accent-foreground hover:ring-transparent"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-sidebar-foreground/40">
+                    <th className="border-b border-border px-4 py-3 font-medium">
                       {tx("Message", "Message")}
-                    </p>
+                    </th>
 
-                    <p className="mt-1 text-sm leading-5 text-sidebar-foreground/90">
-                      {expandedAlert.message}
-                    </p>
-                  </div>
+                    <th className="border-b border-border px-4 py-3 font-medium">
+                      {tx("Secteur", "Sector")}
+                    </th>
 
-                  <div className="mt-3 grid grid-cols-2 gap-2 rounded-2xl bg-white/[0.06] p-4 ring-1 ring-white/10">
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
-                        {tx("Secteur", "Sector")}
-                      </p>
+                    <th className="border-b border-border px-4 py-3 font-medium">
+                      {tx("Sévérité", "Severity")}
+                    </th>
 
-                      <p className="mt-1 text-sm font-semibold capitalize">
-                        {getSectorLabel(expandedAlert.sector, tx)}
-                      </p>
-                    </div>
+                    <th className="border-b border-border px-4 py-3 font-medium">
+                      {tx("Date", "Date")}
+                    </th>
+                  </tr>
+                </thead>
 
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
-                        {tx("Statut", "Status")}
-                      </p>
+                <tbody>
+                  {tableAlerts.map((alert, i) => {
+                    const key = `${alert.equipment}-${alert.date}`
+                    const isSelected =
+                      expandedAlertKey === key
 
-                      <span
-                        className={cn(
-                          "mt-1 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
-                          expandedAlert.severity === "CRITICAL"
-                            ? "bg-destructive/10 text-destructive"
-                            : "bg-amber-500/15 text-amber-600"
-                        )}
-                      >
-                        {expandedAlert.severity}
-                      </span>
-                    </div>
-
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
-                        {tx("Score de risque", "Risk score")}
-                      </p>
-
-                      <p
-                        className={cn(
-                          "mt-1 text-sm font-semibold",
-                          typeof expandedRecommendation?.risk_score === "number"
-                            ? "text-accent"
-                            : "text-sidebar-foreground/40"
-                        )}
-                        title={
-                          typeof expandedRecommendation?.risk_score === "number"
-                            ? tx(
-                                "Gravité du problème lui-même, calculée à partir des mesures brutes",
-                                "How severe the problem itself is, computed from the raw measurements"
-                              )
-                            : tx(
-                                "Ce secteur ne calcule pas encore de score de risque pour cette alerte",
-                                "This sector does not compute a risk score for this alert yet"
-                              )
-                        }
-                      >
-                        {typeof expandedRecommendation?.risk_score === "number"
-                          ? `${expandedRecommendation.risk_score} / 100`
-                          : tx("Non calculé", "Not computed")}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
-                        {tx("Confiance", "Confidence")}
-                      </p>
-
-                      {expandedRecommendation ? (
-                        <p
-                          className="mt-1 inline-flex items-center gap-1 text-sm font-semibold"
-                          title={tx(
-                            "À quel point SentrIA est sûr que cette alerte mérite votre attention",
-                            "How sure SentrIA is that this alert deserves your attention"
-                          )}
-                        >
-                          <Gauge className="h-3 w-3 shrink-0 text-sidebar-foreground/50" />
-                          {estimateConfidence(
-                            expandedRecommendation,
-                            recurrenceOf(
-                              expandedRecommendation.equipment,
-                              alerts
-                            ),
-                            trackRecordForCategory(
-                              expandedRecommendation.action_category,
-                              recommendations,
-                              actionsLog
-                            )
-                          )}
-                          %
-                        </p>
-                      ) : (
-                        <p className="mt-1 text-sm font-semibold text-sidebar-foreground/40">
-                          {tx("Non mesuré", "Not measured")}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="min-w-0">
-                      <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
-                        {tx("Catégorie", "Category")}
-                      </p>
-
-                      <p className="mt-1 truncate text-sm font-semibold capitalize">
-                        {expandedRecommendation?.action_category ?? "N/A"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 rounded-2xl border border-accent/20 bg-accent/5 px-4 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-accent">
-                      {tx("Recommandation", "Recommendation")}
-                    </p>
-
-                    <p className="mt-1.5 text-sm font-medium leading-5 text-sidebar-foreground/90">
-                      {expandedRecommendation?.recommended_action ??
-                        tx(
-                          "Analyse en cours, recommandation bientôt disponible.",
-                          "Analysis in progress, a recommendation is coming."
-                        )}
-                    </p>
-                  </div>
-
-                  {expandedRecommendation && (
-                    <div className="mt-3 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
-                      <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
-                        {tx("Pourquoi", "Why")}
-                      </p>
-
-                      <p className="mt-1.5 text-xs leading-5 text-sidebar-foreground/70">
-                        {reasoningFor(
-                          expandedRecommendation,
-                          recurrenceOf(
-                            expandedRecommendation.equipment,
-                            alerts
-                          ),
-                          tx
-                        )}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="mt-3 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
-                      {tx("Contexte sectoriel", "Sector context")}
-                    </p>
-
-                    <p className="mt-1.5 text-xs leading-5 text-sidebar-foreground/70">
-                      {expandedRecommendation
-                        ? getRecommendationContext(
-                            expandedRecommendation,
-                            tx
+                    return (
+                      <tr
+                        key={`${key}-${i}`}
+                        onClick={() =>
+                          setExpandedAlertKey(
+                            isSelected ? null : key
                           )
-                        : tx(
-                            "SentrIA analyse cette alerte afin d'identifier l'action opérationnelle la plus pertinente.",
-                            "SentrIA is working out the most useful operational action for this alert."
-                          )}
-                    </p>
-                  </div>
-
-                  {expandedRecommendation &&
-                    (() => {
-                      const actionKey = `${expandedRecommendation.equipment}-${
-                        expandedRecommendation.alert_key ??
-                        expandedRecommendation.id
-                      }`
-                      const action = actionsLog[actionKey]
-
-                      return !action || action.status === "pending" ? (
-                        <div className="mt-3 flex gap-2">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              recordAction(actionKey, "done")
-                            }}
-                            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground transition-opacity hover:opacity-90"
-                          >
-                            <Check className="h-3.5 w-3.5" />
-                            {tx("Marquer traité", "Mark handled")}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              recordAction(actionKey, "dismissed")
-                            }}
-                            className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-sidebar-foreground/70 transition-colors hover:bg-white/5"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                            {tx("Ignorer", "Dismiss")}
-                          </button>
-                        </div>
-                      ) : (
-                        <div
+                        }
+                        className={cn(
+                          "cursor-pointer transition-colors",
+                          isSelected
+                            ? "bg-foreground text-background"
+                            : "hover:bg-accent/15"
+                        )}
+                      >
+                        <td
                           className={cn(
-                            "mt-3 rounded-xl px-3 py-2.5 ring-1",
-                            action.status === "done"
-                              ? "bg-emerald-500/10 ring-emerald-500/30"
-                              : "bg-white/5 ring-white/10"
+                            "px-4 py-4 font-semibold",
+                            isSelected
+                              ? "rounded-l-2xl"
+                              : "border-b border-border"
                           )}
                         >
-                          <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-sidebar-foreground/60">
-                            {tx("Résultat", "Outcome")}
-                          </p>
-                          <p className="mt-1 text-[11px] leading-4 text-sidebar-foreground/80">
-                            {action.status === "done"
-                              ? tx(
-                                  `Traité à ${action.at}. SentrIA continue de surveiller cet actif pour confirmer l'effet.`,
-                                  `Handled at ${action.at}. SentrIA keeps watching this asset to confirm the effect.`
-                                )
-                              : tx(
-                                  `Écarté à ${action.at}. Réapparaîtra si le signal s'aggrave.`,
-                                  `Dismissed at ${action.at}. It will come back if the signal worsens.`
-                                )}
-                          </p>
-                        </div>
-                      )
-                    })()}
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={cn(
+                                "h-1.5 w-1.5 shrink-0 rounded-full",
+                                alert.severity === "CRITICAL"
+                                  ? "bg-destructive"
+                                  : "bg-brand"
+                              )}
+                            />
 
-                  <div className="mt-4 flex items-center justify-end">
-                    <button
-                      type="button"
-                      disabled={!expandedRecommendation}
-                      onClick={(e) => {
-                        e.stopPropagation()
+                            {alert.equipment}
+                          </div>
+                        </td>
 
-                        if (expandedRecommendation) {
-                          setSelectedRecommendation(
-                            expandedRecommendation
+                        <td
+                          className={cn(
+                            "max-w-[280px] truncate px-4 py-4",
+                            isSelected
+                              ? "text-background/70"
+                              : "border-b border-border text-muted-foreground"
+                          )}
+                        >
+                          {alert.message}
+                        </td>
+
+                        <td
+                          className={cn(
+                            "px-4 py-4 capitalize",
+                            isSelected
+                              ? "text-background/70"
+                              : "border-b border-border text-muted-foreground"
+                          )}
+                        >
+                          {getSectorLabel(alert.sector, tx)}
+                        </td>
+
+                        <td
+                          className={cn(
+                            "px-4 py-4",
+                            !isSelected &&
+                              "border-b border-border"
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
+                              alert.severity === "CRITICAL"
+                                ? "bg-destructive/10 text-destructive"
+                                : "bg-amber-500/15 text-amber-600"
+                            )}
+                          >
+                            {alert.severity}
+                          </span>
+                        </td>
+
+                        <td
+                          className={cn(
+                            "px-4 py-4",
+                            isSelected
+                              ? "rounded-r-2xl text-background/70"
+                              : "border-b border-border text-muted-foreground"
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            {new Date(
+                              alert.date
+                            ).toLocaleString(dateLocale)}
+
+                            <ChevronRight
+                              className={cn(
+                                "h-4 w-4 shrink-0 transition-all",
+                                isSelected
+                                  ? "rotate-90 text-brand"
+                                  : "text-muted-foreground"
+                              )}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+
+                  {tableAlerts.length === 0 && (
+                    <tr>
+                      <td
+                        className="px-4 py-8 text-muted-foreground"
+                        colSpan={5}
+                      >
+                        {alertsError ? (
+                          <span
+                            role="alert"
+                            className="text-destructive"
+                          >
+                            {tx(
+                              "Impossible de charger les alertes",
+                              "Cannot load the alerts"
+                            )}
+                            {` (${alertsError}). `}
+                            {tx(
+                              "L'API est peut-être hors service : rechargez la page ou vérifiez la console du navigateur.",
+                              "The API may be down: reload the page, or check the browser console."
+                            )}
+                          </span>
+                        ) : (
+                          tx(
+                            "Aucune alerte pour ces filtres. Importez un CSV ou élargissez la période.",
+                            "No alerts match these filters. Import a CSV, or widen the period."
                           )
-                        }
-                      }}
-                      className={cn(
-                        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition-transform",
-                        expandedRecommendation
-                          ? "bg-accent text-accent-foreground hover:scale-[1.02]"
-                          : "cursor-not-allowed bg-white/10 text-sidebar-foreground/40"
-                      )}
-                    >
-                      {tx("Voir la recommandation", "See the recommendation")}
-                      <ArrowUpRight className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              )}
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
+
+          {expandedAlert && (
+            <div className="min-w-0 self-start rounded-3xl bg-sidebar p-5 text-sidebar-foreground shadow-lg ring-1 ring-sidebar-border lg:sticky lg:top-6">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-accent">
+                    {tx("Détails de l'alerte", "Alert detail")}
+                  </p>
+
+                  <h4 className="mt-1.5 truncate font-heading text-xl font-bold tracking-tight">
+                    {expandedAlert.equipment}
+                  </h4>
+
+                  <p className="mt-0.5 text-xs text-sidebar-foreground/50">
+                    {new Date(
+                      expandedAlert.date
+                    ).toLocaleString(dateLocale)}
+                  </p>
+                </div>
+
+                <div className="flex shrink-0 items-center gap-2">
+                  <span
+                    className={cn(
+                      "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
+                      expandedAlert.severity === "CRITICAL"
+                        ? "bg-destructive/10 text-destructive"
+                        : "bg-amber-500/15 text-amber-600"
+                    )}
+                  >
+                    {expandedAlert.severity}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => setExpandedAlertKey(null)}
+                    aria-label={tx("Fermer les détails", "Close the detail")}
+                    className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-sidebar-foreground/60 ring-1 ring-white/10 transition-colors hover:bg-accent hover:text-accent-foreground hover:ring-transparent"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-sidebar-foreground/40">
+                  {tx("Message", "Message")}
+                </p>
+
+                <p className="mt-1 text-sm leading-5 text-sidebar-foreground/90">
+                  {expandedAlert.message}
+                </p>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2 rounded-2xl bg-white/[0.06] p-4 ring-1 ring-white/10">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
+                    {tx("Secteur", "Sector")}
+                  </p>
+
+                  <p className="mt-1 text-sm font-semibold capitalize">
+                    {getSectorLabel(expandedAlert.sector, tx)}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
+                    {tx("Statut", "Status")}
+                  </p>
+
+                  <span
+                    className={cn(
+                      "mt-1 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
+                      expandedAlert.severity === "CRITICAL"
+                        ? "bg-destructive/10 text-destructive"
+                        : "bg-amber-500/15 text-amber-600"
+                    )}
+                  >
+                    {expandedAlert.severity}
+                  </span>
+                </div>
+
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
+                    {tx("Score de risque", "Risk score")}
+                  </p>
+
+                  <p
+                    className={cn(
+                      "mt-1 text-sm font-semibold",
+                      typeof expandedRecommendation?.risk_score === "number"
+                        ? "text-accent"
+                        : "text-sidebar-foreground/40"
+                    )}
+                    title={
+                      typeof expandedRecommendation?.risk_score === "number"
+                        ? tx(
+                            "Gravité du problème lui-même, calculée à partir des mesures brutes",
+                            "How severe the problem itself is, computed from the raw measurements"
+                          )
+                        : tx(
+                            "Ce secteur ne calcule pas encore de score de risque pour cette alerte",
+                            "This sector does not compute a risk score for this alert yet"
+                          )
+                    }
+                  >
+                    {typeof expandedRecommendation?.risk_score === "number"
+                      ? `${expandedRecommendation.risk_score} / 100`
+                      : tx("Non calculé", "Not computed")}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
+                    {tx("Confiance", "Confidence")}
+                  </p>
+
+                  {expandedRecommendation ? (
+                    <p
+                      className="mt-1 inline-flex items-center gap-1 text-sm font-semibold"
+                      title={tx(
+                        "À quel point SentrIA est sûr que cette alerte mérite votre attention",
+                        "How sure SentrIA is that this alert deserves your attention"
+                      )}
+                    >
+                      <Gauge className="h-3 w-3 shrink-0 text-sidebar-foreground/50" />
+                      {estimateConfidence(
+                        expandedRecommendation,
+                        recurrenceOf(
+                          expandedRecommendation.equipment,
+                          alerts
+                        ),
+                        trackRecordForCategory(
+                          expandedRecommendation.action_category,
+                          recommendations,
+                          actionsLog
+                        )
+                      )}
+                      %
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-sm font-semibold text-sidebar-foreground/40">
+                      {tx("Non mesuré", "Not measured")}
+                    </p>
+                  )}
+                </div>
+
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
+                    {tx("Catégorie", "Category")}
+                  </p>
+
+                  <p className="mt-1 truncate text-sm font-semibold capitalize">
+                    {expandedRecommendation?.action_category ?? "N/A"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-3 rounded-2xl border border-accent/20 bg-accent/5 px-4 py-3">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-accent">
+                  {tx("Recommandation", "Recommendation")}
+                </p>
+
+                <p className="mt-1.5 text-sm font-medium leading-5 text-sidebar-foreground/90">
+                  {expandedRecommendation?.recommended_action ??
+                    tx(
+                      "Analyse en cours, recommandation bientôt disponible.",
+                      "Analysis in progress, a recommendation is coming."
+                    )}
+                </p>
+              </div>
+
+              {expandedRecommendation && (
+                <div className="mt-3 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
+                    {tx("Pourquoi", "Why")}
+                  </p>
+
+                  <p className="mt-1.5 text-xs leading-5 text-sidebar-foreground/70">
+                    {reasoningFor(
+                      expandedRecommendation,
+                      recurrenceOf(
+                        expandedRecommendation.equipment,
+                        alerts
+                      ),
+                      tx
+                    )}
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-3 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
+                  {tx("Contexte sectoriel", "Sector context")}
+                </p>
+
+                <p className="mt-1.5 text-xs leading-5 text-sidebar-foreground/70">
+                  {expandedRecommendation
+                    ? getRecommendationContext(
+                        expandedRecommendation,
+                        tx
+                      )
+                    : tx(
+                        "SentrIA analyse cette alerte afin d'identifier l'action opérationnelle la plus pertinente.",
+                        "SentrIA is working out the most useful operational action for this alert."
+                      )}
+                </p>
+              </div>
+
+              {expandedRecommendation &&
+                (() => {
+                  const actionKey = `${expandedRecommendation.equipment}-${
+                    expandedRecommendation.alert_key ??
+                    expandedRecommendation.id
+                  }`
+                  const action = actionsLog[actionKey]
+
+                  return !action || action.status === "pending" ? (
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          recordAction(actionKey, "done")
+                        }}
+                        className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground transition-opacity hover:opacity-90"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                        {tx("Marquer traité", "Mark handled")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          recordAction(actionKey, "dismissed")
+                        }}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-sidebar-foreground/70 transition-colors hover:bg-white/5"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                        {tx("Ignorer", "Dismiss")}
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      className={cn(
+                        "mt-3 rounded-xl px-3 py-2.5 ring-1",
+                        action.status === "done"
+                          ? "bg-emerald-500/10 ring-emerald-500/30"
+                          : "bg-white/5 ring-white/10"
+                      )}
+                    >
+                      <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-sidebar-foreground/60">
+                        {tx("Résultat", "Outcome")}
+                      </p>
+                      <p className="mt-1 text-[11px] leading-4 text-sidebar-foreground/80">
+                        {action.status === "done"
+                          ? tx(
+                              `Traité à ${action.at}. SentrIA continue de surveiller cet actif pour confirmer l'effet.`,
+                              `Handled at ${action.at}. SentrIA keeps watching this asset to confirm the effect.`
+                            )
+                          : tx(
+                              `Écarté à ${action.at}. Réapparaîtra si le signal s'aggrave.`,
+                              `Dismissed at ${action.at}. It will come back if the signal worsens.`
+                            )}
+                      </p>
+                    </div>
+                  )
+                })()}
+
+              <div className="mt-4 flex items-center justify-end">
+                <button
+                  type="button"
+                  disabled={!expandedRecommendation}
+                  onClick={(e) => {
+                    e.stopPropagation()
+
+                    if (expandedRecommendation) {
+                      setSelectedRecommendation(
+                        expandedRecommendation
+                      )
+                    }
+                  }}
+                  className={cn(
+                    "inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition-transform",
+                    expandedRecommendation
+                      ? "bg-accent text-accent-foreground hover:scale-[1.02]"
+                      : "cursor-not-allowed bg-white/10 text-sidebar-foreground/40"
+                  )}
+                >
+                  {tx("Voir la recommandation", "See the recommendation")}
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
