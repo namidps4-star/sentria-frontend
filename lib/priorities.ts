@@ -20,7 +20,6 @@ import {
   Thermometer,
   Truck,
   Warehouse,
-  Wheat,
   Zap,
 } from "lucide-react"
 
@@ -231,18 +230,6 @@ export const PRIORITIES_BY_SECTOR: Record<Sector, Priority[]> = {
 
   agriculture: [
     {
-      id: "crops",
-      label: localized(
-        "Récoltes",
-        "Harvests"
-      ),
-      description: localized(
-        "Pertes et risques de production",
-        "Losses and production risk"
-      ),
-      icon: Wheat,
-    },
-    {
       id: "storage",
       label: localized(
         "Stockage",
@@ -289,18 +276,6 @@ export const PRIORITIES_BY_SECTOR: Record<Sector, Priority[]> = {
         "Product availability"
       ),
       icon: Package,
-    },
-    {
-      id: "irrigation",
-      label: localized(
-        "Irrigation",
-        "Irrigation"
-      ),
-      description: localized(
-        "Eau et fonctionnement des systèmes",
-        "Water and system operation"
-      ),
-      icon: Droplets,
     },
   ],
 
@@ -630,10 +605,26 @@ export const PRIORITIES_BY_SECTOR: Record<Sector, Priority[]> = {
   ],
 }
 
-export function prioritiesFor(sector: Sector | string | null | undefined) {
+/** Card lists for activities that do not offer the whole sector list.
+ *  Ids must exist in PRIORITIES_BY_SECTOR; an activity without an entry
+ *  gets the sector list. */
+const PRIORITY_IDS_BY_ACTIVITY: Record<string, string[]> = {
+  "exploitation-agricole": ["storage", "temperature", "transport"],
+  // A-COOP adds network rebalancing here once it exists.
+  "cooperative-agricole": ["transport"],
+  "silo-stockage": ["storage", "temperature"],
+}
+
+export function prioritiesFor(
+  sector: Sector | string | null | undefined,
+  businessType?: string | null
+) {
   if (!sector) return []
 
-  return PRIORITIES_BY_SECTOR[sector as Sector] ?? []
+  const all = PRIORITIES_BY_SECTOR[sector as Sector] ?? []
+  const ids = businessType ? PRIORITY_IDS_BY_ACTIVITY[businessType] : undefined
+
+  return ids ? all.filter((item) => ids.includes(item.id)) : all
 }
 
 export function priorityMeta(
@@ -685,9 +676,10 @@ export function priorityDescription(
  *  the catalog no longer knows about. */
 export function orderPriorities(
   sector: Sector | string | null | undefined,
-  ids: string[]
+  ids: string[],
+  businessType?: string | null
 ): string[] {
-  const known = prioritiesFor(sector).map((item) => item.id)
+  const known = prioritiesFor(sector, businessType).map((item) => item.id)
 
   return known.filter((id) => ids.includes(id))
 }

@@ -154,7 +154,7 @@ export const ACTIVITIES_BY_SECTOR: Record<Sector, Activity[]> = {
       ),
       description: localized(
         "Production, culture et élevage",
-        "Production, crops and livestock"
+        "Farming and livestock production"
       ),
       icon: Wheat,
     },

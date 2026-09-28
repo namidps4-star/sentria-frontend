@@ -774,10 +774,13 @@ const LOGISTICS_OPS_META: Record<
   multi: SECTOR_META.logistics,
 }
 
-function getSavedPriorities(sector: string): string[] {
+function getSavedPriorities(
+  sector: string,
+  businessType?: string | null
+): string[] {
   if (typeof window === "undefined") return []
 
-  if (prioritiesFor(sector).length === 0) return []
+  if (prioritiesFor(sector, businessType).length === 0) return []
 
   try {
     const stored = JSON.parse(
@@ -788,7 +791,8 @@ function getSavedPriorities(sector: string): string[] {
 
     return orderPriorities(
       sector,
-      stored.filter((value): value is string => typeof value === "string")
+      stored.filter((value): value is string => typeof value === "string"),
+      businessType
     )
   } catch {
     return []
@@ -994,8 +998,8 @@ export function DashboardView({
   const [taskMap, setTaskMap] = useState<Record<string, Assignment>>({})
 
   useEffect(() => {
-    setSelectedSectorPriorities(getSavedPriorities(filterSector))
-  }, [filterSector])
+    setSelectedSectorPriorities(getSavedPriorities(filterSector, businessType))
+  }, [filterSector, businessType])
 
   useEffect(() => {
     const options = activitiesFor(uploadSector)

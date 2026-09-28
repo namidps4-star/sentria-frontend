@@ -45,7 +45,7 @@ import {
   writeCountryCode,
   writeLanguage,
 } from "@/lib/locale"
-import { PRIORITIES_BY_SECTOR } from "@/lib/priorities"
+import { prioritiesFor } from "@/lib/priorities"
 import {
   ACTIVITIES_BY_SECTOR,
   normalizeOpsType,
@@ -262,9 +262,7 @@ const PRIORITY_IMAGES: Record<string, string> = {
   storage: "/storage.png",
 
   // Agriculture
-  crops: "/crops.png",
   transport: "/transport.png",
-  irrigation: "/irrigation.png",
 
   // Transportation
   vehicles: "/vehicles.png",
@@ -724,9 +722,18 @@ export function OnboardingView({
   const [configureLater, setConfigureLater] = useState(false)
 
   const equipment = useMemo(
-    () => (sector ? PRIORITIES_BY_SECTOR[sector] : []),
-    [sector]
+    () => prioritiesFor(sector, subType),
+    [sector, subType]
   )
+
+  // Changing activity can remove cards: drop ticks on cards no longer offered.
+  useEffect(() => {
+    const offered = new Set(equipment.map((item) => item.id))
+    setSelectedEquipment((ids) => {
+      const kept = ids.filter((id) => offered.has(id))
+      return kept.length === ids.length ? ids : kept
+    })
+  }, [equipment])
 
   const subTypes = useMemo(
     () => (sector ? ACTIVITIES_BY_SECTOR[sector] : []),
