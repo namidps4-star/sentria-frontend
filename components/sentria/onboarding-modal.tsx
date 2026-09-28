@@ -408,6 +408,14 @@ const CSV_COLUMNS: Record<string, string[]> = {
   // Names check_logistics reads (and the /upload check requires):
   // equipment_id and daily_cycles.
   "logistics": ["equipment_id", "daily_cycles", "hydraulic_pressure", "fuel_level"],
+  // A port file can also carry vessel rows (arrival, berth window) and
+  // customs rows (clearance against free time): port_flow.py.
+  "port-conteneurs": [
+    "equipment_id", "daily_cycles", "avg_wait_hours",
+    "vessel_id", "eta", "berth_window_end", "containers_aboard",
+    "declaration_id", "hours_in_customs", "docs_missing",
+    "free_time_hours_left",
+  ],
   // Names the backend reads (check_agriculture): days_in_storage, not
   // days_stored. product_name drives the silo spoilage profiles (A-PROF).
   "agriculture": ["product_name", "days_in_storage", "storage_temp"],
