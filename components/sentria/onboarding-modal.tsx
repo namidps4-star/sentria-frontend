@@ -45,6 +45,7 @@ import {
   writeCountryCode,
   writeLanguage,
 } from "@/lib/locale"
+import { uploadProblemMessage } from "@/lib/upload-problem"
 import { prioritiesFor } from "@/lib/priorities"
 import {
   ACTIVITIES_BY_SECTOR,
@@ -404,7 +405,9 @@ const CSV_COLUMNS: Record<string, string[]> = {
     "Product ID", "Torque [Nm]", "Tool wear [min]", "Rotational speed [rpm]",
     "last_maintenance_date",
   ],
-  "logistics": ["equipment", "cycles", "hydraulic_pressure", "fuel_level"],
+  // Names check_logistics reads (and the /upload check requires):
+  // equipment_id and daily_cycles.
+  "logistics": ["equipment_id", "daily_cycles", "hydraulic_pressure", "fuel_level"],
   // Names the backend reads (check_agriculture): days_in_storage, not
   // days_stored. product_name drives the silo spoilage profiles (A-PROF).
   "agriculture": ["product_name", "days_in_storage", "storage_temp"],
@@ -417,7 +420,11 @@ const CSV_COLUMNS: Record<string, string[]> = {
     "member_id", "product_name", "days_in_storage", "spare_capacity_kg",
     "qty", "unit_cost",
   ],
-  "transportation": ["vehicle_id", "km_since_service", "engine_temp"],
+  // Names check_transportation reads: truck_id, mileage_km and
+  // last_service_km (not vehicle_id / km_since_service).
+  "transportation": [
+    "truck_id", "mileage_km", "last_service_km", "engine_temp", "fuel_level",
+  ],
   // Names check_energy reads: fuel_level_pct, not fuel_level.
   "energy": ["generator_id", "fuel_level_pct", "coolant_temp"],
   "centrale-production": [
@@ -988,6 +995,22 @@ export function OnboardingView({
         method: "POST",
         body: form,
       })
+
+      // 422: the file doesn't carry this activity's data (B-24). Show
+      // what the server says is missing; nothing was saved.
+      if (res.status === 422) {
+        const problem = await res.json().catch(() => null)
+
+        setCsvFailed(true)
+        setCsvMsg(
+          uploadProblemMessage(problem, tx) ??
+            tx(
+              "Ce fichier ne correspond pas à l'activité choisie.",
+              "This file doesn't match the chosen activity."
+            )
+        )
+        return
+      }
 
       if (!res.ok) {
         const body = await res.text().catch(() => "")

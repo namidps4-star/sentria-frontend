@@ -62,6 +62,7 @@ import {
 } from "@/lib/activities"
 import { useCompanyIdentity } from "@/lib/company"
 import { accountCurrencyParam } from "@/lib/locale"
+import { uploadProblemMessage } from "@/lib/upload-problem"
 import {
   contractorIdsOf,
   fetchAssignments,
@@ -1002,6 +1003,15 @@ export function DashboardView({
 
   const [businessType, setBusinessType] = useState<string | null>(null)
 
+  /** The configured activity, only for the sector it belongs to. One
+   *  activity is saved (the main sector's); applying it to every sector
+   *  hid other sectors' alerts, and the alerts of any other activity
+   *  just uploaded (B-25). */
+  const activityIn = (sector: string | null | undefined) =>
+    businessType && activitiesFor(sector).some((a) => a.id === businessType)
+      ? businessType
+      : null
+
   const [logisticsPriority, setLogisticsPriority] =
     useState<LogisticsPriority | null>(null)
 
@@ -1476,8 +1486,12 @@ export function DashboardView({
           ? normalizeOpsType(uploadActivity) ?? normalizeOpsType(opsType)
           : undefined
 
+      // The activity picked in the upload panel. Logistics keeps its
+      // configured activity when it has one: its panel picks the ops type.
       const chosenBusinessType =
-        uploadSector === "logistics" ? businessType : uploadActivity ?? businessType
+        uploadSector === "logistics"
+          ? activityIn(uploadSector) ?? uploadActivity
+          : uploadActivity ?? activityIn(uploadSector)
 
       const res = await fetch(
         `${API}/upload?sector=${toApiSector(uploadSector)}&lang=${tx("fr", "en")}` +
@@ -1492,6 +1506,22 @@ export function DashboardView({
         }
       )
 
+      // 422: the file doesn't carry this activity's data (B-24). The
+      // server says what is missing; nothing was saved.
+      if (res.status === 422) {
+        const problem = await res.json().catch(() => null)
+
+        setUploadFailed(true)
+        setUploadMsg(
+          uploadProblemMessage(problem, tx) ??
+            tx(
+              "Ce fichier ne correspond pas à l'activité choisie.",
+              "This file doesn't match the chosen activity."
+            )
+        )
+        return
+      }
+
       if (!res.ok) {
         throw new Error("Upload failed")
       }
@@ -1499,6 +1529,14 @@ export function DashboardView({
       const data = await res.json()
 
       setUploadMsg(data.message ?? tx("Fichier traité.", "File processed."))
+
+      // Show the department the file was for: if this sector is filtered
+      // on another activity, the new alerts would stay hidden (B-25).
+      const configured = activityIn(uploadSector)
+
+      if (uploadActivity && configured && uploadActivity !== configured) {
+        applyActivityToDashboard(uploadSector, uploadActivity)
+      }
 
       await new Promise((r) => setTimeout(r, 1500))
 
@@ -1557,11 +1595,13 @@ export function DashboardView({
     business_type?: string | null
     alert_key?: string | null
   }) => {
-    if (!businessType) return true
+    const configured = activityIn(a.sector)
+
+    if (!configured) return true
 
     const activity = activityOf(a)
 
-    if (activity !== null) return activity === businessType
+    if (activity !== null) return activity === configured
 
     return !sectorsWithRecordedActivity.has(a.sector ?? "")
   }
@@ -1591,14 +1631,17 @@ export function DashboardView({
     .filter(matchesActivity)
 
   const recommendationMatchesActivity = (r: {
+    sector?: string | null
     business_type?: string | null
     alert_key?: string | null
   }) => {
-    if (!businessType) return true
+    const configured = activityIn(r.sector)
+
+    if (!configured) return true
 
     const activity = activityOf(r)
 
-    return activity === null || activity === businessType
+    return activity === null || activity === configured
   }
 
   const filteredRecommendations = recommendations
@@ -1745,23 +1788,30 @@ export function DashboardView({
         SECTOR_META.all
       : SECTOR_META[filterSector] ?? SECTOR_META.all
 
-  const subtypeLabels =
-    businessType && filterSector !== "all"
-      ? SUBTYPE_KPI_LABELS[businessType]
-      : undefined
-
-  const subtypeName = businessType
-    ? BUSINESS_TYPE_LABELS[businessType]
-      ? px(BUSINESS_TYPE_LABELS[businessType])
-      : undefined
-    : undefined
-
   const onboardedSectorKey =
     filterSector !== "all"
       ? filterSector
       : activeSectors.length === 1
       ? activeSectors[0]
       : null
+
+  // The activity of the sector on screen: another sector's activity
+  // must not label or filter this one (B-25). The all-sectors view keeps
+  // naming the configured activity.
+  const viewActivity = onboardedSectorKey
+    ? activityIn(onboardedSectorKey)
+    : businessType
+
+  const subtypeLabels =
+    viewActivity && filterSector !== "all"
+      ? SUBTYPE_KPI_LABELS[viewActivity]
+      : undefined
+
+  const subtypeName = viewActivity
+    ? BUSINESS_TYPE_LABELS[viewActivity]
+      ? px(BUSINESS_TYPE_LABELS[viewActivity])
+      : undefined
+    : undefined
 
   const onboardedSectorLabel = sectorName(onboardedSectorKey)
 
@@ -1770,7 +1820,7 @@ export function DashboardView({
     null
 
   const activitySeparationActive =
-    Boolean(businessType) &&
+    Boolean(viewActivity) &&
     alerts.some(
       (a) =>
         (onboardedSectorKey === null ||
@@ -1789,7 +1839,7 @@ export function DashboardView({
   const breakdown = alertBreakdown(filteredAlerts, tx)
 
   const chartTitle = px(
-    (businessType ? SUBTYPE_CHART_TITLES[businessType] : undefined) ??
+    (viewActivity ? SUBTYPE_CHART_TITLES[viewActivity] : undefined) ??
       meta.chartTitle
   )
 
