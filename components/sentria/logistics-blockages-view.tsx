@@ -100,7 +100,7 @@ interface Signal {
   label: string
   value: string
   width: string // literal tailwind class, e.g. "w-[82%]"
-  tone: string // literal tailwind class, e.g. "bg-rose-500"
+  tone: string // literal tailwind class, e.g. "bg-destructive"
 }
 
 interface ProjectionStep {
@@ -147,9 +147,9 @@ const OPS_TYPE_CONFIGS: Record<Exclude<OpsType, "multi">, OpsTypeConfig> = {
       riskPercent: 68,
       globalRisk: 34,
       signals: [
-        { label: "Retards récents", value: "+23%", width: "w-[82%]", tone: "bg-rose-500" },
-        { label: "Capacité transport", value: "−14%", width: "w-[42%]", tone: "bg-amber-500" },
-        { label: "Volume demain", value: "+31%", width: "w-[91%]", tone: "bg-rose-500" },
+        { label: "Retards récents", value: "+23%", width: "w-[82%]", tone: "bg-destructive" },
+        { label: "Capacité transport", value: "−14%", width: "w-[42%]", tone: "bg-warning" },
+        { label: "Volume demain", value: "+31%", width: "w-[91%]", tone: "bg-destructive" },
       ],
       narrative: "Ces signaux convergent vers une surcharge probable demain matin. 11 commandes prioritaires sont concernées.",
       projection: [
@@ -181,9 +181,9 @@ const OPS_TYPE_CONFIGS: Record<Exclude<OpsType, "multi">, OpsTypeConfig> = {
       riskPercent: 71,
       globalRisk: 38,
       signals: [
-        { label: "Temps d'immobilisation", value: "96 h", width: "w-[88%]", tone: "bg-rose-500" },
-        { label: "Frais de stockage cumulés", value: "+540 €", width: "w-[65%]", tone: "bg-amber-500" },
-        { label: "Créneaux d'enlèvement dispo", value: "−30%", width: "w-[35%]", tone: "bg-amber-500" },
+        { label: "Temps d'immobilisation", value: "96 h", width: "w-[88%]", tone: "bg-destructive" },
+        { label: "Frais de stockage cumulés", value: "+540 €", width: "w-[65%]", tone: "bg-warning" },
+        { label: "Créneaux d'enlèvement dispo", value: "−30%", width: "w-[35%]", tone: "bg-warning" },
       ],
       narrative: "Le conteneur MSKU-2201 approche du seuil de surestarie. 3 commandes clients en dépendent directement.",
       projection: [
@@ -215,9 +215,9 @@ const OPS_TYPE_CONFIGS: Record<Exclude<OpsType, "multi">, OpsTypeConfig> = {
       riskPercent: 64,
       globalRisk: 33,
       signals: [
-        { label: "Taux d'occupation zone B", value: "+27%", width: "w-[86%]", tone: "bg-rose-500" },
-        { label: "Temps de picking moyen", value: "+18%", width: "w-[58%]", tone: "bg-amber-500" },
-        { label: "Commandes en attente", value: "64", width: "w-[70%]", tone: "bg-amber-500" },
+        { label: "Taux d'occupation zone B", value: "+27%", width: "w-[86%]", tone: "bg-destructive" },
+        { label: "Temps de picking moyen", value: "+18%", width: "w-[58%]", tone: "bg-warning" },
+        { label: "Commandes en attente", value: "64", width: "w-[70%]", tone: "bg-warning" },
       ],
       narrative: "La saturation de la zone B ralentit la préparation. 9 commandes du jour risquent de dépasser leur créneau d'expédition.",
       projection: [
@@ -249,9 +249,9 @@ const OPS_TYPE_CONFIGS: Record<Exclude<OpsType, "multi">, OpsTypeConfig> = {
       riskPercent: 59,
       globalRisk: 30,
       signals: [
-        { label: "Retard de préparation", value: "+34%", width: "w-[80%]", tone: "bg-rose-500" },
-        { label: "Taux de rebut emballage", value: "+9%", width: "w-[40%]", tone: "bg-amber-500" },
-        { label: "Commandes urgentes", value: "22", width: "w-[55%]", tone: "bg-amber-500" },
+        { label: "Retard de préparation", value: "+34%", width: "w-[80%]", tone: "bg-destructive" },
+        { label: "Taux de rebut emballage", value: "+9%", width: "w-[40%]", tone: "bg-warning" },
+        { label: "Commandes urgentes", value: "22", width: "w-[55%]", tone: "bg-warning" },
       ],
       narrative: "Le retard s'accumule depuis ce matin sur la ligne 2. 22 commandes urgentes risquent de manquer le départ de 17h.",
       projection: [
@@ -283,9 +283,9 @@ const OPS_TYPE_CONFIGS: Record<Exclude<OpsType, "multi">, OpsTypeConfig> = {
       riskPercent: 76,
       globalRisk: 41,
       signals: [
-        { label: "Écart de température", value: "+4.2°C", width: "w-[90%]", tone: "bg-rose-500" },
-        { label: "Durée hors plage", value: "38 min", width: "w-[62%]", tone: "bg-amber-500" },
-        { label: "Produits sensibles concernés", value: "120 kg", width: "w-[70%]", tone: "bg-rose-500" },
+        { label: "Écart de température", value: "+4.2°C", width: "w-[90%]", tone: "bg-destructive" },
+        { label: "Durée hors plage", value: "38 min", width: "w-[62%]", tone: "bg-warning" },
+        { label: "Produits sensibles concernés", value: "120 kg", width: "w-[70%]", tone: "bg-destructive" },
       ],
       narrative: "Le capteur IoT du camion #12 signale une sortie de plage de température depuis 38 minutes. 120 kg de produits sensibles sont concernés.",
       projection: [
@@ -339,9 +339,9 @@ function composeMultiConfig(selected: Exclude<OpsType, "multi">[]): OpsTypeConfi
 }
 
 const stateStyle = {
-  good: { dot: "bg-emerald-500", text: "text-emerald-700 dark:text-emerald-400", ring: "border-emerald-500/25 bg-emerald-500/10" },
-  watch: { dot: "bg-amber-500", text: "text-amber-700 dark:text-amber-400", ring: "border-amber-500/25 bg-amber-500/10" },
-  risk: { dot: "bg-rose-500", text: "text-rose-700 dark:text-rose-400", ring: "border-rose-500/25 bg-rose-500/10" },
+  good: { dot: "bg-success", text: "text-success", ring: "border-success/25 bg-success/10" },
+  watch: { dot: "bg-warning", text: "text-warning", ring: "border-warning/25 bg-warning/10" },
+  risk: { dot: "bg-destructive", text: "text-destructive", ring: "border-destructive/25 bg-destructive/10" },
 }
 
 const stateLabel: Record<StageStatus, string> = { good: "Fluide", watch: "Sous tension", risk: "Rupture" }
@@ -391,7 +391,7 @@ export function LogisticsBlockagesView({
   const SelectedIcon = selectedStage.icon
   const { flagship } = config
 
-  const riskColor = flagship.globalRisk >= 50 ? "#f43f5e" : flagship.globalRisk >= 30 ? "#f59e0b" : "#10b981"
+  const riskColor = flagship.globalRisk >= 50 ? "var(--destructive)" : flagship.globalRisk >= 30 ? "var(--warning)" : "var(--success)"
   const riskLabel = flagship.globalRisk >= 50 ? "Critique" : flagship.globalRisk >= 30 ? "Sous tension" : "Sous contrôle"
 
   const focusMessage =
@@ -404,11 +404,11 @@ export function LogisticsBlockagesView({
   return (
     <div className="mx-auto max-w-7xl space-y-6 pb-10">
       <section className="relative overflow-hidden rounded-[2rem] border border-border bg-card p-5 shadow-sm sm:p-7">
-        <div className="absolute -right-24 -top-32 h-72 w-72 rounded-full bg-emerald-400/10 blur-3xl" />
+        <div className="absolute -right-24 -top-32 h-72 w-72 rounded-full bg-accent/10 blur-3xl" />
         <div className="relative flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-400">
-              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/15"><Radar className="h-3.5 w-3.5" /></span>
+            <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-success">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-success/15"><Radar className="h-3.5 w-3.5" /></span>
               SentrIA Flow
             </div>
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">Votre flux, avant qu&apos;il ne casse.</h2>
@@ -417,7 +417,7 @@ export function LogisticsBlockagesView({
           <div className="flex items-center gap-4 rounded-2xl border border-border bg-background/70 px-4 py-3">
             <div
               className="relative grid h-12 w-12 place-items-center rounded-full"
-              style={{ background: `conic-gradient(${riskColor} 0deg ${(flagship.globalRisk / 100) * 360}deg, #e5e7eb ${(flagship.globalRisk / 100) * 360}deg 360deg)` }}
+              style={{ background: `conic-gradient(${riskColor} 0deg ${(flagship.globalRisk / 100) * 360}deg, var(--muted) ${(flagship.globalRisk / 100) * 360}deg 360deg)` }}
             >
               <div className="grid h-9 w-9 place-items-center rounded-full bg-card text-sm font-bold">{flagship.globalRisk}</div>
             </div>
@@ -438,37 +438,37 @@ export function LogisticsBlockagesView({
                     <span className={cn("grid h-12 w-12 place-items-center rounded-2xl border transition-all", style.ring, isSelected && "scale-110 shadow-lg shadow-black/5", isTemplate && "border-dashed opacity-60")}>
                       <Icon className={cn("h-5 w-5", style.text)} />
                     </span>
-                    <span className="text-[11px] font-semibold text-foreground">{stage.name}</span>
-                    <span className="flex items-center gap-1 text-[10px] text-muted-foreground"><span className={cn("h-1.5 w-1.5 rounded-full", style.dot)} />{stateLabel[stage.status]}</span>
+                    <span className="text-xs font-semibold text-foreground">{stage.name}</span>
+                    <span className="flex items-center gap-1 text-xs text-muted-foreground"><span className={cn("h-1.5 w-1.5 rounded-full", style.dot)} />{stateLabel[stage.status]}</span>
                     {isTemplate && (
-                      <span className="flex items-center gap-0.5 text-[9px] font-medium text-muted-foreground/70">
+                      <span className="flex items-center gap-0.5 text-xs font-medium text-muted-foreground/70">
                         <Clock3 className="h-2.5 w-2.5" /> à confirmer
                       </span>
                     )}
                   </button>
-                  {index < stages.length - 1 && <div className={cn("mx-1 h-1 flex-1 rounded-full", stage.status === "risk" ? "bg-gradient-to-r from-rose-300 to-amber-300" : "bg-emerald-200 dark:bg-emerald-900/60")} />}
+                  {index < stages.length - 1 && <div className={cn("mx-1 h-1 flex-1 rounded-full", stage.status === "risk" ? "bg-gradient-to-r from-destructive/70 to-warning/70" : "bg-success/40")} />}
                 </div>
               )
             })}
           </div>
         </div>
-        <div className="relative mt-6 flex items-center gap-3 rounded-2xl border border-rose-500/15 bg-rose-500/[0.06] p-3 text-sm">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-rose-500 text-white"><SelectedIcon className="h-4 w-4" /></span>
+        <div className="relative mt-6 flex items-center gap-3 rounded-2xl border border-destructive/15 bg-destructive/[0.06] p-3 text-sm">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-destructive text-destructive-foreground"><SelectedIcon className="h-4 w-4" /></span>
           <p>{focusMessage}</p>
           <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground" />
         </div>
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(300px,.8fr)]">
-        <section className="overflow-hidden rounded-[2rem] border border-rose-500/20 bg-card shadow-sm">
+        <section className="overflow-hidden rounded-[2rem] border border-destructive/20 bg-card shadow-sm">
           <div className="border-b border-border p-5 sm:p-7">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-rose-600 dark:text-rose-400"><CircleAlert className="h-4 w-4" /> Avant le blocage</div>
+                <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.16em] text-destructive"><CircleAlert className="h-4 w-4" /> Avant le blocage</div>
                 <h3 className="text-2xl font-semibold tracking-tight">{flagship.title}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">{flagship.subtitle}</p>
               </div>
-              <span className="rounded-full bg-rose-500/10 px-3 py-1.5 text-sm font-bold text-rose-700 dark:text-rose-400">{flagship.riskPercent}% de risque</span>
+              <span className="rounded-full bg-destructive/10 px-3 py-1.5 text-sm font-bold text-destructive">{flagship.riskPercent}% de risque</span>
             </div>
             <div className="mt-6 grid gap-3 sm:grid-cols-3">
               {flagship.signals.map((signal) => (
@@ -478,7 +478,7 @@ export function LogisticsBlockagesView({
                 </div>
               ))}
             </div>
-            <p className="mt-5 border-l-2 border-rose-400 pl-3 text-sm leading-6 text-muted-foreground">{flagship.narrative}</p>
+            <p className="mt-5 border-l-2 border-destructive pl-3 text-sm leading-6 text-muted-foreground">{flagship.narrative}</p>
           </div>
 
           <div className="grid gap-5 p-5 sm:p-7 lg:grid-cols-[.7fr_1.3fr]">
@@ -487,28 +487,28 @@ export function LogisticsBlockagesView({
               <div className="mt-5 space-y-3 border-l border-dashed border-border pl-4 text-sm">
                 {flagship.projection.map((step) => (
                   <p key={step.time} className="relative">
-                    {step.tone && <span className={cn("absolute -left-[21px] top-1 h-2 w-2 rounded-full", step.tone === "amber" ? "bg-amber-500" : "bg-rose-500")} />}
+                    {step.tone && <span className={cn("absolute -left-[21px] top-1 h-2 w-2 rounded-full", step.tone === "amber" ? "bg-warning" : "bg-destructive")} />}
                     <span className="font-semibold">{step.time}</span><span className="ml-2 text-muted-foreground">{step.detail}</span>
                   </p>
                 ))}
               </div>
               <p className="mt-5 text-lg font-semibold">{flagship.costEstimate} <span className="text-sm font-normal text-muted-foreground">de coût potentiel</span></p>
             </div>
-            <div className={cn("rounded-2xl border p-5 transition-colors", applied ? "border-emerald-500/30 bg-emerald-500/[0.07]" : "border-emerald-500/20 bg-emerald-500/[0.04]")}>
+            <div className={cn("rounded-2xl border p-5 transition-colors", applied ? "border-success/30 bg-success/[0.07]" : "border-success/20 bg-success/[0.04]")}>
               <div className="flex items-start gap-3">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-500 text-white"><ShieldCheck className="h-5 w-5" /></span>
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-success text-success-foreground"><ShieldCheck className="h-5 w-5" /></span>
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.13em] text-emerald-700 dark:text-emerald-400">SentrIA propose</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.13em] text-success">SentrIA propose</p>
                   <h4 className="mt-1 font-semibold">{flagship.recommendation.title}</h4>
                   <p className="mt-1 text-sm text-muted-foreground">{flagship.recommendation.detail}</p>
                 </div>
               </div>
               <div className="mt-5 grid grid-cols-3 gap-2 text-center">
-                <div><p className="text-xs text-muted-foreground">Risque</p><p className="mt-1 font-bold text-rose-600 line-through decoration-rose-300">{flagship.recommendation.beforeRisk}%</p></div>
+                <div><p className="text-xs text-muted-foreground">Risque</p><p className="mt-1 font-bold text-destructive line-through decoration-destructive/50">{flagship.recommendation.beforeRisk}%</p></div>
                 <div className="pt-5 text-muted-foreground"><ArrowRight className="mx-auto h-4 w-4" /></div>
-                <div><p className="text-xs text-muted-foreground">Après action</p><p className="mt-1 font-bold text-emerald-600">{flagship.recommendation.afterRisk}%</p></div>
+                <div><p className="text-xs text-muted-foreground">Après action</p><p className="mt-1 font-bold text-success">{flagship.recommendation.afterRisk}%</p></div>
               </div>
-              <button onClick={() => setApplied(!applied)} className={cn("mt-5 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all", applied ? "bg-emerald-600 text-white" : "bg-primary text-primary-foreground hover:opacity-90")}>
+              <button onClick={() => setApplied(!applied)} className={cn("mt-5 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-all", applied ? "bg-success text-success-foreground" : "bg-primary text-primary-foreground hover:opacity-90")}>
                 <span>{applied ? "Protection activée" : "Éviter ce blocage"}</span>{applied ? <Check className="h-4 w-4" /> : <Zap className="h-4 w-4" />}
               </button>
             </div>
@@ -527,8 +527,8 @@ export function LogisticsBlockagesView({
               const primitive = PRIMITIVES[point.primitiveId]
               const PrimitiveIcon = primitive.icon
               const toneClasses = point.tone === "risk"
-                ? { pill: "bg-rose-500 text-white", ring: "bg-rose-500/10 text-rose-600" }
-                : { pill: "bg-amber-500 text-white", ring: "bg-amber-500/10 text-amber-600" }
+                ? { pill: "bg-destructive text-destructive-foreground", ring: "bg-destructive/10 text-destructive" }
+                : { pill: "bg-warning text-warning-foreground", ring: "bg-warning/10 text-warning" }
 
               return (
                 <div key={point.primitiveId} className={cn("overflow-hidden rounded-2xl border transition-all", active ? "border-primary" : "border-border")}>
@@ -545,13 +545,13 @@ export function LogisticsBlockagesView({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="truncate font-semibold">{primitive.name}</p>
-                        <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide", toneClasses.pill)}>
+                        <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-bold uppercase tracking-wide", toneClasses.pill)}>
                           {point.tone === "risk" ? "Risque" : "À surveiller"}
                         </span>
                       </div>
                       <p className="mt-0.5 truncate text-xs text-muted-foreground">{point.title}</p>
                     </div>
-                    <span className={cn("shrink-0 text-sm font-bold", point.tone === "risk" ? "text-rose-600" : "text-amber-600")}>{point.risk}%</span>
+                    <span className={cn("shrink-0 text-sm font-bold", point.tone === "risk" ? "text-destructive" : "text-warning")}>{point.risk}%</span>
                     <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", isOpen && "rotate-180")} />
                   </button>
 
@@ -562,11 +562,11 @@ export function LogisticsBlockagesView({
                         <span className="font-semibold text-foreground">{point.impact}</span>
                       </div>
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">SentrIA surveille ici</p>
+                        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">SentrIA surveille ici</p>
                         <ul className="mt-1.5 space-y-1">
                           {primitive.signalDna.map((signal) => (
                             <li key={signal} className="flex items-center gap-1.5 text-xs text-foreground">
-                              <span className={cn("h-1 w-1 rounded-full", point.tone === "risk" ? "bg-rose-500" : "bg-amber-500")} />
+                              <span className={cn("h-1 w-1 rounded-full", point.tone === "risk" ? "bg-destructive" : "bg-warning")} />
                               {signal}
                             </li>
                           ))}
@@ -579,7 +579,7 @@ export function LogisticsBlockagesView({
             })}
           </div>
           <div className="mt-6 flex items-center gap-3 rounded-2xl bg-muted/60 p-4">
-            <PackageCheck className="h-5 w-5 text-emerald-600" />
+            <PackageCheck className="h-5 w-5 text-success" />
             <p className="text-xs leading-5 text-muted-foreground">{flagship.footerNote}</p>
           </div>
         </aside>

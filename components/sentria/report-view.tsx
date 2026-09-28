@@ -91,8 +91,8 @@ const SEVERITY_LABEL: Record<Severity, string> = {
 
 const SEVERITY_DOT: Record<Severity, string> = {
   critical: "bg-destructive",
-  warning: "bg-amber-500",
-  info: "bg-blue-500",
+  warning: "bg-warning",
+  info: "bg-muted-foreground",
 }
 
 // ---------------------------------------------------------------------------
@@ -198,7 +198,7 @@ function DeltaBadge({ delta }: { delta: number }) {
       className={cn(
         "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
         isUp
-          ? "bg-emerald-500/10 text-emerald-600"
+          ? "bg-success/10 text-success"
           : "bg-destructive/10 text-destructive"
       )}
     >
@@ -449,8 +449,8 @@ function AlertsTable({ alerts }: { alerts: AlertRow[] }) {
                       className={cn(
                         "text-xs font-medium",
                         alert.status === "open"
-                          ? "text-amber-600"
-                          : "text-emerald-600"
+                          ? "text-warning"
+                          : "text-success"
                       )}
                     >
                       {alert.status === "open" ? "Ouverte" : "Résolue"}

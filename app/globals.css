@@ -17,9 +17,14 @@
 }
 
 @theme inline {
-  --font-heading: var(--font-sans);
-  --font-sans: var(--font-geist-sans), 'Geist Fallback';
-  --font-mono: var(--font-geist-mono), 'Geist Mono Fallback';
+  --font-heading: var(--font-inter), 'Inter Fallback', system-ui, sans-serif;
+  --font-sans: var(--font-inter), 'Inter Fallback', system-ui, sans-serif;
+  --font-mono: var(--font-inter), 'Inter Fallback', system-ui, sans-serif;
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -61,111 +66,95 @@
 }
 
 :root {
+  /* SentrIA brand kit v1: light variant uses noir on crème, never lime. */
   color-scheme: light;
-  --background: oklch(0.965 0.002 110);
-  --foreground: oklch(0.18 0.005 110);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.005 110);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.005 110);
-  --primary: oklch(0.19 0.004 110);
-  --primary-foreground: oklch(0.98 0 0);
-  --secondary: oklch(0.95 0.002 110);
-  --secondary-foreground: oklch(0.22 0.005 110);
-  --muted: oklch(0.95 0.002 110);
-  --muted-foreground: oklch(0.52 0.006 110);
-  --accent: oklch(0.88 0.205 124);
-  --accent-foreground: oklch(0.22 0.04 124);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.91 0.003 110);
-  --input: oklch(0.91 0.003 110);
-  --ring: oklch(0.88 0.205 124);
-  --chart-1: oklch(0.88 0.205 124);
-  --chart-2: oklch(0.19 0.004 110);
-  --chart-3: oklch(0.55 0.006 110);
-  --chart-4: oklch(0.72 0.005 110);
-  --chart-5: oklch(0.82 0.12 124);
+  --sentria-lime: #D6FF3F;
+  --sentria-noir: #0B0C08;
+  --sentria-surface: #151711;
+  --sentria-bordure: #2E3029;
+  --sentria-creme: #ECE7D6;
+  --sentria-creme-clair: #F5F2EA;
+  --sentria-gris: #8E9182;
+  --sentria-rouge: #FF5A4E;
+
+  --background: var(--sentria-creme);
+  --foreground: var(--sentria-noir);
+  --card: var(--sentria-creme-clair);
+  --card-foreground: var(--sentria-noir);
+  --popover: var(--sentria-creme-clair);
+  --popover-foreground: var(--sentria-noir);
+  --primary: var(--sentria-noir);
+  --primary-foreground: var(--sentria-creme);
+  --secondary: #E2DCC9;
+  --secondary-foreground: var(--sentria-noir);
+  --muted: #E2DCC9;
+  --muted-foreground: #5B5E51;
+  --accent: var(--sentria-noir);
+  --accent-foreground: var(--sentria-creme);
+  --destructive: #B32E24;
+  --destructive-foreground: var(--sentria-creme-clair);
+  --warning: var(--sentria-noir);
+  --warning-foreground: var(--sentria-creme);
+  --success: #5B5E51;
+  --success-foreground: var(--sentria-creme-clair);
+  --border: #D6CFBA;
+  --input: #D6CFBA;
+  --ring: var(--sentria-noir);
+  --chart-1: var(--sentria-noir);
+  --chart-2: #5B5E51;
+  --chart-3: var(--sentria-gris);
+  --chart-4: #BDB6A1;
+  --chart-5: #B32E24;
   --radius: 1rem;
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.18 0.005 110);
-  --sidebar-primary: oklch(0.19 0.004 110);
-  --sidebar-primary-foreground: oklch(0.98 0 0);
-  --sidebar-accent: oklch(0.95 0.002 110);
-  --sidebar-accent-foreground: oklch(0.22 0.005 110);
-  --sidebar-border: oklch(0.91 0.003 110);
-  --sidebar-ring: oklch(0.88 0.205 124);
+  --sidebar: var(--sentria-creme-clair);
+  --sidebar-foreground: var(--sentria-noir);
+  --sidebar-primary: var(--sentria-noir);
+  --sidebar-primary-foreground: var(--sentria-creme);
+  --sidebar-accent: #E2DCC9;
+  --sidebar-accent-foreground: var(--sentria-noir);
+  --sidebar-border: #D6CFBA;
+  --sidebar-ring: var(--sentria-noir);
 }
 
+/* Default brand theme: noir background, lime signal (~5%), rouge for alerts only. */
 .dark {
   color-scheme: dark;
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    color-scheme: dark;
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
-  }
+  --background: var(--sentria-noir);
+  --foreground: var(--sentria-creme);
+  --card: var(--sentria-surface);
+  --card-foreground: var(--sentria-creme);
+  --popover: var(--sentria-surface);
+  --popover-foreground: var(--sentria-creme);
+  --primary: var(--sentria-creme);
+  --primary-foreground: var(--sentria-noir);
+  --secondary: #20221B;
+  --secondary-foreground: var(--sentria-creme);
+  --muted: #20221B;
+  --muted-foreground: var(--sentria-gris);
+  --accent: var(--sentria-lime);
+  --accent-foreground: var(--sentria-noir);
+  --destructive: var(--sentria-rouge);
+  --destructive-foreground: var(--sentria-noir);
+  --warning: var(--sentria-lime);
+  --warning-foreground: var(--sentria-noir);
+  --success: var(--sentria-gris);
+  --success-foreground: var(--sentria-noir);
+  --border: var(--sentria-bordure);
+  --input: var(--sentria-bordure);
+  --ring: var(--sentria-lime);
+  --chart-1: var(--sentria-lime);
+  --chart-2: var(--sentria-creme);
+  --chart-3: var(--sentria-gris);
+  --chart-4: var(--sentria-bordure);
+  --chart-5: var(--sentria-rouge);
+  --sidebar: var(--sentria-surface);
+  --sidebar-foreground: var(--sentria-creme);
+  --sidebar-primary: var(--sentria-lime);
+  --sidebar-primary-foreground: var(--sentria-noir);
+  --sidebar-accent: #20221B;
+  --sidebar-accent-foreground: var(--sentria-creme);
+  --sidebar-border: var(--sentria-bordure);
+  --sidebar-ring: var(--sentria-lime);
 }
 
 @layer base {
@@ -176,6 +165,16 @@
     @apply bg-background text-foreground;
   }
   html {
-    @apply font-sans;
+    @apply bg-background font-sans;
+  }
+  /* Inter Display = Inter at its 32 optical size. */
+  .font-heading,
+  h1,
+  h2 {
+    font-variation-settings: 'opsz' 32;
+    letter-spacing: -0.02em;
+  }
+  .font-mono {
+    font-variant-numeric: tabular-nums;
   }
 }

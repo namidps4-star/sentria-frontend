@@ -103,7 +103,7 @@ export function BarChart({
         })}
       </svg>
       {labels && (
-        <div className="mt-2 flex justify-between px-1 text-[11px] text-muted-foreground">
+        <div className="mt-2 flex justify-between px-1 text-xs text-muted-foreground">
           {labels.map((l) => (
             <span key={l}>{l}</span>
           ))}

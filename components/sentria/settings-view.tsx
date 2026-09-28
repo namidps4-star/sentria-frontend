@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import { Globe, Bell, Moon, Check, Building2, Mail } from "lucide-react"
 
@@ -159,8 +159,19 @@ export function SettingsView() {
   const [toggles, setToggles] = useState({
     alerts: true,
     weekly: false,
-    dark: false,
+    dark:
+      typeof document === "undefined" ||
+      document.documentElement.classList.contains("dark"),
   })
+
+  useEffect(() => {
+    const root = document.documentElement
+    root.classList.toggle("dark", toggles.dark)
+    root.classList.toggle("light", !toggles.dark)
+    try {
+      localStorage.setItem("sentria-theme", toggles.dark ? "dark" : "light")
+    } catch {}
+  }, [toggles.dark])
 
   const toggle = (key: keyof typeof toggles) => {
     setToggles((state) => ({
@@ -330,7 +341,7 @@ export function SettingsView() {
             </span>
 
             <input
-              defaultValue="Sentria Africa"
+              defaultValue="SentrIA Africa"
               className="mt-1.5 w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-sm outline-none focus:border-ring"
             />
           </label>

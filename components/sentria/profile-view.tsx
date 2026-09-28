@@ -86,12 +86,12 @@ export function ProfileView() {
   return (
     <div className="space-y-6">
       <div className="overflow-hidden rounded-3xl border border-border bg-card">
-        <div className="relative h-28 bg-foreground">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_50%,rgba(174,255,0,0.25),transparent_35%)]" />
+        <div className="dark relative h-28 bg-background">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_50%,rgba(214,255,63,0.25),transparent_35%)]" />
 
           <div className="absolute bottom-4 left-6 flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-accent" />
-            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-background/50">
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               SentrIA Account
             </span>
           </div>
@@ -103,7 +103,7 @@ export function ProfileView() {
               AM
             </div>
 
-            <span className="absolute bottom-1 right-1 h-4 w-4 rounded-full border-2 border-card bg-green-500" />
+            <span className="absolute bottom-1 right-1 h-4 w-4 rounded-full border-2 border-card bg-success" />
           </div>
 
           <div className="mt-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -113,7 +113,7 @@ export function ProfileView() {
                   Aïcha Mbaye
                 </h2>
 
-                <span className="rounded-full bg-accent/20 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-accent-foreground">
+                <span className="rounded-full bg-accent/20 px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-accent">
                   Pro
                 </span>
               </div>
@@ -160,7 +160,7 @@ export function ProfileView() {
                   <Icon className="h-4 w-4" />
                 </div>
 
-                <TrendingUp className="h-4 w-4 text-accent-foreground" />
+                <TrendingUp className="h-4 w-4 text-accent" />
               </div>
 
               <p className="mt-5 font-heading text-3xl font-bold tracking-tight">
@@ -309,7 +309,7 @@ export function ProfileView() {
                     item.status === "critical"
                       ? "bg-destructive/10 text-destructive"
                       : item.status === "ai"
-                        ? "bg-accent/20 text-accent-foreground"
+                        ? "bg-accent/20 text-accent"
                         : "bg-muted text-foreground",
                   )}
                 >
@@ -352,7 +352,7 @@ export function ProfileView() {
                 Votre compte et vos données opérationnelles sont protégés.
               </p>
 
-              <div className="mt-4 flex items-center gap-2 text-xs font-semibold text-green-600">
+              <div className="mt-4 flex items-center gap-2 text-xs font-semibold text-success">
                 <CheckCircle2 className="h-4 w-4" />
                 Sécurité active
               </div>
@@ -360,7 +360,7 @@ export function ProfileView() {
           </div>
         </div>
 
-        <div className="rounded-3xl bg-foreground p-6 text-background">
+        <div className="dark rounded-3xl border border-border bg-card p-6 text-card-foreground">
           <div className="flex items-start gap-4">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent">
               <Sparkles className="h-4 w-4 text-accent-foreground" />
@@ -371,7 +371,7 @@ export function ProfileView() {
                 Intelligence SentrIA
               </h3>
 
-              <p className="mt-1 text-sm text-background/60">
+              <p className="mt-1 text-sm text-muted-foreground">
                 Analyse prédictive et recommandations pour anticiper les
                 risques opérationnels.
               </p>

@@ -238,19 +238,19 @@ function ContainerYardPreview() {
       <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div>
           <p className="text-xs font-semibold text-foreground">Aperçu du terminal conteneurs</p>
-          <p className="text-[11px] text-muted-foreground">Exemple avec vos futures données</p>
+          <p className="text-xs text-muted-foreground">Exemple avec vos futures données</p>
         </div>
-        <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+        <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <span className="h-1.5 w-1.5 rounded-full bg-success" />
             Normal
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+            <span className="h-1.5 w-1.5 rounded-full bg-warning" />
             À surveiller
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+            <span className="h-1.5 w-1.5 rounded-full bg-destructive" />
             Bloqué
           </span>
         </div>
@@ -262,9 +262,9 @@ function ContainerYardPreview() {
             key={i}
             className={cn(
               "aspect-[7/5] rounded-md border transition-colors duration-300",
-              status === "ok" && "border-emerald-500/25 bg-emerald-500/[0.06]",
-              status === "watch" && "border-amber-500/60 bg-amber-500/[0.12]",
-              status === "blocked" && "border-red-500 bg-red-500/[0.15]"
+              status === "ok" && "border-success/25 bg-success/[0.06]",
+              status === "watch" && "border-warning/60 bg-warning/[0.12]",
+              status === "blocked" && "border-destructive bg-destructive/[0.15]"
             )}
           />
         ))}
@@ -272,13 +272,13 @@ function ContainerYardPreview() {
 
       <div
         className={cn(
-          "mx-4 mb-4 flex items-start gap-3 rounded-xl border border-l-2 border-border border-l-red-500 bg-card px-3.5 py-3 transition-all duration-500",
+          "mx-4 mb-4 flex items-start gap-3 rounded-xl border border-l-2 border-border border-l-destructive bg-card px-3.5 py-3 transition-all duration-500",
           showRecommendation ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0"
         )}
       >
-        <span className="whitespace-nowrap font-mono text-[11px] text-muted-foreground">CNT-0417</span>
+        <span className="whitespace-nowrap font-mono text-xs text-muted-foreground">CNT-0417</span>
         <p className="text-xs leading-5 text-foreground">
-          Immobile depuis <span className="font-semibold text-amber-600">18h</span>, contre 4h en
+          Immobile depuis <span className="font-semibold text-warning">18h</span>, contre 4h en
           moyenne. Vérifier le document douanier avant qu&apos;il ne déclenche des frais de stockage.
         </p>
       </div>
@@ -399,7 +399,7 @@ export function OnboardingView({ onComplete }: { onComplete?: () => void }) {
     <div className="fixed inset-0 z-50 animate-in fade-in zoom-in-[0.98] overflow-y-auto bg-background duration-200 ease-out motion-reduce:animate-none">
       <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 md:px-8 md:py-12">
       {/* HERO */}
-      <div className="rounded-3xl bg-foreground p-6 text-background md:p-10">
+      <div className="dark rounded-3xl border border-border bg-card p-6 text-card-foreground md:p-10">
         <div className="max-w-3xl">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
             <Zap className="h-3.5 w-3.5" />
@@ -410,7 +410,7 @@ export function OnboardingView({ onComplete }: { onComplete?: () => void }) {
             Configurez votre surveillance opérationnelle.
           </h1>
 
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-background/70 md:text-base">
+          <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
             Quelques étapes suffisent pour connecter vos données, configurer vos secteurs
             et commencer à détecter les situations critiques.
           </p>
@@ -464,7 +464,7 @@ export function OnboardingView({ onComplete }: { onComplete?: () => void }) {
                 {completed ? <Check className="h-5 w-5" /> : <Icon className="h-5 w-5" />}
               </div>
 
-              <p className="mt-4 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <p className="mt-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Étape {stepNumber}
               </p>
               <p className="mt-1 font-heading text-sm font-bold">{meta.title}</p>
@@ -477,7 +477,7 @@ export function OnboardingView({ onComplete }: { onComplete?: () => void }) {
       <div className="rounded-3xl border border-border bg-card p-6 md:p-8">
         <div className="flex flex-col gap-8">
           <div className="flex gap-4">
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent/20 text-accent-foreground">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-accent/20 text-accent">
               <currentMeta.icon className="h-7 w-7" />
             </div>
             <div>
@@ -549,7 +549,7 @@ export function OnboardingView({ onComplete }: { onComplete?: () => void }) {
                       )}
                     >
                       {disabled && (
-                        <span className="absolute right-4 top-4 rounded-full bg-muted px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                        <span className="absolute right-4 top-4 rounded-full bg-muted px-2 py-0.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                           Bientôt disponible
                         </span>
                       )}
@@ -572,7 +572,7 @@ export function OnboardingView({ onComplete }: { onComplete?: () => void }) {
                   <span className="font-semibold text-foreground">{selectedEquipment.length}</span>{" "}
                   {selectedEquipment.length > 1 ? "priorités sélectionnées" : "priorité sélectionnée"}
                 </span>
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Modifiable plus tard</span>
+                <span className="text-xs uppercase tracking-wider text-muted-foreground">Modifiable plus tard</span>
               </div>
             </div>
           )}
@@ -633,7 +633,7 @@ export function OnboardingView({ onComplete }: { onComplete?: () => void }) {
                       <span className={cn("text-xs leading-5", active ? "text-background/70" : "text-muted-foreground")}>
                         {source.description}
                       </span>
-                      <span className={cn("mt-1 text-[11px] leading-5", active ? "text-background/50" : "text-muted-foreground/70")}>
+                      <span className={cn("mt-1 text-xs leading-5", active ? "text-background/50" : "text-muted-foreground/70")}>
                         {source.detail}
                       </span>
                     </button>
@@ -659,7 +659,7 @@ export function OnboardingView({ onComplete }: { onComplete?: () => void }) {
                   <Activity className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                   <div>
                     <p className="text-xs font-semibold text-foreground">Aucune connexion n&apos;est requise maintenant</p>
-                    <p className="mt-1 text-[11px] leading-5 text-muted-foreground">
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
                       SentrIA pourra être configuré avec votre ERP, vos capteurs ou vos fichiers CSV / Excel
                       depuis votre espace, à tout moment.
                     </p>

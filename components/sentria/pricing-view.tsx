@@ -146,10 +146,10 @@ export function PricingView() {
 
             <span
               className={cn(
-                "rounded-full px-2 py-0.5 text-[10px] font-bold",
+                "rounded-full px-2 py-0.5 text-xs font-bold",
                 annual
                   ? "bg-accent text-accent-foreground"
-                  : "bg-accent/30 text-accent-foreground",
+                  : "bg-accent/30 text-accent",
               )}
             >
               −20%
@@ -165,7 +165,7 @@ export function PricingView() {
             className={cn(
               "flex flex-col rounded-3xl border p-6 transition-shadow",
               t.featured
-                ? "border-foreground bg-primary text-primary-foreground shadow-xl"
+                ? "dark border-accent bg-card text-card-foreground shadow-xl"
                 : "border-border bg-card",
             )}
           >
@@ -173,7 +173,7 @@ export function PricingView() {
               <h3 className="font-heading text-xl font-bold">{t.name}</h3>
 
               {t.featured && (
-                <span className="rounded-full bg-accent px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-accent-foreground">
+                <span className="rounded-full bg-accent px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-accent-foreground">
                   Populaire
                 </span>
               )}
@@ -183,7 +183,7 @@ export function PricingView() {
               className={cn(
                 "mt-1.5 min-h-10 text-sm",
                 t.featured
-                  ? "text-primary-foreground/70"
+                  ? "text-muted-foreground"
                   : "text-muted-foreground",
               )}
             >
@@ -200,7 +200,7 @@ export function PricingView() {
                   className={cn(
                     "pb-1 text-sm",
                     t.featured
-                      ? "text-primary-foreground/60"
+                      ? "text-muted-foreground"
                       : "text-muted-foreground",
                   )}
                 >
@@ -213,7 +213,7 @@ export function PricingView() {
               className={cn(
                 "mt-1 min-h-5 text-xs",
                 t.featured
-                  ? "text-primary-foreground/60"
+                  ? "text-muted-foreground"
                   : "text-muted-foreground",
               )}
             >
@@ -247,7 +247,7 @@ export function PricingView() {
                       "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full",
                       t.featured
                         ? "bg-accent text-accent-foreground"
-                        : "bg-accent/25 text-accent-foreground",
+                        : "bg-accent/25 text-accent",
                     )}
                   >
                     <Check className="h-3 w-3" />
@@ -256,7 +256,7 @@ export function PricingView() {
                   <span
                     className={
                       t.featured
-                        ? "text-primary-foreground/90"
+                        ? "text-card-foreground"
                         : "text-foreground/80"
                     }
                   >
@@ -269,9 +269,9 @@ export function PricingView() {
             {t.highlight && (
               <div className="mt-5 rounded-2xl border border-accent/40 bg-accent/10 p-4">
                 <div className="mb-3 flex items-center gap-2">
-                  <t.highlight.icon className="h-4 w-4 text-accent-foreground" />
+                  <t.highlight.icon className="h-4 w-4 text-accent" />
 
-                  <span className="text-xs font-bold text-accent-foreground">
+                  <span className="text-xs font-bold text-accent">
                     {t.highlight.label}
                   </span>
                 </div>
@@ -282,9 +282,9 @@ export function PricingView() {
                       key={f}
                       className="flex items-start gap-2 text-xs"
                     >
-                      <Check className="mt-0.5 h-3 w-3 shrink-0 text-accent-foreground" />
+                      <Check className="mt-0.5 h-3 w-3 shrink-0 text-accent" />
 
-                      <span className="text-primary-foreground/80">
+                      <span className="text-card-foreground/80">
                         {f}
                       </span>
                     </li>

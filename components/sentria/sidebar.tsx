@@ -125,12 +125,17 @@ export function Sidebar({
         {/* Logo */}
         <div className="flex h-[76px] items-center justify-between border-b border-sidebar-border px-5">
           <img
-            src="/sentria logo.png"
+            src="/sentria-logo-dark.svg"
             alt="SentrIA"
-            className="h-11 w-auto object-contain"
+            className="hidden h-8 w-auto dark:block"
+          />
+          <img
+            src="/sentria-logo-light.svg"
+            alt="SentrIA"
+            className="h-8 w-auto dark:hidden"
           />
 
-          <span className="text-[9px] font-semibold uppercase tracking-[0.2em] text-sidebar-foreground/25">
+          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Ops
           </span>
         </div>
@@ -142,7 +147,7 @@ export function Sidebar({
               key={section.title}
               className={cn(sectionIndex > 0 && "mt-6")}
             >
-              <p className="mb-2 px-3 text-[9px] font-bold uppercase tracking-[0.18em] text-sidebar-foreground/30">
+              <p className="mb-2 px-3 text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
                 {section.title}
               </p>
 
@@ -164,8 +169,8 @@ export function Sidebar({
                         "text-sm font-medium",
                         "transition-all duration-200",
                         isActive
-                          ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-sm"
-                          : "text-sidebar-foreground/55 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                          : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                       )}
                     >
                       {/* Active indicator */}
@@ -177,8 +182,8 @@ export function Sidebar({
                         className={cn(
                           "h-4 w-4 shrink-0 transition-colors",
                           isActive
-                            ? "text-accent-foreground"
-                            : "text-sidebar-foreground/35 group-hover:text-sidebar-accent-foreground",
+                            ? "text-accent"
+                            : "text-muted-foreground group-hover:text-sidebar-accent-foreground",
                         )}
                         strokeWidth={1.8}
                       />
@@ -189,7 +194,7 @@ export function Sidebar({
 
                       {/* AI badge */}
                       {item.badge && (
-                        <span className="rounded-full bg-accent px-2 py-0.5 text-[9px] font-bold text-accent-foreground">
+                        <span className="rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-accent-foreground">
                           {item.badge}
                         </span>
                       )}
@@ -218,26 +223,26 @@ export function Sidebar({
               </span>
 
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-accent-foreground">
+                <p className="text-xs font-bold uppercase tracking-widest text-accent">
                   Plan Pro
                 </p>
 
-                <p className="mt-0.5 text-[9px] text-sidebar-foreground/40">
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   Intelligence avancée
                 </p>
               </div>
             </div>
 
-            <p className="mt-3 text-[10px] leading-relaxed text-sidebar-foreground/45">
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
               Sites illimités, IoT, rapports avancés et support prioritaire.
             </p>
 
             <div className="mt-3 flex items-center justify-between">
-              <span className="text-[10px] font-semibold text-sidebar-foreground">
+              <span className="text-xs font-semibold text-sidebar-foreground">
                 Gérer mon abonnement
               </span>
 
-              <span className="text-sm text-accent-foreground transition-transform group-hover:translate-x-0.5">
+              <span className="text-sm text-accent transition-transform group-hover:translate-x-0.5">
                 →
               </span>
             </div>
@@ -252,7 +257,7 @@ export function Sidebar({
             }}
             className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-sidebar-accent"
           >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-[10px] font-bold text-accent-foreground">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground">
               JK
             </div>
 
@@ -261,19 +266,19 @@ export function Sidebar({
                 Jean Kokou
               </p>
 
-              <p className="mt-0.5 truncate text-[10px] text-sidebar-foreground/35">
+              <p className="mt-0.5 truncate text-xs text-muted-foreground">
                 Administrateur
               </p>
             </div>
 
-            <User className="h-4 w-4 text-sidebar-foreground/25" />
+            <User className="h-4 w-4 text-muted-foreground" />
           </button>
 
           {/* Support */}
           <div className="mt-1 flex items-center justify-center gap-1.5 py-2">
-            <LifeBuoy className="h-3 w-3 text-sidebar-foreground/20" />
+            <LifeBuoy className="h-3 w-3 text-muted-foreground" />
 
-            <span className="text-[9px] text-sidebar-foreground/25">
+            <span className="text-xs text-muted-foreground">
               Support SentrIA
             </span>
           </div>

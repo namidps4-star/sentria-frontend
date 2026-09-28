@@ -1058,7 +1058,7 @@ export function DashboardView({
   return (
     <div className="space-y-6">
       {/* HERO */}
-      <div className="flex flex-col gap-4 rounded-3xl bg-foreground p-6 text-background md:flex-row md:items-center md:justify-between md:p-8">
+      <div className="flex flex-col gap-4 dark rounded-3xl border border-border bg-card p-6 text-card-foreground md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-xl">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
             <Zap className="h-3.5 w-3.5" />
@@ -1069,7 +1069,7 @@ export function DashboardView({
             Vue globale de vos opérations critiques.
           </h2>
 
-          <p className="mt-2 text-pretty text-sm text-background/70">
+          <p className="mt-2 text-pretty text-sm text-muted-foreground">
             SentrIA surveille vos alertes en temps réel ·
             machines, stocks, flottes, équipements · partout
             dans le monde.
@@ -1139,7 +1139,7 @@ export function DashboardView({
               </div>
 
               {rest.length > 0 && (
-                <span className="hidden shrink-0 rounded-full border border-border px-3 py-1 text-[11px] font-medium text-muted-foreground sm:inline-flex">
+                <span className="hidden shrink-0 rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground sm:inline-flex">
                   Faites défiler pour voir la suite
                 </span>
               )}
@@ -1149,7 +1149,7 @@ export function DashboardView({
               <div className="flex w-full shrink-0 flex-col justify-between rounded-2xl border border-transparent bg-gradient-to-br from-accent/20 via-card to-card p-5 ring-1 ring-accent/40 lg:w-72">
                 <div>
                   <div className="flex items-center justify-between gap-2">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-accent-foreground">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-xs font-bold uppercase tracking-wider text-accent-foreground">
                       <Sparkles className="h-3 w-3" />
                       Priorité n°1
                     </span>
@@ -1168,15 +1168,15 @@ export function DashboardView({
                   </p>
 
                   <div className="mt-3 flex items-start gap-1.5 rounded-lg bg-background/60 px-2.5 py-2">
-                    <Shield className="mt-0.5 h-3 w-3 shrink-0 text-accent-foreground" />
-                    <p className="text-[11px] leading-4 text-muted-foreground">
+                    <Shield className="mt-0.5 h-3 w-3 shrink-0 text-accent" />
+                    <p className="text-xs leading-4 text-muted-foreground">
                       {IMPACT_HINT[top.action_category] ??
                         IMPACT_HINT.other}
                     </p>
                   </div>
 
                   {topRecurrence > 1 && (
-                    <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive">
+                    <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-semibold text-destructive">
                       <TrendingUp className="h-3 w-3" />
                       Réapparu {topRecurrence} fois cette semaine
                     </div>
@@ -1187,16 +1187,16 @@ export function DashboardView({
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span
                       className={cn(
-                        "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+                        "rounded-full px-2 py-0.5 text-xs font-semibold uppercase tracking-wider",
                         topCritical
                           ? "bg-destructive/10 text-destructive"
-                          : "bg-amber-500/15 text-amber-600"
+                          : "bg-warning/15 text-warning"
                       )}
                     >
                       {top.severity}
                     </span>
 
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-xs text-muted-foreground">
                       {CATEGORY_LABEL[top.action_category] ??
                         "Autre"}
                     </span>
@@ -1210,7 +1210,7 @@ export function DashboardView({
                             "h-full rounded-full transition-all duration-500",
                             topCritical
                               ? "bg-destructive"
-                              : "bg-amber-500"
+                              : "bg-warning"
                           )}
                           style={{
                             width: `${topRiskPct}%`,
@@ -1218,7 +1218,7 @@ export function DashboardView({
                         />
                       </div>
 
-                      <span className="shrink-0 text-[10px] font-medium text-muted-foreground">
+                      <span className="shrink-0 text-xs font-medium text-muted-foreground">
                         {topRiskPct}%
                       </span>
                     </div>
@@ -1254,7 +1254,7 @@ export function DashboardView({
                               "flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold tabular-nums",
                               isCritical
                                 ? "bg-destructive/10 text-destructive"
-                                : "bg-amber-500/15 text-amber-600"
+                                : "bg-warning/15 text-warning"
                             )}
                           >
                             {String(rank).padStart(2, "0")}
@@ -1272,7 +1272,7 @@ export function DashboardView({
                         </p>
 
                         {recurrence > 1 && (
-                          <div className="mt-2 inline-flex w-fit items-center gap-1 rounded-full bg-destructive/10 px-1.5 py-0.5 text-[9px] font-semibold text-destructive">
+                          <div className="mt-2 inline-flex w-fit items-center gap-1 rounded-full bg-destructive/10 px-1.5 py-0.5 text-xs font-semibold text-destructive">
                             <TrendingUp className="h-2.5 w-2.5" />
                             {recurrence}x cette semaine
                           </div>
@@ -1281,17 +1281,17 @@ export function DashboardView({
                         <div className="mt-3 flex flex-wrap items-center gap-1.5">
                           <span
                             className={cn(
-                              "rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider",
+                              "rounded-full px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wider",
                               isCritical
                                 ? "bg-destructive/10 text-destructive"
-                                : "bg-amber-500/15 text-amber-600"
+                                : "bg-warning/15 text-warning"
                             )}
                           >
                             {rec.severity}
                           </span>
 
                           {rec.sector && (
-                            <span className="truncate text-[9px] uppercase tracking-wider text-muted-foreground">
+                            <span className="truncate text-xs uppercase tracking-wider text-muted-foreground">
                               {SECTORS.find(
                                 (s) => s.key === rec.sector
                               )?.label ?? rec.sector}
@@ -1328,7 +1328,7 @@ export function DashboardView({
           )}
         >
           Tous
-          <span className="ml-1.5 text-[10px] opacity-60">
+          <span className="ml-1.5 text-xs opacity-60">
             {alerts.length}
           </span>
         </button>
@@ -1353,7 +1353,7 @@ export function DashboardView({
           >
             {s.label}
 
-            <span className="ml-1.5 text-[10px] opacity-60">
+            <span className="ml-1.5 text-xs opacity-60">
               {
                 alerts.filter(
                   (a) => a.sector === s.key
@@ -1367,7 +1367,7 @@ export function DashboardView({
       {filterSector === "logistics" &&
         opsType &&
         LOGISTICS_OPS_META[opsType] && (
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[11px] font-medium text-accent-foreground">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
             <Shield className="h-3 w-3" />
             Vue adaptée : {OPS_TYPE_LABEL[opsType]}
           </div>
@@ -1389,7 +1389,7 @@ export function DashboardView({
                 className={cn(
                   "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
                   k.up
-                    ? "bg-accent/25 text-accent-foreground"
+                    ? "bg-accent/25 text-accent"
                     : "bg-destructive/10 text-destructive"
                 )}
               >
@@ -1448,7 +1448,7 @@ export function DashboardView({
 
         <div className="rounded-3xl border border-border bg-card p-6">
           <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-accent-foreground" />
+            <Activity className="h-5 w-5 text-accent" />
 
             <h3 className="font-heading text-lg font-bold">
               Répartition
@@ -1516,7 +1516,7 @@ export function DashboardView({
         </div>
 
         {uploadMsg && (
-          <p className="mt-3 text-sm font-medium text-green-600">
+          <p className="mt-3 text-sm font-medium text-success">
             {uploadMsg}
           </p>
         )}
@@ -1610,7 +1610,7 @@ export function DashboardView({
                           "rounded-full px-2.5 py-1 text-xs font-semibold",
                           alert.severity === "CRITICAL"
                             ? "bg-destructive/10 text-destructive"
-                            : "bg-amber-500/15 text-amber-600"
+                            : "bg-warning/15 text-warning"
                         )}
                       >
                         {alert.severity}

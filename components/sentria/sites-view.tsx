@@ -72,14 +72,14 @@ const STATUS_META = {
   connected: {
     label: "Connecté",
     icon: CheckCircle2,
-    className: "bg-accent/20 text-accent-foreground",
-    dot: "bg-green-500",
+    className: "bg-accent/20 text-accent",
+    dot: "bg-success",
   },
   warning: {
     label: "Attention",
     icon: AlertTriangle,
-    className: "bg-amber-500/15 text-amber-600",
-    dot: "bg-amber-500",
+    className: "bg-warning/15 text-warning",
+    dot: "bg-warning",
   },
   offline: {
     label: "Hors ligne",
@@ -114,9 +114,9 @@ function HealthScore({ value }: { value: number }) {
             strokeLinecap="round"
             className={
               value >= 80
-                ? "text-green-500"
+                ? "text-success"
                 : value >= 50
-                  ? "text-amber-500"
+                  ? "text-warning"
                   : "text-destructive"
             }
           />
@@ -377,7 +377,7 @@ export function SitesView() {
             {activeSite.critical === 0 &&
             activeSite.warnings === 0 ? (
               <div className="mt-6 flex items-center gap-3 rounded-2xl bg-muted p-4">
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <CheckCircle2 className="h-5 w-5 text-success" />
                 <div>
                   <p className="text-sm font-semibold">
                     Aucun problème détecté
@@ -407,9 +407,9 @@ export function SitesView() {
                 )}
 
                 {activeSite.warnings > 0 && (
-                  <div className="flex items-center justify-between rounded-2xl bg-amber-500/5 p-4">
+                  <div className="flex items-center justify-between rounded-2xl bg-warning/5 p-4">
                     <div className="flex items-center gap-3">
-                      <AlertTriangle className="h-4 w-4 text-amber-600" />
+                      <AlertTriangle className="h-4 w-4 text-warning" />
                       <div>
                         <p className="text-sm font-semibold">
                           {activeSite.warnings} warning
@@ -569,7 +569,7 @@ export function SitesView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-5 rounded-3xl bg-foreground p-6 text-background md:flex-row md:items-center md:justify-between md:p-8">
+      <div className="flex flex-col gap-5 dark rounded-3xl border border-border bg-card p-6 text-card-foreground md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-2xl">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
             <Building2 className="h-3.5 w-3.5" />
@@ -580,7 +580,7 @@ export function SitesView() {
             Vos opérations, site par site.
           </h2>
 
-          <p className="mt-2 text-sm leading-relaxed text-background/70">
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             Centralisez vos sites, actifs, sources de données et
             alertes dans un seul espace.
           </p>
@@ -712,7 +712,7 @@ export function SitesView() {
 
                 <div className="mt-6 grid grid-cols-3 gap-2">
                   <div className="rounded-2xl bg-muted p-3">
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Actifs
                     </p>
                     <p className="mt-1 font-heading text-xl font-bold">
@@ -721,7 +721,7 @@ export function SitesView() {
                   </div>
 
                   <div className="rounded-2xl bg-muted p-3">
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Warnings
                     </p>
                     <p className="mt-1 font-heading text-xl font-bold">
@@ -730,7 +730,7 @@ export function SitesView() {
                   </div>
 
                   <div className="rounded-2xl bg-muted p-3">
-                    <p className="text-[11px] text-muted-foreground">
+                    <p className="text-xs text-muted-foreground">
                       Critiques
                     </p>
                     <p
