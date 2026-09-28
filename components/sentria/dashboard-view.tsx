@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   Cog,
   Radar,
@@ -55,6 +55,7 @@ import {
   activitiesFor,
   activityLabel,
   activityOf,
+  couldBeFrom,
   normalizeOpsType,
   opsTypeFor,
   readOpsTypes,
@@ -1015,8 +1016,6 @@ export function DashboardView({
     string[]
   >([])
 
-  const scrollRef = useRef<HTMLDivElement | null>(null)
-
   const [taskMap, setTaskMap] = useState<Record<string, Assignment>>({})
 
   useEffect(() => {
@@ -1564,9 +1563,25 @@ export function DashboardView({
           const delta = afterTop - beforeTop
           if (delta === 0) return
 
-          const scroller =
-            (scrollRef.current as HTMLElement | null) ??
-            (document.scrollingElement as HTMLElement | null)
+          // The app shell's <main> scrolls, not the document, so the
+          // correction goes to the table's nearest scrolling parent
+          // (B-13: it went to the document and did nothing).
+          let scroller: HTMLElement | null = afterAnchor?.parentElement ?? null
+
+          while (scroller) {
+            const { overflowY } = getComputedStyle(scroller)
+
+            if (
+              (overflowY === "auto" || overflowY === "scroll") &&
+              scroller.scrollHeight > scroller.clientHeight
+            ) {
+              break
+            }
+
+            scroller = scroller.parentElement
+          }
+
+          scroller ??= document.scrollingElement as HTMLElement | null
 
           if (!scroller) return
 
@@ -1595,7 +1610,10 @@ export function DashboardView({
 
     if (activity !== null) return activity === configured
 
-    return !sectorsWithRecordedActivity.has(a.sector ?? "")
+    return (
+      !sectorsWithRecordedActivity.has(a.sector ?? "") &&
+      couldBeFrom(configured, a.alert_key)
+    )
   }
 
   const filteredAlerts = alerts
@@ -1633,7 +1651,9 @@ export function DashboardView({
 
     const activity = activityOf(r)
 
-    return activity === null || activity === configured
+    return activity === null
+      ? couldBeFrom(configured, r.alert_key)
+      : activity === configured
   }
 
   const filteredRecommendations = recommendations

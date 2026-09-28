@@ -11,7 +11,6 @@ import {
   TrendingDown,
   AlertTriangle,
   Wrench,
-  CircleDollarSign,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { localized, useTx, type Localized, type Tx } from "@/lib/i18n"
@@ -26,10 +25,6 @@ type Alert = {
 }
 
 /** Grouped thousands in the reader's own convention. */
-function money(value: number, tx: Tx): string {
-  return value.toLocaleString(tx("fr-FR", "en-GB"))
-}
-
 function matchAny(message: string, keywords: string[]) {
   const m = message.toLowerCase()
   return keywords.some((k) => m.includes(k))
@@ -157,7 +152,7 @@ function AlertRow({
   children,
 }: {
   alert: Alert
-  children: React.ReactNode
+  children?: React.ReactNode
 }) {
   const tx = useTx()
 
@@ -208,11 +203,6 @@ function AlertRow({
 // 1. MACHINES DE PRODUCTION — Predicted downtime cost
 // ---------------------------------------------------------------------
 
-function estimateDowntimeCost(alert: Alert): number {
-  // Heuristic estimate — replace with real cost model when available.
-  return alert.severity === "CRITICAL" ? 2800 : 900
-}
-
 export function IndustryMachinesView({ alerts }: { alerts: Alert[] }) {
   const tx = useTx()
 
@@ -230,10 +220,9 @@ export function IndustryMachinesView({ alerts }: { alerts: Alert[] }) {
   }
 
   const critical = relevant.filter((a) => a.severity === "CRITICAL")
-  const totalCost = relevant.reduce(
-    (sum, a) => sum + estimateDowntimeCost(a),
-    0
-  )
+  // No money figure: there is no downtime cost rate to base one on, and a
+  // flat 2 800 € per alert showed euros to every account (B-05, B-23).
+  const warnings = relevant.length - critical.length
 
   return (
     <div className="space-y-4">
@@ -241,8 +230,8 @@ export function IndustryMachinesView({ alerts }: { alerts: Alert[] }) {
         icon={Cog}
         title={localized("Machines de production", "Production machines")}
         differentiator={localized(
-          "Chaque anomalie machine est traduite en impact financier estimé, pour prioriser l'intervention selon le risque réel plutôt que la seule sévérité brute.",
-          "Every machine anomaly is turned into an estimated financial impact, so work is ordered by real risk rather than raw severity alone."
+          "Les machines proches de la panne passent en premier, puis celles qui dérivent, pour intervenir avant l'arrêt plutôt qu'après.",
+          "Machines close to failure come first, then those drifting, so work happens before the stop rather than after it."
         )}
       />
 
@@ -257,9 +246,9 @@ export function IndustryMachinesView({ alerts }: { alerts: Alert[] }) {
           value={String(new Set(relevant.map((a) => a.equipment)).size)}
         />
         <MetricCard
-          label={localized("Perte estimée cumulée", "Estimated loss in total")}
-          value={`~€${money(totalCost, tx)}`}
-          tone="warning"
+          label={localized("Machines à surveiller", "Machines to watch")}
+          value={String(warnings)}
+          tone={warnings > 0 ? "warning" : "neutral"}
         />
       </div>
 
@@ -267,12 +256,6 @@ export function IndustryMachinesView({ alerts }: { alerts: Alert[] }) {
         <div className="border-b border-border px-5 py-3">
           <p className="text-sm font-semibold">
             {tx("Détail par machine", "By machine")}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {tx(
-              "Estimation indicative, à affiner avec vos coûts réels d'arrêt.",
-              "An indicative estimate, to refine with your own downtime costs."
-            )}
           </p>
         </div>
 
@@ -285,12 +268,7 @@ export function IndustryMachinesView({ alerts }: { alerts: Alert[] }) {
           </div>
         ) : (
           relevant.map((a, i) => (
-            <AlertRow key={`${a.equipment}-${a.date}-${i}`} alert={a}>
-              <div className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold">
-                <CircleDollarSign className="h-3.5 w-3.5" />
-                ~€{money(estimateDowntimeCost(a), tx)}
-              </div>
-            </AlertRow>
+            <AlertRow key={`${a.equipment}-${a.date}-${i}`} alert={a} />
           ))
         )}
       </div>
@@ -633,12 +611,8 @@ export function IndustryPressureView({ alerts }: { alerts: Alert[] }) {
 }
 
 // ---------------------------------------------------------------------
-// 5. PRODUCTION — €/hour lost
+// 5. PRODUCTION — lines below target
 // ---------------------------------------------------------------------
-
-function estimateHourlyLoss(alert: Alert): number {
-  return alert.severity === "CRITICAL" ? 450 : 150
-}
 
 export function IndustryProductionView({ alerts }: { alerts: Alert[] }) {
   const tx = useTx()
@@ -656,10 +630,9 @@ export function IndustryProductionView({ alerts }: { alerts: Alert[] }) {
     )
   }
 
-  const totalHourlyLoss = relevant.reduce(
-    (sum, a) => sum + estimateHourlyLoss(a),
-    0
-  )
+  // No €/h figure: it was a flat 450 or 150 € per alert, in euros for
+  // every account (B-05, B-23).
+  const critical = relevant.filter((a) => a.severity === "CRITICAL").length
 
   return (
     <div className="space-y-4">
@@ -667,8 +640,8 @@ export function IndustryProductionView({ alerts }: { alerts: Alert[] }) {
         icon={Boxes}
         title={localized("Production", "Production")}
         differentiator={localized(
-          "Chaque baisse de rendement est convertie en perte estimée par heure, pour que l'impact business soit visible immédiatement, pas seulement un pourcentage.",
-          "Every drop in yield becomes an estimated loss per hour, so the business impact is visible straight away rather than just a percentage."
+          "Chaque ligne sous son objectif de rendement est signalée avec l'écart mesuré, les plus graves en premier.",
+          "Every line below its output target is flagged with the measured gap, the worst first."
         )}
       />
 
@@ -682,9 +655,9 @@ export function IndustryProductionView({ alerts }: { alerts: Alert[] }) {
           value={String(relevant.length)}
         />
         <MetricCard
-          label={localized("Perte estimée cumulée", "Estimated loss in total")}
-          value={`~€${money(totalHourlyLoss, tx)}/h`}
-          tone="warning"
+          label={localized("Écarts critiques", "Critical gaps")}
+          value={String(critical)}
+          tone={critical > 0 ? "critical" : "neutral"}
         />
       </div>
 
@@ -704,12 +677,7 @@ export function IndustryProductionView({ alerts }: { alerts: Alert[] }) {
           </div>
         ) : (
           relevant.map((a, i) => (
-            <AlertRow key={`${a.equipment}-${a.date}-${i}`} alert={a}>
-              <div className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold">
-                <CircleDollarSign className="h-3.5 w-3.5" />
-                ~€{estimateHourlyLoss(a)}/h
-              </div>
-            </AlertRow>
+            <AlertRow key={`${a.equipment}-${a.date}-${i}`} alert={a} />
           ))
         )}
       </div>

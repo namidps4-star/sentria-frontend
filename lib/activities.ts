@@ -443,8 +443,34 @@ export function inAccountScope<
 
     const activity = activityOf(r)
 
-    return activity !== null ? activity === businessType : !sectorRecordsActivity
+    return activity !== null
+      ? activity === businessType
+      : !sectorRecordsActivity && couldBeFrom(businessType, r.alert_key)
   })
+}
+
+/** Alert key families each health activity's checks can produce
+ *  (pipeline/alerts.py). Alerts saved before business_type was recorded
+ *  carry only their key: a "health.stock.low" cannot be a laboratory's,
+ *  so a lab account must not see it (B-06). Activities not listed here
+ *  accept any key. */
+const KEY_PREFIXES_BY_ACTIVITY: Record<string, string[]> = {
+  pharmacie: ["health.", "supplier."],
+  "clinique-hopital": ["health.", "hospital.", "supplier."],
+  laboratoire: ["lab.", "supplier."],
+  "grossiste-pharma": ["wholesaler.", "supplier."],
+}
+
+/** False only when the alert's key proves another activity produced it. */
+export function couldBeFrom(
+  activity: string,
+  alertKey: string | null | undefined
+): boolean {
+  const prefixes = KEY_PREFIXES_BY_ACTIVITY[activity]
+
+  if (!prefixes || !alertKey) return true
+
+  return prefixes.some((prefix) => alertKey.startsWith(prefix))
 }
 
 /** The activity that produced an alert or recommendation: its recorded

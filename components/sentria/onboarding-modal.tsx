@@ -410,6 +410,23 @@ const CSV_COLUMNS: Record<string, string[]> = {
   "logistics": ["equipment_id", "daily_cycles", "hydraulic_pressure", "fuel_level"],
   // A port file can also carry vessel rows (arrival, berth window) and
   // customs rows (clearance against free time): port_flow.py.
+  "entrepot-manutention": [
+    "equipment_id", "daily_cycles", "max_cycles", "hydraulic_pressure",
+    "fuel_level", "last_service_date",
+  ],
+  "preparation-expedition": [
+    "equipment_id", "daily_cycles", "max_cycles", "avg_wait_hours",
+    "last_service_date",
+  ],
+  "chaine-froid": [
+    "equipment_id", "temperature", "max_temperature", "fuel_level",
+    "last_service_date",
+  ],
+  // Trucks: the upload sends ops_type=transport, so the vehicle checks run.
+  "transport-distribution": [
+    "truck_id", "mileage_km", "last_service_km", "engine_temp",
+    "fuel_level", "oil_level", "tire_age_months",
+  ],
   "port-conteneurs": [
     "equipment_id", "daily_cycles", "avg_wait_hours",
     "vessel_id", "eta", "berth_window_end", "containers_aboard",
@@ -419,6 +436,10 @@ const CSV_COLUMNS: Record<string, string[]> = {
   // Names the backend reads (check_agriculture): days_in_storage, not
   // days_stored. product_name drives the silo spoilage profiles (A-PROF).
   "agriculture": ["product_name", "days_in_storage", "storage_temp"],
+  "exploitation-agricole": [
+    "product_name", "storage_temp", "days_in_storage", "scheduled_pickup",
+    "actual_pickup", "qty", "unit_cost",
+  ],
   "silo-stockage": [
     "product_name", "days_in_storage", "storage_temp", "max_storage_temp",
   ],
@@ -435,6 +456,17 @@ const CSV_COLUMNS: Record<string, string[]> = {
   ],
   // Cold chain reads the cargo's own temperature against its category
   // (surgelés, viande, vaccins...), never the engine's.
+  "flotte-entreprise": [
+    "truck_id", "mileage_km", "last_service_km", "fuel_level",
+    "harsh_braking_count", "speeding_minutes", "idle_minutes",
+    "days_used_this_month", "days_available_this_month",
+    "cost_per_km", "budget_cost_per_km",
+  ],
+  "location-vehicules": [
+    "truck_id", "mileage_km", "last_service_km", "damage_reported",
+    "turnaround_days_since_return", "days_rented_this_month",
+    "days_available_this_month", "contract_end_date",
+  ],
   "transporteur-routier": [
     "truck_id", "mileage_km", "last_service_km", "engine_temp", "fuel_level",
     "cargo_category", "cargo_temp", "scheduled_arrival", "actual_arrival",
@@ -443,6 +475,10 @@ const CSV_COLUMNS: Record<string, string[]> = {
   "energy": ["generator_id", "fuel_level_pct", "coolant_temp"],
   "centrale-production": [
     "generator_id", "output_kw", "rated_kw", "fuel_level_pct", "coolant_temp",
+  ],
+  "generateurs-secours": [
+    "generator_id", "fuel_level_pct", "coolant_temp", "load_pct",
+    "runtime_hours", "last_service_hours",
   ],
   "distribution-energetique": [
     "site_id", "generator_id", "fuel_level_pct", "load_pct", "rated_kw",
@@ -1002,6 +1038,11 @@ export function OnboardingView({
     const query =
       `?sector=${encodeURIComponent(toApiSector(sector))}&lang=${language}` +
       (subType ? `&business_type=${encodeURIComponent(subType)}` : "") +
+      // Logistics picks its checks by ops type, as the dashboard upload
+      // does: without it a truck file ran the equipment checks (B-03).
+      (sector === "logistics" && normalizeOpsType(subType)
+        ? `&ops_type=${normalizeOpsType(subType)}`
+        : "") +
       accountCurrencyParam()
 
     try {
