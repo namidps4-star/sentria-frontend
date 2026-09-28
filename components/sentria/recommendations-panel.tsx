@@ -102,6 +102,7 @@ const CATEGORY_ICON: Record<string, typeof Wrench> = {
   sales: ShoppingCart,
   staffing: Sparkles,
   shrinkage: ShoppingCart,
+  deadstock: Package,
   operations: Cpu,
   diagnostics: FlaskConical,
   critical_supply: HeartPulse,
@@ -122,6 +123,7 @@ const CATEGORY_LABEL: Record<string, Localized> = {
   sales: localized("Ventes", "Sales"),
   staffing: localized("Personnel", "Staffing"),
   shrinkage: localized("Démarque", "Shrinkage"),
+  deadstock: localized("Stock dormant", "Dead stock"),
   operations: localized("Opérations", "Operations"),
   diagnostics: localized("Diagnostic", "Diagnostics"),
   critical_supply: localized("Stock critique", "Critical stock"),
@@ -177,6 +179,10 @@ const IMPACT_HINT: Record<string, Localized> = {
   shrinkage: localized(
     "Limite une perte de marchandise non expliquée",
     "Contains unexplained loss of goods"
+  ),
+  deadstock: localized(
+    "Libère la trésorerie bloquée dans des invendus",
+    "Frees up cash tied up in unsold stock"
   ),
   operations: localized(
     "Débloque une opération qui empêche de vendre",
