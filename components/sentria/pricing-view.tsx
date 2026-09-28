@@ -112,7 +112,7 @@ export function PricingView() {
       className="w-full h-full overflow-hidden relative"
       style={{
         background:
-          "radial-gradient(ellipse at 15% 20%, #c8e06a 0%, #a8c45a 18%, #7fa048 35%, #4a6a3a 55%, #2a4025 75%, #0d1a14 100%)",
+          "radial-gradient(ellipse at 15% 20%, #c8e06a 0%, #a9bd5d 18%, #85934f 35%, #56603a 55%, #34382a 75%, #1d1d1b 100%)",
       }}
     >
       {/* Subtle decorative glow */}
@@ -178,7 +178,7 @@ export function PricingView() {
             <div
               className="flex items-center gap-2.5 rounded-full px-4 py-2"
               style={{
-                backgroundColor: "rgba(15, 26, 20, 0.6)",
+                backgroundColor: "rgba(29, 29, 27, 0.6)",
                 border: "1px solid rgba(200, 224, 106, 0.25)",
                 backdropFilter: "blur(8px)",
               }}
@@ -197,7 +197,7 @@ export function PricingView() {
                 <span
                   className="absolute top-0.5 w-4 h-4 rounded-full transition-transform"
                   style={{
-                    backgroundColor: "#0f1a14",
+                    backgroundColor: "#1d1d1b",
                     left: annual ? "24px" : "2px",
                   }}
                 />
@@ -232,7 +232,7 @@ export function PricingView() {
               className="flex flex-col rounded-2xl overflow-hidden"
               style={{
                 backgroundColor: tier.featured
-                  ? "rgba(15, 26, 20, 0.85)"
+                  ? "rgba(29, 29, 27, 0.85)"
                   : "rgba(255, 255, 255, 0.95)",
                 border: tier.featured
                   ? "2px solid #d9f36e"
@@ -339,7 +339,7 @@ export function PricingView() {
                         style={{
                           backgroundColor: tier.featured
                             ? "#d9f36e"
-                            : "#c9e5b8",
+                            : "rgba(217, 243, 110, 0.35)",
                           width: "18px",
                           height: "18px",
                           marginTop: "1px",
@@ -349,7 +349,7 @@ export function PricingView() {
                           className="h-2.5 w-2.5"
                           strokeWidth={3}
                           style={{
-                            color: tier.featured ? "#0f1a14" : "#1a1a1a",
+                            color: tier.featured ? "#1d1d1b" : "#1a1a1a",
                           }}
                         />
                       </span>
@@ -423,7 +423,7 @@ export function PricingView() {
                 className="w-full rounded-full text-xs font-semibold transition-opacity hover:opacity-90"
                 style={{
                   backgroundColor: tier.featured ? "#d9f36e" : "#1d1d1b",
-                  color: tier.featured ? "#0f1a14" : "#f5f4ec",
+                  color: tier.featured ? "#1d1d1b" : "#f5f4ec",
                   padding: "12px 0",
                   marginTop: "auto",
                 }}

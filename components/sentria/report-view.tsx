@@ -133,8 +133,8 @@ const SEVERITY_LABEL: Record<Severity, Localized> = {
 
 const SEVERITY_DOT: Record<Severity, string> = {
   critical: "bg-destructive",
-  warning: "bg-amber-500",
-  info: "bg-blue-500",
+  warning: "bg-warning",
+  info: "bg-muted-foreground",
 }
 
 // ---------------------------------------------------------------------------

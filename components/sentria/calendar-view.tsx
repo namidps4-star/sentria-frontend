@@ -81,7 +81,7 @@ const TYPE_ICON: Record<EventKind, typeof AlertTriangle> = {
 const TYPE_TONE: Record<EventKind, string> = {
   resolved: "bg-primary text-primary-foreground",
   threshold: "bg-red-500/15 text-red-700 dark:bg-red-500/20 dark:text-red-300",
-  incident: "bg-blue-600 text-white",
+  incident: "bg-warning text-white",
   deadline: "bg-accent text-accent-foreground",
 }
 
@@ -670,7 +670,7 @@ export function CalendarView() {
         <div
           className="relative flex flex-col justify-between overflow-hidden rounded-3xl p-6"
           style={{
-            background: "#0f1a14",
+            background: "#1d1d1b",
             border: "1px solid rgba(217, 243, 110, 0.2)",
             minHeight: "180px",
           }}
@@ -719,7 +719,7 @@ export function CalendarView() {
         <div
           className="relative flex flex-col justify-between overflow-hidden rounded-3xl p-6"
           style={{
-            background: "#0f1a14",
+            background: "#1d1d1b",
             border: "1px solid rgba(239, 68, 68, 0.2)",
             minHeight: "180px",
           }}
@@ -939,8 +939,8 @@ export function CalendarView() {
                     className={cn(
                       "relative flex min-h-[90px] flex-col border-b border-r border-[#1d1d1b]/8 p-1.5 text-left transition-all",
                       !isCurrentMonth && "bg-[#f5f5f0] opacity-40",
-                      isSelected && "bg-[#2563eb]/5",
-                      hasDeadline && !isSelected && "bg-[#2563eb]/3"
+                      isSelected && "bg-[#1d1d1b]/5",
+                      hasDeadline && !isSelected && "bg-[#d9f36e]/15"
                     )}
                   >
                     <div className="flex items-center justify-between mb-1">
@@ -950,7 +950,7 @@ export function CalendarView() {
                           isToday
                             ? "flex h-5 w-5 items-center justify-center rounded-full bg-[#1d1d1b] text-[#d9f36e]"
                             : isSelected
-                            ? "text-[#2563eb]"
+                            ? "text-[#1d1d1b]"
                             : "text-[#1d1d1b]/70"
                         )}
                       >
@@ -1003,7 +1003,7 @@ export function CalendarView() {
                     {hasDeadline && (
                       <div
                         className="absolute left-0 top-0 bottom-0 w-1 rounded-r"
-                        style={{ backgroundColor: "#2563eb" }}
+                        style={{ backgroundColor: "#d9f36e" }}
                       />
                     )}
                   </button>
@@ -1016,7 +1016,7 @@ export function CalendarView() {
           <div
             className="rounded-3xl overflow-hidden flex flex-col"
             style={{
-              background: "#0a2a1a",
+              background: "#1d1d1b",
               border: "1px solid rgba(200, 224, 106, 0.15)",
             }}
           >
@@ -1028,7 +1028,7 @@ export function CalendarView() {
                     className="h-7 w-7 rounded-full flex items-center justify-center"
                     style={{ backgroundColor: "#c8e06a" }}
                   >
-                    <CalendarClock className="h-3.5 w-3.5" style={{ color: "#0a2a1a" }} />
+                    <CalendarClock className="h-3.5 w-3.5" style={{ color: "#1d1d1b" }} />
                   </div>
                   <span
                     className="text-sm font-semibold"
@@ -1068,13 +1068,13 @@ export function CalendarView() {
                         <div className="flex flex-col items-center">
                           <span
                             className="text-[9px] font-bold uppercase tracking-wider"
-                            style={{ color: "#0a2a1a", opacity: 0.7 }}
+                            style={{ color: "#1d1d1b", opacity: 0.7 }}
                           >
                             {eventMonth}
                           </span>
                           <span
                             className="font-heading text-lg font-black leading-none"
-                            style={{ color: "#0a2a1a" }}
+                            style={{ color: "#1d1d1b" }}
                           >
                             {eventDay}
                           </span>
@@ -1084,7 +1084,7 @@ export function CalendarView() {
                           <span
                             className="rounded-full px-1.5 py-0.5 text-[7px] font-bold uppercase"
                             style={{
-                              backgroundColor: "#0a2a1a",
+                              backgroundColor: "#1d1d1b",
                               color: "#c8e06a",
                             }}
                           >
@@ -1097,8 +1097,8 @@ export function CalendarView() {
                         <span
                           className="rounded-full px-2 py-0.5 text-[9px] font-bold"
                           style={{
-                            backgroundColor: "rgba(10, 42, 26, 0.15)",
-                            color: "#0a2a1a",
+                            backgroundColor: "rgba(29, 29, 27, 0.15)",
+                            color: "#1d1d1b",
                           }}
                         >
                           {dayEvts.length}
@@ -1110,7 +1110,7 @@ export function CalendarView() {
                     {dayEvts.length === 0 ? (
                       <p
                         className="text-[10px] font-semibold italic"
-                        style={{ color: "#0a2a1a", opacity: 0.5 }}
+                        style={{ color: "#1d1d1b", opacity: 0.5 }}
                       >
                         {tx("Nothing", "Rien")}
                       </p>
@@ -1125,7 +1125,7 @@ export function CalendarView() {
                               onClick={() => setSelected(event.id)}
                               className="w-full rounded-xl p-2 text-left transition-transform hover:-translate-y-0.5"
                               style={{
-                                backgroundColor: "rgba(10, 42, 26, 0.08)",
+                                backgroundColor: "rgba(29, 29, 27, 0.08)",
                               }}
                             >
                               <div className="flex items-center gap-2">
@@ -1134,12 +1134,12 @@ export function CalendarView() {
                                   style={{
                                     backgroundColor:
                                       event.kind === "deadline"
-                                        ? "#0a2a1a"
+                                        ? "#1d1d1b"
                                         : event.kind === "incident"
-                                        ? "#2563eb"
+                                        ? "var(--warning)"
                                         : event.kind === "threshold"
                                         ? "#ef4444"
-                                        : "rgba(10, 42, 26, 0.2)",
+                                        : "rgba(29, 29, 27, 0.2)",
                                   }}
                                 >
                                   <Icon
@@ -1151,7 +1151,7 @@ export function CalendarView() {
                                           : event.kind === "incident" ||
                                             event.kind === "threshold"
                                           ? "#ffffff"
-                                          : "#0a2a1a",
+                                          : "#1d1d1b",
                                     }}
                                   />
                                 </div>
@@ -1159,14 +1159,14 @@ export function CalendarView() {
                                 <div className="flex-1 min-w-0">
                                   <p
                                     className="text-[10px] font-bold leading-tight truncate"
-                                    style={{ color: "#0a2a1a" }}
+                                    style={{ color: "#1d1d1b" }}
                                   >
                                     {event.title}
                                   </p>
                                   <p
                                     className="text-[9px] font-semibold truncate"
                                     style={{
-                                      color: "#0a2a1a",
+                                      color: "#1d1d1b",
                                       opacity: 0.7,
                                     }}
                                   >
@@ -1180,7 +1180,7 @@ export function CalendarView() {
                         {dayEvts.length > 2 && (
                           <p
                             className="text-[9px] font-bold text-center"
-                            style={{ color: "#0a2a1a", opacity: 0.6 }}
+                            style={{ color: "#1d1d1b", opacity: 0.6 }}
                           >
                             +{dayEvts.length - 2}{" "}
                             {tx("more", "autres")}
