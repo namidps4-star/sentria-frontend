@@ -618,8 +618,8 @@ const ACTIVITY_ONLY_PRIORITIES: Partial<Record<Sector, Priority[]>> = {
         "See a hygiene shutdown coming"
       ),
       description: localized(
-        "Température qui reste près de la limite, relevé après relevé",
-        "Temperature staying near the limit, reading after reading"
+        "Température bloquée près de la limite",
+        "Temperature stuck near the limit"
       ),
       icon: ShieldCheck,
     },
@@ -630,7 +630,7 @@ const ACTIVITY_ONLY_PRIORITIES: Partial<Record<Sector, Priority[]>> = {
         "Maintenance and output"
       ),
       description: localized(
-        "Quand un entretien en retard fait baisser la production",
+        "Entretien en retard qui freine la production",
         "When overdue maintenance drags output down"
       ),
       icon: Cog,
@@ -656,8 +656,8 @@ const ACTIVITY_ONLY_PRIORITIES: Partial<Record<Sector, Priority[]>> = {
         "Rebalancing between members"
       ),
       description: localized(
-        "Confier les lots à risque aux membres qui ont du transport",
-        "Hand at-risk lots to members with spare transport"
+        "Confier un lot à risque à un autre membre",
+        "Give at-risk lots to a member with transport"
       ),
       icon: ArrowLeftRight,
     },
@@ -670,7 +670,7 @@ const ACTIVITY_ONLY_PRIORITIES: Partial<Record<Sector, Priority[]>> = {
         "Output drift"
       ),
       description: localized(
-        "Baisse de production qui dure sur plusieurs relevés",
+        "Baisse de production sur plusieurs relevés",
         "Output loss that lasts over several readings"
       ),
       icon: TrendingDown,
@@ -682,7 +682,7 @@ const ACTIVITY_ONLY_PRIORITIES: Partial<Record<Sector, Priority[]>> = {
         "Rebalancing between sites"
       ),
       description: localized(
-        "Transférer le carburant d'un site à l'autre avant de commander",
+        "Carburant transféré entre sites avant commande",
         "Move fuel between sites before ordering more"
       ),
       icon: ArrowLeftRight,

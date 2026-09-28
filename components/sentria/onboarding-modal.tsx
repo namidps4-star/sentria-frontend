@@ -263,6 +263,12 @@ const PRIORITY_IMAGES: Record<string, string> = {
 
   // Agriculture
   transport: "/transport.png",
+  // Activity feature cards.
+  "network-rebalancing": "/networking-rebalancing.png",
+  rebalancing: "/rebalancing.png",
+  "output-drift": "/output-drift.png",
+  "hygiene-lead-time": "/hygiene-lead-time.png",
+  "failure-signature": "/failure-signature.png",
 
   // Transportation
   vehicles: "/vehicles.png",
