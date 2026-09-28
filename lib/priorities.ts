@@ -631,7 +631,7 @@ const ACTIVITY_ONLY_PRIORITIES: Partial<Record<Sector, Priority[]>> = {
       ),
       description: localized(
         "Entretien en retard qui freine la production",
-        "When overdue maintenance drags output down"
+        "Overdue maintenance cutting output"
       ),
       icon: Cog,
     },

@@ -269,6 +269,7 @@ const PRIORITY_IMAGES: Record<string, string> = {
   "output-drift": "/output-drift.png",
   "hygiene-lead-time": "/hygiene-lead-time.png",
   "failure-signature": "/failure-signature.png",
+  "maintenance-production-link": "/maintenance-production-link.png",
 
   // Transportation
   vehicles: "/vehicles.png",
