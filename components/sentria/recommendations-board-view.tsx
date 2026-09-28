@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ArrowUpRight,
   CalendarDays,
@@ -565,6 +565,94 @@ function Owner({
  * other route is dragging.
  * -------------------------------------------------------------------------- */
 
+/** The assignee picker a card's owner button opens (B-16). It used to
+ *  open the full detail dialog, so assigning someone meant finding the
+ *  list inside it; the "…" button is the way to the detail. */
+function AssignPopover({
+  task,
+  contractors,
+  contractorsLoaded,
+  onPatch,
+  onClose,
+}: {
+  task: TaskMeta
+  contractors: Contractor[]
+  contractorsLoaded: boolean
+  onPatch: (patch: Partial<TaskMeta>) => void
+  onClose: () => void
+}) {
+  const tx = useTx()
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function onPointer(event: MouseEvent) {
+      if (ref.current && !ref.current.contains(event.target as Node)) onClose()
+    }
+
+    function onKey(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose()
+    }
+
+    document.addEventListener("mousedown", onPointer)
+    document.addEventListener("keydown", onKey)
+
+    return () => {
+      document.removeEventListener("mousedown", onPointer)
+      document.removeEventListener("keydown", onKey)
+    }
+  }, [onClose])
+
+  return (
+    <div
+      ref={ref}
+      role="dialog"
+      aria-label={tx("Assigner la tâche", "Assign the task")}
+      className="absolute left-0 top-full z-30 mt-1.5 w-64 rounded-xl border border-border bg-card p-1.5 shadow-xl"
+    >
+      {contractors.length === 0 ? (
+        <p className="px-2 py-2 text-xs leading-5 text-muted-foreground">
+          {contractorsLoaded
+            ? tx(
+                "Aucun intervenant enregistré. Ajoutez-les depuis Intervenants.",
+                "No contractor on file. Add them from Field team."
+              )
+            : tx("Chargement des intervenants…", "Loading contractors…")}
+        </p>
+      ) : (
+        <div className="max-h-56 overflow-y-auto">
+          {contractors.map((person) => {
+            const picked = task.contractor_ids.includes(person.id)
+
+            return (
+              <label
+                key={person.id}
+                className={cn(
+                  "flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm transition-colors hover:bg-muted",
+                  picked && "bg-muted"
+                )}
+              >
+                <input
+                  type="checkbox"
+                  checked={picked}
+                  onChange={() =>
+                    onPatch({
+                      contractor_ids: picked
+                        ? task.contractor_ids.filter((id) => id !== person.id)
+                        : [...task.contractor_ids, person.id],
+                    })
+                  }
+                  className="h-4 w-4 shrink-0 accent-foreground"
+                />
+                <span className="truncate">{person.name}</span>
+              </label>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function DetailDialog({
   card,
   contractors,
@@ -1073,6 +1161,7 @@ export function RecommendationsBoard({
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<Status | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [assigningId, setAssigningId] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>("all")
   const [query, setQuery] = useState("")
   const [activeSector, setActiveSector] = useState<string | null>(null)
@@ -1206,6 +1295,10 @@ export function RecommendationsBoard({
    *  lying about the state of the operation, which is worse than a board
    *  that feels slow.
    */
+  // Stable, so the popover's outside-click listener is not rebuilt on
+  // every render of the board.
+  const closeAssign = useCallback(() => setAssigningId(null), [])
+
   function updateTask(id: string, patch: Partial<TaskMeta>) {
     const card = cards.find((entry) => entry.id === id)
 
@@ -1384,7 +1477,7 @@ export function RecommendationsBoard({
       <div className="flex flex-col gap-5 p-5 md:flex-row md:items-end md:justify-between md:p-6">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            {opsLabel ?? tx("Opérations", "Operations")}
+            {opsLabel ?? tx("Toutes priorités", "All priorities")}
           </p>
 
           <h3 className="mt-1.5 font-heading text-2xl font-bold tracking-tight">
@@ -1756,14 +1849,28 @@ export function RecommendationsBoard({
                       )}
                     >
                       {/* Row 1 — who owns it, and how bad it is. */}
-                      <div className="flex items-center justify-between gap-2">
+                      <div className="relative flex items-center justify-between gap-2">
                         <button
                           type="button"
-                          onClick={() => setEditingId(id)}
+                          onClick={() =>
+                            setAssigningId(assigningId === id ? null : id)
+                          }
+                          aria-expanded={assigningId === id}
+                          aria-haspopup="dialog"
                           className="flex min-w-0 items-center gap-2 rounded-full text-left transition-opacity hover:opacity-70"
                         >
                           <Owner assignees={assignees} tx={tx} />
                         </button>
+
+                        {assigningId === id && (
+                          <AssignPopover
+                            task={task}
+                            contractors={contractors}
+                            contractorsLoaded={loaded}
+                            onPatch={(patch) => updateTask(id, patch)}
+                            onClose={closeAssign}
+                          />
+                        )}
 
                         <span
                           className={cn(
@@ -1863,11 +1970,12 @@ export function RecommendationsBoard({
 
                       {/* Row 5 — by when, and for how much. */}
                       <div className="mt-3.5 flex items-center justify-between gap-2 border-t border-border pt-3">
-                        <button
-                          type="button"
-                          onClick={() => setEditingId(id)}
+                        {/* Sets the date in place (B-16): it opened the
+                            detail dialog, like the owner button. */}
+                        <label
                           className={cn(
-                            "-ml-1 flex shrink-0 items-center gap-1.5 rounded-lg px-1 py-0.5 text-[11px] transition-colors hover:bg-muted",
+                            "relative -ml-1 flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-1 py-0.5 text-[11px] transition-colors hover:bg-muted",
+                            "focus-within:outline-none focus-within:ring-2 focus-within:ring-ring",
                             overdue
                               ? "font-semibold text-destructive"
                               : "text-muted-foreground"
@@ -1881,7 +1989,29 @@ export function RecommendationsBoard({
                           {task.deadline
                             ? formatDeadline(task.deadline, tx)
                             : tx("Échéance", "Due date")}
-                        </button>
+
+                          <input
+                            type="date"
+                            value={task.deadline ?? ""}
+                            onChange={(event) =>
+                              updateTask(id, {
+                                deadline: event.target.value || null,
+                              })
+                            }
+                            onClick={(event) => {
+                              try {
+                                event.currentTarget.showPicker?.()
+                              } catch {
+                                /* Older browsers focus the field instead. */
+                              }
+                            }}
+                            aria-label={tx(
+                              `Échéance de ${rec.equipment}`,
+                              `Due date for ${rec.equipment}`
+                            )}
+                            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                          />
+                        </label>
 
                         {(rec.exposureEUR ?? 0) > 0 && (
                           <span className="truncate text-[11px] font-semibold tabular-nums">

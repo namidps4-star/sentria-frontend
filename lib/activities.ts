@@ -418,6 +418,35 @@ export function sectorOfActivity(id: string | null | undefined): Sector | null {
   return null
 }
 
+/** Rows (alerts or recommendations, sectors in our spelling) that
+ *  belong to the account: its selected sectors and, in the sector of its
+ *  configured activity, that activity. A row with no recorded activity
+ *  still counts until that sector has rows that record one, as on the
+ *  dashboard. */
+export function inAccountScope<
+  T extends {
+    sector?: string | null
+    business_type?: string | null
+    alert_key?: string | null
+  },
+>(rows: T[], sectors: string[], businessType: string | null): T[] {
+  const activitySector = sectorOfActivity(businessType)
+
+  const sectorRecordsActivity =
+    activitySector !== null &&
+    rows.some((r) => r.sector === activitySector && activityOf(r) !== null)
+
+  return rows.filter((r) => {
+    if (sectors.length > 0 && !sectors.includes(r.sector ?? "")) return false
+
+    if (!businessType || r.sector !== activitySector) return true
+
+    const activity = activityOf(r)
+
+    return activity !== null ? activity === businessType : !sectorRecordsActivity
+  })
+}
+
 /** The activity that produced an alert or recommendation: its recorded
  *  business_type, else what its alert_key namespace implies, else null. */
 export function activityOf(row: {
@@ -560,3 +589,28 @@ export function opsTypeFor(types: SingleOpsType[]): OpsType | undefined {
 }
 
 export { isSingleOpsType }
+
+/** The sectors the account selected in onboarding, in our spelling. */
+export function readSectors(): string[] {
+  if (typeof window === "undefined") return []
+
+  try {
+    const many = JSON.parse(localStorage.getItem("sentria_sectors") || "null")
+
+    if (Array.isArray(many)) {
+      const valid = many.filter((s): s is string => typeof s === "string")
+
+      if (valid.length > 0) return valid
+    }
+  } catch {
+    /* fall through to the single-value key */
+  }
+
+  try {
+    const one = localStorage.getItem("sentria_sector")
+
+    return one ? [one] : []
+  } catch {
+    return []
+  }
+}

@@ -59,6 +59,19 @@ export type Contractor = {
   open_assignments: number
 }
 
+/** The task a recommendation or alert is tracked under. One key for the
+ *  whole app: the dashboard's "Mark handled", the tracking board and the
+ *  calendar each keyed tasks their own way, so a task done in one place
+ *  stayed open in the others (P-TRACK). Repeat alerts on the same
+ *  equipment for the same issue are one task. */
+export function taskKeyFor(rec: {
+  equipment: string
+  alert_key?: string | null
+  id: string
+}): string {
+  return `${rec.equipment}-${rec.alert_key ?? rec.id}`
+}
+
 export type Assignment = {
   id?: string
   task_key: string

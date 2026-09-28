@@ -1,13 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 
+import { inAccountScope, readSectors } from "@/lib/activities"
 import { API_BASE } from "@/lib/api"
-import { useT, type MessageKey } from "@/lib/i18n"
+import { useCompanyIdentity } from "@/lib/company"
+import { fetchAssignments, taskKeyFor } from "@/lib/crm"
+import { useT, useTx, type MessageKey } from "@/lib/i18n"
+import { withOurSector } from "@/lib/sector"
 import { DocumentLanguage } from "./document-language"
 import { Sidebar } from "./sidebar"
 import type { ViewKey } from "./types"
-import { Topbar } from "./topbar"
+import { Topbar, type Notification } from "./topbar"
 import { DashboardView } from "./dashboard-view"
 import { CalendarView } from "./calendar-view"
 import { SitesView } from "./sites-view"
@@ -18,6 +22,7 @@ import { SettingsView } from "./settings-view"
 import { OnboardingView } from "./onboarding-modal"
 import { ReportView } from "./report-view"
 import { ContractorsView } from "./contractors-view"
+import { TrackingView } from "./tracking-view"
 
 /* Message keys, not labels. app-shell was holding a second copy of
    every view name next to the sidebar's. */
@@ -25,6 +30,10 @@ const META: Record<ViewKey, { title: MessageKey; subtitle: MessageKey }> = {
   dashboard: {
     title: "view.dashboard.title",
     subtitle: "view.dashboard.subtitle",
+  },
+  tracking: {
+    title: "view.tracking.title",
+    subtitle: "view.tracking.subtitle",
   },
   calendar: {
     title: "view.calendar.title",
@@ -60,6 +69,9 @@ const META: Record<ViewKey, { title: MessageKey; subtitle: MessageKey }> = {
   },
 }
 
+/** When the bell was last opened: alerts dated after it are unread. */
+const NOTIFICATIONS_SEEN_KEY = "sentria_notifications_seen_at"
+
 export function AppShell() {
   const t = useT()
 
@@ -69,34 +81,117 @@ export function AppShell() {
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
 
-  // The shell owns the chrome, so the bell's count is fetched here rather
-  // than reaching into the dashboard's state. Failure is silent on
-  // purpose: an unreachable API should leave the bell quiet, not show a
-  // dot implying unread alerts nobody can read.
-  const [criticalCount, setCriticalCount] = useState(0)
+  // The bell (B-22): critical alerts of the account's sectors and
+  // activity that nobody has marked handled, newest first. Fetched by the
+  // shell, which owns the chrome, and again on every page change so a
+  // task closed on the board leaves the bell. Failure is silent on
+  // purpose: an unreachable API leaves the bell quiet rather than showing
+  // a dot for alerts nobody can read.
+  const tx = useTx()
+  const lang = tx("fr", "en")
+  const { name: companyName } = useCompanyIdentity()
+
+  const [bellAlerts, setBellAlerts] = useState<Notification[]>([])
+  const [seenAt, setSeenAt] = useState("")
+
+  useEffect(() => {
+    try {
+      setSeenAt(localStorage.getItem(NOTIFICATIONS_SEEN_KEY) ?? "")
+    } catch {
+      setSeenAt("")
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
 
-    fetch(`${API_BASE}/alerts`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then((d) => {
-        if (cancelled) return
+    async function load() {
+      const [alerts, handled] = await Promise.all([
+        fetch(`${API_BASE}/alerts?lang=${lang}`)
+          .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+          .then((d) => (Array.isArray(d) ? d.map(withOurSector) : [])),
+        companyName
+          ? fetchAssignments(companyName).then((result) =>
+              result.ok
+                ? new Set(
+                    result.data
+                      .filter((a) => a.status === "done")
+                      .map((a) => a.task_key)
+                  )
+                : new Set<string>()
+            )
+          : Promise.resolve(new Set<string>()),
+      ])
 
-        setCriticalCount(
-          Array.isArray(d)
-            ? d.filter((a) => a?.severity === "CRITICAL").length
-            : 0
+      if (cancelled) return
+
+      let businessType: string | null = null
+
+      try {
+        businessType = localStorage.getItem("sentria_business_type")
+      } catch {
+        businessType = null
+      }
+
+      const byTask = new Map<string, Notification>()
+
+      for (const a of inAccountScope(alerts, readSectors(), businessType)) {
+        if (a?.severity !== "CRITICAL") continue
+
+        const key = taskKeyFor({ ...a, id: String(a.id ?? "") })
+
+        if (handled.has(key)) continue
+
+        const seen = byTask.get(key)
+
+        if (!seen || (a.date ?? "") > seen.date) {
+          byTask.set(key, {
+            key,
+            equipment: String(a.equipment ?? ""),
+            message: String(a.message ?? "").trim(),
+            date: String(a.date ?? ""),
+            sector: a.sector ?? null,
+          })
+        }
+      }
+
+      setBellAlerts(
+        Array.from(byTask.values()).sort((x, y) =>
+          y.date.localeCompare(x.date)
         )
-      })
-      .catch((err) => {
-        console.error("Failed to load the alert count:", err)
-      })
+      )
+    }
+
+    load().catch((err) => {
+      console.error("Failed to load the notifications:", err)
+    })
 
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [lang, companyName, view])
+
+  const unreadCount = useMemo(() => {
+    const since = Date.parse(seenAt)
+
+    return bellAlerts.filter((n) => {
+      const at = Date.parse(n.date)
+
+      return !Number.isFinite(since) || (Number.isFinite(at) && at > since)
+    }).length
+  }, [bellAlerts, seenAt])
+
+  function markNotificationsSeen() {
+    const now = new Date().toISOString()
+
+    setSeenAt(now)
+
+    try {
+      localStorage.setItem(NOTIFICATIONS_SEEN_KEY, now)
+    } catch {
+      /* A blocked localStorage keeps the count for this session only. */
+    }
+  }
 
   useEffect(() => {
     const onboarded = localStorage.getItem("sentria_onboarded")
@@ -151,12 +246,16 @@ export function AppShell() {
               onMenu={() => setOpen(true)}
               search={search}
               onSearch={handleSearch}
-              unreadCount={criticalCount}
+              unreadCount={unreadCount}
+              notifications={bellAlerts}
+              onNotificationsOpen={markNotificationsSeen}
+              onOpenTracking={() => setView("tracking")}
             />
           </div>
 
           <main className="flex-1 overflow-y-auto p-4 lg:p-8">
             {view === "dashboard" && <DashboardView search={search} />}
+            {view === "tracking" && <TrackingView />}
             {view === "calendar" && <CalendarView />}
             {view === "sites" && <SitesView />}
             {view === "ask" && <AskView />}

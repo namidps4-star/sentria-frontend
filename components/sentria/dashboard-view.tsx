@@ -68,6 +68,7 @@ import {
   contractorIdsOf,
   fetchAssignments,
   saveAssignment,
+  taskKeyFor,
   type Assignment,
 } from "@/lib/crm"
 
@@ -3413,10 +3414,7 @@ export function DashboardView({
 
               {expandedRecommendation &&
                 (() => {
-                  const actionKey = `${expandedRecommendation.equipment}-${
-                    expandedRecommendation.alert_key ??
-                    expandedRecommendation.id
-                  }`
+                  const actionKey = taskKeyFor(expandedRecommendation)
                   const row = taskMap[actionKey]
 
                   return !row || row.status !== "done" ? (
@@ -3698,10 +3696,7 @@ export function DashboardView({
               )}
 
               {(() => {
-                const actionKey = `${selectedRecommendation.equipment}-${
-                  selectedRecommendation.alert_key ??
-                  selectedRecommendation.id
-                }`
+                const actionKey = taskKeyFor(selectedRecommendation)
                 const row = taskMap[actionKey]
 
                 if (!row || row.status !== "done") {
@@ -3739,10 +3734,7 @@ export function DashboardView({
               <button
                 type="button"
                 onClick={() => {
-                  const actionKey = `${selectedRecommendation.equipment}-${
-                    selectedRecommendation.alert_key ??
-                    selectedRecommendation.id
-                  }`
+                  const actionKey = taskKeyFor(selectedRecommendation)
                   markHandled(actionKey)
                   setSelectedRecommendation(null)
                 }}

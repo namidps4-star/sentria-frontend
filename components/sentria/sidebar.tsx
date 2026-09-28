@@ -4,6 +4,7 @@ import type { ViewKey } from "./types"
 import { useT, type MessageKey } from "@/lib/i18n"
 import {
   LayoutDashboard,
+  SquareKanban,
   CalendarDays,
   Factory,
   Sparkles,
@@ -46,6 +47,11 @@ const sections: {
         id: "dashboard",
         label: "nav.dashboard",
         icon: LayoutDashboard,
+      },
+      {
+        id: "tracking",
+        label: "nav.tracking",
+        icon: SquareKanban,
       },
       {
         id: "calendar",

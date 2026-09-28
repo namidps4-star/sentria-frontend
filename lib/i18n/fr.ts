@@ -59,6 +59,7 @@ export const fr = {
   "nav.calendar": "Calendrier",
   "nav.sites": "Sites",
   "nav.contractors": "Intervenants",
+  "nav.tracking": "Suivi",
   "nav.ask": "Ask SentrIA",
   "nav.report": "Rapport",
   "nav.pricing": "Abonnement",
@@ -111,6 +112,9 @@ export const fr = {
 
   "view.report.title": "Rapport",
   "view.report.subtitle": "Analyse détaillée de vos opérations",
+
+  "view.tracking.title": "Suivi",
+  "view.tracking.subtitle": "Toutes les recommandations, à faire, en cours et faites",
 
   "view.contractors.title": "Intervenants",
   "view.contractors.subtitle": "Qui est disponible, et qui fait quoi",

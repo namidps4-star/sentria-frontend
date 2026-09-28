@@ -3,6 +3,7 @@
 import {
   Activity as ActivityIcon,
   AlertTriangle,
+  CheckCircle2,
   Bell,
   Building2,
   Clock3,
@@ -17,13 +18,15 @@ import { useEffect, useMemo, useState } from "react"
 
 import {
   activityLabel as activityName,
-  activityOf,
+  inAccountScope,
+  readSectors,
   opsTypeFor,
   readOpsTypes,
   sectorOfActivity,
   type SingleOpsType,
 } from "@/lib/activities"
 import { API_BASE } from "@/lib/api"
+import { fetchAssignments, taskKeyFor, type Assignment } from "@/lib/crm"
 import {
   formatInCompanyZone,
   initialsOf,
@@ -64,30 +67,6 @@ import type { ViewKey } from "./types"
    rewritten. The API has no authentication at all, so a green check
    claiming the operator's data is protected was the most costly sentence
    on the page. */
-
-function readSectors(): string[] {
-  if (typeof window === "undefined") return []
-
-  try {
-    const many = JSON.parse(localStorage.getItem("sentria_sectors") || "null")
-
-    if (Array.isArray(many)) {
-      const valid = many.filter((s): s is string => typeof s === "string")
-
-      if (valid.length > 0) return valid
-    }
-  } catch {
-    /* fall through to the single-value key */
-  }
-
-  try {
-    const one = localStorage.getItem("sentria_sector")
-
-    return one ? [one] : []
-  } catch {
-    return []
-  }
-}
 
 function timeOf(alert: LogisticsAlert): number {
   const t = new Date(alert.date).getTime()
@@ -141,29 +120,30 @@ export function ProfileView({
      selected and, in the sector of its configured activity, of that
      activity. Same rule as the dashboard: an alert with no recorded
      activity still counts until that sector has alerts that record one. */
-  const accountAlerts = useMemo(() => {
-    const activitySector = sectorOfActivity(businessType)
+  // Task states, for the resolution rate (B-18).
+  const [assignments, setAssignments] = useState<Assignment[] | null>(null)
 
-    const sectorRecordsActivity =
-      activitySector !== null &&
-      alerts.some(
-        (a) => a.sector === activitySector && activityOf(a) !== null
-      )
+  useEffect(() => {
+    if (!companyName) {
+      setAssignments(null)
+      return
+    }
 
-    return alerts.filter((a) => {
-      if (sectors.length > 0 && !sectors.includes(a.sector ?? "")) {
-        return false
-      }
+    let cancelled = false
 
-      if (!businessType || a.sector !== activitySector) return true
-
-      const activity = activityOf(a)
-
-      return activity !== null
-        ? activity === businessType
-        : !sectorRecordsActivity
+    fetchAssignments(companyName).then((result) => {
+      if (!cancelled) setAssignments(result.ok ? result.data : null)
     })
-  }, [alerts, sectors, businessType])
+
+    return () => {
+      cancelled = true
+    }
+  }, [companyName])
+
+  const accountAlerts = useMemo(
+    () => inAccountScope(alerts, sectors, businessType),
+    [alerts, sectors, businessType]
+  )
 
   const empty = loaded && accountAlerts.length === 0
 
@@ -176,6 +156,25 @@ export function ProfileView({
 
     const since = Date.now() - 7 * 24 * 60 * 60 * 1000
     const week = accountAlerts.filter((a) => timeOf(a) >= since).length
+
+    /* Share of the account's tasks marked done, keyed like the tracking
+       board (one task per equipment and issue). No company or no tasks:
+       a dash, never a made-up 0 %. */
+    const tasks = new Set(
+      accountAlerts.map((a) =>
+        taskKeyFor({ ...a, id: String((a as { id?: unknown }).id ?? "") })
+      )
+    )
+    const done = new Set(
+      (assignments ?? [])
+        .filter((a) => a.status === "done")
+        .map((a) => a.task_key)
+    )
+    const resolved = [...tasks].filter((key) => done.has(key)).length
+    const resolution =
+      assignments === null || tasks.size === 0
+        ? "—"
+        : `${Math.round((resolved / tasks.size) * 100)} %`
 
     return [
       {
@@ -198,8 +197,13 @@ export function ProfileView({
         value: week,
         icon: Clock3,
       },
+      {
+        label: tx("Tâches résolues", "Tasks resolved"),
+        value: resolution,
+        icon: CheckCircle2,
+      },
     ]
-  }, [accountAlerts, tx])
+  }, [accountAlerts, assignments, tx])
 
   /* The sectors the operator selected, each carrying the number of alerts
      the backend attributed to it. A sector with nothing against it shows
@@ -302,14 +306,18 @@ export function ProfileView({
       </div>
 
       {/* COUNTERS */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {stats.map((stat) => {
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        {stats.map((stat, index) => {
           const Icon = stat.icon
 
           return (
             <div
               key={stat.label}
-              className="rounded-3xl border border-border bg-card p-5 transition-all hover:-translate-y-0.5 hover:shadow-sm"
+              className={cn(
+                "rounded-3xl border border-border bg-card p-5 transition-all hover:-translate-y-0.5 hover:shadow-sm",
+                // Five cards: the last one fills the row at two columns.
+                index === stats.length - 1 && "sm:col-span-2 lg:col-span-1"
+              )}
             >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
                 <Icon className="h-4 w-4" aria-hidden="true" />

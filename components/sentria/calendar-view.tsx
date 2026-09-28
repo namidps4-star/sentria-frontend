@@ -18,10 +18,13 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useCompanyIdentity } from "@/lib/company"
+import { inAccountScope, readSectors } from "@/lib/activities"
 import { API_BASE } from "@/lib/api"
+import { fromApiSector } from "@/lib/sector"
 import {
   fetchAssignments,
   fetchContractors,
+  taskKeyFor,
   type Assignment,
   type Contractor,
 } from "@/lib/crm"
@@ -40,6 +43,7 @@ type Recommendation = {
   message: string
   recommended_action?: string
   alert_key?: string | null
+  business_type?: string | null
   action_category?: string
   risk_score?: number | null
   confidence?: number | null
@@ -162,7 +166,9 @@ function normalizeRecommendations(
     return {
       id,
       equipment: rec.equipment ?? "",
-      sector: rec.sector ?? null,
+      // Our spelling (retail -> commerce), as the account's sectors are.
+      sector: fromApiSector(rec.sector) || null,
+      business_type: rec.business_type ?? null,
       severity: rec.severity ?? "WARNING",
       date: rec.date ?? "",
       message: rec.message ?? "",
@@ -175,6 +181,14 @@ function normalizeRecommendations(
   })
 }
 
+function readBusinessType(): string | null {
+  try {
+    return localStorage.getItem("sentria_business_type")
+  } catch {
+    return null
+  }
+}
+
 function buildEvents(
   recommendations: Recommendation[],
   assignments: Assignment[],
@@ -185,7 +199,11 @@ function buildEvents(
   const events: CalendarEvent[] = []
 
   for (const rec of recommendations) {
-    const assignment = assignmentByTaskKey.get(rec.id)
+    // taskKeyFor first: the tracking board and "Mark handled" save under
+    // it, so their deadlines and status land on the calendar (P-TRACK).
+    const assignment =
+      assignmentByTaskKey.get(taskKeyFor(rec)) ??
+      assignmentByTaskKey.get(rec.id)
     const alertDate = parseDate(rec.date)
     const deadlineDate = parseDate(assignment?.deadline ?? null)
 
@@ -272,7 +290,14 @@ export function CalendarView() {
 
       if (cancelled) return
 
-      setRecommendations(normalizeRecommendations(recs))
+      // Only the account's sectors and activity, as on the dashboard.
+      setRecommendations(
+        inAccountScope(
+          normalizeRecommendations(recs),
+          readSectors(),
+          readBusinessType()
+        )
+      )
       setAssignments(assignmentsResult?.ok ? assignmentsResult.data : [])
       setContractors(contractorsResult?.ok ? contractorsResult.data : [])
       setLoaded(true)
