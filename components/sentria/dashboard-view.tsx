@@ -1766,9 +1766,11 @@ export function DashboardView({
   const chartData = dailySeries(filteredAlerts, 7)
 
   if (filterSector === "industry") {
-    const industryAlerts = alerts.filter(
-      (a) => a.sector === "industry"
-    )
+    // Scoped to the selected activity, like logisticsViewAlerts: another
+    // industry activity's alerts must not fill this one's KPI cards.
+    const industryAlerts = alerts
+      .filter((a) => a.sector === "industry")
+      .filter(matchesActivity)
 
     if (industryPriority === null) {
       return (
