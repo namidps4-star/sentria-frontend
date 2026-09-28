@@ -14,7 +14,7 @@ axes: ['opsz'],
 
 // Applies the saved theme before paint; brand default is dark (noir + lime).
 // Applies the saved theme before paint; ThemeSync re-applies it after hydration.
-const themeScript = `try{if(localStorage.getItem('sentria-theme')==='light'){var e=document.documentElement;e.classList.remove('dark');e.classList.add('light')}}catch(e){}`
+const themeScript = `try{if(localStorage.getItem('sentria-theme')==='dark'){var e=document.documentElement;e.classList.remove('light');e.classList.add('dark')}}catch(e){}`
 
 export const metadata: Metadata = {
 title: 'SentrIA — Intelligence opérationnelle',
@@ -32,8 +32,8 @@ apple: '/favicon-180.png',
 }
 
 export const viewport: Viewport = {
-colorScheme: 'dark light',
-themeColor: '#0B0C08',
+colorScheme: 'light dark',
+themeColor: '#ECE7D6',
 }
 
 export default function RootLayout({
@@ -44,7 +44,7 @@ children: React.ReactNode
 return (
 <html
 lang="fr"
-className="dark"
+className="light"
 suppressHydrationWarning
 >
 <head>

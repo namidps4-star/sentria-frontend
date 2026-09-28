@@ -160,7 +160,7 @@ export function SettingsView() {
     alerts: true,
     weekly: false,
     dark:
-      typeof document === "undefined" ||
+      typeof document !== "undefined" &&
       document.documentElement.classList.contains("dark"),
   })
 

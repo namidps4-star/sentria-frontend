@@ -66,7 +66,7 @@
 }
 
 :root {
-  /* SentrIA brand kit v1: light variant uses noir on crème, never lime. */
+  /* SentrIA brand kit v1, default theme: noir on crème, never lime. */
   color-scheme: light;
   --sentria-lime: #D6FF3F;
   --sentria-noir: #0B0C08;
@@ -116,7 +116,7 @@
   --sidebar-ring: var(--sentria-noir);
 }
 
-/* Default brand theme: noir background, lime signal (~5%), rouge for alerts only. */
+/* Dark theme: noir background, lime signal (~5%), rouge for alerts only. */
 .dark {
   color-scheme: dark;
   --background: var(--sentria-noir);
