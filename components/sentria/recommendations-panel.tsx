@@ -18,6 +18,7 @@ import {
   FlaskConical,
   HeartPulse,
   Truck,
+  Wallet,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { computeConfidence, confidenceWord } from "@/lib/confidence"
@@ -103,6 +104,7 @@ const CATEGORY_ICON: Record<string, typeof Wrench> = {
   staffing: Sparkles,
   shrinkage: ShoppingCart,
   deadstock: Package,
+  credit: Wallet,
   operations: Cpu,
   diagnostics: FlaskConical,
   critical_supply: HeartPulse,
@@ -124,6 +126,7 @@ const CATEGORY_LABEL: Record<string, Localized> = {
   staffing: localized("Personnel", "Staffing"),
   shrinkage: localized("Démarque", "Shrinkage"),
   deadstock: localized("Stock dormant", "Dead stock"),
+  credit: localized("Crédit client", "Customer credit"),
   operations: localized("Opérations", "Operations"),
   diagnostics: localized("Diagnostic", "Diagnostics"),
   critical_supply: localized("Stock critique", "Critical stock"),
@@ -183,6 +186,10 @@ const IMPACT_HINT: Record<string, Localized> = {
   deadstock: localized(
     "Libère la trésorerie bloquée dans des invendus",
     "Frees up cash tied up in unsold stock"
+  ),
+  credit: localized(
+    "Évite une créance qui ne sera jamais payée",
+    "Avoids a debt that will never be paid"
   ),
   operations: localized(
     "Débloque une opération qui empêche de vendre",

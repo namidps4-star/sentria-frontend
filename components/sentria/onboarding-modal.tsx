@@ -398,12 +398,11 @@ const CSV_COLUMNS: Record<string, string[]> = {
     "unit_cost", "last_sale_date", "sales_last_30_days",
   ],
   "chaine-magasins": [
-    "product_name", "stock_qty", "min_stock",
-    "sales_last_30_days", "sales_last_7_days", "sales_previous_7_days",
+    "store_id", "product_name", "stock_qty", "min_stock",
+    "sales_last_30_days", "unit_cost",
   ],
   "grossiste-distributeur": [
-    "product_name", "stock_qty", "min_stock",
-    "sales_last_30_days", "supplier_lead_days",
+    "client_name", "order_date", "amount", "outstanding_balance",
   ],
   "commerce": ["product_name", "stock_qty", "min_stock", "unit_cost"],
 }

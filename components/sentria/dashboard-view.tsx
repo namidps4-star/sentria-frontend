@@ -220,17 +220,19 @@ const SUBTYPE_KPI_LABELS: Record<string, Localized[]> = {
     localized("Références concernées", "SKUs affected"),
     localized("Démarque", "Shrinkage"),
   ],
+  // Same order as the generic retail KPIs: critical, warning,
+  // distinct items, total.
   "chaine-magasins": [
-    localized("Ruptures réseau", "Network stockouts"),
-    localized("Magasins concernés", "Stores affected"),
-    localized("Références concernées", "SKUs affected"),
-    localized("Démarque totale", "Total shrinkage"),
+    localized("Alertes critiques", "Critical alerts"),
+    localized("Transferts et alertes à surveiller", "Transfers and alerts to watch"),
+    localized("Magasins · produits concernés", "Stores · products affected"),
+    localized("Total alertes", "Total alerts"),
   ],
   "grossiste-distributeur": [
-    localized("Ruptures réseau", "Network stockouts"),
-    localized("Rééquilibrages suggérés", "Suggested transfers"),
-    localized("Produits concernés", "Products affected"),
-    localized("Invendus réseau", "Network deadstock"),
+    localized("Clients à risque d'impayé", "Customers at risk of non-payment"),
+    localized("Clients qui décrochent", "Customers drifting away"),
+    localized("Clients concernés", "Customers affected"),
+    localized("Total alertes", "Total alerts"),
   ],
 }
 
