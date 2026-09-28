@@ -16,8 +16,11 @@ import {
 import { useEffect, useMemo, useState } from "react"
 
 import {
+  activityLabel as activityName,
+  activityOf,
   opsTypeFor,
   readOpsTypes,
+  sectorOfActivity,
   type SingleOpsType,
 } from "@/lib/activities"
 import { API_BASE } from "@/lib/api"
@@ -34,6 +37,7 @@ import {
 } from "@/lib/logistics-signals"
 import { useTx } from "@/lib/i18n"
 import { sectorLabel } from "@/lib/priorities"
+import { withOurSector } from "@/lib/sector"
 import { cn } from "@/lib/utils"
 import type { ViewKey } from "./types"
 
@@ -104,33 +108,74 @@ export function ProfileView({
   const [loaded, setLoaded] = useState(false)
   const [sectors, setSectors] = useState<string[]>([])
   const [opsTypes, setOpsTypes] = useState<SingleOpsType[]>([])
+  const [businessType, setBusinessType] = useState<string | null>(null)
+
+  const tx = useTx()
+  const lang = tx("fr", "en")
 
   useEffect(() => {
     setSectors(readSectors())
     setOpsTypes(readOpsTypes())
 
-    fetch(`${API_BASE}/alerts`)
+    try {
+      setBusinessType(localStorage.getItem("sentria_business_type"))
+    } catch {
+      setBusinessType(null)
+    }
+  }, [])
+
+  // Refetched on a language switch: /alerts rebuilds messages (B-11).
+  useEffect(() => {
+    fetch(`${API_BASE}/alerts?lang=${lang}`)
       .then((r) => (r.ok ? r.json() : []))
-      .then((d) => setAlerts(Array.isArray(d) ? d : []))
+      .then((d) =>
+        setAlerts(Array.isArray(d) ? d.map(withOurSector) : [])
+      )
       .catch((error) => {
         console.error("Failed to load alerts for the profile page:", error)
       })
       .finally(() => setLoaded(true))
-  }, [])
+  }, [lang])
 
-  const tx = useTx()
+  /* Only the account's own signals (B-09): alerts of the sectors it
+     selected and, in the sector of its configured activity, of that
+     activity. Same rule as the dashboard: an alert with no recorded
+     activity still counts until that sector has alerts that record one. */
+  const accountAlerts = useMemo(() => {
+    const activitySector = sectorOfActivity(businessType)
 
-  const empty = loaded && alerts.length === 0
+    const sectorRecordsActivity =
+      activitySector !== null &&
+      alerts.some(
+        (a) => a.sector === activitySector && activityOf(a) !== null
+      )
+
+    return alerts.filter((a) => {
+      if (sectors.length > 0 && !sectors.includes(a.sector ?? "")) {
+        return false
+      }
+
+      if (!businessType || a.sector !== activitySector) return true
+
+      const activity = activityOf(a)
+
+      return activity !== null
+        ? activity === businessType
+        : !sectorRecordsActivity
+    })
+  }, [alerts, sectors, businessType])
+
+  const empty = loaded && accountAlerts.length === 0
 
   const stats = useMemo(() => {
     const equipment = new Set(
-      alerts.map((a) => a.equipment).filter((e): e is string => Boolean(e))
+      accountAlerts.map((a) => a.equipment).filter((e): e is string => Boolean(e))
     )
 
-    const critical = alerts.filter((a) => a.severity === "CRITICAL").length
+    const critical = accountAlerts.filter((a) => a.severity === "CRITICAL").length
 
     const since = Date.now() - 7 * 24 * 60 * 60 * 1000
-    const week = alerts.filter((a) => timeOf(a) >= since).length
+    const week = accountAlerts.filter((a) => timeOf(a) >= since).length
 
     return [
       {
@@ -140,7 +185,7 @@ export function ProfileView({
       },
       {
         label: tx("Signaux reçus", "Signals received"),
-        value: alerts.length,
+        value: accountAlerts.length,
         icon: Bell,
       },
       {
@@ -154,7 +199,7 @@ export function ProfileView({
         icon: Clock3,
       },
     ]
-  }, [alerts, tx])
+  }, [accountAlerts, tx])
 
   /* The sectors the operator selected, each carrying the number of alerts
      the backend attributed to it. A sector with nothing against it shows
@@ -162,7 +207,7 @@ export function ProfileView({
   const sectorRows = useMemo(() => {
     const counts = new Map<string, number>()
 
-    for (const alert of alerts) {
+    for (const alert of accountAlerts) {
       if (alert.sector) {
         counts.set(alert.sector, (counts.get(alert.sector) ?? 0) + 1)
       }
@@ -173,16 +218,24 @@ export function ProfileView({
       label: sectorLabel(id, tx),
       count: counts.get(id) ?? 0,
     }))
-  }, [sectors, alerts, tx])
+  }, [sectors, accountAlerts, tx])
 
   const recent = useMemo(
-    () => [...alerts].sort((a, b) => timeOf(b) - timeOf(a)).slice(0, 5),
-    [alerts]
+    () => [...accountAlerts].sort((a, b) => timeOf(b) - timeOf(a)).slice(0, 5),
+    [accountAlerts]
   )
 
+  // The activity chosen in onboarding, then the logistics ops types:
+  // a health account read "No activity selected" or a logistics label.
   const activityLabel =
+    activityName(sectorOfActivity(businessType), businessType, tx) ??
     opsLabelFor(opsTypeFor(opsTypes), tx, opsTypes) ??
     tx("Aucune activité sélectionnée", "No activity selected")
+
+  const monitoredActivities = [
+    activityName(sectorOfActivity(businessType), businessType, tx),
+    ...opsTypes.map((type) => tx(OPS_LABELS[type].fr, OPS_LABELS[type].en)),
+  ].filter((label): label is string => Boolean(label))
 
   const zoneLabel = timezoneId ? timezoneFor(timezoneId).label : "—"
 
@@ -327,8 +380,8 @@ export function ProfileView({
               </dt>
 
               <dd className="mt-1 text-sm font-semibold">
-                {opsTypes.length > 0
-                  ? opsTypes.map((type) => OPS_LABELS[type]).join(", ")
+                {monitoredActivities.length > 0
+                  ? monitoredActivities.join(", ")
                   : tx("Aucune", "None")}
               </dd>
             </div>

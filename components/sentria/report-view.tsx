@@ -658,7 +658,9 @@ export function ReportView({ data }: { data?: ReportData }) {
         console.error("Failed to load alerts for the report:", error)
       })
       .finally(() => setLoaded(true))
-  }, [])
+    // Refetched on a language switch: /alerts rebuilds messages (B-11).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tx("fr", "en")])
 
   /* Only actually filters once there is more than one real choice — see
      SectorTabs. A single-sector company keeps seeing every one of its

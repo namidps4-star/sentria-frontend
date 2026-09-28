@@ -54,6 +54,7 @@ import { deriveRecommendations } from "@/lib/logistics-signals"
 import {
   activitiesFor,
   activityLabel,
+  activityOf,
   normalizeOpsType,
   opsTypeFor,
   readOpsTypes,
@@ -263,21 +264,6 @@ const SUBTYPE_CHART_TITLES: Record<string, Localized> = {
     "Alertes réseau · 7 jours", "Network alerts · 7 days"),
   "grossiste-distributeur": localized(
     "Alertes réseau · 7 jours", "Network alerts · 7 days"),
-}
-
-function activityOf(row: {
-  business_type?: string | null
-  alert_key?: string | null
-}): string | null {
-  if (row.business_type) return row.business_type
-
-  const key = row.alert_key ?? ""
-
-  if (key.startsWith("lab.")) return "laboratoire"
-  if (key.startsWith("hospital.")) return "clinique-hopital"
-  if (key.startsWith("wholesaler.")) return "grossiste-pharma"
-
-  return null
 }
 
 const KEY_FAMILY_LABELS: Record<string, Localized> = {
@@ -1299,8 +1285,12 @@ export function DashboardView({
     }
   }, [activeSectors, uploadSector, filterSector])
 
+  // Refetched on a language switch: /alerts rebuilds each message in the
+  // language asked for (B-11).
+  const alertsLang = tx("fr", "en")
+
   useEffect(() => {
-    fetch(`${API}/alerts?lang=${tx("fr", "en")}`)
+    fetch(`${API}/alerts?lang=${alertsLang}`)
       .then((r) => {
         if (!r.ok) {
           throw new Error(`HTTP ${r.status}`)
@@ -1319,7 +1309,8 @@ export function DashboardView({
             : tx("réseau", "network")
         )
       })
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alertsLang])
 
   function refreshRecommendations() {
     fetch(
@@ -2401,8 +2392,16 @@ export function DashboardView({
       <RecommendationsPanel
         recommendations={filteredRecommendations}
         totalRecommendationsCount={recommendations.length}
-        alerts={alerts}
-        opsType={opsType}
+        // Recurrence counts only this view's alerts: the same equipment
+        // name in another sector or activity is another asset (B-08).
+        alerts={alerts.filter(
+          (a) =>
+            (filterSector === "all" || a.sector === filterSector) &&
+            matchesActivity(a)
+        )}
+        // The ops type tailors logistics only. Passed everywhere, it
+        // labelled retail chain cards "Tailored view: Port" (B-20).
+        opsType={filterSector === "logistics" ? opsType : null}
       />
 
       <div className="flex flex-wrap items-center gap-2">

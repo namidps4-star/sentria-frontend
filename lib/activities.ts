@@ -407,6 +407,34 @@ export function activityLabel(
   return label ? tx(label.fr, label.en) : undefined
 }
 
+/** The sector an activity id belongs to, or null. */
+export function sectorOfActivity(id: string | null | undefined): Sector | null {
+  if (!id) return null
+
+  for (const [sector, activities] of Object.entries(ACTIVITIES_BY_SECTOR)) {
+    if (activities.some((a) => a.id === id)) return sector as Sector
+  }
+
+  return null
+}
+
+/** The activity that produced an alert or recommendation: its recorded
+ *  business_type, else what its alert_key namespace implies, else null. */
+export function activityOf(row: {
+  business_type?: string | null
+  alert_key?: string | null
+}): string | null {
+  if (row.business_type) return row.business_type
+
+  const key = row.alert_key ?? ""
+
+  if (key.startsWith("lab.")) return "laboratoire"
+  if (key.startsWith("hospital.")) return "clinique-hopital"
+  if (key.startsWith("wholesaler.")) return "grossiste-pharma"
+
+  return null
+}
+
 /* ------------------------------------------------------------------ */
 /*  Logistics: onboarding ids vs the ops types the code speaks         */
 /* ------------------------------------------------------------------ */
