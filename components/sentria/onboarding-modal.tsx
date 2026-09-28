@@ -316,7 +316,7 @@ function cardColumns(total: number): number {
   return 4
 }
 
-const CARD_WIDTH = 184
+const CARD_WIDTH = 208
 const CARD_GAP = 16
 
 function cardRowWidth(total: number): number {
@@ -1767,10 +1767,10 @@ export function OnboardingView({
                         onClick={() => chooseSubType(item.id)}
                         aria-pressed={active}
                         className={cn(
-                          "group relative flex flex-col items-center rounded-2xl border px-3 pb-4 pt-5 text-center transition-all duration-300",
+                          "group relative flex flex-col items-center rounded-2xl border px-3 pb-5 pt-6 text-center transition-all duration-300",
                           // Two per row on phones, a fixed width from sm up so
                           // every row lines up whatever the card count.
-                          "w-[calc(50%-0.5rem)] sm:w-[184px]",
+                          "w-[calc(50%-0.5rem)] sm:w-[208px]",
                           "border-neutral-200 bg-white shadow-sm hover:-translate-y-1 hover:border-lime-500 hover:shadow-md",
                           active && "border-lime-500 bg-lime-50 shadow-md ring-1 ring-lime-500/20"
                         )}
@@ -1790,7 +1790,7 @@ export function OnboardingView({
 
                         <div className="flex w-full flex-col items-center">
                           {img ? (
-                            <div className="mb-3 flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
+                            <div className="mb-3 flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
                               <img
                                 src={img}
                                 alt=""
@@ -1803,7 +1803,7 @@ export function OnboardingView({
                           ) : (
                             <div
                               className={cn(
-                                "flex h-20 w-20 items-center justify-center rounded-xl transition-all duration-300 mb-3",
+                                "flex h-24 w-24 items-center justify-center rounded-xl transition-all duration-300 mb-3",
                                 active
                                   ? "bg-lime-100 text-lime-700 scale-105"
                                   : "bg-neutral-100 text-neutral-500 group-hover:text-lime-600"
@@ -1937,10 +1937,10 @@ export function OnboardingView({
                         onClick={() => !disabled && toggleEquipment(item.id)}
                         disabled={disabled}
                         className={cn(
-                          "group relative flex flex-col items-center rounded-2xl border px-3 pb-4 pt-5 text-center transition-all duration-300",
+                          "group relative flex flex-col items-center rounded-2xl border px-3 pb-5 pt-6 text-center transition-all duration-300",
                           // Two per row on phones, a fixed width from sm up so
                           // every row lines up whatever the card count.
-                          "w-[calc(50%-0.5rem)] sm:w-[184px]",
+                          "w-[calc(50%-0.5rem)] sm:w-[208px]",
                           disabled
                             ? "cursor-not-allowed border-neutral-200 bg-white opacity-60"
                             : active
@@ -1956,7 +1956,7 @@ export function OnboardingView({
 
                         <div className="flex w-full flex-col items-center">
                           {img ? (
-                            <div className="mb-3 flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
+                            <div className="mb-3 flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
                               <img
                                 src={img}
                                 alt=""
@@ -1969,7 +1969,7 @@ export function OnboardingView({
                           ) : (
                             <div
                               className={cn(
-                                "flex h-20 w-20 items-center justify-center rounded-xl transition-all duration-300 mb-3",
+                                "flex h-24 w-24 items-center justify-center rounded-xl transition-all duration-300 mb-3",
                                 active
                                   ? "bg-lime-100 text-lime-700 scale-105"
                                   : "bg-neutral-100 text-neutral-500 group-hover:text-lime-600"
