@@ -384,7 +384,12 @@ const CSV_COLUMNS: Record<string, string[]> = {
     "Rotational speed [rpm]",
   ],
   "logistics": ["equipment", "cycles", "hydraulic_pressure", "fuel_level"],
-  "agriculture": ["batch_id", "days_stored", "storage_temp"],
+  // Names the backend reads (check_agriculture): days_in_storage, not
+  // days_stored. product_name drives the silo spoilage profiles (A-PROF).
+  "agriculture": ["product_name", "days_in_storage", "storage_temp"],
+  "silo-stockage": [
+    "product_name", "days_in_storage", "storage_temp", "max_storage_temp",
+  ],
   "transportation": ["vehicle_id", "km_since_service", "engine_temp"],
   "energy": ["generator_id", "fuel_level", "coolant_temp"],
   "supermarche-hypermarche": [
