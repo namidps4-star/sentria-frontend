@@ -19,6 +19,7 @@ import {
   Snowflake,
   Sparkles,
   Thermometer,
+  TrendingDown,
   Truck,
   Warehouse,
   Zap,
@@ -623,6 +624,32 @@ const ACTIVITY_ONLY_PRIORITIES: Partial<Record<Sector, Priority[]>> = {
       icon: ArrowLeftRight,
     },
   ],
+  energy: [
+    {
+      id: "output-drift",
+      label: localized(
+        "Dérive de production",
+        "Output drift"
+      ),
+      description: localized(
+        "Baisse de production qui dure sur plusieurs relevés",
+        "Output loss that lasts over several readings"
+      ),
+      icon: TrendingDown,
+    },
+    {
+      id: "rebalancing",
+      label: localized(
+        "Rééquilibrage entre sites",
+        "Rebalancing between sites"
+      ),
+      description: localized(
+        "Transférer le carburant d'un site à l'autre avant de commander",
+        "Move fuel between sites before ordering more"
+      ),
+      icon: ArrowLeftRight,
+    },
+  ],
 }
 
 /** Card lists for activities that do not offer the whole sector list, in
@@ -633,6 +660,8 @@ const PRIORITY_IDS_BY_ACTIVITY: Record<string, string[]> = {
   "exploitation-agricole": ["storage", "temperature", "transport"],
   "cooperative-agricole": ["network-rebalancing", "transport"],
   "silo-stockage": ["storage", "temperature"],
+  "centrale-production": ["generators", "output-drift", "sensors", "load"],
+  "distribution-energetique": ["generators", "rebalancing", "load"],
 }
 
 function catalogFor(sector: Sector | string): Priority[] {

@@ -397,7 +397,14 @@ const CSV_COLUMNS: Record<string, string[]> = {
     "qty", "unit_cost",
   ],
   "transportation": ["vehicle_id", "km_since_service", "engine_temp"],
-  "energy": ["generator_id", "fuel_level", "coolant_temp"],
+  // Names check_energy reads: fuel_level_pct, not fuel_level.
+  "energy": ["generator_id", "fuel_level_pct", "coolant_temp"],
+  "centrale-production": [
+    "generator_id", "output_kw", "rated_kw", "fuel_level_pct", "coolant_temp",
+  ],
+  "distribution-energetique": [
+    "site_id", "generator_id", "fuel_level_pct", "load_pct", "rated_kw",
+  ],
   "supermarche-hypermarche": [
     "product_name", "stock_qty", "min_stock",
     "unit_cost", "expiry_date", "last_sale_date",
