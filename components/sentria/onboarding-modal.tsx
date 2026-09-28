@@ -300,19 +300,21 @@ function imageForPriority(priorityId: string | undefined): string | undefined {
 /* GRID COLUMN SPANS                                                          */
 /* -------------------------------------------------------------------------- */
 
-function activityColSpan(index: number, total: number): string {
-  if (total === 3) return "lg:col-span-4"
-  if (total === 4) return "lg:col-span-3"
-  if (total === 5) {
-    if (index < 3) return "lg:col-span-4"
-    if (index === 3) return "lg:col-span-4 lg:col-start-3"
-    return "lg:col-span-4"
-  }
-  return "lg:col-span-3"
+/** Cards per row for the activity and priority steps: balanced rows
+ *  whatever the count (5 and 6 become 3 + 2 and 3 + 3), never a lone card
+ *  pushed to one side. */
+function cardColumns(total: number): number {
+  if (total <= 4) return Math.max(total, 2)
+  if (total <= 6) return 3
+  return 4
 }
 
-function sixCardColSpan(_index: number, _total: number): string {
-  return "lg:col-span-4"
+const CARD_WIDTH = 184
+const CARD_GAP = 16
+
+function cardRowWidth(total: number): number {
+  const columns = cardColumns(total)
+  return columns * CARD_WIDTH + (columns - 1) * CARD_GAP
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1742,14 +1744,14 @@ export function OnboardingView({
                   </p>
                 )}
 
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-12">
-                  {shownSubTypes.map((item, index) => {
+                <div
+                  className="mx-auto flex flex-wrap justify-center gap-4"
+                  style={{ maxWidth: cardRowWidth(shownSubTypes.length) }}
+                >
+                  {shownSubTypes.map((item) => {
                     const Icon = item.icon
                     const active = subTypes2.includes(item.id)
                     const img = imageForActivity(item.id)
-                    const total = shownSubTypes.length
-
-                    const colSpan = activityColSpan(index, total)
 
                     return (
                       <button
@@ -1758,9 +1760,10 @@ export function OnboardingView({
                         onClick={() => chooseSubType(item.id)}
                         aria-pressed={active}
                         className={cn(
-                          "group relative flex flex-col items-center justify-between rounded-2xl border p-4 text-center transition-all duration-300",
-                          "aspect-[2/3] w-full",
-                          colSpan,
+                          "group relative flex flex-col items-center rounded-2xl border px-3 pb-4 pt-5 text-center transition-all duration-300",
+                          // Two per row on phones, a fixed width from sm up so
+                          // every row lines up whatever the card count.
+                          "w-[calc(50%-0.5rem)] sm:w-[184px]",
                           "border-neutral-200 bg-white shadow-sm hover:-translate-y-1 hover:border-lime-500 hover:shadow-md",
                           active && "border-lime-500 bg-lime-50 shadow-md ring-1 ring-lime-500/20"
                         )}
@@ -1778,9 +1781,9 @@ export function OnboardingView({
                           </span>
                         )}
 
-                        <div className="flex flex-1 flex-col items-center justify-center w-full pt-2">
+                        <div className="flex w-full flex-col items-center">
                           {img ? (
-                            <div className="mb-3 flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
+                            <div className="mb-3 flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
                               <img
                                 src={img}
                                 alt=""
@@ -1799,13 +1802,13 @@ export function OnboardingView({
                                   : "bg-neutral-100 text-neutral-500 group-hover:text-lime-600"
                               )}
                             >
-                              <Icon className="h-10 w-10 stroke-[1.5]" />
+                              <Icon className="h-9 w-9 stroke-[1.5]" />
                             </div>
                           )}
 
                           <span
                             className={cn(
-                              "text-sm font-bold tracking-tight leading-tight transition-colors duration-300 line-clamp-2",
+                              "min-h-[2.5em] text-sm font-bold leading-tight tracking-tight transition-colors duration-300 line-clamp-2",
                               active ? "text-lime-700" : "text-neutral-900 group-hover:text-neutral-950"
                             )}
                           >
@@ -1815,7 +1818,7 @@ export function OnboardingView({
 
                         <span
                           className={cn(
-                            "mt-2 max-w-[18ch] text-[10px] leading-3.5 transition-colors duration-300 line-clamp-2",
+                            "mt-1.5 min-h-[2.8em] w-full text-xs leading-snug transition-colors duration-300 line-clamp-3 sm:line-clamp-2",
                             active
                               ? "text-lime-800/80"
                               : "text-neutral-500 group-hover:text-neutral-600"
@@ -1899,31 +1902,26 @@ export function OnboardingView({
                   allSelected={allEquipmentSelected}
                   onSelectAll={selectAllEquipment}
                   onClear={clearEquipment}
-                  noun={
+                  // French keeps 0 and 1 singular; English only 1.
+                  noun={tx(
                     selectedEquipment.length > 1
-                      ? tx("priorités sélectionnées", "priorities selected")
-                      : tx("priorité sélectionnée", "priority selected")
-                  }
+                      ? "priorités sélectionnées"
+                      : "priorité sélectionnée",
+                    selectedEquipment.length === 1
+                      ? "priority selected"
+                      : "priorities selected"
+                  )}
                 />
 
                 <div
-                  className={cn(
-                    "grid grid-cols-2 gap-4 sm:grid-cols-3",
-                    equipment.length === 6
-                      ? "lg:grid-cols-12"
-                      : "lg:grid-cols-4 xl:grid-cols-5"
-                  )}
+                  className="mx-auto flex flex-wrap justify-center gap-4"
+                  style={{ maxWidth: cardRowWidth(equipment.length) }}
                 >
                   {equipment.map((item, index) => {
                     const Icon = item.icon
                     const active = selectedEquipment.includes(item.id)
                     const disabled = Boolean(item.comingSoon)
                     const img = imageForPriority(item.id)
-
-                    const colSpan =
-                      equipment.length === 6
-                        ? sixCardColSpan(index, equipment.length)
-                        : undefined
 
                     return (
                       <button
@@ -1932,9 +1930,10 @@ export function OnboardingView({
                         onClick={() => !disabled && toggleEquipment(item.id)}
                         disabled={disabled}
                         className={cn(
-                          "group relative flex flex-col items-center justify-between rounded-2xl border p-4 text-center transition-all duration-300",
-                          "aspect-[2/3] w-full",
-                          colSpan,
+                          "group relative flex flex-col items-center rounded-2xl border px-3 pb-4 pt-5 text-center transition-all duration-300",
+                          // Two per row on phones, a fixed width from sm up so
+                          // every row lines up whatever the card count.
+                          "w-[calc(50%-0.5rem)] sm:w-[184px]",
                           disabled
                             ? "cursor-not-allowed border-neutral-200 bg-white opacity-60"
                             : active
@@ -1948,9 +1947,9 @@ export function OnboardingView({
                           </span>
                         )}
 
-                        <div className="flex flex-1 flex-col items-center justify-center w-full pt-2">
+                        <div className="flex w-full flex-col items-center">
                           {img ? (
-                            <div className="mb-3 flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
+                            <div className="mb-3 flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
                               <img
                                 src={img}
                                 alt=""
@@ -1969,13 +1968,13 @@ export function OnboardingView({
                                   : "bg-neutral-100 text-neutral-500 group-hover:text-lime-600"
                               )}
                             >
-                              <Icon className="h-10 w-10 stroke-[1.5]" />
+                              <Icon className="h-9 w-9 stroke-[1.5]" />
                             </div>
                           )}
 
                           <span
                             className={cn(
-                              "text-sm font-bold tracking-tight leading-tight transition-colors duration-300 line-clamp-2",
+                              "min-h-[2.5em] text-sm font-bold leading-tight tracking-tight transition-colors duration-300 line-clamp-2",
                               active ? "text-lime-700" : "text-neutral-900 group-hover:text-neutral-950"
                             )}
                           >
@@ -1985,7 +1984,7 @@ export function OnboardingView({
 
                         <span
                           className={cn(
-                            "mt-2 max-w-[18ch] text-[10px] leading-3.5 transition-colors duration-300 line-clamp-2",
+                            "mt-1.5 min-h-[2.8em] w-full text-xs leading-snug transition-colors duration-300 line-clamp-3 sm:line-clamp-2",
                             active
                               ? "text-lime-800/80"
                               : "text-neutral-500 group-hover:text-neutral-600"
@@ -2021,11 +2020,10 @@ export function OnboardingView({
                     setSelectedSources(DATA_SOURCES.map((s) => s.id))
                   }
                   onClear={() => setSelectedSources([])}
-                  noun={
-                    selectedSources.length > 1
-                      ? tx("sources choisies", "sources chosen")
-                      : tx("source choisie", "source chosen")
-                  }
+                  noun={tx(
+                    selectedSources.length > 1 ? "sources choisies" : "source choisie",
+                    selectedSources.length === 1 ? "source chosen" : "sources chosen"
+                  )}
                 />
 
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-3">

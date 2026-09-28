@@ -345,8 +345,8 @@ export const ACTIVITIES_BY_SECTOR: Record<Sector, Activity[]> = {
         "Wholesaler / distributor"
       ),
       description: localized(
-        "Vente en gros : repère les clients qui décrochent ou risquent de ne pas payer",
-        "Wholesale: spots customers drifting away or at risk of not paying"
+        "Clients qui décrochent ou ne paient pas",
+        "Spots customers drifting away or not paying"
       ),
       icon: Warehouse,
     },
@@ -369,8 +369,8 @@ export const ACTIVITIES_BY_SECTOR: Record<Sector, Activity[]> = {
         "Retail chain"
       ),
       description: localized(
-        "Plusieurs magasins : déplace le stock entre eux avant de racheter",
-        "Several stores: moves stock between them before buying more"
+        "Transferts entre magasins avant de racheter",
+        "Moves stock between stores before reordering"
       ),
       icon: Store,
     },
