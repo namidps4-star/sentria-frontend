@@ -383,6 +383,18 @@ const CSV_COLUMNS: Record<string, string[]> = {
     "Product ID", "Torque [Nm]", "Tool wear [min]",
     "Rotational speed [rpm]",
   ],
+  "usine-agroalimentaire": [
+    "Product ID", "food_temp", "max_food_temp", "hygiene_control_passed",
+    "production_rate", "target_rate",
+  ],
+  "usine-production": [
+    "Product ID", "Torque [Nm]", "Tool wear [min]", "Rotational speed [rpm]",
+    "production_rate", "target_rate", "last_maintenance_date",
+  ],
+  "atelier-soustraitance": [
+    "Product ID", "Torque [Nm]", "Tool wear [min]", "Rotational speed [rpm]",
+    "last_maintenance_date",
+  ],
   "logistics": ["equipment", "cycles", "hydraulic_pressure", "fuel_level"],
   // Names the backend reads (check_agriculture): days_in_storage, not
   // days_stored. product_name drives the silo spoilage profiles (A-PROF).

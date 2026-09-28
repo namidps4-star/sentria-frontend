@@ -212,6 +212,9 @@ export function PriorityHeading({
 }
 
 /** Total priorities a sector offers, for the "x sur y" line. */
-export function priorityCount(sector: Sector | string | null | undefined) {
-  return prioritiesFor(sector).length
+export function priorityCount(
+  sector: Sector | string | null | undefined,
+  businessType?: string | null
+) {
+  return prioritiesFor(sector, businessType).length
 }

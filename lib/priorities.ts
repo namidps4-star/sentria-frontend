@@ -610,6 +610,44 @@ export const PRIORITIES_BY_SECTOR: Record<Sector, Priority[]> = {
 /** Cards only some activities offer. Kept out of PRIORITIES_BY_SECTOR so
  *  an account without an activity never sees them. */
 const ACTIVITY_ONLY_PRIORITIES: Partial<Record<Sector, Priority[]>> = {
+  industry: [
+    {
+      id: "hygiene-lead-time",
+      label: localized(
+        "Anticiper un arrêt sanitaire",
+        "See a hygiene shutdown coming"
+      ),
+      description: localized(
+        "Température qui reste près de la limite, relevé après relevé",
+        "Temperature staying near the limit, reading after reading"
+      ),
+      icon: ShieldCheck,
+    },
+    {
+      id: "maintenance-production-link",
+      label: localized(
+        "Entretien et production",
+        "Maintenance and output"
+      ),
+      description: localized(
+        "Quand un entretien en retard fait baisser la production",
+        "When overdue maintenance drags output down"
+      ),
+      icon: Cog,
+    },
+    {
+      id: "failure-signature",
+      label: localized(
+        "Pannes récurrentes",
+        "Recurring faults"
+      ),
+      description: localized(
+        "Machines qui alertent encore et encore",
+        "Machines that keep raising alerts"
+      ),
+      icon: Radar,
+    },
+  ],
   agriculture: [
     {
       id: "network-rebalancing",
@@ -660,6 +698,12 @@ const PRIORITY_IDS_BY_ACTIVITY: Record<string, string[]> = {
   "exploitation-agricole": ["storage", "temperature", "transport"],
   "cooperative-agricole": ["network-rebalancing", "transport"],
   "silo-stockage": ["storage", "temperature"],
+  // Industry lists follow the columns each activity is asked for
+  // (onboarding CSV_COLUMNS): rpm is supplied to the production plant and
+  // the workshop, so motors stay there; nobody supplies pressure.
+  "usine-agroalimentaire": ["temperature", "hygiene-lead-time", "production"],
+  "usine-production": ["machines", "motors", "production", "maintenance-production-link"],
+  "atelier-soustraitance": ["machines", "motors", "failure-signature", "maintenance"],
   "centrale-production": ["generators", "output-drift", "sensors", "load"],
   "distribution-energetique": ["generators", "rebalancing", "load"],
 }

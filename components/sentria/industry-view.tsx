@@ -22,6 +22,7 @@ type Alert = {
   severity: "WARNING" | "CRITICAL" | string
   date: string
   sector?: string | null
+  alert_key?: string | null
 }
 
 /** Grouped thousands in the reader's own convention. */
@@ -824,6 +825,72 @@ export function IndustryMaintenanceView({ alerts }: { alerts: Alert[] }) {
             )
           })
         )}
+      </div>
+    </div>
+  )
+}
+
+/** A priority whose alerts are identified by alert_key, not by words in
+ *  the message: the language-independent matching the note above asks
+ *  for. Used by the activity-specific industry cards. */
+export function IndustryKeyAlertsView({
+  alerts,
+  keys,
+  icon,
+  title,
+  differentiator,
+  emptyHint,
+}: {
+  alerts: Alert[]
+  keys: string[]
+  icon: React.ElementType
+  title: Localized
+  differentiator: Localized
+  emptyHint: Localized
+}) {
+  const tx = useTx()
+
+  const relevant = alerts.filter(
+    (a) => a.alert_key != null && keys.includes(a.alert_key)
+  )
+
+  if (relevant.length === 0) {
+    return <EmptyPriorityView icon={icon} title={title} />
+  }
+
+  return (
+    <div className="space-y-4">
+      <HeaderCard icon={icon} title={title} differentiator={differentiator} />
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <MetricCard
+          label={localized("Alertes", "Alerts")}
+          value={String(relevant.length)}
+          tone={
+            relevant.some((a) => a.severity === "CRITICAL")
+              ? "critical"
+              : "warning"
+          }
+        />
+        <MetricCard
+          label={localized("Équipements concernés", "Assets affected")}
+          value={String(new Set(relevant.map((a) => a.equipment)).size)}
+        />
+      </div>
+
+      <div className="rounded-3xl border border-border bg-card">
+        <div className="border-b border-border px-5 py-3">
+          <p className="text-sm font-semibold">{tx(title.fr, title.en)}</p>
+          <p className="text-xs text-muted-foreground">
+            {tx(emptyHint.fr, emptyHint.en)}
+          </p>
+        </div>
+
+        {relevant.map((a, i) => (
+          <AlertRow key={`${a.equipment}-${a.date}-${i}`} alert={a}>
+            <span />
+          </AlertRow>
+        ))}
       </div>
     </div>
   )

@@ -2,6 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
+  Cog,
+  Radar,
+  ShieldCheck,
+
   Activity,
   Cpu,
   TrendingUp,
@@ -34,6 +38,7 @@ import {
   IndustryPressureView,
   IndustryProductionView,
   IndustryMaintenanceView,
+  IndustryKeyAlertsView,
 } from "./industry-view"
 
 import { API_BASE as API } from "@/lib/api"
@@ -118,6 +123,9 @@ type IndustryPriority =
   | "pressure"
   | "production"
   | "maintenance"
+  | "hygiene-lead-time"
+  | "maintenance-production-link"
+  | "failure-signature"
 
 function dailySeries(
   alerts: Alert[],
@@ -803,8 +811,20 @@ function getSavedLogisticsPriorities(): LogisticsPriority[] {
   return getSavedPriorities("logistics") as LogisticsPriority[]
 }
 
+function savedBusinessType(): string | null {
+  if (typeof window === "undefined") return null
+
+  try {
+    return localStorage.getItem("sentria_business_type")
+  } catch {
+    return null
+  }
+}
+
+/** Read the activity from storage, not state: this runs in effects that
+ *  fire before the businessType state is set. */
 function getSavedIndustryPriorities(): IndustryPriority[] {
-  return getSavedPriorities("industry") as IndustryPriority[]
+  return getSavedPriorities("industry", savedBusinessType()) as IndustryPriority[]
 }
 
 function getSectorLabel(sector: string | null | undefined, tx: Tx) {
@@ -1819,7 +1839,7 @@ export function DashboardView({
           <div>
             <PriorityHeading
               count={selectedIndustryPriorities.length}
-              total={priorityCount("industry")}
+              total={priorityCount("industry", businessType)}
             />
 
             <PriorityCards
@@ -1936,6 +1956,51 @@ export function DashboardView({
           <IndustryPressureView alerts={industryAlerts} />
         ) : industryPriority === "production" ? (
           <IndustryProductionView alerts={industryAlerts} />
+        ) : industryPriority === "hygiene-lead-time" ? (
+          <IndustryKeyAlertsView
+            alerts={industryAlerts}
+            keys={["industry.hygiene.shutdown_risk"]}
+            icon={ShieldCheck}
+            title={localized("Anticiper un arrêt sanitaire", "See a hygiene shutdown coming")}
+            differentiator={localized(
+              "Une prévision, pas un constat : SentrIA signale quand la température reste près de la limite sur plusieurs relevés, avant que le contrôle sanitaire n'échoue.",
+              "A forecast, not a finding: SentrIA flags when temperature stays near the limit over several readings, before the hygiene check fails."
+            )}
+            emptyHint={localized(
+              "Prévisions à partir des derniers relevés de chaque ligne.",
+              "Forecasts from each line's latest readings."
+            )}
+          />
+        ) : industryPriority === "maintenance-production-link" ? (
+          <IndustryKeyAlertsView
+            alerts={industryAlerts}
+            keys={["industry.maintenance.production_link"]}
+            icon={Cog}
+            title={localized("Entretien et production", "Maintenance and output")}
+            differentiator={localized(
+              "Quand un entretien en retard et une baisse de production tombent sur la même ligne, SentrIA les relie en une seule cause à traiter.",
+              "When overdue maintenance and lost output hit the same line, SentrIA links them into one cause to fix."
+            )}
+            emptyHint={localized(
+              "Lignes où l'entretien en retard pèse sur la production.",
+              "Lines where overdue maintenance weighs on output."
+            )}
+          />
+        ) : industryPriority === "failure-signature" ? (
+          <IndustryKeyAlertsView
+            alerts={industryAlerts}
+            keys={["industry.failure.signature_match"]}
+            icon={Radar}
+            title={localized("Pannes récurrentes", "Recurring faults")}
+            differentiator={localized(
+              "Une règle de fréquence, pas de l'apprentissage automatique : une machine qui a déjà alerté trois fois récemment et alerte encore est signalée en priorité.",
+              "A frequency rule, not machine learning: a machine that has alerted three times recently and alerts again is flagged first."
+            )}
+            emptyHint={localized(
+              "Machines qui alertent de façon répétée.",
+              "Machines that alert again and again."
+            )}
+          />
         ) : (
           <IndustryMaintenanceView alerts={industryAlerts} />
         )}
