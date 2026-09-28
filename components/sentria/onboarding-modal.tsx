@@ -36,6 +36,7 @@ import {
   writeTimezoneId,
 } from "@/lib/company"
 import {
+  accountCurrencyParam,
   COUNTRIES,
   LANGUAGES,
   countryFor,
@@ -933,7 +934,8 @@ export function OnboardingView({
 
     const query =
       `?sector=${encodeURIComponent(toApiSector(sector))}&lang=${language}` +
-      (subType ? `&business_type=${encodeURIComponent(subType)}` : "")
+      (subType ? `&business_type=${encodeURIComponent(subType)}` : "") +
+      accountCurrencyParam()
 
     try {
       const res = await fetch(`${API_BASE}/upload${query}`, {

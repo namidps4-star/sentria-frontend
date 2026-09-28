@@ -56,6 +56,7 @@ import {
   type SingleOpsType,
 } from "@/lib/activities"
 import { useCompanyIdentity } from "@/lib/company"
+import { accountCurrencyParam } from "@/lib/locale"
 import {
   contractorIdsOf,
   fetchAssignments,
@@ -1450,11 +1451,12 @@ export function DashboardView({
         uploadSector === "logistics" ? businessType : uploadActivity ?? businessType
 
       const res = await fetch(
-        `${API}/upload?sector=${toApiSector(uploadSector)}&lang=fr` +
+        `${API}/upload?sector=${toApiSector(uploadSector)}&lang=${tx("fr", "en")}` +
           (chosenOpsType ? `&ops_type=${chosenOpsType}` : "") +
           (chosenBusinessType
             ? `&business_type=${encodeURIComponent(chosenBusinessType)}`
-            : ""),
+            : "") +
+          accountCurrencyParam(),
         {
           method: "POST",
           body: form,

@@ -364,6 +364,14 @@ export function currencyFor(code: string | null | undefined): Currency {
   return countryFor(code)?.currency ?? EUR
 }
 
+/** The account currency as an ISO code for /upload, or "" when no
+ *  country is chosen: the backend then prints amounts without a symbol
+ *  instead of guessing the euro (B-23). */
+export function accountCurrencyParam(): string {
+  const code = countryFor(readCountryCode())?.currency.code
+  return code ? `&currency=${encodeURIComponent(code)}` : ""
+}
+
 /** A figure with its symbol.
  *
  *  Grouped, never with decimals: these are exposures in the hundreds or
