@@ -390,6 +390,12 @@ const CSV_COLUMNS: Record<string, string[]> = {
   "silo-stockage": [
     "product_name", "days_in_storage", "storage_temp", "max_storage_temp",
   ],
+  // One row per member lot; the capacity column drives A-COOP pairing
+  // (spare_capacity_kg, available_transport_capacity or transport_capacity).
+  "cooperative-agricole": [
+    "member_id", "product_name", "days_in_storage", "spare_capacity_kg",
+    "qty", "unit_cost",
+  ],
   "transportation": ["vehicle_id", "km_since_service", "engine_temp"],
   "energy": ["generator_id", "fuel_level", "coolant_temp"],
   "supermarche-hypermarche": [

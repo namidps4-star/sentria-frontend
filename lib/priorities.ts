@@ -1,5 +1,6 @@
 import {
   Activity,
+  ArrowLeftRight,
   BatteryCharging,
   Boxes,
   CalendarClock,
@@ -605,33 +606,66 @@ export const PRIORITIES_BY_SECTOR: Record<Sector, Priority[]> = {
   ],
 }
 
-/** Card lists for activities that do not offer the whole sector list.
- *  Ids must exist in PRIORITIES_BY_SECTOR; an activity without an entry
- *  gets the sector list. */
+/** Cards only some activities offer. Kept out of PRIORITIES_BY_SECTOR so
+ *  an account without an activity never sees them. */
+const ACTIVITY_ONLY_PRIORITIES: Partial<Record<Sector, Priority[]>> = {
+  agriculture: [
+    {
+      id: "network-rebalancing",
+      label: localized(
+        "Rééquilibrage entre membres",
+        "Rebalancing between members"
+      ),
+      description: localized(
+        "Confier les lots à risque aux membres qui ont du transport",
+        "Hand at-risk lots to members with spare transport"
+      ),
+      icon: ArrowLeftRight,
+    },
+  ],
+}
+
+/** Card lists for activities that do not offer the whole sector list, in
+ *  display order. Ids come from PRIORITIES_BY_SECTOR or
+ *  ACTIVITY_ONLY_PRIORITIES; an activity without an entry gets the
+ *  sector list. */
 const PRIORITY_IDS_BY_ACTIVITY: Record<string, string[]> = {
   "exploitation-agricole": ["storage", "temperature", "transport"],
-  // A-COOP adds network rebalancing here once it exists.
-  "cooperative-agricole": ["transport"],
+  "cooperative-agricole": ["network-rebalancing", "transport"],
   "silo-stockage": ["storage", "temperature"],
+}
+
+function catalogFor(sector: Sector | string): Priority[] {
+  return [
+    ...(PRIORITIES_BY_SECTOR[sector as Sector] ?? []),
+    ...(ACTIVITY_ONLY_PRIORITIES[sector as Sector] ?? []),
+  ]
 }
 
 export function prioritiesFor(
   sector: Sector | string | null | undefined,
   businessType?: string | null
-) {
+): Priority[] {
   if (!sector) return []
 
-  const all = PRIORITIES_BY_SECTOR[sector as Sector] ?? []
   const ids = businessType ? PRIORITY_IDS_BY_ACTIVITY[businessType] : undefined
 
-  return ids ? all.filter((item) => ids.includes(item.id)) : all
+  if (!ids) return PRIORITIES_BY_SECTOR[sector as Sector] ?? []
+
+  const catalog = catalogFor(sector)
+
+  return ids
+    .map((id) => catalog.find((item) => item.id === id))
+    .filter((item): item is Priority => item !== undefined)
 }
 
 export function priorityMeta(
   sector: Sector | string | null | undefined,
   id: string
 ): Priority | undefined {
-  return prioritiesFor(sector).find((item) => item.id === id)
+  if (!sector) return undefined
+
+  return catalogFor(sector).find((item) => item.id === id)
 }
 
 /** Short name, for nav chips and cards. Falls back to the id so an
