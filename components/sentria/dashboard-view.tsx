@@ -49,7 +49,7 @@ import {
   PriorityPills,
   priorityCount,
 } from "./priority-nav"
-import { orderPriorities, prioritiesFor } from "@/lib/priorities"
+import { featurePriorityIds, orderPriorities, prioritiesFor } from "@/lib/priorities"
 import { deriveRecommendations } from "@/lib/logistics-signals"
 import {
   activitiesFor,
@@ -290,6 +290,8 @@ const KEY_FAMILY_LABELS: Record<string, Localized> = {
   reagent: localized("Réactifs", "Reagents"),
   critical_supply: localized("Sans alternative", "No substitute"),
   rebalance: localized("Transferts", "Transfers"),
+  chain: localized("Transferts magasins", "Store transfers"),
+  wholesale: localized("Clients", "Customers"),
   torque: localized("Couple", "Torque"),
   wear: localized("Usure", "Wear"),
   failure: localized("Panne", "Failure"),
@@ -799,7 +801,10 @@ function getSavedPriorities(
 
     return orderPriorities(
       sector,
-      stored.filter((value): value is string => typeof value === "string"),
+      [
+        ...stored.filter((value): value is string => typeof value === "string"),
+        ...featurePriorityIds(sector, businessType),
+      ],
       businessType
     )
   } catch {

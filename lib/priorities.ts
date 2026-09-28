@@ -708,6 +708,23 @@ const PRIORITY_IDS_BY_ACTIVITY: Record<string, string[]> = {
   "distribution-energetique": ["generators", "rebalancing", "load"],
 }
 
+/** The activity's feature cards (activity-only ones). Always shown on the
+ *  dashboard, even when the saved onboarding selection predates them:
+ *  otherwise an existing account never sees a new feature. */
+export function featurePriorityIds(
+  sector: Sector | string | null | undefined,
+  businessType?: string | null
+): string[] {
+  if (!sector || !businessType) return []
+
+  const ids = PRIORITY_IDS_BY_ACTIVITY[businessType] ?? []
+  const featureIds = new Set(
+    (ACTIVITY_ONLY_PRIORITIES[sector as Sector] ?? []).map((item) => item.id)
+  )
+
+  return ids.filter((id) => featureIds.has(id))
+}
+
 function catalogFor(sector: Sector | string): Priority[] {
   return [
     ...(PRIORITIES_BY_SECTOR[sector as Sector] ?? []),
