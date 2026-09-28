@@ -425,6 +425,12 @@ const CSV_COLUMNS: Record<string, string[]> = {
   "transportation": [
     "truck_id", "mileage_km", "last_service_km", "engine_temp", "fuel_level",
   ],
+  // Cold chain reads the cargo's own temperature against its category
+  // (surgelés, viande, vaccins...), never the engine's.
+  "transporteur-routier": [
+    "truck_id", "mileage_km", "last_service_km", "engine_temp", "fuel_level",
+    "cargo_category", "cargo_temp", "scheduled_arrival", "actual_arrival",
+  ],
   // Names check_energy reads: fuel_level_pct, not fuel_level.
   "energy": ["generator_id", "fuel_level_pct", "coolant_temp"],
   "centrale-production": [
