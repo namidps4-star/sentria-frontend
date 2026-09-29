@@ -209,8 +209,13 @@ export function AppShell() {
     }
   }
 
+  // The shell is exactly the visible screen and never scrolls itself:
+  // only <main> scrolls. It is positioned so a hidden absolute element
+  // (an sr-only file input, say) is clipped here instead of making the
+  // page taller and dragging the whole box when scrolled or focused.
+  // h-dvh follows the phone's visible height as its URL bar shows/hides.
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-foreground">
+    <div className="relative flex h-dvh overflow-hidden bg-background text-foreground">
       {/* Corrects the tab title and <html lang> once the operator's
           language is known. Renders nothing. */}
       <DocumentLanguage />
