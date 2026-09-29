@@ -13,6 +13,8 @@ import { cn } from "@/lib/utils"
 type AdminAccount = {
   user_id: string
   email: string | null
+  /** Given at sign-up; null when none was. */
+  name: string | null
   company_id: string
   company_name: string
   sector: string | null
@@ -112,7 +114,7 @@ export function AdminView() {
     const q = query.trim().toLowerCase()
     if (!q) return accounts
     return accounts.filter((a) =>
-      [a.company_name, a.email, a.sector, a.department, a.plan]
+      [a.company_name, a.name, a.email, a.sector, a.department, a.plan]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q))
     )
@@ -158,7 +160,7 @@ export function AdminView() {
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder={tx("Entreprise, email, offre…", "Company, email, plan…")}
+                placeholder={tx("Entreprise, nom, email, offre…", "Company, name, email, plan…")}
                 className="h-10 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-64 [&::-webkit-search-cancel-button]:hidden"
               />
             </label>
@@ -213,7 +215,16 @@ export function AdminView() {
                             <span className="ml-2 rounded-full bg-brand/30 px-2 py-0.5 text-[10px] font-bold uppercase">Admin</span>
                           )}
                         </p>
-                        <p className="text-xs text-muted-foreground">{account.email ?? "—"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {account.name ? (
+                            <>
+                              <span className="font-medium text-foreground">{account.name}</span>
+                              {account.email ? ` · ${account.email}` : ""}
+                            </>
+                          ) : (
+                            account.email ?? "—"
+                          )}
+                        </p>
                       </td>
                       <td className="px-3 py-3">
                         {account.sector ? (

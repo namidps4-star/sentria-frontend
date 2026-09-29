@@ -27,7 +27,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
-import { API_BASE, apiFetch } from "@/lib/api"
+import { API_BASE } from "@/lib/api"
 import { toApiSector } from "@/lib/sector"
 import {
   detectTimezoneId,
@@ -58,6 +58,8 @@ import {
   type PlanId,
 } from "@/lib/plans"
 import { uploadProblemMessage } from "@/lib/upload-problem"
+import { runUpload, type UploadState } from "@/lib/upload"
+import { UploadProgress } from "./upload-progress"
 import { prioritiesFor } from "@/lib/priorities"
 import {
   ACTIVITIES_BY_SECTOR,
@@ -828,10 +830,14 @@ export function OnboardingView({
   }
 
   const [selectedEquipment, setSelectedEquipment] = useState<string[]>([])
-  const [csvUploading, setCsvUploading] = useState(false)
-  const [csvMsg, setCsvMsg] = useState("")
-  const [csvFailed, setCsvFailed] = useState(false)
-  const [csvDone, setCsvDone] = useState(false)
+  // Brought into view when the last file passes: it sits low, above the
+  // step's fixed footer.
+  const goodToGoRef = useRef<HTMLDivElement>(null)
+
+  // One import per department chosen (a clinic with its pharmacy and
+  // lab uploads three files), each checked by the API before anything is
+  // saved. Keyed by department id ("" when the sector has none).
+  const [deptUploads, setDeptUploads] = useState<Record<string, UploadState>>({})
 
   const [selectedSources, setSelectedSources] = useState<DataSource["id"][]>([])
   const [configureLater, setConfigureLater] = useState(false)
@@ -1040,97 +1046,56 @@ export function OnboardingView({
     DATA_SOURCES.length > 0 &&
     DATA_SOURCES.every((source) => selectedSources.includes(source.id))
 
-  const csvColumns =
-    (subType && CSV_COLUMNS[subType]) ||
-    (sector && CSV_COLUMNS[sector]) ||
-    []
+  /** The departments to import for: every one chosen, or the sector alone. */
+  const importTargets: string[] =
+    subTypes2.length > 0 ? subTypes2 : subType ? [subType] : [""]
 
-  async function handleOnboardingUpload(
-    e: React.ChangeEvent<HTMLInputElement>
-  ) {
-    const file = e.target.files?.[0]
-    if (!file || !sector) return
+  const columnsFor = (department: string) =>
+    (department && CSV_COLUMNS[department]) || (sector && CSV_COLUMNS[sector]) || []
 
-    setCsvUploading(true)
-    setCsvFailed(false)
-    setCsvDone(false)
-    setCsvMsg("")
+  const labelFor = (department: string) => {
+    const item = subTypes.find((entry) => entry.id === department)
+    return item ? px(item.label) : selectedSector ? px(selectedSector.label) : ""
+  }
 
-    const form = new FormData()
-    form.append("file", file)
+  const readyCount = importTargets.filter(
+    (department) => deptUploads[department]?.phase === "done"
+  ).length
+  const allReady = readyCount === importTargets.length
+
+  useEffect(() => {
+    if (allReady) goodToGoRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" })
+  }, [allReady])
+
+  async function importFor(department: string, file: File) {
+    if (!sector) return
 
     const query =
       `?sector=${encodeURIComponent(toApiSector(sector))}&lang=${language}` +
-      (subType ? `&business_type=${encodeURIComponent(subType)}` : "") +
+      (department ? `&business_type=${encodeURIComponent(department)}` : "") +
       // Logistics picks its checks by ops type, as the dashboard upload
       // does: without it a truck file ran the equipment checks (B-03).
-      (sector === "logistics" && normalizeOpsType(subType)
-        ? `&ops_type=${normalizeOpsType(subType)}`
+      (sector === "logistics" && normalizeOpsType(department)
+        ? `&ops_type=${normalizeOpsType(department)}`
         : "") +
-      accountCurrencyParam() +
-      // S-3: supplier history is kept per company.
-      (companyName.trim()
-        ? `&company_name=${encodeURIComponent(companyName.trim())}`
-        : "")
+      accountCurrencyParam()
 
-    try {
-      const res = await apiFetch(`${API_BASE}/upload${query}`, {
-        method: "POST",
-        body: form,
-      })
-
-      // 422: the file doesn't carry this activity's data (B-24). Show
-      // what the server says is missing; nothing was saved.
-      // 403: outside the plan (a second sector or department); the
-      // server's message names the plan that covers it.
-      if (res.status === 422 || res.status === 403) {
-        const problem = await res.json().catch(() => null)
-
-        setCsvFailed(true)
-        setCsvMsg(
-          uploadProblemMessage(problem, tx) ??
-            tx(
-              "Ce fichier ne correspond pas à l'activité choisie.",
-              "This file doesn't match the chosen activity."
-            )
-        )
-        return
-      }
-
-      if (!res.ok) {
-        const body = await res.text().catch(() => "")
-        console.error(
-          `[SentrIA] onboarding upload -> HTTP ${res.status}`,
-          body
-        )
-        throw new Error(`HTTP ${res.status}`)
-      }
-
-      const data = await res.json()
-
-      setCsvDone(true)
-      setCsvMsg(
-        data.message === "Processed successfully"
-          ? tx(
-              `${file.name} importé. Les alertes apparaîtront sur le tableau de bord.`,
-              `${file.name} imported. The alerts will appear on the dashboard.`
-            )
-          : data.message ??
-            tx(`${file.name} importé.`, `${file.name} imported.`)
-      )
-    } catch (error) {
-      console.error("[SentrIA] onboarding upload failed:", error)
-      setCsvFailed(true)
-      setCsvMsg(
+    await runUpload(
+      `${API_BASE}/upload${query}`,
+      file,
+      (state) => setDeptUploads((current) => ({ ...current, [department]: state })),
+      // 422: not this department's data (B-24); 403: outside the plan.
+      (problem) =>
+        uploadProblemMessage(problem, tx) ??
         tx(
-          "Import impossible. Vérifiez la console du navigateur, puis réessayez.",
-          "The import failed. Check the browser console, then try again."
-        )
+          "Ce fichier ne correspond pas à ce département.",
+          "This file doesn't match this department."
+        ),
+      tx(
+        "L'API SentrIA n'a pas répondu. Réessayez dans un instant.",
+        "The SentrIA API did not answer. Try again in a moment."
       )
-    } finally {
-      setCsvUploading(false)
-      e.target.value = ""
-    }
+    )
   }
 
   function toggleSource(id: DataSource["id"]) {
@@ -2229,103 +2194,173 @@ export function OnboardingView({
                 </div>
 
                 {selectedSources.includes("csv") && (
-                  <div className="mt-4 rounded-2xl border border-accent/40 bg-accent/5 p-4">
-                    <div className="flex items-start gap-3">
-                      <Upload
-                        className="mt-0.5 h-4 w-4 shrink-0 text-accent-foreground"
-                        aria-hidden="true"
-                      />
-                      <div className="min-w-0 flex-1">
+                  <div className="mt-4 rounded-2xl border border-accent/40 bg-accent/5 p-4 md:p-5">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
                         <p className="text-sm font-semibold">
+                          {importTargets.length > 1
+                            ? tx("Importez un fichier par département", "Import one file per department")
+                            : tx("Importez votre fichier maintenant", "Import your file now")}
+                        </p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
                           {tx(
-                            "Importez votre fichier maintenant",
-                            "Import your file now"
+                            "SentrIA vérifie chaque fichier avant d'enregistrer quoi que ce soit.",
+                            "SentrIA checks each file before saving anything."
                           )}
                         </p>
-                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                          {tx(
-                            "Chaque activité attend ses propres colonnes. Pour",
-                            "Each activity expects its own columns. For"
-                          )}{" "}
-                          <span className="font-semibold text-foreground">
-                            {selectedSubType
-                              ? px(selectedSubType.label)
-                              : selectedSector
-                                ? px(selectedSector.label)
-                                : null}
-                          </span>
-                          {tx(", SentrIA lit :", ", SentrIA reads:")}
+                      </div>
+                      {importTargets.length > 1 && (
+                        <p className="text-sm font-bold tabular-nums" aria-live="polite">
+                          {tx(`${readyCount} / ${importTargets.length} prêts`, `${readyCount} / ${importTargets.length} ready`)}
                         </p>
+                      )}
+                    </div>
 
-                        {csvColumns.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            {csvColumns.map((col) => (
-                              <code
-                                key={col}
-                                className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-foreground"
-                              >
-                                {col}
-                              </code>
-                            ))}
-                          </div>
-                        )}
+                    {importTargets.length > 1 && (
+                      <div
+                        className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted"
+                        role="progressbar"
+                        aria-label={tx("Départements prêts", "Departments ready")}
+                        aria-valuemin={0}
+                        aria-valuemax={importTargets.length}
+                        aria-valuenow={readyCount}
+                      >
+                        <div
+                          className="h-full rounded-full bg-foreground transition-[width] duration-300"
+                          style={{ width: `${(readyCount / importTargets.length) * 100}%` }}
+                        />
+                      </div>
+                    )}
 
-                        <p className="mt-2 text-[11px] leading-5 text-muted-foreground">
-                          {tx(
-                            "Les colonnes manquantes sont simplement ignorées, jamais une erreur.",
-                            "Missing columns are simply skipped, never an error."
-                          )}
-                        </p>
+                    <ul className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                      {importTargets.map((department) => {
+                        const upload = deptUploads[department] ?? { phase: "idle" as const }
+                        const working = upload.phase === "sending" || upload.phase === "analysing"
+                        const columns = columnsFor(department)
+                        const label = labelFor(department)
 
-                        <label
-                          className={cn(
-                            "mt-3 inline-flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-opacity",
-                            "focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
-                            csvUploading
-                              ? "bg-muted text-muted-foreground"
-                              : "bg-foreground text-background hover:opacity-90"
-                          )}
-                        >
-                          <Upload className="h-4 w-4" aria-hidden="true" />
-                          {csvUploading
-                            ? tx("Import en cours...", "Importing...")
-                            : csvDone
-                              ? tx(
-                                  "Importer un autre fichier",
-                                  "Import another file"
-                                )
-                              : tx(
-                                  "Choisir un fichier CSV",
-                                  "Choose a CSV file"
-                                )}
-                          <input
-                            type="file"
-                            accept=".csv"
-                            className="sr-only"
-                            onChange={handleOnboardingUpload}
-                            disabled={csvUploading || !sector}
-                            aria-label={tx(
-                              "Importer un fichier CSV",
-                              "Import a CSV file"
-                            )}
-                          />
-                        </label>
-
-                        {csvMsg && (
-                          <p
-                            role={csvFailed ? "alert" : "status"}
+                        return (
+                          <li
+                            key={department || "sector"}
                             className={cn(
-                              "mt-2 text-xs font-medium",
-                              csvFailed
-                                ? "text-destructive"
-                                : "text-green-600"
+                              "rounded-2xl border bg-background p-4",
+                              upload.phase === "done" ? "border-lime-500/60" : upload.phase === "refused" || upload.phase === "failed" ? "border-destructive/50" : "border-border"
                             )}
                           >
-                            {csvMsg}
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-bold">{label}</p>
+                              <span
+                                className={cn(
+                                  "rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
+                                  upload.phase === "done"
+                                    ? "bg-lime-500/20 text-lime-800 dark:text-lime-300"
+                                    : upload.phase === "refused" || upload.phase === "failed"
+                                      ? "bg-destructive/10 text-destructive"
+                                      : working
+                                        ? "bg-muted text-foreground"
+                                        : "bg-muted text-muted-foreground"
+                                )}
+                              >
+                                {upload.phase === "done"
+                                  ? tx("Prêt", "Ready")
+                                  : upload.phase === "refused" || upload.phase === "failed"
+                                    ? tx("À corriger", "Needs a fix")
+                                    : working
+                                      ? tx("Vérification…", "Checking…")
+                                      : tx("À importer", "To import")}
+                              </span>
+                            </div>
+
+                            {columns.length > 0 && upload.phase === "idle" && (
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {columns.map((col) => (
+                                  <code key={col} className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-foreground">
+                                    {col}
+                                  </code>
+                                ))}
+                              </div>
+                            )}
+
+                            {upload.phase !== "idle" && (
+                              <div className="mt-3">
+                                <UploadProgress state={upload} compact />
+                              </div>
+                            )}
+
+                            {!working && (
+                              <label
+                                className={cn(
+                                  "relative mt-3 inline-flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-opacity",
+                                  "focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+                                  upload.phase === "done"
+                                    ? "border border-border bg-background hover:bg-muted"
+                                    : "bg-foreground text-background hover:opacity-90"
+                                )}
+                              >
+                                <Upload className="h-4 w-4" aria-hidden="true" />
+                                {upload.phase === "done"
+                                  ? tx("Remplacer le fichier", "Replace the file")
+                                  : upload.phase === "idle"
+                                    ? tx("Choisir un fichier CSV", "Choose a CSV file")
+                                    : tx("Choisir un autre fichier", "Choose another file")}
+                                <input
+                                  type="file"
+                                  accept=".csv"
+                                  className="sr-only"
+                                  disabled={!sector}
+                                  aria-label={tx(`Fichier CSV : ${label}`, `CSV file: ${label}`)}
+                                  onChange={(event) => {
+                                    const file = event.target.files?.[0]
+                                    event.target.value = ""
+                                    if (file) void importFor(department, file)
+                                  }}
+                                />
+                              </label>
+                            )}
+                          </li>
+                        )
+                      })}
+                    </ul>
+
+                    <p className="mt-3 text-[11px] leading-5 text-muted-foreground">
+                      {tx(
+                        "Les colonnes manquantes sont simplement ignorées, jamais une erreur.",
+                        "Missing columns are simply skipped, never an error."
+                      )}
+                    </p>
+
+                    {allReady && (
+                      <div
+                        ref={goodToGoRef}
+                        className="mt-4 flex scroll-mb-28 items-start gap-3 rounded-2xl bg-lime-500/15 p-4"
+                        role="status"
+                      >
+                        <Check className="mt-0.5 h-5 w-5 shrink-0 text-lime-700 dark:text-lime-300" aria-hidden="true" />
+                        <div>
+                          <p className="text-sm font-bold">{tx("Tout est prêt", "You're good to go")}</p>
+                          <p className="mt-0.5 text-sm text-muted-foreground">
+                            {importTargets.length > 1
+                              ? tx(
+                                  `Vos ${importTargets.length} départements sont vérifiés. Chacun a sa vue sur le tableau de bord.`,
+                                  `Your ${importTargets.length} departments are checked. Each one gets its own view on the dashboard.`
+                                )
+                              : tx("Votre fichier est vérifié et analysé.", "Your file is checked and analysed.")}
                           </p>
-                        )}
+                          <ul className="mt-2 space-y-0.5 text-sm tabular-nums">
+                            {importTargets.map((department) => (
+                              <li key={department || "sector"}>
+                                <span className="font-semibold">{labelFor(department)}</span>
+                                {" · "}
+                                {tx(
+                                  `${(deptUploads[department]?.rows ?? 0).toLocaleString("fr-FR")} lignes, ${(deptUploads[department]?.alerts ?? 0).toLocaleString("fr-FR")} alertes`,
+                                  `${(deptUploads[department]?.rows ?? 0).toLocaleString("en-GB")} rows, ${(deptUploads[department]?.alerts ?? 0).toLocaleString("en-GB")} alerts`
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 )}
 

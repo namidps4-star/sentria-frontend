@@ -24,6 +24,7 @@ import { ReportView } from "./report-view"
 import { ContractorsView } from "./contractors-view"
 import { TrackingView } from "./tracking-view"
 import { AdminView } from "./admin-view"
+import { UploadPanelHost } from "./upload-panel-host"
 import { readAccountPlan } from "@/lib/plans"
 
 /* Message keys, not labels. app-shell was holding a second copy of
@@ -80,9 +81,11 @@ const NOTIFICATIONS_SEEN_KEY = "sentria_notifications_seen_at"
 
 export function AppShell({
   email,
+  name,
   onSignOut,
 }: {
   email?: string
+  name?: string
   onSignOut?: () => void
 } = {}) {
   const t = useT()
@@ -235,6 +238,7 @@ export function AppShell({
       {/* Corrects the tab title and <html lang> once the operator's
           language is known. Renders nothing. */}
       <DocumentLanguage />
+      <UploadPanelHost />
 
       {showOnboarding && (
         <OnboardingView onComplete={() => setShowOnboarding(false)} />
@@ -251,6 +255,7 @@ export function AppShell({
         collapsed={collapsed}
         onToggleCollapse={() => setCollapsed((current) => !current)}
         email={email}
+        name={name}
         onSignOut={onSignOut}
         isAdmin={isAdmin}
       />

@@ -27,8 +27,10 @@ interface SidebarProps {
   onClose: () => void
   collapsed: boolean
   onToggleCollapse: () => void
-  /** The signed-in user's email, shown above the sign-out button. */
+  /** The signed-in user, shown above the sign-out button: their name
+   *  when they gave one at sign-up, else their email. */
   email?: string
+  name?: string
   onSignOut?: () => void
   /** SentrIA staff: adds the Admin page. */
   isAdmin?: boolean
@@ -126,6 +128,7 @@ export function Sidebar({
   collapsed,
   onToggleCollapse,
   email,
+  name,
   onSignOut,
   isAdmin = false,
 }: SidebarProps) {
@@ -351,9 +354,14 @@ export function Sidebar({
           {/* SIGN OUT */}
           {onSignOut && (
             <div className="shrink-0 border-t border-white/10 px-3 py-3">
-              {!collapsed && email && (
-                <div className="mb-1 truncate px-3 text-[11px] text-sidebar-foreground/45" title={email}>
-                  {email}
+              {!collapsed && (name || email) && (
+                <div className="mb-1 px-3" title={email}>
+                  <div className="truncate text-xs font-semibold text-sidebar-foreground/80">
+                    {name || email}
+                  </div>
+                  {name && email && (
+                    <div className="truncate text-[11px] text-sidebar-foreground/45">{email}</div>
+                  )}
                 </div>
               )}
 

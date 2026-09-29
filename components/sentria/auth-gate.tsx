@@ -16,7 +16,7 @@ type State =
   | { kind: "signed-out" }
   | { kind: "recovery" }
   | { kind: "failed"; userId: string }
-  | { kind: "ready"; userId: string; email: string }
+  | { kind: "ready"; userId: string; email: string; name: string }
 
 /** Shows the app only to a signed-in user, with their own account loaded
  *  (S-3 step 1). Everyone else gets the sign-in screen. */
@@ -58,7 +58,14 @@ export function AuthGate() {
 
     await stopSync.current?.()
     stopSync.current = syncAccount(supabase, user.id)
-    setState({ kind: "ready", userId: user.id, email: user.email ?? "" })
+    const fullName = user.user_metadata?.full_name
+    setState({
+      kind: "ready",
+      userId: user.id,
+      email: user.email ?? "",
+      // The name typed at sign-up, shown instead of the email.
+      name: typeof fullName === "string" ? fullName.trim() : "",
+    })
   }, [])
 
   const leave = useCallback(async () => {
@@ -125,7 +132,14 @@ export function AuthGate() {
   }, [leave])
 
   if (state.kind === "ready") {
-    return <AppShell key={state.userId} email={state.email} onSignOut={signOut} />
+    return (
+      <AppShell
+        key={state.userId}
+        email={state.email}
+        name={state.name}
+        onSignOut={signOut}
+      />
+    )
   }
 
   if (state.kind === "signed-out") return <AuthScreen />

@@ -71,6 +71,8 @@ import {
   sectorsForPlan,
   type PlanId,
 } from "@/lib/plans"
+import { runUpload } from "@/lib/upload"
+import { setUploadPanel } from "@/lib/upload-panel"
 import { holdInPlace } from "@/lib/hold-scroll"
 import { uploadProblemMessage } from "@/lib/upload-problem"
 import {
@@ -987,6 +989,7 @@ export function DashboardView({
   const [opsTypes, setOpsTypes] = useState<SingleOpsType[]>([])
 
   const [uploading, setUploading] = useState(false)
+
   const [uploadMsg, setUploadMsg] = useState("")
   const [uploadFailed, setUploadFailed] = useState(false)
   const [alertsError, setAlertsError] = useState<string | null>(null)
@@ -1502,9 +1505,9 @@ export function DashboardView({
     setUploading(true)
     setUploadMsg("")
     setUploadFailed(false)
-
-    const form = new FormData()
-    form.append("file", file)
+    // The import panel (drawn by the app shell): progress while the file
+    // goes up and is analysed, then the result.
+    setUploadPanel({ open: true, busy: true, title: "", state: { phase: "idle" } })
 
     try {
       const chosenOpsType =
@@ -1519,7 +1522,13 @@ export function DashboardView({
           ? activityIn(uploadSector) ?? uploadActivity
           : uploadActivity ?? activityIn(uploadSector)
 
-      const res = await apiFetch(
+      setUploadPanel({
+        title: activityLabel(uploadSector, chosenBusinessType, tx) ?? sectorName(uploadSector) ?? "",
+      })
+
+      // The import with its real progress: bytes sent, then the server's
+      // check and analysis (components/sentria/upload-progress.tsx).
+      const result = await runUpload(
         `${API}/upload?sector=${toApiSector(uploadSector)}&lang=${tx("fr", "en")}` +
           (chosenOpsType ? `&ops_type=${chosenOpsType}` : "") +
           (chosenBusinessType
@@ -1530,37 +1539,38 @@ export function DashboardView({
           (companyName
             ? `&company_name=${encodeURIComponent(companyName)}`
             : ""),
-        {
-          method: "POST",
-          body: form,
-        }
+        file,
+        (state) => setUploadPanel({ state }),
+        // 422: the file doesn't carry this activity's data (B-24).
+        // 403: outside the plan; the server's message names the plan.
+        (problem) =>
+          uploadProblemMessage(problem, tx) ??
+          tx(
+            "Ce fichier ne correspond pas à l'activité choisie.",
+            "This file doesn't match the chosen activity."
+          ),
+        tx(
+          "L'API SentrIA n'a pas répondu. Réessayez dans un instant.",
+          "The SentrIA API did not answer. Try again in a moment."
+        )
       )
 
-      // 422: the file doesn't carry this activity's data (B-24). The
-      // server says what is missing; nothing was saved.
-      // 403: outside the plan (a second sector or department); the
-      // server's message names the plan that covers it.
-      if (res.status === 422 || res.status === 403) {
-        const problem = await res.json().catch(() => null)
+      // The result is in: the panel can be closed while the dashboard
+      // refreshes behind it.
+      setUploadPanel({ busy: false })
 
+      if (result.phase !== "done") {
         setUploadFailed(true)
-        setUploadMsg(
-          uploadProblemMessage(problem, tx) ??
-            tx(
-              "Ce fichier ne correspond pas à l'activité choisie.",
-              "This file doesn't match the chosen activity."
-            )
-        )
+        setUploadMsg(result.message ?? "")
         return
       }
 
-      if (!res.ok) {
-        throw new Error("Upload failed")
-      }
-
-      const data = await res.json()
-
-      setUploadMsg(data.message ?? tx("Fichier traité.", "File processed."))
+      setUploadMsg(
+        tx(
+          `${result.rows} ligne(s) analysée(s), ${result.alerts} alerte(s).`,
+          `Processed ${result.rows} rows, ${result.alerts} alert(s) fired.`
+        )
+      )
 
       // Show the department the file was for: if this sector is filtered
       // on another activity, the new alerts would stay hidden (B-25).
@@ -1594,6 +1604,7 @@ export function DashboardView({
       )
     } finally {
       setUploading(false)
+      setUploadPanel({ busy: false })
       e.target.value = ""
 
       // Let the last renders settle before letting go.
@@ -2340,8 +2351,55 @@ export function DashboardView({
     )
   }
 
+  // One view per department when the company runs several in a sector
+  // (Business: clinic + pharmacy + lab, ...). Logistics has its own
+  // multi-activity views.
+  const tabSector = filterSector !== "all" ? filterSector : activeSectors[0]
+  const departmentTabs =
+    tabSector && tabSector !== "logistics"
+      ? (departments[tabSector] ?? []).filter((id) =>
+          activitiesFor(tabSector).some((a) => a.id === id)
+        )
+      : []
+
   return (
     <div className="space-y-6">
+      {departmentTabs.length > 1 && (
+        <div
+          role="tablist"
+          aria-label={tx("Vos départements", "Your departments")}
+          className="flex flex-wrap items-center gap-2"
+        >
+          <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {tx("Départements", "Departments")}
+          </span>
+          {departmentTabs.map((id) => {
+            const active = activityIn(tabSector) === id
+            return (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => {
+                  applyActivityToDashboard(tabSector, id)
+                  setFilterSector(tabSector)
+                  localStorage.setItem("sentria_sector", tabSector)
+                }}
+                className={cn(
+                  "rounded-full border px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  active
+                    ? "border-foreground bg-foreground text-background"
+                    : "border-border bg-card hover:bg-accent hover:text-accent-foreground"
+                )}
+              >
+                {activityLabel(tabSector, id, tx) ?? id}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       <div className="flex flex-col gap-4 rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-xl">
           <div className="flex flex-wrap items-center gap-2">
