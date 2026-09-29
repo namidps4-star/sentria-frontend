@@ -64,6 +64,7 @@ import {
 } from "@/lib/activities"
 import { useCompanyIdentity } from "@/lib/company"
 import { accountCurrencyParam } from "@/lib/locale"
+import { holdInPlace } from "@/lib/hold-scroll"
 import { uploadProblemMessage } from "@/lib/upload-problem"
 import {
   contractorIdsOf,
@@ -1313,7 +1314,7 @@ export function DashboardView({
   }, [alertsLang])
 
   function refreshRecommendations() {
-    fetch(
+    return fetch(
       `${API}/recommendations?limit=20&lang=${tx("fr", "en")}`
     )
       .then((r) => r.json())
@@ -1461,8 +1462,11 @@ export function DashboardView({
 
     if (!file) return
 
-    const anchor = document.getElementById("alerts-table")
-    const beforeTop = anchor?.getBoundingClientRect().top ?? null
+    // Keep the import button where the user clicked it while the
+    // results come in (B-13). The alerts table was the anchor before, but
+    // the result message opens above the table, so holding the table
+    // still pushed the button up.
+    const release = holdInPlace(e.target.closest("label"))
 
     setUploading(true)
     setUploadMsg("")
@@ -1540,7 +1544,9 @@ export function DashboardView({
 
       setAlerts(Array.isArray(d2) ? d2.map(withOurSector) : [])
 
-      refreshRecommendations()
+      // Awaited so the recommendations panel above has its final height
+      // before the scroll correction below.
+      await refreshRecommendations()
 
       setFilterSector(uploadSector)
       localStorage.setItem("sentria_sector", uploadSector)
@@ -1557,41 +1563,8 @@ export function DashboardView({
       setUploading(false)
       e.target.value = ""
 
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (beforeTop === null) return
-          const afterAnchor = document.getElementById("alerts-table")
-          const afterTop = afterAnchor?.getBoundingClientRect().top
-          if (afterTop === undefined) return
-
-          const delta = afterTop - beforeTop
-          if (delta === 0) return
-
-          // The app shell's <main> scrolls, not the document, so the
-          // correction goes to the table's nearest scrolling parent
-          // (B-13: it went to the document and did nothing).
-          let scroller: HTMLElement | null = afterAnchor?.parentElement ?? null
-
-          while (scroller) {
-            const { overflowY } = getComputedStyle(scroller)
-
-            if (
-              (overflowY === "auto" || overflowY === "scroll") &&
-              scroller.scrollHeight > scroller.clientHeight
-            ) {
-              break
-            }
-
-            scroller = scroller.parentElement
-          }
-
-          scroller ??= document.scrollingElement as HTMLElement | null
-
-          if (!scroller) return
-
-          scroller.scrollTop += delta
-        })
-      })
+      // Let the last renders settle before letting go.
+      setTimeout(release, 800)
     }
   }
 
