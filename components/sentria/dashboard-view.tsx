@@ -64,6 +64,13 @@ import {
 } from "@/lib/activities"
 import { useCompanyIdentity } from "@/lib/company"
 import { accountCurrencyParam } from "@/lib/locale"
+import {
+  departmentsForPlan,
+  readAccountPlan,
+  readDepartments,
+  sectorsForPlan,
+  type PlanId,
+} from "@/lib/plans"
 import { holdInPlace } from "@/lib/hold-scroll"
 import { uploadProblemMessage } from "@/lib/upload-problem"
 import {
@@ -992,6 +999,19 @@ export function DashboardView({
 
   const [businessType, setBusinessType] = useState<string | null>(null)
 
+  // The plan and the departments the company runs: the upload offers
+  // only what the plan allows (the API refuses the rest anyway).
+  const [plan, setPlan] = useState<PlanId>("decouverte")
+  const [departments, setDepartments] = useState<Record<string, string[]>>({})
+
+  const uploadActivitiesFor = (sector: string) => {
+    const all = activitiesFor(sector)
+    const allowed = new Set(
+      departmentsForPlan(sector, all.map((a) => a.id), departments[sector] ?? [], plan)
+    )
+    return all.filter((a) => allowed.has(a.id))
+  }
+
   /** The configured activity, only for the sector it belongs to. One
    *  activity is saved (the main sector's); applying it to every sector
    *  hid other sectors' alerts, and the alerts of any other activity
@@ -1024,7 +1044,7 @@ export function DashboardView({
   }, [filterSector, businessType])
 
   useEffect(() => {
-    const options = activitiesFor(uploadSector)
+    const options = uploadActivitiesFor(uploadSector)
 
     if (options.length === 0) {
       setUploadActivity(null)
@@ -1044,7 +1064,8 @@ export function DashboardView({
     )
 
     setUploadActivity(match?.id ?? options[0].id)
-  }, [uploadSector, opsType, businessType])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uploadSector, opsType, businessType, plan, departments])
 
   useEffect(() => {
     try {
@@ -1053,10 +1074,15 @@ export function DashboardView({
       )
 
       setActiveSectors(
-        Array.isArray(storedSectors) && storedSectors.length > 0
-          ? storedSectors
-          : ["industry"]
+        sectorsForPlan(
+          Array.isArray(storedSectors) && storedSectors.length > 0
+            ? storedSectors
+            : ["industry"],
+          readAccountPlan().effective
+        )
       )
+      setPlan(readAccountPlan().effective)
+      setDepartments(readDepartments())
     } catch {
       setActiveSectors(["industry"])
     }
@@ -1188,10 +1214,15 @@ export function DashboardView({
         )
 
         setActiveSectors(
-          Array.isArray(stored) && stored.length > 0
-            ? stored
-            : ["industry"]
+          sectorsForPlan(
+            Array.isArray(stored) && stored.length > 0
+              ? stored
+              : ["industry"],
+            readAccountPlan().effective
+          )
         )
+        setPlan(readAccountPlan().effective)
+        setDepartments(readDepartments())
       } catch {
         setActiveSectors(["industry"])
       }
@@ -1507,7 +1538,9 @@ export function DashboardView({
 
       // 422: the file doesn't carry this activity's data (B-24). The
       // server says what is missing; nothing was saved.
-      if (res.status === 422) {
+      // 403: outside the plan (a second sector or department); the
+      // server's message names the plan that covers it.
+      if (res.status === 422 || res.status === 403) {
         const problem = await res.json().catch(() => null)
 
         setUploadFailed(true)
@@ -2724,7 +2757,7 @@ export function DashboardView({
           </p>
         )}
 
-        {activitiesFor(uploadSector).length > 0 && (
+        {uploadActivitiesFor(uploadSector).length > 0 && (
           <div className="mt-4 border-t border-border pt-4">
             <p className="text-xs font-semibold">
               {tx("Activité de ce fichier", "Activity for this file")}
@@ -2738,7 +2771,7 @@ export function DashboardView({
             </p>
 
             <div className="mt-2.5 flex flex-wrap gap-2">
-              {activitiesFor(uploadSector).map((activity) => (
+              {uploadActivitiesFor(uploadSector).map((activity) => (
                 <button
                   key={activity.id}
                   type="button"

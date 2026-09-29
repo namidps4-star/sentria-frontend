@@ -1,448 +1,286 @@
-import { useState } from "react";
-import { Check, Sparkles, TrendingUp } from "lucide-react";
+"use client"
 
-type Localized = { fr: string; en: string };
+import { useEffect, useState } from "react"
+import { BrainCircuit, Check, Clock, Sparkles } from "lucide-react"
 
-type Highlight = {
-  icon: typeof TrendingUp;
-  label: Localized;
-  features: Localized[];
-};
+import { useTx, type Localized, resolve } from "@/lib/i18n"
+import { currencyByCode, useLocale } from "@/lib/locale"
+import {
+  PLAN_LIMITS,
+  PLAN_NAMES,
+  PLAN_ORDER,
+  PLAN_UPDATED_EVENT,
+  PRICES,
+  PRICE_FALLBACK_CURRENCY,
+  TRIAL_DAYS,
+  atLeast,
+  monthlyPrice,
+  readAccountPlan,
+  trialDaysLeft,
+  type AccountPlan,
+  type PlanId,
+} from "@/lib/plans"
+import { cn } from "@/lib/utils"
 
-type Tier = {
-  name: string;
-  tagline: Localized;
-  monthly: number | null;
-  priceLabel?: Localized;
-  cta: Localized;
-  featured?: boolean;
-  features: Localized[];
-  missing?: Localized[];
-  highlight?: Highlight;
-};
+/** What each plan is for, in one line. */
+const TAGLINES: Record<PlanId, Localized> = {
+  decouverte: { fr: "Pour essayer SentrIA sur un département", en: "Try SentrIA on one department" },
+  pro: { fr: "Pour un département qui tourne tous les jours", en: "For one department running every day" },
+  business: { fr: "Pour plusieurs départements liés, avec l'IA", en: "For linked departments, with the AI" },
+  entreprise: { fr: "Pour les groupes sur plusieurs secteurs", en: "For groups across several sectors" },
+}
 
-const TIERS: Tier[] = [
-  {
-    name: "Starter",
-    tagline: { fr: "Idéal pour démarrer", en: "Best for getting started" },
-    monthly: 0,
-    cta: { fr: "Commencer gratuitement", en: "Start for free" },
-    features: [
-      { fr: "1 site surveillé", en: "1 site monitored" },
-      { fr: "1 secteur au choix", en: "1 sector of your choice" },
-      { fr: "Upload CSV manuel", en: "Manual CSV upload" },
-      { fr: "Alertes SMS · 10/mois", en: "SMS alerts · 10/month" },
-      { fr: "Ask SentrIA · 20/mois", en: "Ask SentrIA · 20 queries/month" },
-      { fr: "Historique 7 jours", en: "7-day history" },
-    ],
-  },
-  {
-    name: "Pro",
-    tagline: { fr: "Le bon départ", en: "Perfect to get started" },
-    monthly: 49,
-    cta: { fr: "Passer au Pro", en: "Upgrade to Pro" },
-    featured: true,
-    features: [
-      { fr: "Jusqu'à 5 sites · 3 secteurs", en: "Up to 5 sites · 3 sectors" },
-      { fr: "Alertes SMS illimitées", en: "Unlimited SMS alerts" },
-      { fr: "Ask SentrIA illimité", en: "Unlimited Ask SentrIA" },
-      { fr: "Historique 12 mois & exports", en: "12-month history & CSV/PDF exports" },
-      { fr: "IA prédictive & anomalies", en: "Predictive AI & anomaly detection" },
-      { fr: "SentrIA Network Insights", en: "SentrIA Network Insights" },
-    ],
-    highlight: {
-      icon: TrendingUp,
-      label: { fr: "SentrIA Intelligence", en: "SentrIA Intelligence" },
-      features: [
-        { fr: "Tendances du secteur", en: "Benchmarked against sector trends" },
-        { fr: "Benchmarks anonymisés", en: "Anonymised benchmarks" },
-        { fr: "Alertes marché", en: "Alerts driven by market trends" },
-      ],
-    },
-  },
-  {
-    name: "Team",
-    tagline: { fr: "Pour les équipes et les agences", en: "Best for teams and agencies" },
-    monthly: 199,
-    priceLabel: { fr: "jusqu'à 5 sièges", en: "up to 5 seats" },
-    cta: { fr: "Choisir Team", en: "Choose Team" },
-    features: [
-      { fr: "Sites & secteurs illimités", en: "Unlimited sites & sectors" },
-      { fr: "Capteurs IoT intégrés", en: "Built-in IoT sensors" },
-      { fr: "Espaces partagés + rôles", en: "Shared workspaces + roles & permissions" },
-      { fr: "API & webhooks", en: "API access & webhooks" },
-      { fr: "Scoring de risque", en: "Custom risk scoring" },
-      { fr: "Support prioritaire", en: "Priority support" },
-    ],
-  },
-  {
-    name: "Enterprise",
-    tagline: { fr: "Pour les institutions", en: "Best for institutions & scale" },
-    monthly: null,
-    priceLabel: { fr: "Sur devis", en: "On request" },
-    cta: { fr: "Contacter les ventes", en: "Contact sales" },
-    features: [
-      { fr: "SSO / SAML, journaux", en: "SSO / SAML, audit logs" },
-      { fr: "Modèles dédiés & on-premise", en: "Dedicated models & on-premise option" },
-      { fr: "SLA + responsable dédié", en: "SLA + dedicated account manager" },
-      { fr: "Sièges & API illimités", en: "Unlimited seats & API volume" },
-      { fr: "Marque blanche", en: "White label available" },
-    ],
-  },
-];
+/** SentrIA Intelligence. `soon` marks what is not built yet: the page
+ *  only states as available what the product does today. */
+const ML_FEATURES: { label: Localized; soon?: boolean }[] = [
+  { label: { fr: "Délais fournisseurs appris sur votre historique", en: "Supplier lead times learned from your history" } },
+  { label: { fr: "Conseils de stock saisonniers (paludisme en saison des pluies, grippe à l'harmattan...)", en: "Seasonal stock advice (malaria in the rainy season, flu in the harmattan...)" }, soon: true },
+  { label: { fr: "Prévision de la demande : quand chaque article sera épuisé", en: "Demand forecast: when each item will run out" }, soon: true },
+  { label: { fr: "Détection d'anomalies sur stocks et machines", en: "Anomaly detection on stock and machines" }, soon: true },
+]
+
+const ADD_ONS: Localized[] = [
+  { fr: "Chaîne du froid", en: "Cold chain" },
+  { fr: "Groupes électrogènes de secours", en: "Backup generators" },
+  { fr: "Flotte d'entreprise", en: "Company fleet" },
+]
+
+function formatAmount(amount: number, currency: string, locale: string) {
+  const symbol = currencyByCode(currency)?.symbol ?? currency
+  return `${amount.toLocaleString(locale)} ${symbol}`
+}
 
 export function PricingView() {
-  const [annual, setAnnual] = useState<boolean>(false);
-  const [lang, setLang] = useState<"fr" | "en">("en");
+  const tx = useTx()
+  const { currency } = useLocale()
+  const [annual, setAnnual] = useState(false)
+  const [account, setAccount] = useState<AccountPlan | null>(null)
 
-  const t = (obj: Localized | string): string =>
-    typeof obj === "string" ? obj : obj[lang] || obj.en;
+  useEffect(() => {
+    const sync = () => setAccount(readAccountPlan())
+    sync()
+    window.addEventListener(PLAN_UPDATED_EVENT, sync)
+    return () => window.removeEventListener(PLAN_UPDATED_EVENT, sync)
+  }, [])
 
-  const formatPrice = (tier: Tier): string => {
-    if (tier.monthly === null) {
-      return t(tier.priceLabel || { fr: "Sur devis", en: "On request" });
-    }
-    if (tier.monthly === 0) return "Free";
-    const price = annual ? Math.round(tier.monthly * 0.8) : tier.monthly;
-    return `€${price}`;
-  };
+  const locale = tx("fr-FR", "en-GB")
+  const priced = PRICES[currency.code] ? currency.code : PRICE_FALLBACK_CURRENCY
+  const trialLeft = account ? trialDaysLeft(account.trialEndsAt) : 0
+  const paidPlan = account?.plan ?? "decouverte"
+
+  const priceText = (plan: PlanId) => {
+    if (plan === "decouverte") return tx("Gratuit", "Free")
+    if (plan === "entreprise") return tx("Sur devis", "On request")
+    const price = monthlyPrice(plan, currency.code)!
+    return formatAmount(annual ? price.amount * 10 : price.amount, price.currency, locale)
+  }
 
   return (
-    <div
-      className="w-full h-full overflow-hidden relative"
-      style={{
-        background:
-          "radial-gradient(ellipse at 15% 20%, #c8e06a 0%, #a9bd5d 18%, #85934f 35%, #56603a 55%, #34382a 75%, #1d1d1b 100%)",
-      }}
-    >
-      {/* Subtle decorative glow */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(circle at 80% 80%, rgba(217, 243, 110, 0.08) 0%, transparent 40%)",
-        }}
-      />
-
-      <div
-        className="relative w-full h-full flex flex-col"
-        style={{ padding: "48px 64px" }}
-      >
-        {/* Header row */}
-        <div
-          className="flex items-center justify-between"
-          style={{ marginBottom: "56px" }}
-        >
-          <div className="flex items-center gap-5">
-            <div
-              className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold"
-              style={{ backgroundColor: "#d9f36e", color: "#1d1d1b" }}
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              Pricing
-            </div>
-            <h2
-              className="text-3xl font-bold tracking-tight"
-              style={{ color: "#ffffff" }}
-            >
-              Operational intelligence at every scale
+    // Negative margins: the page fills the whole content box, padding
+    // included, instead of leaving a strip of the box around it.
+    <div className="-m-4 min-h-[calc(100%+2rem)] bg-[radial-gradient(ellipse_at_15%_10%,#c8e06a_0%,#85934f_30%,#34382a_65%,#1d1d1b_100%)] px-4 py-8 text-white lg:-m-8 lg:min-h-[calc(100%+4rem)] lg:px-10 lg:py-10">
+      <div className="mx-auto flex max-w-7xl flex-col gap-8">
+        {/* Header */}
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#d9f36e] px-3.5 py-1.5 text-xs font-semibold text-[#1d1d1b]">
+              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+              {tx("Offres", "Plans")}
+            </span>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight [text-shadow:0_1px_3px_rgba(0,0,0,0.35)] md:text-4xl">
+              {tx("L'offre qui suit votre activité", "The plan that fits your operation")}
             </h2>
+            <p className="mt-2 max-w-2xl text-sm font-medium text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.45)]">
+              {priced === currency.code
+                ? tx(
+                    `Prix en ${currency.code}, fixés pour votre marché, pas convertis.`,
+                    `Prices in ${currency.code}, set for your market, not converted.`
+                  )
+                : tx(
+                    `Pas encore de prix en ${currency.code} : prix en dollars US.`,
+                    `No ${currency.code} prices yet: prices in US dollars.`
+                  )}
+            </p>
           </div>
 
-          <div className="flex items-center gap-5">
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => setLang("fr")}
-                className="px-3 py-1 text-xs font-semibold rounded-full transition-colors"
-                style={{
-                  backgroundColor: lang === "fr" ? "#ffffff" : "transparent",
-                  color: lang === "fr" ? "#1d1d1b" : "#c8e06a",
-                  border: lang === "fr" ? "none" : "1px solid #c8e06a55",
-                }}
-              >
-                FR
-              </button>
-              <button
-                onClick={() => setLang("en")}
-                className="px-3 py-1 text-xs font-semibold rounded-full transition-colors"
-                style={{
-                  backgroundColor: lang === "en" ? "#ffffff" : "transparent",
-                  color: lang === "en" ? "#1d1d1b" : "#c8e06a",
-                  border: lang === "en" ? "none" : "1px solid #c8e06a55",
-                }}
-              >
-                EN
-              </button>
-            </div>
-
-            <div
-              className="flex items-center gap-2.5 rounded-full px-4 py-2"
-              style={{
-                backgroundColor: "rgba(29, 29, 27, 0.6)",
-                border: "1px solid rgba(200, 224, 106, 0.25)",
-                backdropFilter: "blur(8px)",
-              }}
+          <div className="flex items-center gap-2.5 self-start rounded-full border border-[#c8e06a]/25 bg-[#1d1d1b]/60 px-4 py-2 backdrop-blur lg:self-auto">
+            <span className={cn("text-xs font-medium", annual ? "text-white/50" : "text-[#d9f36e]")}>
+              {tx("Mensuel", "Monthly")}
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={annual}
+              aria-label={tx("Facturation annuelle", "Annual billing")}
+              onClick={() => setAnnual((v) => !v)}
+              className="relative h-5 w-11 rounded-full bg-[#d9f36e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
             >
-              <span
-                className="text-xs font-medium"
-                style={{ color: !annual ? "#d9f36e" : "#8a8a8a" }}
-              >
-                Monthly
-              </span>
-              <button
-                onClick={() => setAnnual(!annual)}
-                className="relative w-11 h-5 rounded-full transition-colors"
-                style={{ backgroundColor: "#d9f36e" }}
-              >
-                <span
-                  className="absolute top-0.5 w-4 h-4 rounded-full transition-transform"
-                  style={{
-                    backgroundColor: "#1d1d1b",
-                    left: annual ? "24px" : "2px",
-                  }}
-                />
-              </button>
-              <span
-                className="text-xs font-medium"
-                style={{ color: annual ? "#d9f36e" : "#8a8a8a" }}
-              >
-                Annual
-              </span>
-              <span
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                style={{ backgroundColor: "#d9f36e", color: "#1d1d1b" }}
-              >
-                −20%
-              </span>
-            </div>
+              <span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-[#1d1d1b] transition-all", annual ? "left-6" : "left-0.5")} />
+            </button>
+            <span className={cn("text-xs font-medium", annual ? "text-[#d9f36e]" : "text-white/50")}>
+              {tx("Annuel", "Annual")}
+            </span>
+            <span className="rounded-full bg-[#d9f36e] px-2 py-0.5 text-[10px] font-bold text-[#1d1d1b]">
+              {tx("2 mois offerts", "2 months free")}
+            </span>
           </div>
         </div>
 
-        {/* Cards row - spread out with much larger gaps */}
-        <div
-          className="grid flex-1"
-          style={{
-            gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-            gap: "32px",
-          }}
-        >
-          {TIERS.map((tier: Tier) => (
-            <div
-              key={tier.name}
-              className="flex flex-col rounded-2xl overflow-hidden"
-              style={{
-                backgroundColor: tier.featured
-                  ? "rgba(29, 29, 27, 0.85)"
-                  : "rgba(255, 255, 255, 0.95)",
-                border: tier.featured
-                  ? "2px solid #d9f36e"
-                  : "1px solid rgba(224, 224, 220, 0.6)",
-                padding: "28px",
-                backdropFilter: "blur(10px)",
-                boxShadow: tier.featured
-                  ? "0 20px 50px -20px rgba(217, 243, 110, 0.25)"
-                  : "0 10px 30px -15px rgba(0, 0, 0, 0.15)",
-              }}
-            >
-              <div
-                className="flex items-center justify-between"
-                style={{ marginBottom: "10px" }}
+        {trialLeft > 0 && (
+          <p role="status" className="flex items-center gap-2 rounded-2xl border border-[#d9f36e]/30 bg-[#1d1d1b]/50 px-4 py-3 text-sm">
+            <Clock className="h-4 w-4 text-[#d9f36e]" aria-hidden="true" />
+            {tx(
+              `Essai Business : encore ${trialLeft} jour${trialLeft > 1 ? "s" : ""}. Ensuite, votre compte passe en ${PLAN_NAMES[paidPlan]}.`,
+              `Business trial: ${trialLeft} day${trialLeft > 1 ? "s" : ""} left. Then your account moves to ${PLAN_NAMES[paidPlan]}.`
+            )}
+          </p>
+        )}
+
+        {/* Plans */}
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          {PLAN_ORDER.map((plan) => {
+            const limits = PLAN_LIMITS[plan]
+            const featured = plan === "business"
+            const current = account?.effective === plan
+            const included = account ? atLeast(account.effective, plan) : false
+
+            return (
+              <section
+                key={plan}
+                aria-labelledby={`plan-${plan}`}
+                className={cn(
+                  "relative flex flex-col rounded-3xl p-6",
+                  featured
+                    ? "border border-[#d9f36e]/60 bg-[#1d1d1b] shadow-[0_20px_50px_-15px_rgba(217,243,110,0.35)]"
+                    : "border border-white/60 bg-white text-[#1a1a1a]"
+                )}
               >
-                <h3
-                  className="text-base font-bold"
-                  style={{
-                    color: tier.featured ? "#d9f36e" : "#1a1a1a",
-                  }}
-                >
-                  {tier.name}
+                {current && (
+                  <span className="absolute -top-3 left-6 rounded-full bg-[#d9f36e] px-3 py-1 text-[11px] font-bold text-[#1d1d1b]">
+                    {trialLeft > 0 && plan === "business" ? tx("Votre essai", "Your trial") : tx("Votre offre", "Your plan")}
+                  </span>
+                )}
+
+                <h3 id={`plan-${plan}`} className={cn("text-lg font-bold", featured && "text-[#d9f36e]")}>
+                  {PLAN_NAMES[plan]}
                 </h3>
-                {tier.featured && (
-                  <span
-                    className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
-                    style={{ backgroundColor: "#d9f36e", color: "#1a1a1a" }}
-                  >
-                    Popular
-                  </span>
-                )}
-              </div>
+                <p className={cn("mt-1 text-xs", featured ? "text-white/60" : "text-[#6b6b6b]")}>
+                  {resolve(TAGLINES[plan], tx)}
+                </p>
 
-              <p
-                className="text-[11px]"
-                style={{
-                  color: tier.featured ? "#b0b0a8" : "#8a8a8a",
-                  marginBottom: "20px",
-                }}
-              >
-                {t(tier.tagline)}
-              </p>
+                <p className={cn("mt-5 text-3xl font-bold tabular-nums", featured && "text-[#d9f36e]")}>
+                  {priceText(plan)}
+                </p>
+                <p className={cn("mt-1 h-4 text-xs", featured ? "text-white/50" : "text-[#8a8a8a]")}>
+                  {plan === "pro" || plan === "business"
+                    ? annual
+                      ? tx("par an", "per year")
+                      : tx("par mois", "per month")
+                    : ""}
+                </p>
 
-              <div className="flex items-end gap-1" style={{ marginBottom: "6px" }}>
-                <span
-                  className="text-4xl font-bold leading-none"
-                  style={{
-                    color: tier.featured ? "#d9f36e" : "#1a1a1a",
-                  }}
-                >
-                  {formatPrice(tier)}
-                </span>
-                {tier.monthly !== null && tier.monthly > 0 && (
-                  <span
-                    className="text-[11px]"
-                    style={{
-                      color: tier.featured ? "#b0b0a8" : "#8a8a8a",
-                      marginBottom: "4px",
-                      marginLeft: "4px",
-                    }}
-                  >
-                    /mo
-                  </span>
-                )}
-              </div>
-
-              <p
-                className="text-[10px]"
-                style={{
-                  color: "#8a887a",
-                  minHeight: "14px",
-                  marginBottom: "22px",
-                }}
-              >
-                {tier.monthly !== null && tier.monthly > 0 && annual
-                  ? "billed annually"
-                  : tier.priceLabel && tier.monthly !== null
-                  ? t(tier.priceLabel)
-                  : ""}
-              </p>
-
-              <div
-                className="rounded-lg flex-1"
-                style={{
-                  backgroundColor: tier.featured
-                    ? "rgba(255, 255, 255, 0.06)"
-                    : "rgba(240, 240, 236, 0.8)",
-                  border: tier.featured
-                    ? "1px solid rgba(217, 243, 110, 0.15)"
-                    : "1px solid rgba(224, 224, 220, 0.5)",
-                  padding: "18px",
-                  marginBottom: "22px",
-                }}
-              >
-                <ul style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                  {tier.features.map((f, idx) => (
-                    <li
-                      key={idx}
-                      className="flex items-start"
-                      style={{ gap: "10px" }}
-                    >
-                      <span
-                        className="flex shrink-0 items-center justify-center rounded-full"
-                        style={{
-                          backgroundColor: tier.featured
-                            ? "#d9f36e"
-                            : "rgba(217, 243, 110, 0.35)",
-                          width: "18px",
-                          height: "18px",
-                          marginTop: "1px",
-                        }}
-                      >
-                        <Check
-                          className="h-2.5 w-2.5"
-                          strokeWidth={3}
-                          style={{
-                            color: tier.featured ? "#1d1d1b" : "#1a1a1a",
-                          }}
-                        />
-                      </span>
-                      <span
-                        style={{
-                          color: tier.featured ? "#e8e8e6" : "#3c3b33",
-                          lineHeight: "1.4",
-                          fontSize: "11px",
-                        }}
-                      >
-                        {t(f)}
-                      </span>
+                <ul className={cn("mt-5 flex flex-1 flex-col gap-2.5 border-t pt-5 text-sm", featured ? "border-white/10" : "border-black/10")}>
+                  {[limits.sectors, limits.departments, limits.sitesUsers, limits.alerts, limits.ask, limits.history].map((line) => (
+                    <li key={line.en} className="flex gap-2">
+                      <Check className={cn("mt-0.5 h-4 w-4 shrink-0", featured ? "text-[#d9f36e]" : "text-[#5f7a1f]")} aria-hidden="true" />
+                      {resolve(line, tx)}
                     </li>
                   ))}
+                  {limits.tracking && (
+                    <li className="flex gap-2">
+                      <Check className={cn("mt-0.5 h-4 w-4 shrink-0", featured ? "text-[#d9f36e]" : "text-[#5f7a1f]")} aria-hidden="true" />
+                      {tx("Suivi, calendrier, sous-traitants, rapports PDF", "Tracking, calendar, contractors, PDF reports")}
+                    </li>
+                  )}
+                  {limits.ml && (
+                    <li className="flex gap-2 font-semibold">
+                      <BrainCircuit className={cn("mt-0.5 h-4 w-4 shrink-0", featured ? "text-[#d9f36e]" : "text-[#5f7a1f]")} aria-hidden="true" />
+                      {plan === "entreprise"
+                        ? tx("SentrIA Intelligence + modèles dédiés", "SentrIA Intelligence + dedicated models")
+                        : "SentrIA Intelligence"}
+                    </li>
+                  )}
                 </ul>
 
-                {tier.highlight && (
-                  <div
-                    className="rounded-lg"
-                    style={{
-                      backgroundColor: "rgba(217, 243, 110, 0.15)",
-                      border: "1px solid rgba(217, 243, 110, 0.25)",
-                      padding: "14px",
-                      marginTop: "18px",
-                    }}
-                  >
-                    <div
-                      className="flex items-center"
-                      style={{ gap: "8px", marginBottom: "12px" }}
-                    >
-                      <TrendingUp
-                        className="h-3 w-3"
-                        style={{ color: "#d9f36e" }}
-                      />
-                      <span
-                        className="text-[10px] font-bold"
-                        style={{ color: "#d9f36e" }}
-                      >
-                        {t(tier.highlight.label)}
-                      </span>
-                    </div>
-                    <ul style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                      {tier.highlight.features.map((f, idx) => (
-                        <li
-                          key={idx}
-                          className="flex items-start"
-                          style={{ gap: "8px" }}
-                        >
-                          <Check
-                            className="h-2.5 w-2.5 shrink-0"
-                            strokeWidth={3}
-                            style={{ color: "#d9f36e", marginTop: "2px" }}
-                          />
-                          <span
-                            style={{
-                              color: "#e8e8e6",
-                              lineHeight: "1.4",
-                              fontSize: "10px",
-                            }}
-                          >
-                            {t(f)}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-
-              <button
-                className="w-full rounded-full text-xs font-semibold transition-opacity hover:opacity-90"
-                style={{
-                  backgroundColor: tier.featured ? "#d9f36e" : "#1d1d1b",
-                  color: tier.featured ? "#1d1d1b" : "#f5f4ec",
-                  padding: "12px 0",
-                  marginTop: "auto",
-                }}
-              >
-                {t(tier.cta)}
-              </button>
-            </div>
-          ))}
+                <div
+                  className={cn(
+                    "mt-6 rounded-xl px-4 py-3 text-center text-sm font-semibold",
+                    featured ? "bg-[#d9f36e] text-[#1d1d1b]" : "bg-[#1d1d1b] text-white",
+                    (current || included) && "opacity-60"
+                  )}
+                >
+                  {current
+                    ? tx("Offre actuelle", "Current plan")
+                    : included
+                      ? tx("Inclus dans votre offre", "Included in your plan")
+                      : plan === "entreprise"
+                        ? tx("Nous contacter", "Contact us")
+                        : tx("Paiement en ligne : bientôt", "Online payment: coming soon")}
+                </div>
+              </section>
+            )
+          })}
         </div>
 
-        {/* Footer */}
-        <p
-          className="text-center text-[11px]"
-          style={{ color: "rgba(200, 224, 106, 0.8)", marginTop: "40px" }}
-        >
-          Every plan includes data encryption and a 14-day trial with no
-          commitment.
+        {/* SentrIA Intelligence + add-ons */}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[2fr_1fr]">
+          <section className="rounded-3xl border border-[#d9f36e]/30 bg-[#1d1d1b]/70 p-6 backdrop-blur">
+            <h3 className="flex items-center gap-2 text-lg font-bold text-[#d9f36e]">
+              <BrainCircuit className="h-5 w-5" aria-hidden="true" />
+              SentrIA Intelligence
+              <span className="text-xs font-medium text-white/60">· Business {tx("et", "and")} Entreprise</span>
+            </h3>
+            <ul className="mt-4 grid gap-2.5 text-sm sm:grid-cols-2">
+              {ML_FEATURES.map((feature) => (
+                <li key={feature.label.en} className="flex gap-2">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#d9f36e]" aria-hidden="true" />
+                  <span>
+                    {resolve(feature.label, tx)}
+                    {feature.soon && (
+                      <span className="ml-1.5 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-white/70">
+                        {tx("Bientôt", "Soon")}
+                      </span>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-4 text-xs text-white/55">
+              {tx(
+                "Les conseils saisonniers partent du calendrier de votre région, puis de votre propre historique après 3 mois de données. Ce sont des conseils de stock, jamais des conseils médicaux.",
+                "Seasonal advice starts from your region's calendar, then from your own history after 3 months of data. It is stock advice, never medical advice."
+              )}
+            </p>
+          </section>
+
+          <section className="rounded-3xl border border-white/15 bg-white/10 p-6 backdrop-blur">
+            <h3 className="text-lg font-bold">
+              {tx("Options", "Add-ons")}{" "}
+              <span className="rounded-full bg-white/15 px-2 py-0.5 align-middle text-[10px] font-semibold uppercase text-white/80">
+                {tx("Bientôt", "Soon")}
+              </span>
+            </h3>
+            <p className="mt-1 text-xs text-white/60">
+              {tx("Sur toute offre payante, quel que soit votre secteur.", "On any paid plan, whatever your sector.")}
+            </p>
+            <ul className="mt-4 flex flex-col gap-2 text-sm">
+              {ADD_ONS.map((addOn) => (
+                <li key={addOn.en} className="flex gap-2">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#d9f36e]" aria-hidden="true" />
+                  {resolve(addOn, tx)}
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
+
+        <p className="text-center text-xs text-white/55">
+          {tx(
+            `Chaque nouveau compte essaie Business pendant ${TRIAL_DAYS} jours. Départements liés (Business) : clinique + pharmacie + laboratoire, coopérative ou exploitation + silo, centrale + distribution, grossiste + magasins, transporteur + location, et toute la logistique.`,
+            `Every new account tries Business for ${TRIAL_DAYS} days. Linked departments (Business): clinic + pharmacy + lab, cooperative or farm + silo, power plant + distribution, wholesaler + stores, haulier + rental, and all of logistics.`
+          )}
         </p>
       </div>
     </div>
-  );
+  )
 }

@@ -266,6 +266,8 @@ export type Country = {
 const XOF: Currency = { code: "XOF", symbol: "F CFA" }
 const XAF: Currency = { code: "XAF", symbol: "FCFA" }
 const EUR: Currency = { code: "EUR", symbol: "€" }
+const USD: Currency = { code: "USD", symbol: "$" }
+const GBP: Currency = { code: "GBP", symbol: "£" }
 
 /** The markets the product's own timezone list already implies, plus an
  *  explicit fallback. Not a world list: an option nobody can serve is
@@ -313,6 +315,8 @@ export const COUNTRIES: Country[] = [
     timezoneId: "cet",
   },
   { code: "FR", name: localized("France", "France"), currency: EUR, timezoneId: "cet" },
+  { code: "GB", name: localized("Royaume-Uni", "United Kingdom"), currency: GBP, timezoneId: "uk" },
+  { code: "US", name: localized("États-Unis", "United States"), currency: USD, timezoneId: "et" },
   {
     code: "BR",
     name: localized("Brésil", "Brazil"),
@@ -326,6 +330,22 @@ export const COUNTRIES: Country[] = [
 ]
 
 /* i18n-ignore-end */
+
+/** Every currency the app can show, for the onboarding's currency
+ *  choice: the countries' own, and the dollar for anywhere else. */
+export const CURRENCIES: Currency[] = Array.from(
+  new Map(
+    [...COUNTRIES.map((country) => country.currency), USD].map((c) => [c.code, c])
+  ).values()
+)
+
+/** The currency the account chose in onboarding, when it differs from
+ *  its country's (a company in Ghana billing in dollars, say). */
+export const CURRENCY_KEY = "sentria_currency"
+
+export function currencyByCode(code: string | null | undefined): Currency | undefined {
+  return CURRENCIES.find((currency) => currency.code === code)
+}
 
 export function countryFor(code: string | null | undefined): Country | undefined {
   return COUNTRIES.find((country) => country.code === code)
@@ -364,11 +384,40 @@ export function currencyFor(code: string | null | undefined): Currency {
   return countryFor(code)?.currency ?? EUR
 }
 
+/** The account's currency: the one chosen in onboarding, else its
+ *  country's, else the euro. Labels figures and prices the plans. */
+export function readCurrency(): Currency {
+  try {
+    const chosen = currencyByCode(localStorage.getItem(CURRENCY_KEY))
+    if (chosen) return chosen
+  } catch {
+    /* fall through */
+  }
+  return currencyFor(readCountryCode())
+}
+
+export function writeCurrency(code: string) {
+  try {
+    if (currencyByCode(code)) localStorage.setItem(CURRENCY_KEY, code)
+    else if (!code) localStorage.removeItem(CURRENCY_KEY)
+  } catch {
+    /* ignore */
+  }
+
+  announce()
+}
+
 /** The account currency as an ISO code for /upload, or "" when no
  *  country is chosen: the backend then prints amounts without a symbol
  *  instead of guessing the euro (B-23). */
 export function accountCurrencyParam(): string {
-  const code = countryFor(readCountryCode())?.currency.code
+  let chosen: string | null = null
+  try {
+    chosen = localStorage.getItem(CURRENCY_KEY)
+  } catch {
+    /* ignore */
+  }
+  const code = currencyByCode(chosen)?.code ?? countryFor(readCountryCode())?.currency.code
   return code ? `&currency=${encodeURIComponent(code)}` : ""
 }
 
@@ -428,7 +477,7 @@ export function useLocale(): LocaleState {
         language,
         ui: uiLanguage(language),
         countryCode,
-        currency: currencyFor(countryCode),
+        currency: readCurrency(),
       })
     }
 

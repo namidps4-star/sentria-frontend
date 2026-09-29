@@ -1,5 +1,7 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js"
 
+import { PLAN_KEY, PLAN_UPDATED_EVENT, TRIAL_KEY, isPlanId } from "@/lib/plans"
+
 /** The account (S-3 step 1).
  *
  *  Each user has one row in `accounts` (supabase/001_accounts.sql). Its
@@ -15,10 +17,12 @@ export const ACCOUNT_KEYS = [
   "sentria_company_name",
   "sentria_timezone",
   "sentria_country",
+  "sentria_currency",
   "sentria_language",
   "sentria_sector",
   "sentria_sectors",
   "sentria_business_type",
+  "sentria_departments",
   "sentria_equipment",
   "sentria_monitoring",
   "sentria_ops_types",
@@ -34,6 +38,10 @@ export const ACCOUNT_KEYS = [
 const LOCAL_ONLY_USER_KEYS = [
   "sentria_notifications_seen_at",
   "sentria_recommendation_tasks_v2",
+  // Read from the account's own columns at sign-in, never saved back:
+  // only an admin (or, later, payment) changes a plan.
+  PLAN_KEY,
+  TRIAL_KEY,
 ]
 
 /** Whose values localStorage holds. */
@@ -88,21 +96,39 @@ function asProfile(value: unknown): Profile {
  *  row on first sign-in. Throws when the account can't be read, so the
  *  app never runs on someone else's leftover values. */
 export async function loadAccount(client: SupabaseClient, user: User) {
-  const { data, error } = await client
-    .from("accounts")
-    .select("profile")
-    .eq("user_id", user.id)
-    .maybeSingle()
+  const readRow = async () => {
+    const full = await client
+      .from("accounts")
+      .select("profile, plan, trial_ends_at")
+      .eq("user_id", user.id)
+      .maybeSingle()
+
+    // Before migrations/004_plans.sql: no plan columns, the free plan.
+    if (full.error && /plan|trial_ends_at/.test(full.error.message ?? "")) {
+      return client
+        .from("accounts")
+        .select("profile")
+        .eq("user_id", user.id)
+        .maybeSingle()
+    }
+
+    return full
+  }
+
+  let { data, error } = await readRow()
 
   if (error) throw error
 
   if (!data) {
-    // company_id is set by the database, never by the browser.
+    // company_id, plan and trial are set by the database, never by the
+    // browser.
     const { error: insertError } = await client
       .from("accounts")
       .insert({ user_id: user.id, profile: {} })
 
     if (insertError) throw insertError
+    ;({ data, error } = await readRow())
+    if (error) throw error
   }
 
   const saved = asProfile(data?.profile)
@@ -131,6 +157,17 @@ export async function loadAccount(client: SupabaseClient, user: User) {
   if (!localStorage.getItem("sentria_company_name") && typeof signedUpAs === "string" && signedUpAs.trim()) {
     localStorage.setItem("sentria_company_name", signedUpAs.trim())
   }
+
+  const row = (data ?? {}) as { plan?: unknown; trial_ends_at?: unknown }
+  localStorage.setItem(PLAN_KEY, isPlanId(row.plan) ? row.plan : "decouverte")
+
+  if (typeof row.trial_ends_at === "string") {
+    localStorage.setItem(TRIAL_KEY, row.trial_ends_at)
+  } else {
+    localStorage.removeItem(TRIAL_KEY)
+  }
+
+  window.dispatchEvent(new Event(PLAN_UPDATED_EVENT))
 
   localStorage.setItem(ACCOUNT_OWNER_KEY, user.id)
 }

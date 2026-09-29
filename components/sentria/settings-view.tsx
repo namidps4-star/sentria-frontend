@@ -18,6 +18,7 @@ import {
   readCountryCode,
   readLanguage,
   writeCountryCode,
+  writeCurrency,
   writeLanguage,
 } from "@/lib/locale"
 import { useTx } from "@/lib/i18n"
@@ -280,6 +281,9 @@ export function SettingsView() {
   function chooseCountry(code: string) {
     setCountryCode(code)
     writeCountryCode(code)
+    // A new country brings its own currency; the onboarding's choice
+    // belonged to the old one.
+    writeCurrency("")
   }
 
   const toggleDark = () => {

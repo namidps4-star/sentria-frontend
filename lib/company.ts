@@ -68,6 +68,8 @@ export const TIMEZONES: TimezoneOption[] = [
   { id: "cet", label: "CET (Paris, Lyon)", zone: "Europe/Paris" },
   { id: "eat", label: "EAT (Nairobi)", zone: "Africa/Nairobi" },
   { id: "brt", label: "BRT (São Paulo)", zone: "America/Sao_Paulo" },
+  { id: "uk", label: "UK (London)", zone: "Europe/London" },
+  { id: "et", label: "ET (New York)", zone: "America/New_York" },
 ]
 /* i18n-ignore-end */
 

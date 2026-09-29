@@ -39,6 +39,8 @@ import {
 import {
   accountCurrencyParam,
   COUNTRIES,
+  CURRENCIES,
+  writeCurrency,
   LANGUAGES,
   countryFor,
   detectLanguage,
@@ -46,6 +48,15 @@ import {
   writeCountryCode,
   writeLanguage,
 } from "@/lib/locale"
+import {
+  DEPARTMENTS_KEY,
+  DEPARTMENT_GROUPS,
+  atLeast,
+  combinableWith,
+  isAllowedCombo,
+  readAccountPlan,
+  type PlanId,
+} from "@/lib/plans"
 import { uploadProblemMessage } from "@/lib/upload-problem"
 import { prioritiesFor } from "@/lib/priorities"
 import {
@@ -777,6 +788,9 @@ export function OnboardingView({
   const [companyName, setCompanyName] = useState("")
   const [timezoneId, setTimezoneId] = useState(TIMEZONES[0].id)
   const [countryCode, setCountryCode] = useState("")
+  // Defaults to the country's currency; can be changed (a company in
+  // Ghana may bill in dollars). It also prices the plans.
+  const [currencyCode, setCurrencyCode] = useState("")
 
   const [language, setLanguage] = useState("fr")
 
@@ -855,6 +869,14 @@ export function OnboardingView({
   )
 
   const isLogistics = sector === "logistics"
+
+  // What the plan allows (lib/plans.ts). Right after sign-up this is the
+  // Business trial: linked departments, one sector.
+  const [plan, setPlan] = useState<PlanId>("decouverte")
+  useEffect(() => setPlan(readAccountPlan().effective), [])
+  const canMultiSector = atLeast(plan, "entreprise")
+  const canMultiDepartment =
+    atLeast(plan, "business") && Boolean(sector && DEPARTMENT_GROUPS[sector])
 
   const langStepNumber = 1
   const countryStepNumber = 2
@@ -959,7 +981,7 @@ export function OnboardingView({
   }
 
   function chooseSubType(id: string) {
-    if (!isLogistics) {
+    if (!canMultiDepartment) {
       setSubType(id)
       setSubTypes2([id])
       return
@@ -968,7 +990,10 @@ export function OnboardingView({
     setSubTypes2((current) => {
       const next = current.includes(id)
         ? current.filter((item) => item !== id)
-        : [...current, id]
+        : atLeast(plan, "entreprise") || isAllowedCombo(sector ?? "", [...current, id])
+          ? [...current, id]
+          : // Doesn't run with the others: start over with this one.
+            [id]
 
       setSubType(next[0] ?? null)
       return next
@@ -1060,7 +1085,9 @@ export function OnboardingView({
 
       // 422: the file doesn't carry this activity's data (B-24). Show
       // what the server says is missing; nothing was saved.
-      if (res.status === 422) {
+      // 403: outside the plan (a second sector or department); the
+      // server's message names the plan that covers it.
+      if (res.status === 422 || res.status === 403) {
         const problem = await res.json().catch(() => null)
 
         setCsvFailed(true)
@@ -1146,6 +1173,7 @@ export function OnboardingView({
       writeCompanyName(companyName)
       writeTimezoneId(timezoneId)
       writeCountryCode(countryCode)
+      writeCurrency(currencyCode || (selectedCountry?.currency.code ?? ""))
       writeLanguage(language)
 
       if (sector) {
@@ -1155,6 +1183,11 @@ export function OnboardingView({
 
       if (subType) {
         localStorage.setItem("sentria_business_type", subType)
+      }
+
+      // The departments the company runs, within what its plan allows.
+      if (sector && subTypes2.length > 0) {
+        localStorage.setItem(DEPARTMENTS_KEY, JSON.stringify({ [sector]: subTypes2 }))
       }
 
       localStorage.setItem(
@@ -1456,6 +1489,7 @@ export function OnboardingView({
                             type="button"
                             onClick={() => {
                               setCountryCode(item.code)
+                              setCurrencyCode(item.currency.code)
                               setTimezoneId(item.timezoneId)
                             }}
                             aria-pressed={active}
@@ -1508,10 +1542,28 @@ export function OnboardingView({
                   <div className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 h-12 w-3/4 bg-lime-500/10 blur-2xl rounded-full" />
                 </div>
 
-                <p className="mt-6 text-center text-xs text-muted-foreground max-w-sm">
+                <label className="mt-5 flex w-full max-w-md items-center justify-between gap-3 rounded-2xl border border-white/10 bg-zinc-900/90 px-5 py-3 text-sm text-zinc-300">
+                  <span className="font-medium">{tx("Devise", "Currency")}</span>
+                  <select
+                    value={currencyCode}
+                    onChange={(event) => setCurrencyCode(event.target.value)}
+                    disabled={!countryCode}
+                    aria-label={tx("Devise du compte", "Account currency")}
+                    className="rounded-lg border border-white/10 bg-zinc-800 px-3 py-1.5 font-mono text-sm text-lime-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500/50 disabled:opacity-50"
+                  >
+                    {!countryCode && <option value="">{tx("Choisissez un pays", "Pick a country")}</option>}
+                    {CURRENCIES.map((currency) => (
+                      <option key={currency.code} value={currency.code}>
+                        {currency.code} · {currency.symbol}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <p className="mt-4 text-center text-xs text-muted-foreground max-w-sm">
                   {tx(
-                    "La devise sert à étiqueter vos propres montants. Aucune conversion n'est faite.",
-                    "The currency labels your own figures. Nothing is converted."
+                    "La devise étiquette vos montants et fixe le prix de votre offre. Aucune conversion n'est faite.",
+                    "The currency labels your figures and sets your plan's price. Nothing is converted."
                   )}
                 </p>
               </div>
@@ -1757,58 +1809,67 @@ export function OnboardingView({
                   })}
                 </div>
 
-                <div className="mt-8 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
-                  <label className="flex cursor-pointer items-start gap-3">
-                    <input
-                      type="checkbox"
-                      checked={multiSector}
-                      onChange={(event) => {
-                        setMultiSector(event.target.checked)
-                        if (!event.target.checked) setExtraSectors([])
-                      }}
-                      className="mt-0.5 h-4 w-4 shrink-0 accent-lime-500"
-                    />
-                    <span>
-                      <span className="block text-sm font-semibold text-neutral-900">
-                        {tx(
-                          "Mon entreprise couvre plusieurs secteurs",
-                          "My company covers more than one sector"
-                        )}
+                {canMultiSector ? (
+                  <div className="mt-8 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
+                    <label className="flex cursor-pointer items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={multiSector}
+                        onChange={(event) => {
+                          setMultiSector(event.target.checked)
+                          if (!event.target.checked) setExtraSectors([])
+                        }}
+                        className="mt-0.5 h-4 w-4 shrink-0 accent-lime-500"
+                      />
+                      <span>
+                        <span className="block text-sm font-semibold text-neutral-900">
+                          {tx(
+                            "Mon entreprise couvre plusieurs secteurs",
+                            "My company covers more than one sector"
+                          )}
+                        </span>
+                        <span className="mt-0.5 block text-xs leading-5 text-neutral-500">
+                          {tx(
+                            "Par exemple une usine avec son propre entrepôt. Le secteur choisi ci-dessus reste le principal.",
+                            "A factory with its own warehouse, for instance. The sector chosen above stays the main one."
+                          )}
+                        </span>
                       </span>
-                      <span className="mt-0.5 block text-xs leading-5 text-neutral-500">
-                        {tx(
-                          "Par exemple une usine avec son propre entrepôt. Le secteur choisi ci-dessus reste le principal.",
-                          "A factory with its own warehouse, for instance. The sector chosen above stays the main one."
-                        )}
-                      </span>
-                    </span>
-                  </label>
+                    </label>
 
-                  {multiSector && (
-                    <p className="mt-4 border-t border-neutral-200 pt-4 text-xs text-neutral-500">
-                      {extraSectors.length > 0 ? (
-                        <>
-                          {tx("Secteurs :", "Sectors:")}{" "}
-                          <span className="font-semibold text-lime-700">
-                            {allSectors
-                              .map((id) => sectorName(id))
-                              .join(", ")}
-                          </span>
-                        </>
-                      ) : sector ? (
-                        tx(
-                          "Touchez un autre secteur pour l'ajouter.",
-                          "Tap another sector to add it."
-                        )
-                      ) : (
-                        tx(
-                          "Choisissez d'abord votre secteur principal.",
-                          "Choose your main sector first."
-                        )
-                      )}
-                    </p>
-                  )}
-                </div>
+                    {multiSector && (
+                      <p className="mt-4 border-t border-neutral-200 pt-4 text-xs text-neutral-500">
+                        {extraSectors.length > 0 ? (
+                          <>
+                            {tx("Secteurs :", "Sectors:")}{" "}
+                            <span className="font-semibold text-lime-700">
+                              {allSectors
+                                .map((id) => sectorName(id))
+                                .join(", ")}
+                            </span>
+                          </>
+                        ) : sector ? (
+                          tx(
+                            "Touchez un autre secteur pour l'ajouter.",
+                            "Tap another sector to add it."
+                          )
+                        ) : (
+                          tx(
+                            "Choisissez d'abord votre secteur principal.",
+                            "Choose your main sector first."
+                          )
+                        )}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-8 rounded-2xl border border-neutral-200 bg-white p-5 text-xs leading-5 text-neutral-500 shadow-sm">
+                    {tx(
+                      "Une entreprise suit un secteur. Plusieurs secteurs (une usine avec son entrepôt, par exemple) : offre Entreprise.",
+                      "A company follows one sector. Several sectors (a factory with its own warehouse, say): Entreprise plan."
+                    )}
+                  </p>
+                )}
               </>
             )}
 
@@ -1827,7 +1888,25 @@ export function OnboardingView({
                   </p>
                 </div>
 
-                {isLogistics && (
+                {!canMultiDepartment && (
+                  <p className="mb-3 text-xs text-muted-foreground">
+                    {tx(
+                      "Choisissez votre département. Plusieurs départements qui tournent ensemble : offre Business.",
+                      "Pick your department. Several departments that run together: Business plan."
+                    )}
+                  </p>
+                )}
+
+                {canMultiDepartment && !isLogistics && (
+                  <p className="mb-3 text-xs text-muted-foreground">
+                    {tx(
+                      "Cochez tous les départements que vous exploitez ensemble, par exemple une clinique avec sa pharmacie et son laboratoire. Ceux qui ne vont pas avec votre choix sont grisés.",
+                      "Tick every department you run together, a clinic with its own pharmacy and lab for instance. Those that don't go with your choice are greyed out."
+                    )}
+                  </p>
+                )}
+
+                {canMultiDepartment && isLogistics && (
                   <p className="mb-3 text-xs text-muted-foreground">
                     {tx(
                       "Sélectionnez toutes les activités que vous exploitez. Un terminal qui manipule des conteneurs réfrigérés fait du port et de la chaîne du froid : cochez les deux et SentrIA suivra les étapes des deux, sans y ajouter celles que vous n'avez pas.",
@@ -1844,6 +1923,14 @@ export function OnboardingView({
                     const Icon = item.icon
                     const active = subTypes2.includes(item.id)
                     const img = imageForActivity(item.id)
+                    // Greyed when it doesn't run with what is ticked: a
+                    // click then starts over with it.
+                    const fits =
+                      !canMultiDepartment ||
+                      active ||
+                      subTypes2.length === 0 ||
+                      atLeast(plan, "entreprise") ||
+                      combinableWith(sector, subTypes2).has(item.id)
 
                     return (
                       <button
@@ -1851,7 +1938,16 @@ export function OnboardingView({
                         type="button"
                         onClick={() => chooseSubType(item.id)}
                         aria-pressed={active}
+                        title={
+                          fits
+                            ? undefined
+                            : tx(
+                                "Ne va pas avec votre choix : le sélectionner remplace la sélection.",
+                                "Doesn't go with your choice: selecting it replaces the selection."
+                              )
+                        }
                         className={cn(
+                          !fits && "opacity-50",
                           "group relative flex flex-col items-center rounded-2xl border px-3 pb-5 pt-6 text-center transition-all duration-300",
                           // Two per row on phones, a fixed width from sm up so
                           // every row lines up whatever the card count.

@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import type { OpsType } from "@/lib/logistics-signals"
 import type { Sector } from "@/lib/priorities"
+import { readAccountPlan, sectorsForPlan } from "@/lib/plans"
 import { localized, type Localized, type Tx } from "@/lib/i18n"
 
 /** One activity inside a sector: what the user picks at step 2 of
@@ -616,9 +617,15 @@ export function opsTypeFor(types: SingleOpsType[]): OpsType | undefined {
 
 export { isSingleOpsType }
 
-/** The sectors the account selected in onboarding, in our spelling. */
+/** The sectors the account selected in onboarding, in our spelling,
+ *  cut to what its plan allows (one, unless Entreprise). */
 export function readSectors(): string[] {
   if (typeof window === "undefined") return []
+
+  return sectorsForPlan(readStoredSectors(), readAccountPlan().effective)
+}
+
+function readStoredSectors(): string[] {
 
   try {
     const many = JSON.parse(localStorage.getItem("sentria_sectors") || "null")
