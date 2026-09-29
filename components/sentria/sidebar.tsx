@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Bot,
   UsersRound,
+  LogOut,
 } from "lucide-react"
 
 interface SidebarProps {
@@ -25,6 +26,9 @@ interface SidebarProps {
   onClose: () => void
   collapsed: boolean
   onToggleCollapse: () => void
+  /** The signed-in user's email, shown above the sign-out button. */
+  email?: string
+  onSignOut?: () => void
 }
 
 type SidebarItem = {
@@ -118,6 +122,8 @@ export function Sidebar({
   onClose,
   collapsed,
   onToggleCollapse,
+  email,
+  onSignOut,
 }: SidebarProps) {
   const t = useT()
 
@@ -313,6 +319,34 @@ export function Sidebar({
               </div>
             )}
           </nav>
+
+          {/* SIGN OUT */}
+          {onSignOut && (
+            <div className="shrink-0 border-t border-white/10 px-3 py-3">
+              {!collapsed && email && (
+                <div className="mb-1 truncate px-3 text-[11px] text-sidebar-foreground/45" title={email}>
+                  {email}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={onSignOut}
+                aria-label={collapsed ? t("sidebar.signOut") : undefined}
+                title={collapsed ? t("sidebar.signOut") : undefined}
+                className={[
+                  "flex h-10 w-full items-center rounded-xl text-sidebar-foreground/65 transition hover:bg-accent/10 hover:text-accent",
+                  collapsed ? "justify-center" : "gap-3 px-3 text-left",
+                  SIDEBAR_FOCUS,
+                ].join(" ")}
+              >
+                <LogOut className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                {!collapsed && (
+                  <span className="text-sm font-medium">{t("sidebar.signOut")}</span>
+                )}
+              </button>
+            </div>
+          )}
 
           {/* COLLAPSED TOGGLE */}
           {collapsed && (

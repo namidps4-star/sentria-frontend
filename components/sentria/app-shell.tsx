@@ -72,7 +72,13 @@ const META: Record<ViewKey, { title: MessageKey; subtitle: MessageKey }> = {
 /** When the bell was last opened: alerts dated after it are unread. */
 const NOTIFICATIONS_SEEN_KEY = "sentria_notifications_seen_at"
 
-export function AppShell() {
+export function AppShell({
+  email,
+  onSignOut,
+}: {
+  email?: string
+  onSignOut?: () => void
+} = {}) {
   const t = useT()
 
   const [view, setView] = useState<ViewKey>("dashboard")
@@ -234,6 +240,8 @@ export function AppShell() {
         onClose={() => setOpen(false)}
         collapsed={collapsed}
         onToggleCollapse={() => setCollapsed((current) => !current)}
+        email={email}
+        onSignOut={onSignOut}
       />
 
       <div

@@ -31,6 +31,7 @@ import { API_BASE } from "@/lib/api"
 import { toApiSector } from "@/lib/sector"
 import {
   detectTimezoneId,
+  readCompanyName,
   TIMEZONES,
   writeCompanyName,
   writeTimezoneId,
@@ -785,6 +786,8 @@ export function OnboardingView({
   }
 
   useEffect(() => {
+    // The company typed at sign-up (S-3), so it isn't asked twice.
+    setCompanyName((current) => current || readCompanyName())
     setTimezoneId(detectTimezoneId())
     const detected = detectLanguage()
     const safeLang = detected === "en" ? "en" : "fr"

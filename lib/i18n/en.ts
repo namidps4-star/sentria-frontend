@@ -29,6 +29,7 @@ export const en: Record<keyof typeof fr, string> = {
   "sidebar.close": "Close the sidebar",
   "sidebar.collapse": "Collapse the sidebar",
   "sidebar.expand": "Expand the sidebar",
+  "sidebar.signOut": "Sign out",
 
   /* ---------------------------------------------------------------- */
   /*  Navigation                                                       */
