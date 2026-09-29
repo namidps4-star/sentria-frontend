@@ -313,3 +313,40 @@
   from { transform: scaleX(0); }
   to { transform: scaleX(1); }
 }
+
+/* Status tags: flat, pure hues. Light values on :root, dark ones for
+   .dark and for "system" on a dark OS (dark: utilities only follow the
+   .dark class, tokens follow both). */
+:root {
+  --tag-warning-bg: #fff4e0; --tag-warning-bd: #f5c46a; --tag-warning-fg: #a85a06;
+  --tag-danger-bg: #feeceb; --tag-danger-bd: #f5a39c; --tag-danger-fg: #c4271d;
+  --tag-success-bg: #e8f7ed; --tag-success-bd: #8fd8aa; --tag-success-fg: #157a3a;
+  --tag-info-bg: #eaf2ff; --tag-info-bd: #9ebffa; --tag-info-fg: #1c5bd0;
+  --tag-neutral-bg: #f2f2f0; --tag-neutral-bd: #d5d5d0; --tag-neutral-fg: #4f4f4a;
+  --tag-brand-bg: #f1fad0; --tag-brand-bd: #bfe25a; --tag-brand-fg: #476300;
+}
+.dark {
+  --tag-warning-bg: rgb(247 176 50 / 0.14); --tag-warning-bd: rgb(247 176 50 / 0.38); --tag-warning-fg: #f6b955;
+  --tag-danger-bg: rgb(240 82 72 / 0.15); --tag-danger-bd: rgb(240 82 72 / 0.4); --tag-danger-fg: #ff8b80;
+  --tag-success-bg: rgb(52 199 110 / 0.14); --tag-success-bd: rgb(52 199 110 / 0.36); --tag-success-fg: #62d690;
+  --tag-info-bg: rgb(80 145 255 / 0.15); --tag-info-bd: rgb(80 145 255 / 0.4); --tag-info-fg: #8db8ff;
+  --tag-neutral-bg: rgb(255 255 255 / 0.07); --tag-neutral-bd: rgb(255 255 255 / 0.16); --tag-neutral-fg: #d6d6d2;
+  --tag-brand-bg: rgb(190 242 58 / 0.13); --tag-brand-bd: rgb(190 242 58 / 0.36); --tag-brand-fg: #c9f35c;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --tag-warning-bg: rgb(247 176 50 / 0.14); --tag-warning-bd: rgb(247 176 50 / 0.38); --tag-warning-fg: #f6b955;
+    --tag-danger-bg: rgb(240 82 72 / 0.15); --tag-danger-bd: rgb(240 82 72 / 0.4); --tag-danger-fg: #ff8b80;
+    --tag-success-bg: rgb(52 199 110 / 0.14); --tag-success-bd: rgb(52 199 110 / 0.36); --tag-success-fg: #62d690;
+    --tag-info-bg: rgb(80 145 255 / 0.15); --tag-info-bd: rgb(80 145 255 / 0.4); --tag-info-fg: #8db8ff;
+    --tag-neutral-bg: rgb(255 255 255 / 0.07); --tag-neutral-bd: rgb(255 255 255 / 0.16); --tag-neutral-fg: #d6d6d2;
+    --tag-brand-bg: rgb(190 242 58 / 0.13); --tag-brand-bd: rgb(190 242 58 / 0.36); --tag-brand-fg: #c9f35c;
+  }
+}
+
+/* Sign-in backdrop: warm cream with a soft olive glow (no bright lime). */
+:root { --auth-bg: #f3efe4; --auth-glow: rgb(110 124 52 / 0.2); }
+.dark { --auth-bg: #11120e; --auth-glow: rgb(128 142 60 / 0.22); }
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) { --auth-bg: #11120e; --auth-glow: rgb(128 142 60 / 0.22); }
+}

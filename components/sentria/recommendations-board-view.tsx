@@ -1,8 +1,11 @@
 "use client"
 
+import { StatBento } from "./stat-bento"
 import { StatusTag, type TagTone } from "./status-tag"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
+  ListChecks,
+  TriangleAlert,
   ArrowUpRight,
   CalendarDays,
   Check,
@@ -1409,17 +1412,7 @@ export function RecommendationsBoard({
     )
   }
 
-  const stats: { label: string; value: string }[] = [
-    { label: tx("Priorités", "Priorities"), value: String(cards.length) },
-    { label: tx("Critiques", "Critical"), value: String(criticalCount) },
-  ]
-
-  if (totalExposure > 0) {
-    stats.push({
-      label: tx("Exposition", "Exposure"),
-      value: formatMoney(totalExposure, currency, tx),
-    })
-  }
+  const doneCount = cards.filter((card) => card.task.status === "done").length
 
   return (
     <div className="flex flex-col gap-6">
@@ -1468,7 +1461,7 @@ export function RecommendationsBoard({
       {/* ------------------------------------------------------------------
           Title band: what this is, and the three numbers that describe it.
           ------------------------------------------------------------------ */}
-      <div className="flex flex-col gap-5 bg-[radial-gradient(ellipse_at_top_right,color-mix(in_oklch,var(--color-brand)_24%,transparent),transparent_60%)] p-5 md:flex-row md:items-end md:justify-between md:p-6">
+      <div className="bg-[radial-gradient(ellipse_at_top_right,color-mix(in_oklch,var(--color-brand)_24%,transparent),transparent_60%)] p-5 md:p-6">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             {opsLabel ?? tx("Toutes priorités", "All priorities")}
@@ -1479,33 +1472,26 @@ export function RecommendationsBoard({
           </h3>
         </div>
 
-        <div className="grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-3">
-          {stats.map((stat, index) => (
-            <div
-              key={stat.label}
-              className={cn(
-                "min-w-[110px] rounded-2xl p-3.5 text-center",
-                index === 0
-                  ? "bg-accent text-accent-foreground"
-                  : "bg-primary text-primary-foreground"
-              )}
-            >
-              <p
-                className={cn(
-                  "text-[10px] font-bold uppercase tracking-wider",
-                  index === 0
-                    ? "text-accent-foreground/70"
-                    : "text-primary-foreground/50"
-                )}
-              >
-                {stat.label}
-              </p>
-              <p className="mt-1 font-heading text-2xl font-black leading-none tabular-nums">
-                {stat.value}
-              </p>
-            </div>
-          ))}
-        </div>
+        <StatBento
+          className="mt-5"
+          primary={{
+            label: tx("Priorités", "Priorities"),
+            value: String(cards.length),
+            caption: tx("classées par urgence", "ranked by urgency"),
+            icon: ListChecks,
+            progress: {
+              share: cards.length ? doneCount / cards.length : 0,
+              label: tx(`${doneCount} traitée${doneCount > 1 ? "s" : ""}`, `${doneCount} handled`),
+            },
+          }}
+          dark={{ label: tx("Critiques", "Critical"), value: String(criticalCount), icon: TriangleAlert }}
+          soft={[
+            { label: tx("Non assignées", "Unassigned"), value: String(unassignedCount) },
+            ...(totalExposure > 0
+              ? [{ label: tx("Exposition", "Exposure"), value: formatMoney(totalExposure, currency, tx) }]
+              : []),
+          ]}
+        />
       </div>
 
       {/* ------------------------------------------------------------------

@@ -269,30 +269,30 @@ export function AuthScreen({
       icon: BellRing,
       title: tx("Alertes en temps réel", "Real-time alerts"),
       body: tx(
-        "SentrIA surveille vos stocks, machines et flux, et vous prévient avant la panne ou la rupture.",
-        "SentrIA watches your stock, machines and flows, and warns you before a breakdown or a stock-out."
+        "Stocks, machines, flux : prévenu avant la panne ou la rupture.",
+        "Stock, machines, flows: warned before a breakdown or a stock-out."
       ),
     },
     {
       icon: ShieldCheck,
       title: tx("Vos données restent les vôtres", "Your data stays yours"),
       body: tx(
-        "Chaque entreprise ne voit que ses propres données, protégées par son compte.",
-        "Each company only sees its own data, protected by its account."
+        "Chaque entreprise ne voit que ses propres données.",
+        "Each company sees its own data, and only its own."
       ),
     },
     {
       icon: ListChecks,
       title: tx("Des actions, pas juste des chiffres", "Actions, not just numbers"),
       body: tx(
-        "Chaque alerte vient avec une action à faire, à assigner et à suivre.",
-        "Every alert comes with an action to take, assign and track."
+        "Chaque alerte dit quoi faire, à qui, et suit le résultat.",
+        "Every alert says what to do, who does it, and tracks it."
       ),
     },
   ]
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-[radial-gradient(ellipse_at_top_left,var(--color-brand)_0%,transparent_55%),radial-gradient(ellipse_at_bottom_right,color-mix(in_oklch,var(--color-brand)_60%,transparent)_0%,transparent_60%)] bg-background px-4 py-8">
+    <div className="flex min-h-dvh items-center justify-center bg-[radial-gradient(ellipse_at_top_left,var(--auth-glow)_0%,transparent_55%),radial-gradient(ellipse_at_bottom_right,var(--auth-glow)_0%,transparent_60%)] bg-[var(--auth-bg)] px-4 py-8">
       <main className="grid w-full max-w-[1150px] overflow-hidden rounded-[32px] border-2 border-foreground bg-card shadow-2xl md:min-h-[640px] md:grid-cols-[1.05fr_1fr]">
         {/* Left: what SentrIA does */}
         <section className="flex flex-col gap-8 p-7 md:gap-7 md:p-12">
@@ -338,14 +338,22 @@ export function AuthScreen({
             </p>
           </div>
 
-          <ul className="hidden gap-3 md:grid md:grid-cols-3">
-            {features.map(({ icon: Icon, title, body }) => (
-              <li key={title} className="rounded-2xl bg-muted/60 p-3.5">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand/30 text-foreground">
-                  <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
-                </span>
-                <p className="mt-2.5 text-sm font-bold leading-snug">{title}</p>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{body}</p>
+          {/* Three promises, editorial: numbered, hairline-separated. */}
+          <ul className="hidden border-y border-border md:grid md:grid-cols-3 md:divide-x md:divide-border">
+            {features.map(({ icon: Icon, title, body }, i) => (
+              <li key={title} className="flex flex-col gap-3 py-5 md:px-5 md:first:pl-0 md:last:pr-0">
+                <div className="flex items-center justify-between">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#141414] text-brand shadow-sm">
+                    <Icon className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                  <span className="font-mono text-[10px] font-semibold tracking-widest text-muted-foreground/70" aria-hidden="true">
+                    0{i + 1}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm font-bold leading-snug tracking-tight">{title}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{body}</p>
+                </div>
               </li>
             ))}
           </ul>

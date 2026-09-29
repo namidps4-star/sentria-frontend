@@ -1,5 +1,6 @@
 "use client"
 
+import { StatBento } from "./stat-bento"
 import { useEffect, useState } from "react"
 import {
   AlertTriangle,
@@ -16,6 +17,8 @@ import {
   UserRound,
   XCircle,
   Zap,
+  Briefcase,
+  UsersRound,
 } from "lucide-react"
 
 import { useCompanyIdentity } from "@/lib/company"
@@ -268,6 +271,10 @@ export function ContractorsView({
     (person) => person.open_assignments > 0
   ).length
 
+  const reallyFree = contractors.filter(
+    (person) => person.availability === "available" && person.open_assignments === 0
+  ).length
+
   /* Every role that actually appears, in first-seen order, so the filter
      pills never offer a choice nobody is on file under. */
   const roleKeys: string[] = []
@@ -366,35 +373,25 @@ export function ContractorsView({
             </p>
           </div>
 
-          <div className="grid shrink-0 grid-cols-3 gap-3">
-            <div className="flex min-w-[100px] flex-col items-center justify-center rounded-2xl bg-accent p-4 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-accent-foreground/70">
-                {tx("Enregistrés", "On file")}
-              </p>
-              <p className="mt-1 font-heading text-3xl font-black leading-none tabular-nums text-accent-foreground">
-                {loaded ? contractors.length : "—"}
-              </p>
-            </div>
-
-            <div className="flex min-w-[100px] flex-col items-center justify-center rounded-2xl bg-primary p-4 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-primary-foreground/50">
-                {tx("Se disent dispo", "Say they are free")}
-              </p>
-              <p className="mt-1 font-heading text-3xl font-black leading-none tabular-nums text-primary-foreground">
-                {loaded ? declaredAvailable : "—"}
-              </p>
-            </div>
-
-            <div className="flex min-w-[100px] flex-col items-center justify-center rounded-2xl bg-primary p-4 text-center">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-primary-foreground/50">
-                {tx("Avec du travail", "Carrying work")}
-              </p>
-              <p className="mt-1 font-heading text-3xl font-black leading-none tabular-nums text-primary-foreground">
-                {loaded ? carryingWork : "—"}
-              </p>
-            </div>
-          </div>
         </div>
+
+        <StatBento
+          className="mt-5"
+          primary={{
+            label: tx("Enregistrés", "On file"),
+            value: loaded ? String(contractors.length) : "—",
+            caption: tx("personnes que vous pouvez envoyer", "people you can send out"),
+            icon: UsersRound,
+            progress: {
+              share: contractors.length ? declaredAvailable / contractors.length : 0,
+              label: tx(`${declaredAvailable} se disent dispo`, `${declaredAvailable} say they are free`),
+            },
+          }}
+          dark={{ label: tx("Avec du travail", "Carrying work"), value: loaded ? String(carryingWork) : "—", icon: Briefcase }}
+          soft={[
+            { label: tx("Libres, rien en cours", "Free, nothing open"), value: loaded ? String(reallyFree) : "—" },
+          ]}
+        />
 
         {error && (
           <p

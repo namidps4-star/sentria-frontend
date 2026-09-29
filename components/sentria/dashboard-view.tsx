@@ -1,7 +1,7 @@
 "use client"
 
 import { SeverityTag, StatusTag } from "./status-tag"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   Cog,
   Radar,
@@ -15,6 +15,7 @@ import {
   MoreHorizontal,
   Zap,
   Upload,
+  Loader2,
   Shield,
   ChevronRight,
   Search,
@@ -990,6 +991,25 @@ export function DashboardView({
   const [opsTypes, setOpsTypes] = useState<SingleOpsType[]>([])
 
   const [uploading, setUploading] = useState(false)
+  // The import panel: opened from the upload icon at the top.
+  const [importOpen, setImportOpen] = useState(false)
+  const importRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!importOpen) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setImportOpen(false)
+    }
+    const onPointer = (event: PointerEvent) => {
+      if (importRef.current && !importRef.current.contains(event.target as Node)) setImportOpen(false)
+    }
+    document.addEventListener("keydown", onKey)
+    document.addEventListener("pointerdown", onPointer)
+    return () => {
+      document.removeEventListener("keydown", onKey)
+      document.removeEventListener("pointerdown", onPointer)
+    }
+  }, [importOpen])
 
   const [uploadMsg, setUploadMsg] = useState("")
   const [uploadFailed, setUploadFailed] = useState(false)
@@ -2365,41 +2385,257 @@ export function DashboardView({
 
   return (
     <div className="space-y-6">
-      {departmentTabs.length > 1 && (
+      {/* Toolbar, pinned while the page scrolls: the departments as
+          browser-style tabs, and the import behind one icon. */}
+      <div className="sticky -top-4 z-20 -mx-4 -mt-4 lg:-top-8 flex items-end gap-3 border-b border-border bg-canvas/90 px-4 pt-3 backdrop-blur-md lg:-mx-8 lg:-mt-8 lg:px-8 lg:pt-4">
+        {departmentTabs.length > 1 ? (
+          <div
+            role="tablist"
+            aria-label={tx("Vos départements", "Your departments")}
+            className="-mb-px flex min-w-0 flex-1 items-end gap-1 overflow-x-auto [scrollbar-width:none]"
+          >
+            {departmentTabs.map((id) => {
+              const active = activityIn(tabSector) === id
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => {
+                    applyActivityToDashboard(tabSector, id)
+                    setFilterSector(tabSector)
+                    localStorage.setItem("sentria_sector", tabSector)
+                  }}
+                  className={cn(
+                    "relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-t-2xl border px-4 py-2.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                    active
+                      ? "border-border border-b-card bg-card font-semibold text-foreground"
+                      : "border-transparent text-muted-foreground hover:bg-card/60 hover:text-foreground"
+                  )}
+                >
+                  <span
+                    className={cn("h-1.5 w-1.5 rounded-full", active ? "bg-brand" : "bg-muted-foreground/40")}
+                    aria-hidden="true"
+                  />
+                  {activityLabel(tabSector, id, tx) ?? id}
+                </button>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="flex-1" />
+        )}
+
+        <div ref={importRef} className="relative mb-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => setImportOpen((open) => !open)}
+            aria-expanded={importOpen}
+            aria-controls="import-panel"
+            aria-label={tx("Importer des données", "Import data")}
+            title={tx("Importer un CSV", "Import a CSV")}
+            className={cn(
+              "flex h-10 w-10 items-center justify-center rounded-full shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              importOpen ? "bg-[#141414] text-brand" : "bg-brand text-brand-foreground hover:opacity-90"
+            )}
+          >
+            {uploading ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <Upload className="h-4 w-4" aria-hidden="true" />
+            )}
+          </button>
+
         <div
-          role="tablist"
-          aria-label={tx("Vos départements", "Your departments")}
-          className="flex flex-wrap items-center gap-2"
+          id="import-panel"
+          role="dialog"
+          aria-label={tx("Importer des données", "Import data")}
+          hidden={!importOpen}
+          className="absolute right-0 top-full z-30 mt-2 w-[min(460px,calc(100vw-2.5rem))] rounded-3xl border border-border bg-card p-6 shadow-2xl"
         >
-          <span className="mr-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {tx("Départements", "Departments")}
-          </span>
-          {departmentTabs.map((id) => {
-            const active = activityIn(tabSector) === id
-            return (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => {
-                  applyActivityToDashboard(tabSector, id)
-                  setFilterSector(tabSector)
-                  localStorage.setItem("sentria_sector", tabSector)
-                }}
-                className={cn(
-                  "rounded-full border px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                  active
-                    ? "border-foreground bg-foreground text-background"
-                    : "border-border bg-card hover:bg-accent hover:text-accent-foreground"
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="font-heading text-lg font-bold">
+              {tx("Importer des données", "Import data")}
+            </h3>
+            <button
+              type="button"
+              onClick={() => setImportOpen(false)}
+              aria-label={tx("Fermer", "Close")}
+              className="-mr-2 -mt-1 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
+
+          <p className="mt-1 text-sm text-muted-foreground">
+            {tx(
+              "Choisissez un secteur puis importez votre CSV.",
+              "Choose a sector, then import your CSV."
+            )}
+          </p>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap gap-2">
+              {SECTORS.filter(
+                (s) =>
+                  s.key !== "all" &&
+                  activeSectors.includes(s.key)
+              ).map((s) => (
+                <button
+                  key={s.key}
+                  type="button"
+                  onClick={() => setUploadSector(s.key)}
+                  aria-pressed={uploadSector === s.key}
+                  className={cn(
+                    "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    uploadSector === s.key
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
+                  )}
+                >
+                  {px(s.label)}
+                </button>
+              ))}
+            </div>
+
+            <label className="relative inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90 focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+              <Upload className="h-4 w-4" aria-hidden="true" />
+
+              {uploading
+                ? tx("Traitement...", "Processing...")
+                : tx("Importer CSV", "Import CSV")}
+
+              <input
+                type="file"
+                accept=".csv"
+                className="sr-only"
+                onChange={handleUpload}
+                disabled={uploading}
+                aria-label={tx("Importer un fichier CSV", "Import a CSV file")}
+              />
+            </label>
+          </div>
+
+          {uploadMsg && (
+            <p
+              role={uploadFailed ? "alert" : "status"}
+              className={cn(
+                "mt-3 text-sm font-medium",
+                uploadFailed ? "text-destructive" : "text-green-600"
+              )}
+            >
+              {uploadMsg}
+            </p>
+          )}
+
+          {uploadActivitiesFor(uploadSector).length > 0 && (
+            <div>
+              {uploadActivity &&
+                !isConfiguredActivity(uploadSector, uploadActivity) && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-brand/40 bg-brand/10 px-3 py-2">
+                    <p className="text-xs">
+                      {tx(
+                        "Vous importez une activité différente de celle configurée",
+                        "You are importing an activity other than the configured one"
+                      )}
+                      {configuredActivityLabel(uploadSector)
+                        ? ` (${configuredActivityLabel(uploadSector)})`
+                        : ""}
+                      {tx(
+                        ". Le tableau de bord continue d'afficher l'activité configurée.",
+                        ". The dashboard keeps showing the configured activity."
+                      )}
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        applyActivityToDashboard(uploadSector, uploadActivity)
+                      }
+                      className="rounded-full border border-foreground bg-foreground px-3 py-1 text-[11px] font-semibold text-background transition-opacity hover:opacity-90"
+                    >
+                      {tx(
+                        "Basculer le tableau de bord dessus",
+                        "Switch the dashboard to it"
+                      )}
+                    </button>
+                  </div>
                 )}
+            </div>
+          )}
+
+          <p className="mt-3 text-xs text-muted-foreground">
+            {tx("Envoyé :", "Sent:")}{" "}
+            <span className="font-semibold text-foreground">
+              {sectorName(uploadSector)}
+            </span>
+
+            {uploadActivity && (
+              <>
+                {" · "}
+                <span className="font-semibold text-foreground">
+                  {activityLabel(uploadSector, uploadActivity, tx) ??
+                    uploadActivity}
+                </span>
+              </>
+            )}
+          </p>
+
+          {uploadActivitiesFor(uploadSector).length > 0 && (
+            <div className="relative -mx-6 -mb-6 mt-5 overflow-hidden rounded-b-3xl">
+              {/* Which department the next file is for, as quiet tabs along
+                  the card's bottom edge (like a spreadsheet's sheet tabs):
+                  one per department the plan allows. */}
+              <div
+                className="flex items-stretch gap-0.5 overflow-x-auto border-t border-border bg-muted/40 px-4 [scrollbar-width:none]"
+                role="group"
+                aria-describedby="upload-activity-help"
               >
-                {activityLabel(tabSector, id, tx) ?? id}
-              </button>
-            )
-          })}
+                <p
+                  className="flex shrink-0 items-center pr-2 text-[11px] font-medium text-muted-foreground"
+                  title={tx(
+                    "Elle décide des contrôles appliqués et de la chaîne affichée.",
+                    "It decides which checks run and which chain is shown."
+                  )}
+                >
+                  {tx("Activité de ce fichier", "Activity for this file")}
+                </p>
+                {uploadActivitiesFor(uploadSector).map((activity) => {
+                  const on = uploadActivity === activity.id
+                  return (
+                    <button
+                      key={activity.id}
+                      type="button"
+                      onClick={() => setUploadActivity(activity.id)}
+                      aria-pressed={on}
+                      title={px(activity.description)}
+                      className={cn(
+                        "relative -mt-px shrink-0 whitespace-nowrap rounded-b-lg px-3.5 py-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                        on
+                          ? "border-x border-b border-border bg-card font-semibold text-foreground shadow-sm"
+                          : "text-muted-foreground hover:bg-card/70 hover:text-foreground"
+                      )}
+                    >
+                      {on && (
+                        <span className="absolute inset-x-2.5 bottom-1 h-0.5 rounded-full bg-brand" aria-hidden="true" />
+                      )}
+                      {px(activity.label)}
+                    </button>
+                  )
+                })}
+              </div>
+              <p id="upload-activity-help" className="sr-only">
+                {tx(
+                  "Elle décide des contrôles appliqués et de la chaîne affichée. Changez-la ici pour importer un fichier d'une autre activité.",
+                  "It decides which checks run and which chain is shown. Change it here to import a file for a different activity."
+                )}
+              </p>
+            </div>
+          )}
         </div>
-      )}
+        </div>
+      </div>
 
       <div className="flex flex-col gap-4 rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-xl">
@@ -2632,8 +2868,8 @@ export function DashboardView({
                 tx("votre activité", "your activity")}
             </span>{" "}
             {tx(
-              "via le bouton Importer CSV ci-dessus.",
-              "using the Import CSV button above."
+              "via le bouton d'import (icône en haut à droite).",
+              "with the import button (the icon at the top right)."
             )}
           </p>
         </div>
@@ -2749,178 +2985,6 @@ export function DashboardView({
       </div>
         </>
       )}
-
-      <div className="rounded-3xl border border-border bg-card p-6">
-        <h3 className="font-heading text-lg font-bold">
-          {tx("Importer des données", "Import data")}
-        </h3>
-
-        <p className="mt-1 text-sm text-muted-foreground">
-          {tx(
-            "Choisissez un secteur puis importez votre CSV.",
-            "Choose a sector, then import your CSV."
-          )}
-        </p>
-
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <div className="flex flex-wrap gap-2">
-            {SECTORS.filter(
-              (s) =>
-                s.key !== "all" &&
-                activeSectors.includes(s.key)
-            ).map((s) => (
-              <button
-                key={s.key}
-                type="button"
-                onClick={() => setUploadSector(s.key)}
-                aria-pressed={uploadSector === s.key}
-                className={cn(
-                  "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                  uploadSector === s.key
-                    ? "border-foreground bg-foreground text-background"
-                    : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
-                )}
-              >
-                {px(s.label)}
-              </button>
-            ))}
-          </div>
-
-          <label className="relative inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90 focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-            <Upload className="h-4 w-4" aria-hidden="true" />
-
-            {uploading
-              ? tx("Traitement...", "Processing...")
-              : tx("Importer CSV", "Import CSV")}
-
-            <input
-              type="file"
-              accept=".csv"
-              className="sr-only"
-              onChange={handleUpload}
-              disabled={uploading}
-              aria-label={tx("Importer un fichier CSV", "Import a CSV file")}
-            />
-          </label>
-        </div>
-
-        {uploadMsg && (
-          <p
-            role={uploadFailed ? "alert" : "status"}
-            className={cn(
-              "mt-3 text-sm font-medium",
-              uploadFailed ? "text-destructive" : "text-green-600"
-            )}
-          >
-            {uploadMsg}
-          </p>
-        )}
-
-        {uploadActivitiesFor(uploadSector).length > 0 && (
-          <div>
-            {uploadActivity &&
-              !isConfiguredActivity(uploadSector, uploadActivity) && (
-                <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-brand/40 bg-brand/10 px-3 py-2">
-                  <p className="text-xs">
-                    {tx(
-                      "Vous importez une activité différente de celle configurée",
-                      "You are importing an activity other than the configured one"
-                    )}
-                    {configuredActivityLabel(uploadSector)
-                      ? ` (${configuredActivityLabel(uploadSector)})`
-                      : ""}
-                    {tx(
-                      ". Le tableau de bord continue d'afficher l'activité configurée.",
-                      ". The dashboard keeps showing the configured activity."
-                    )}
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      applyActivityToDashboard(uploadSector, uploadActivity)
-                    }
-                    className="rounded-full border border-foreground bg-foreground px-3 py-1 text-[11px] font-semibold text-background transition-opacity hover:opacity-90"
-                  >
-                    {tx(
-                      "Basculer le tableau de bord dessus",
-                      "Switch the dashboard to it"
-                    )}
-                  </button>
-                </div>
-              )}
-          </div>
-        )}
-
-        <p className="mt-3 text-xs text-muted-foreground">
-          {tx("Envoyé :", "Sent:")}{" "}
-          <span className="font-semibold text-foreground">
-            {sectorName(uploadSector)}
-          </span>
-
-          {uploadActivity && (
-            <>
-              {" · "}
-              <span className="font-semibold text-foreground">
-                {activityLabel(uploadSector, uploadActivity, tx) ??
-                  uploadActivity}
-              </span>
-            </>
-          )}
-        </p>
-
-        {uploadActivitiesFor(uploadSector).length > 0 && (
-          <div className="relative -mx-6 -mb-6 mt-5 overflow-hidden rounded-b-3xl">
-            {/* Which department the next file is for, as quiet tabs along
-                the card's bottom edge (like a spreadsheet's sheet tabs):
-                one per department the plan allows. */}
-            <div
-              className="flex items-stretch gap-0.5 overflow-x-auto border-t border-border bg-muted/40 px-4 [scrollbar-width:none]"
-              role="group"
-              aria-describedby="upload-activity-help"
-            >
-              <p
-                className="flex shrink-0 items-center pr-2 text-[11px] font-medium text-muted-foreground"
-                title={tx(
-                  "Elle décide des contrôles appliqués et de la chaîne affichée.",
-                  "It decides which checks run and which chain is shown."
-                )}
-              >
-                {tx("Activité de ce fichier", "Activity for this file")}
-              </p>
-              {uploadActivitiesFor(uploadSector).map((activity) => {
-                const on = uploadActivity === activity.id
-                return (
-                  <button
-                    key={activity.id}
-                    type="button"
-                    onClick={() => setUploadActivity(activity.id)}
-                    aria-pressed={on}
-                    title={px(activity.description)}
-                    className={cn(
-                      "relative -mt-px shrink-0 whitespace-nowrap rounded-b-lg px-3.5 py-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                      on
-                        ? "border-x border-b border-border bg-card font-semibold text-foreground shadow-sm"
-                        : "text-muted-foreground hover:bg-card/70 hover:text-foreground"
-                    )}
-                  >
-                    {on && (
-                      <span className="absolute inset-x-2.5 bottom-1 h-0.5 rounded-full bg-brand" aria-hidden="true" />
-                    )}
-                    {px(activity.label)}
-                  </button>
-                )
-              })}
-            </div>
-            <p id="upload-activity-help" className="sr-only">
-              {tx(
-                "Elle décide des contrôles appliqués et de la chaîne affichée. Changez-la ici pour importer un fichier d'une autre activité.",
-                "It decides which checks run and which chain is shown. Change it here to import a file for a different activity."
-              )}
-            </p>
-          </div>
-        )}
-      </div>
 
       <div
         id="alerts-table"
