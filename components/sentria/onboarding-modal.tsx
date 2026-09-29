@@ -27,7 +27,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
-import { API_BASE } from "@/lib/api"
+import { API_BASE, apiFetch } from "@/lib/api"
 import { toApiSector } from "@/lib/sector"
 import {
   detectTimezoneId,
@@ -1053,7 +1053,7 @@ export function OnboardingView({
         : "")
 
     try {
-      const res = await fetch(`${API_BASE}/upload${query}`, {
+      const res = await apiFetch(`${API_BASE}/upload${query}`, {
         method: "POST",
         body: form,
       })

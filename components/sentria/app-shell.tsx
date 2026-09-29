@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 
 import { inAccountScope, readSectors } from "@/lib/activities"
-import { API_BASE } from "@/lib/api"
+import { API_BASE, apiFetch } from "@/lib/api"
 import { useCompanyIdentity } from "@/lib/company"
 import { fetchAssignments, taskKeyFor } from "@/lib/crm"
 import { useT, useTx, type MessageKey } from "@/lib/i18n"
@@ -113,7 +113,7 @@ export function AppShell({
 
     async function load() {
       const [alerts, handled] = await Promise.all([
-        fetch(`${API_BASE}/alerts?lang=${lang}`)
+        apiFetch(`${API_BASE}/alerts?lang=${lang}`)
           .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
           .then((d) => (Array.isArray(d) ? d.map(withOurSector) : [])),
         companyName

@@ -16,7 +16,7 @@ import {
   AlertTriangle,
 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
-import { API_BASE } from "@/lib/api"
+import { API_BASE, apiFetch } from "@/lib/api"
 import { readCompanyName, readTimezoneId } from "@/lib/company"
 import { buildReport } from "@/lib/report"
 import type { LogisticsAlert } from "@/lib/logistics-signals"
@@ -651,7 +651,7 @@ export function ReportView({ data }: { data?: ReportData }) {
     setCompanyName(readCompanyName())
     setTimezoneId(readTimezoneId())
 
-    fetch(`${API_BASE}/alerts?lang=${tx("fr", "en")}`)
+    apiFetch(`${API_BASE}/alerts?lang=${tx("fr", "en")}`)
       .then((r) => (r.ok ? r.json() : []))
       .then((d) => setAlerts(Array.isArray(d) ? d : []))
       .catch((error) => {

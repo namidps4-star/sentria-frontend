@@ -17,6 +17,8 @@
  * French word appearing in an English screen at 2am.
  */
 
+import { useMemo } from "react"
+
 import { en } from "./en"
 import { fr } from "./fr"
 import { useLocale, type LanguageCode } from "@/lib/locale"
@@ -127,5 +129,8 @@ export function txFor(ui: LanguageCode): Tx {
 export function useTx(): Tx {
   const { ui } = useLocale()
 
-  return txFor(ui)
+  // The same function for as long as the language is the same: views put
+  // tx in effect dependencies, and a new one each render re-ran the
+  // calendar's loader on every render, calling the API without end.
+  return useMemo(() => txFor(ui), [ui])
 }

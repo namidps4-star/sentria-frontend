@@ -25,7 +25,7 @@ import {
   sectorOfActivity,
   type SingleOpsType,
 } from "@/lib/activities"
-import { API_BASE } from "@/lib/api"
+import { API_BASE, apiFetch } from "@/lib/api"
 import { fetchAssignments, taskKeyFor, type Assignment } from "@/lib/crm"
 import {
   formatInCompanyZone,
@@ -105,7 +105,7 @@ export function ProfileView({
 
   // Refetched on a language switch: /alerts rebuilds messages (B-11).
   useEffect(() => {
-    fetch(`${API_BASE}/alerts?lang=${lang}`)
+    apiFetch(`${API_BASE}/alerts?lang=${lang}`)
       .then((r) => (r.ok ? r.json() : []))
       .then((d) =>
         setAlerts(Array.isArray(d) ? d.map(withOurSector) : [])

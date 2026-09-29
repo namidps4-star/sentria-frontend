@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Loader2 } from "lucide-react"
 
 import { inAccountScope, readSectors } from "@/lib/activities"
-import { API_BASE } from "@/lib/api"
+import { API_BASE, apiFetch } from "@/lib/api"
 import { taskKeyFor } from "@/lib/crm"
 import { useTx } from "@/lib/i18n"
 import { withOurSector } from "@/lib/sector"
@@ -58,7 +58,7 @@ export function TrackingView() {
 
     setFailed(false)
 
-    fetch(`${API_BASE}/recommendations?limit=100&lang=${lang}`)
+    apiFetch(`${API_BASE}/recommendations?limit=100&lang=${lang}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
       .then((d) => {
         if (cancelled) return

@@ -41,7 +41,7 @@ import {
   IndustryKeyAlertsView,
 } from "./industry-view"
 
-import { API_BASE as API } from "@/lib/api"
+import { API_BASE as API, apiFetch } from "@/lib/api"
 import { toApiSector, withOurSector } from "@/lib/sector"
 import {
   PriorityCards,
@@ -1291,7 +1291,7 @@ export function DashboardView({
   const alertsLang = tx("fr", "en")
 
   useEffect(() => {
-    fetch(`${API}/alerts?lang=${alertsLang}`)
+    apiFetch(`${API}/alerts?lang=${alertsLang}`)
       .then((r) => {
         if (!r.ok) {
           throw new Error(`HTTP ${r.status}`)
@@ -1314,7 +1314,7 @@ export function DashboardView({
   }, [alertsLang])
 
   function refreshRecommendations() {
-    return fetch(
+    return apiFetch(
       `${API}/recommendations?limit=20&lang=${tx("fr", "en")}`
     )
       .then((r) => r.json())
@@ -1488,7 +1488,7 @@ export function DashboardView({
           ? activityIn(uploadSector) ?? uploadActivity
           : uploadActivity ?? activityIn(uploadSector)
 
-      const res = await fetch(
+      const res = await apiFetch(
         `${API}/upload?sector=${toApiSector(uploadSector)}&lang=${tx("fr", "en")}` +
           (chosenOpsType ? `&ops_type=${chosenOpsType}` : "") +
           (chosenBusinessType
@@ -1539,7 +1539,7 @@ export function DashboardView({
 
       await new Promise((r) => setTimeout(r, 1500))
 
-      const r2 = await fetch(`${API}/alerts?lang=${tx("fr", "en")}`)
+      const r2 = await apiFetch(`${API}/alerts?lang=${tx("fr", "en")}`)
       const d2 = await r2.json()
 
       setAlerts(Array.isArray(d2) ? d2.map(withOurSector) : [])
@@ -1751,7 +1751,7 @@ export function DashboardView({
 
     setFetchingRecommendationFor(expandedAlert.equipment)
 
-    fetch(
+    apiFetch(
       `${API}/recommendations?equipment=${encodeURIComponent(
         expandedAlert.equipment
       )}&limit=1&lang=${tx("fr", "en")}`

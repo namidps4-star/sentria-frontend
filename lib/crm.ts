@@ -30,7 +30,7 @@
  * any caller can pass any company name. Do not present it as privacy.
  */
 
-import { API_BASE } from "@/lib/api"
+import { API_BASE, apiFetch } from "@/lib/api"
 import { localized, type Localized, type Tx } from "@/lib/i18n"
 
 export type Availability = "available" | "busy" | "off"
@@ -146,7 +146,7 @@ async function call<T>(
   let res: Response
 
   try {
-    res = await fetch(`${API_BASE}${path}`, {
+    res = await apiFetch(`${API_BASE}${path}`, {
       ...init,
       headers: {
         "Content-Type": "application/json",

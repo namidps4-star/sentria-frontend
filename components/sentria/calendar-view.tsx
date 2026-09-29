@@ -19,7 +19,7 @@ import {
 import { cn } from "@/lib/utils"
 import { useCompanyIdentity } from "@/lib/company"
 import { inAccountScope, readSectors } from "@/lib/activities"
-import { API_BASE } from "@/lib/api"
+import { API_BASE, apiFetch } from "@/lib/api"
 import { fromApiSector } from "@/lib/sector"
 import {
   fetchAssignments,
@@ -275,7 +275,7 @@ export function CalendarView() {
     let cancelled = false
 
     async function load() {
-      const recsPromise = fetch(
+      const recsPromise = apiFetch(
         `${API_BASE}/recommendations?limit=100&lang=${tx("fr", "en")}`
       )
         .then((r) => r.json())
