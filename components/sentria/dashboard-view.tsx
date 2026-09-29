@@ -1490,7 +1490,11 @@ export function DashboardView({
           (chosenBusinessType
             ? `&business_type=${encodeURIComponent(chosenBusinessType)}`
             : "") +
-          accountCurrencyParam(),
+          accountCurrencyParam() +
+          // S-3: supplier history is kept per company.
+          (companyName
+            ? `&company_name=${encodeURIComponent(companyName)}`
+            : ""),
         {
           method: "POST",
           body: form,

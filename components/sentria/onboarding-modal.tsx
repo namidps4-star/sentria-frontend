@@ -1043,7 +1043,11 @@ export function OnboardingView({
       (sector === "logistics" && normalizeOpsType(subType)
         ? `&ops_type=${normalizeOpsType(subType)}`
         : "") +
-      accountCurrencyParam()
+      accountCurrencyParam() +
+      // S-3: supplier history is kept per company.
+      (companyName.trim()
+        ? `&company_name=${encodeURIComponent(companyName.trim())}`
+        : "")
 
     try {
       const res = await fetch(`${API_BASE}/upload${query}`, {
