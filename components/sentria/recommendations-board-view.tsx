@@ -1,5 +1,6 @@
 "use client"
 
+import { StatusTag, type TagTone } from "./status-tag"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ArrowUpRight,
@@ -194,17 +195,17 @@ const CATEGORY_TONE: Record<string, { pill: string; dot: string }> = {
   other: { pill: "bg-muted text-muted-foreground", dot: "bg-muted-foreground" },
 }
 
-const PRIORITY_TONE: Record<Priority, { pill: string; dot: string }> = {
-  critical: { pill: "bg-destructive/12 text-foreground", dot: "bg-destructive" },
-  high: { pill: "bg-orange-500/12 text-foreground", dot: "bg-orange-500" },
-  medium: { pill: "bg-warning/15 text-foreground", dot: "bg-warning" },
-  low: { pill: "bg-muted text-muted-foreground", dot: "bg-muted-foreground" },
+const PRIORITY_TONE: Record<Priority, { pill: string; dot: string; tag: TagTone }> = {
+  critical: { pill: "bg-destructive/12 text-foreground", dot: "bg-destructive", tag: "danger" },
+  high: { pill: "bg-orange-500/12 text-foreground", dot: "bg-orange-500", tag: "warning" },
+  medium: { pill: "bg-warning/15 text-foreground", dot: "bg-warning", tag: "info" },
+  low: { pill: "bg-muted text-muted-foreground", dot: "bg-muted-foreground", tag: "neutral" },
 }
 
-const COLUMN_TONE: Record<Status, { pill: string; dot: string }> = {
-  todo: { pill: "bg-warning/15 text-foreground", dot: "bg-warning" },
-  in_progress: { pill: "bg-brand/20 text-foreground", dot: "bg-brand" },
-  done: { pill: "bg-emerald-500/12 text-foreground", dot: "bg-emerald-500" },
+const COLUMN_TONE: Record<Status, { pill: string; dot: string; tag: TagTone }> = {
+  todo: { pill: "bg-warning/15 text-foreground", dot: "bg-warning", tag: "warning" },
+  in_progress: { pill: "bg-brand/20 text-foreground", dot: "bg-brand", tag: "info" },
+  done: { pill: "bg-emerald-500/12 text-foreground", dot: "bg-emerald-500", tag: "success" },
 }
 
 /** Triage order inside a column. Without it the operator can set a card
@@ -388,11 +389,13 @@ const TONE = {
     pill: "bg-destructive/12 text-foreground",
     dot: "bg-destructive",
     word: localized("Critique", "Critical"),
+    tag: "danger" as TagTone,
   },
   warning: {
     pill: "bg-warning/15 text-foreground",
     dot: "bg-warning",
     word: localized("Attention", "Warning"),
+    tag: "warning" as TagTone,
   },
 } as const
 
@@ -728,23 +731,14 @@ function DetailDialog({
         {/* Header ------------------------------------------------------- */}
         <div className="flex items-start justify-between gap-4 border-b border-border p-5 sm:p-6">
           <div className="min-w-0">
-            <span
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[11px] font-semibold",
-                tone.pill
-              )}
-            >
-              <span
-                className={cn("h-1.5 w-1.5 rounded-full", tone.dot)}
-                aria-hidden="true"
-              />
+            <StatusTag tone={tone.tag} size="sm">
               {px(tone.word)}
               {risk !== null && (
                 <span className="tabular-nums opacity-70">
-                  {tx(`· risque ${risk}`, `· risk ${risk}`)}
+                  {tx(` · risque ${risk}`, ` · risk ${risk}`)}
                 </span>
               )}
-            </span>
+            </StatusTag>
 
             <h2
               id="priority-detail-title"
@@ -1750,20 +1744,10 @@ export function RecommendationsBoard({
               {/* Column head: the name, how many, and what it is worth. */}
               <div className="mb-2.5 flex items-center justify-between gap-2 px-2 pt-1.5">
                 <div className="flex min-w-0 items-center gap-2">
-                  <h4
-                    className={cn(
-                      "inline-flex min-w-0 items-center gap-1.5 truncate rounded-full px-2.5 py-1 text-[12px] font-semibold",
-                      COLUMN_TONE[column.id].pill
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "h-1.5 w-1.5 shrink-0 rounded-full",
-                        COLUMN_TONE[column.id].dot
-                      )}
-                      aria-hidden="true"
-                    />
-                    {px(column.label)}
+                  <h4 className="min-w-0">
+                    <StatusTag tone={COLUMN_TONE[column.id].tag} size="sm">
+                      {px(column.label)}
+                    </StatusTag>
                   </h4>
 
                   <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
@@ -1872,26 +1856,14 @@ export function RecommendationsBoard({
                           />
                         )}
 
-                        <span
-                          className={cn(
-                            "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1 text-[11px] font-semibold",
-                            tone.pill
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "h-1.5 w-1.5 rounded-full",
-                              tone.dot
-                            )}
-                            aria-hidden="true"
-                          />
+                        <StatusTag tone={tone.tag} size="xs">
                           {px(tone.word)}
                           {risk !== null && (
                             <span className="tabular-nums opacity-70">
-                              {risk}
+                              {` · ${risk}`}
                             </span>
                           )}
-                        </span>
+                        </StatusTag>
                       </div>
 
                       {/* Row 2 — the asset, and where it sits in the chain. */}
@@ -1938,25 +1910,15 @@ export function RecommendationsBoard({
                           )}
                         </Chip>
 
-                        <Chip
-                          pillClassName={
-                            (
-                              PRIORITY_TONE[task.priority] ??
-                              PRIORITY_TONE.medium
-                            ).pill
-                          }
-                          dotClassName={
-                            (
-                              PRIORITY_TONE[task.priority] ??
-                              PRIORITY_TONE.medium
-                            ).dot
-                          }
+                        <StatusTag
+                          size="xs"
+                          tone={(PRIORITY_TONE[task.priority] ?? PRIORITY_TONE.medium).tag}
                         >
                           {px(
                             PRIORITY_LABEL[task.priority] ??
                               PRIORITY_LABEL.medium
                           )}
-                        </Chip>
+                        </StatusTag>
 
                         {(rec.downstream ?? 0) > 0 && (
                           <Chip icon={Waypoints} tone="brand">

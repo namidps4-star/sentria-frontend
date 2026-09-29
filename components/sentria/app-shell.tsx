@@ -82,10 +82,12 @@ const NOTIFICATIONS_SEEN_KEY = "sentria_notifications_seen_at"
 export function AppShell({
   email,
   name,
+  username,
   onSignOut,
 }: {
   email?: string
   name?: string
+  username?: string | null
   onSignOut?: () => void
 } = {}) {
   const t = useT()
@@ -256,6 +258,7 @@ export function AppShell({
         onToggleCollapse={() => setCollapsed((current) => !current)}
         email={email}
         name={name}
+        username={username}
         onSignOut={onSignOut}
         isAdmin={isAdmin}
       />

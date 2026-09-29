@@ -96,34 +96,48 @@ function asProfile(value: unknown): Profile {
 /** Loads the signed-in user's account into localStorage, creating the
  *  row on first sign-in. Throws when the account can't be read, so the
  *  app never runs on someone else's leftover values. */
-export async function loadAccount(client: SupabaseClient, user: User) {
-  // The richest row the database has: before migrations/005 there is no
-  // is_admin (nobody is admin), before 004 no plan (the free plan).
-  const readRow = async () => {
+export async function loadAccount(
+  client: SupabaseClient,
+  user: User
+): Promise<{ username: string | null }> {
+  // The richest row the database has. Each migration adds columns:
+  // 006 username, 005 is_admin, 004 plan and trial. Before one is run,
+  // its columns are simply not read.
+  type Row = {
+    profile?: unknown
+    plan?: unknown
+    trial_ends_at?: unknown
+    is_admin?: unknown
+    username?: unknown
+  }
+
+  const readRow = async (): Promise<{ data: Row | null; error: { message?: string } | null }> => {
     const missingColumn = (error: { message?: string } | null) =>
-      Boolean(error && /is_admin|plan|trial_ends_at/.test(error.message ?? ""))
+      Boolean(error && /username|is_admin|plan|trial_ends_at/.test(error.message ?? ""))
 
-    const withAdmin = await client
-      .from("accounts")
-      .select("profile, plan, trial_ends_at, is_admin")
-      .eq("user_id", user.id)
-      .maybeSingle()
+    const tiers = [
+      "profile, plan, trial_ends_at, is_admin, username",
+      "profile, plan, trial_ends_at, is_admin",
+      "profile, plan, trial_ends_at",
+    ]
 
-    if (!missingColumn(withAdmin.error)) return withAdmin
+    for (const columns of tiers) {
+      const result = await client
+        .from("accounts")
+        .select(columns)
+        .eq("user_id", user.id)
+        .maybeSingle()
 
-    const withPlan = await client
-      .from("accounts")
-      .select("profile, plan, trial_ends_at")
-      .eq("user_id", user.id)
-      .maybeSingle()
+      if (!missingColumn(result.error)) return { data: result.data as Row | null, error: result.error }
+    }
 
-    if (!missingColumn(withPlan.error)) return withPlan
-
-    return client
+    const result = await client
       .from("accounts")
       .select("profile")
       .eq("user_id", user.id)
       .maybeSingle()
+
+    return { data: result.data as Row | null, error: result.error }
   }
 
   let { data, error } = await readRow()
@@ -169,7 +183,7 @@ export async function loadAccount(client: SupabaseClient, user: User) {
     localStorage.setItem("sentria_company_name", signedUpAs.trim())
   }
 
-  const row = (data ?? {}) as { plan?: unknown; trial_ends_at?: unknown; is_admin?: unknown }
+  const row: Row = data ?? {}
   localStorage.setItem(PLAN_KEY, isPlanId(row.plan) ? row.plan : "decouverte")
 
   // Shows the Admin page. The API checks the flag itself on every admin
@@ -186,6 +200,8 @@ export async function loadAccount(client: SupabaseClient, user: User) {
   window.dispatchEvent(new Event(PLAN_UPDATED_EVENT))
 
   localStorage.setItem(ACCOUNT_OWNER_KEY, user.id)
+
+  return { username: typeof row.username === "string" && row.username ? row.username : null }
 }
 
 /** Saves localStorage's account values whenever they change. The views

@@ -60,6 +60,7 @@ import {
 import { uploadProblemMessage } from "@/lib/upload-problem"
 import { runUpload, type UploadState } from "@/lib/upload"
 import { UploadProgress } from "./upload-progress"
+import { StatusTag } from "./status-tag"
 import { prioritiesFor } from "@/lib/priorities"
 import {
   ACTIVITIES_BY_SECTOR,
@@ -2249,17 +2250,17 @@ export function OnboardingView({
                           >
                             <div className="flex items-center justify-between gap-2">
                               <p className="text-sm font-bold">{label}</p>
-                              <span
-                                className={cn(
-                                  "rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
+                              <StatusTag
+                                size="xs"
+                                tone={
                                   upload.phase === "done"
-                                    ? "bg-lime-500/20 text-lime-800 dark:text-lime-300"
+                                    ? "success"
                                     : upload.phase === "refused" || upload.phase === "failed"
-                                      ? "bg-destructive/10 text-destructive"
+                                      ? "danger"
                                       : working
-                                        ? "bg-muted text-foreground"
-                                        : "bg-muted text-muted-foreground"
-                                )}
+                                        ? "info"
+                                        : "neutral"
+                                }
                               >
                                 {upload.phase === "done"
                                   ? tx("Prêt", "Ready")
@@ -2268,7 +2269,7 @@ export function OnboardingView({
                                     : working
                                       ? tx("Vérification…", "Checking…")
                                       : tx("À importer", "To import")}
-                              </span>
+                              </StatusTag>
                             </div>
 
                             {columns.length > 0 && upload.phase === "idle" && (

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type FormEvent, type ReactNode } from "react"
+import { useEffect, useState, type FormEvent, type ReactNode } from "react"
 import {
   ArrowRight,
   BellRing,
@@ -17,9 +17,16 @@ import { useTx, type Tx } from "@/lib/i18n"
 import { missingSupabaseEnv, supabase } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
 
+import { SeverityTag } from "./status-tag"
+
 type Mode = "sign-in" | "sign-up" | "forgot" | "reset"
 
 const MIN_PASSWORD = 8
+
+/** Same rule as the database (migrations/006_usernames.sql). */
+const USERNAME = /^[a-z0-9_]{3,24}$/
+
+type UsernameStatus = "empty" | "invalid" | "checking" | "free" | "taken" | "unknown"
 
 /** Supabase's errors, in the user's language. */
 function authErrorMessage(error: AuthError | Error, tx: Tx): string {
@@ -101,6 +108,8 @@ export function AuthScreen({
 
   const [mode, setMode] = useState<Mode>(initialMode)
   const [name, setName] = useState("")
+  const [username, setUsername] = useState("")
+  const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>("empty")
   const [company, setCompany] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -116,6 +125,31 @@ export function AuthScreen({
     setPassword("")
   }
 
+  // "Is this username free?", asked as the user types (debounced). If the
+  // check can't run (the SQL isn't installed yet), the form doesn't block:
+  // the database still refuses a duplicate at sign-up.
+  const wanted = username.trim().toLowerCase()
+
+  useEffect(() => {
+    if (mode !== "sign-up") return
+    if (!wanted) return setUsernameStatus("empty")
+    if (!USERNAME.test(wanted)) return setUsernameStatus("invalid")
+    if (!supabase) return setUsernameStatus("unknown")
+
+    setUsernameStatus("checking")
+    let cancelled = false
+    const timer = window.setTimeout(async () => {
+      const { data, error } = await supabase!.rpc("username_available", { name: wanted })
+      if (cancelled) return
+      setUsernameStatus(error || typeof data !== "boolean" ? "unknown" : data ? "free" : "taken")
+    }, 400)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [wanted, mode])
+
   async function submit(event: FormEvent) {
     event.preventDefault()
 
@@ -123,6 +157,21 @@ export function AuthScreen({
 
     setError("")
     setNotice("")
+
+    if (mode === "sign-up" && !USERNAME.test(wanted)) {
+      setError(
+        tx(
+          "Nom d'utilisateur : 3 à 24 caractères, lettres minuscules, chiffres ou _.",
+          "Username: 3 to 24 characters, lowercase letters, digits or _."
+        )
+      )
+      return
+    }
+
+    if (mode === "sign-up" && usernameStatus === "taken") {
+      setError(tx("Ce nom d'utilisateur est déjà utilisé.", "This username is already used."))
+      return
+    }
 
     if ((mode === "sign-up" || mode === "reset") && password.length < MIN_PASSWORD) {
       setError(
@@ -152,9 +201,16 @@ export function AuthScreen({
           password,
           options: {
             emailRedirectTo: origin,
-            data: { full_name: name.trim(), company_name: company.trim() },
+            data: { full_name: name.trim(), company_name: company.trim(), username: wanted },
           },
         })
+        // The database refuses a username taken in the meantime; Supabase
+        // reports it as "Database error saving new user".
+        if (error && /database error saving new user/i.test(error.message ?? "")) {
+          setUsernameStatus("taken")
+          setError(tx("Ce nom d'utilisateur vient d'être pris. Choisissez-en un autre.", "This username was just taken. Choose another one."))
+          return
+        }
         if (error) throw error
 
         if (!data.session) {
@@ -300,7 +356,7 @@ export function AuthScreen({
           <div className="mt-auto hidden rounded-2xl border border-border bg-background p-4 shadow-sm lg:block">
             <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               <span>{tx("Exemple d'alerte", "Example alert")}</span>
-              <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-destructive">{tx("Critique", "Critical")}</span>
+              <SeverityTag severity="CRITICAL" tx={tx} size="xs" />
             </div>
             <p className="mt-2 text-sm font-semibold">
               {tx("Paracétamol 500 mg : rupture dans 3 jours", "Paracetamol 500 mg: out of stock in 3 days")}
@@ -349,6 +405,46 @@ export function AuthScreen({
                       autoComplete="name"
                       required
                     />
+                  </Field>
+                  <Field id="auth-username" label={tx("Nom d'utilisateur", "Username")}>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 text-base text-brand-foreground/60">@</span>
+                      <input
+                        id="auth-username"
+                        className={cn(INPUT, "pl-5")}
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value.replace(/\s/g, "").toLowerCase())}
+                        autoComplete="username"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                        maxLength={24}
+                        aria-describedby="auth-username-status"
+                        aria-invalid={usernameStatus === "invalid" || usernameStatus === "taken"}
+                        required
+                      />
+                    </div>
+                    <p
+                      id="auth-username-status"
+                      aria-live="polite"
+                      className={cn(
+                        "mt-1.5 text-[11px]",
+                        usernameStatus === "taken" || usernameStatus === "invalid"
+                          ? "font-semibold text-destructive"
+                          : usernameStatus === "free"
+                            ? "font-semibold text-brand-foreground"
+                            : "text-brand-foreground/70"
+                      )}
+                    >
+                      {usernameStatus === "taken"
+                        ? tx("Ce nom d'utilisateur est déjà utilisé.", "This username is already used.")
+                        : usernameStatus === "free"
+                          ? tx(`@${wanted} est libre.`, `@${wanted} is available.`)
+                          : usernameStatus === "checking"
+                            ? tx("Vérification…", "Checking…")
+                            : usernameStatus === "invalid"
+                              ? tx("3 à 24 caractères : lettres minuscules, chiffres ou _.", "3 to 24 characters: lowercase letters, digits or _.")
+                              : tx("Lettres minuscules, chiffres ou _.", "Lowercase letters, digits or _.")}
+                    </p>
                   </Field>
                   <Field id="auth-company" label={tx("Entreprise", "Company")}>
                     <input

@@ -1,5 +1,6 @@
 "use client"
 
+import { SeverityTag, StatusTag } from "./status-tag"
 import { useEffect, useMemo, useState } from "react"
 import {
   Cog,
@@ -3219,16 +3220,7 @@ export function DashboardView({
                               "border-b border-border"
                           )}
                         >
-                          <span
-                            className={cn(
-                              "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
-                              alert.severity === "CRITICAL"
-                                ? "bg-destructive/10 text-destructive"
-                                : "bg-amber-500/15 text-amber-600"
-                            )}
-                          >
-                            {alert.severity}
-                          </span>
+                          <SeverityTag severity={alert.severity} tx={tx} size="sm" />
                         </td>
 
                         <td
@@ -3313,16 +3305,7 @@ export function DashboardView({
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
-                  <span
-                    className={cn(
-                      "inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
-                      expandedAlert.severity === "CRITICAL"
-                        ? "bg-destructive/10 text-destructive"
-                        : "bg-amber-500/15 text-amber-600"
-                    )}
-                  >
-                    {expandedAlert.severity}
-                  </span>
+                  <SeverityTag severity={expandedAlert.severity} tx={tx} size="sm" />
 
                   <button
                     type="button"
@@ -3361,16 +3344,7 @@ export function DashboardView({
                     {tx("Statut", "Status")}
                   </p>
 
-                  <span
-                    className={cn(
-                      "mt-1 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold",
-                      expandedAlert.severity === "CRITICAL"
-                        ? "bg-destructive/10 text-destructive"
-                        : "bg-amber-500/15 text-amber-600"
-                    )}
-                  >
-                    {expandedAlert.severity}
-                  </span>
+                  <SeverityTag severity={expandedAlert.severity} tx={tx} size="sm" className="mt-1" />
                 </div>
 
                 <div>
@@ -3608,17 +3582,7 @@ export function DashboardView({
                     )}
                   </span>
 
-                  <span
-                    className={cn(
-                      "rounded-full px-2.5 py-1 text-[10px] font-semibold",
-                      selectedRecommendation.severity ===
-                        "CRITICAL"
-                        ? "bg-destructive/10 text-destructive"
-                        : "bg-amber-500/15 text-amber-600"
-                    )}
-                  >
-                    {selectedRecommendation.severity}
-                  </span>
+                  <SeverityTag severity={selectedRecommendation.severity} tx={tx} size="xs" />
 
                   {selectedRecommendation.risk_score !==
                     null &&

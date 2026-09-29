@@ -10,11 +10,15 @@ import { PLAN_NAMES, PLAN_ORDER, trialDaysLeft, type PlanId } from "@/lib/plans"
 import { sectorLabel } from "@/lib/priorities"
 import { cn } from "@/lib/utils"
 
+import { StatusTag } from "./status-tag"
+
 type AdminAccount = {
   user_id: string
   email: string | null
   /** Given at sign-up; null when none was. */
   name: string | null
+  /** Chosen at sign-up (migrations/006); null for older accounts. */
+  username?: string | null
   company_id: string
   company_name: string
   sector: string | null
@@ -111,10 +115,11 @@ export function AdminView() {
   }
 
   const shown = useMemo(() => {
-    const q = query.trim().toLowerCase()
+    // "@ama" finds the username ama_pharma.
+    const q = query.trim().toLowerCase().replace(/^@/, "")
     if (!q) return accounts
     return accounts.filter((a) =>
-      [a.company_name, a.name, a.email, a.sector, a.department, a.plan]
+      [a.company_name, a.name, a.username, a.email, a.sector, a.department, a.plan]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q))
     )
@@ -160,7 +165,7 @@ export function AdminView() {
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder={tx("Entreprise, nom, email, offre…", "Company, name, email, plan…")}
+                placeholder={tx("Entreprise, nom, @utilisateur, email, offre…", "Company, name, @username, email, plan…")}
                 className="h-10 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:w-64 [&::-webkit-search-cancel-button]:hidden"
               />
             </label>
@@ -212,18 +217,24 @@ export function AdminView() {
                         <p className="font-semibold">
                           {account.company_name || tx("(sans nom)", "(no name)")}
                           {account.is_admin && (
-                            <span className="ml-2 rounded-full bg-brand/30 px-2 py-0.5 text-[10px] font-bold uppercase">Admin</span>
+                            <StatusTag tone="brand" size="xs" icon={ShieldCheck} className="ml-2 align-middle">
+                              Admin
+                            </StatusTag>
                           )}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {account.name ? (
-                            <>
-                              <span className="font-medium text-foreground">{account.name}</span>
-                              {account.email ? ` · ${account.email}` : ""}
-                            </>
-                          ) : (
-                            account.email ?? "—"
+                          {account.name && (
+                            <span className="font-medium text-foreground">{account.name}</span>
                           )}
+                          {account.username && (
+                            <>
+                              {account.name ? " · " : ""}
+                              <span className="font-medium text-foreground">@{account.username}</span>
+                            </>
+                          )}
+                          {account.name || account.username
+                            ? account.email ? ` · ${account.email}` : ""
+                            : account.email ?? "—"}
                         </p>
                       </td>
                       <td className="px-3 py-3">
@@ -257,13 +268,17 @@ export function AdminView() {
                         )}
                       </td>
                       <td className="px-3 py-3">
-                        <p className={cn("text-sm", days > 0 ? "font-semibold" : "text-muted-foreground")}>
-                          {days > 0
-                            ? tx(`${days} j restants`, `${days} days left`)
-                            : account.trial_ends_at
-                              ? tx("Terminé", "Ended")
-                              : "—"}
-                        </p>
+                        {days > 0 ? (
+                          <StatusTag tone="info" size="xs">
+                            {tx(`${days} j restants`, `${days} days left`)}
+                          </StatusTag>
+                        ) : account.trial_ends_at ? (
+                          <StatusTag tone="neutral" size="xs">
+                            {tx("Terminé", "Ended")}
+                          </StatusTag>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">—</p>
+                        )}
                         <div className="mt-1.5 flex gap-1.5">
                           <button
                             type="button"

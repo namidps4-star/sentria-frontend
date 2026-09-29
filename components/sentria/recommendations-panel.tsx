@@ -1,5 +1,6 @@
 "use client"
 
+import { SeverityTag, StatusTag } from "./status-tag"
 import { useState } from "react"
 import {
   Shield,
@@ -422,16 +423,7 @@ export function RecommendationsPanel({
             </p>
 
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              <span
-                className={cn(
-                  "rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
-                  topCritical
-                    ? "bg-destructive/10 text-destructive"
-                    : "bg-amber-500/15 text-amber-600"
-                )}
-              >
-                {top.severity}
-              </span>
+              <SeverityTag severity={top.severity} tx={tx} size="xs" />
 
               <span className="text-[10px] text-muted-foreground">
                 {px(CATEGORY_LABEL[top.action_category] ?? CATEGORY_LABEL.other)}
@@ -636,16 +628,7 @@ export function RecommendationsPanel({
                   )}
 
                   <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                    <span
-                      className={cn(
-                        "rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider",
-                        isCritical
-                          ? "bg-destructive/10 text-destructive"
-                          : "bg-amber-500/15 text-amber-600"
-                      )}
-                    >
-                      {rec.severity}
-                    </span>
+                    <SeverityTag severity={rec.severity} tx={tx} size="xs" />
 
                     <span
                       className="inline-flex items-center gap-1 text-[9px] font-medium text-muted-foreground"

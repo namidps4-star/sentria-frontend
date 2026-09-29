@@ -1,5 +1,6 @@
 "use client"
 
+import { SeverityTag, StatusTag } from "./status-tag"
 import {
   Cog,
   Activity,
@@ -173,16 +174,7 @@ function AlertRow({
             {alert.equipment}
           </p>
 
-          <span
-            className={cn(
-              "inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold",
-              alert.severity === "CRITICAL"
-                ? "bg-destructive/10 text-destructive"
-                : "bg-amber-500/15 text-amber-600"
-            )}
-          >
-            {alert.severity}
-          </span>
+          <SeverityTag severity={alert.severity} tx={tx} size="xs" />
         </div>
 
         <p className="mt-1 truncate text-xs text-muted-foreground">

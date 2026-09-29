@@ -16,7 +16,7 @@ type State =
   | { kind: "signed-out" }
   | { kind: "recovery" }
   | { kind: "failed"; userId: string }
-  | { kind: "ready"; userId: string; email: string; name: string }
+  | { kind: "ready"; userId: string; email: string; name: string; username: string | null }
 
 /** Shows the app only to a signed-in user, with their own account loaded
  *  (S-3 step 1). Everyone else gets the sign-in screen. */
@@ -42,8 +42,10 @@ export function AuthGate() {
 
     setState({ kind: "loading" })
 
+    let username: string | null = null
+
     try {
-      await loadAccount(supabase, user)
+      ;({ username } = await loadAccount(supabase, user))
     } catch (error) {
       console.error("The account could not be loaded:", error)
       current.current = null
@@ -65,6 +67,7 @@ export function AuthGate() {
       email: user.email ?? "",
       // The name typed at sign-up, shown instead of the email.
       name: typeof fullName === "string" ? fullName.trim() : "",
+      username,
     })
   }, [])
 
@@ -137,6 +140,7 @@ export function AuthGate() {
         key={state.userId}
         email={state.email}
         name={state.name}
+        username={state.username}
         onSignOut={signOut}
       />
     )
