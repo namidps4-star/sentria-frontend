@@ -313,8 +313,8 @@ function KpiCard({ point }: { point: KpiPoint }) {
             </span>
           )}
           {point.warningCount > 0 && (
-            <span className="flex items-center gap-1.5 text-amber-600">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+            <span className="flex items-center gap-1.5 text-warning">
+              <span className="h-1.5 w-1.5 rounded-full bg-warning" />
               {point.warningCount} {tx("attention", "warning")}
             </span>
           )}
@@ -332,7 +332,7 @@ function OffendersCallout({ offenders }: { offenders: Offender[] }) {
   if (offenders.length === 0) return null
 
   return (
-    <div className="rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] p-5">
+    <div className="rounded-2xl border border-warning/30 bg-warning/[0.06] p-5">
       <SectionLabel>
         {tx("Ça revient souvent", "Keeps coming back")}
       </SectionLabel>
@@ -344,7 +344,7 @@ function OffendersCallout({ offenders }: { offenders: Offender[] }) {
             className="flex items-center justify-between gap-3 text-sm"
           >
             <span className="font-semibold">{offender.equipment}</span>
-            <span className="shrink-0 rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-bold text-amber-700">
+            <span className="shrink-0 rounded-full bg-warning/12 px-2.5 py-0.5 text-xs font-bold text-warning">
               {tx(
                 `${offender.count} alertes`,
                 `${offender.count} alerts`
@@ -607,7 +607,7 @@ function AlertsTable({ alerts }: { alerts: AlertRow[] }) {
                       className={cn(
                         "text-xs font-medium",
                         alert.status === "open"
-                          ? "text-amber-600"
+                          ? "text-warning"
                           : "text-emerald-600"
                       )}
                     >

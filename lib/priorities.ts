@@ -807,3 +807,74 @@ export function orderPriorities(
 
   return known.filter((id) => ids.includes(id))
 }
+
+/** What sets each card apart from the others in its list, in one line.
+ *  Shown under the card's description in onboarding, so two cards that
+ *  sound alike ("Temperature", "Cold chain") are told apart before
+ *  they're picked. Keyed "sector:id": the same id means different
+ *  things in different sectors. */
+const PRIORITY_EDGES: Record<string, Localized> = {
+  "industry:machines": localized("Repère la machine dont l'usure ou les vibrations dépassent la limite, avant la panne.", "Flags the machine whose wear or vibration is past its limit, before it breaks down."),
+  "industry:motors": localized("Suit la vitesse et le couple, pour repérer un moteur qui tourne anormalement.", "Follows speed and torque, to catch a motor running abnormally."),
+  "industry:temperature": localized("Prévient quand un équipement chauffe plus que d'habitude.", "Warns when equipment runs hotter than usual."),
+  "industry:pressure": localized("Prévient quand une pression sort de sa plage normale.", "Warns when a pressure leaves its normal range."),
+  "industry:production": localized("Compare la production à l'attendu et pointe les arrêts.", "Compares output with what's expected and points to stoppages."),
+  "industry:maintenance": localized("Tient l'entretien à jour et signale ce qui est en retard.", "Keeps servicing on schedule and flags what is overdue."),
+  "industry:hygiene-lead-time": localized("Prévient tant que la température frôle la limite, avant un arrêt d'hygiène.", "Warns while a temperature sits near the limit, before a hygiene stop."),
+  "industry:maintenance-production-link": localized("Relie l'entretien en retard à la production perdue.", "Links overdue maintenance to the output it costs."),
+  "industry:failure-signature": localized("Trouve les machines qui tombent en panne de la même façon, encore et encore.", "Finds the machines that keep failing the same way."),
+
+  "health:stocks": localized("Compte les jours de stock restants, d'après votre consommation.", "Counts the days of stock left, from what you use each day."),
+  "health:cold-chain": localized("Surveille frigos et chambres froides : produits sensibles au froid.", "Watches fridges and cold rooms: products that need the cold."),
+  "health:temperature": localized("Surveille les locaux de stockage, où la chaleur abîme les produits.", "Watches storage rooms, where heat spoils products."),
+  "health:expiry": localized("Liste ce qui périme bientôt, pour l'écouler ou le retourner d'abord.", "Lists what expires soon, to use or return it first."),
+  "health:medications": localized("Se concentre sur les médicaments dont vous ne pouvez pas manquer.", "Focuses on the medicines you can't run out of."),
+  "health:storage": localized("Surveille la place et les conditions de stockage.", "Watches storage space and conditions."),
+
+  "agriculture:storage": localized("Surveille silos et magasins : humidité, chaleur et pertes.", "Watches silos and stores: damp, heat and losses."),
+  "agriculture:temperature": localized("Suit la température qui protège les récoltes.", "Follows the temperature that keeps harvests safe."),
+  "agriculture:transport": localized("Signale les enlèvements et livraisons en retard.", "Flags late pick-ups and deliveries."),
+  "agriculture:stocks": localized("Suit ce qui est en stock, des semences aux récoltes.", "Tracks what's in stock, from seed to harvest."),
+  "agriculture:network-rebalancing": localized("Propose quel membre peut prendre les lots à risque.", "Suggests which member can take the lots at risk."),
+
+  "transportation:vehicles": localized("Une vue de chaque véhicule, pour voir lequel demande de l'attention.", "One view of every vehicle, to see which one needs attention."),
+  "transportation:engine": localized("Repère les relevés moteur qui annoncent une panne.", "Catches engine readings that point to a breakdown."),
+  "transportation:oil": localized("Signale les niveaux bas et les vidanges dues.", "Flags low levels and oil changes due."),
+  "transportation:fuel": localized("Repère les consommations anormales et les réservoirs bas.", "Spots abnormal fuel use and low tanks."),
+  "transportation:tires": localized("Signale les pneus usés ou sous-gonflés.", "Flags worn or under-inflated tyres."),
+  "transportation:maintenance": localized("Tient l'entretien à jour et signale ce qui est en retard.", "Keeps servicing on schedule and flags what is overdue."),
+
+  "logistics:blockages": localized("Ce qui est bloqué maintenant : un conteneur, un camion, un quai.", "What is stuck right now: a container, a truck, a dock."),
+  "logistics:wait": localized("Mesure combien de temps les choses restent immobiles, et où.", "Measures how long things stand still, and where."),
+  "logistics:cost": localized("Montre les postes qui coûtent le plus, pour couper là où ça compte.", "Shows what costs the most, so you cut where it counts."),
+  "logistics:anticipate": localized("Regarde devant : prévient avant le retard, pas après.", "Looks ahead: warns before a delay, not after."),
+  "logistics:recommend": localized("Trie tout en 5 actions à mener en premier.", "Sorts everything into 5 actions to take first."),
+  "logistics:resources": localized("Repère l'équipe, l'engin ou la place qui va manquer.", "Spots the team, equipment or space about to run short."),
+
+  "energy:generators": localized("Vérifie que chaque groupe est disponible et rend ce qu'il doit.", "Checks each generator is available and performing."),
+  "energy:fuel": localized("Dit quand ravitailler, avant qu'un site ne tombe à sec.", "Tells you when to refuel, before a site runs dry."),
+  "energy:temperature": localized("Prévient quand un équipement chauffe trop.", "Warns when equipment runs too hot."),
+  "energy:oil": localized("Signale les niveaux bas et les vidanges dues.", "Flags low levels and oil changes due."),
+  "energy:load": localized("Prévient quand la demande approche de ce que l'installation supporte.", "Warns when demand nears what the equipment can carry."),
+  "energy:sensors": localized("Repère les capteurs muets ou aux valeurs incohérentes.", "Spots sensors that go silent or send odd values."),
+  "energy:output-drift": localized("Ne compte que les pertes qui durent, pas un relevé isolé.", "Only counts losses that last, not one bad reading."),
+  "energy:rebalancing": localized("Propose de déplacer du carburant entre sites avant d'en racheter.", "Suggests moving fuel between sites before buying more."),
+
+  "commerce:stocks": localized("Compte les jours de stock restants, produit par produit.", "Counts the days of stock left, product by product."),
+  "commerce:shelf-availability": localized("Côté rayon : ce qui manque là où le client regarde.", "On the shelf: what's missing where customers look."),
+  "commerce:expiry": localized("Liste ce qui atteint sa date limite bientôt, à vendre ou retirer d'abord.", "Lists what reaches its use-by date soon, to sell or pull first."),
+  "commerce:cold-chain": localized("Surveille frigos et congélateurs du frais et du surgelé.", "Watches the fridges and freezers of chilled and frozen goods."),
+  "commerce:replenishment": localized("Dit quand commander, d'après le délai de votre fournisseur.", "Tells you when to order, from your supplier's lead time."),
+  "commerce:storage": localized("Surveille la place et les conditions en réserve.", "Watches back-room space and conditions."),
+}
+
+/** What sets this card apart from the others ("" when none is written). */
+export function priorityEdge(
+  sector: Sector | string | null | undefined,
+  id: string,
+  tx: Tx
+): string {
+  const text = sector ? PRIORITY_EDGES[`${sector}:${id}`] : undefined
+
+  return text ? tx(text.fr, text.en) : ""
+}

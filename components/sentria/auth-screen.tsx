@@ -17,7 +17,7 @@ import { useTx, type Tx } from "@/lib/i18n"
 import { missingSupabaseEnv, supabase } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
 
-import { SeverityTag } from "./status-tag"
+import { SectorShowcase } from "./sector-showcase"
 
 type Mode = "sign-in" | "sign-up" | "forgot" | "reset"
 
@@ -295,7 +295,7 @@ export function AuthScreen({
     <div className="flex min-h-dvh items-center justify-center bg-[radial-gradient(ellipse_at_top_left,var(--color-brand)_0%,transparent_55%),radial-gradient(ellipse_at_bottom_right,color-mix(in_oklch,var(--color-brand)_60%,transparent)_0%,transparent_60%)] bg-background px-4 py-8">
       <main className="grid w-full max-w-[1150px] overflow-hidden rounded-[32px] border-2 border-foreground bg-card shadow-2xl md:min-h-[640px] md:grid-cols-[1.05fr_1fr]">
         {/* Left: what SentrIA does */}
-        <section className="flex flex-col gap-8 p-7 md:gap-10 md:p-12">
+        <section className="flex flex-col gap-8 p-7 md:gap-7 md:p-12">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <img src="/logo-mark.png" alt="" className="h-11 w-11 object-contain" />
@@ -338,36 +338,20 @@ export function AuthScreen({
             </p>
           </div>
 
-          <ul className="hidden flex-col gap-6 md:flex">
+          <ul className="hidden gap-3 md:grid md:grid-cols-3">
             {features.map(({ icon: Icon, title, body }) => (
-              <li key={title} className="flex gap-4">
-                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand/25 text-foreground">
-                  <Icon className="h-5 w-5" aria-hidden="true" />
+              <li key={title} className="rounded-2xl bg-muted/60 p-3.5">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand/30 text-foreground">
+                  <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
                 </span>
-                <div>
-                  <p className="text-base font-bold">{title}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{body}</p>
-                </div>
+                <p className="mt-2.5 text-sm font-bold leading-snug">{title}</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{body}</p>
               </li>
             ))}
           </ul>
 
-          {/* What an alert looks like: an example, labelled as one. */}
-          <div className="mt-auto hidden rounded-2xl border border-border bg-background p-4 shadow-sm lg:block">
-            <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-              <span>{tx("Exemple d'alerte", "Example alert")}</span>
-              <SeverityTag severity="CRITICAL" tx={tx} size="xs" />
-            </div>
-            <p className="mt-2 text-sm font-semibold">
-              {tx("Paracétamol 500 mg : rupture dans 3 jours", "Paracetamol 500 mg: out of stock in 3 days")}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {tx(
-                "Commandez 120 boîtes aujourd'hui : votre fournisseur livre en 5 jours.",
-                "Order 120 boxes today: your supplier delivers in 5 days."
-              )}
-            </p>
-          </div>
+          {/* What SentrIA says, sector by sector: examples, labelled as such. */}
+          <SectorShowcase tx={tx} className="mt-auto hidden md:block" />
         </section>
 
         {/* Right: the form */}

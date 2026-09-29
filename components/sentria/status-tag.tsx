@@ -25,7 +25,8 @@ export type TagTone = "warning" | "info" | "success" | "danger" | "neutral" | "b
 
 const TONES: Record<TagTone, { tag: string; icon: LucideIcon }> = {
   warning: {
-    tag: "border-amber-400/70 bg-amber-100 text-amber-700 dark:border-amber-400/40 dark:bg-amber-400/15 dark:text-amber-300",
+    // The app's --warning token: a muted honey, not a bright yellow.
+    tag: "border-warning/35 bg-warning/10 text-warning",
     icon: CircleAlert,
   },
   info: {

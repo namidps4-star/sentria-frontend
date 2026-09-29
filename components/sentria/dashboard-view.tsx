@@ -2817,38 +2817,7 @@ export function DashboardView({
         )}
 
         {uploadActivitiesFor(uploadSector).length > 0 && (
-          <div className="mt-4 border-t border-border pt-4">
-            <p className="text-xs font-semibold">
-              {tx("Activité de ce fichier", "Activity for this file")}
-            </p>
-
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {tx(
-                "Elle décide des contrôles appliqués et de la chaîne affichée. Changez-la ici pour importer un fichier d'une autre activité.",
-                "It decides which checks run and which chain is shown. Change it here to import a file for a different activity."
-              )}
-            </p>
-
-            <div className="mt-2.5 flex flex-wrap gap-2">
-              {uploadActivitiesFor(uploadSector).map((activity) => (
-                <button
-                  key={activity.id}
-                  type="button"
-                  onClick={() => setUploadActivity(activity.id)}
-                  aria-pressed={uploadActivity === activity.id}
-                  title={px(activity.description)}
-                  className={cn(
-                    "rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors",
-                    uploadActivity === activity.id
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
-                  )}
-                >
-                  {px(activity.label)}
-                </button>
-              ))}
-            </div>
-
+          <div>
             {uploadActivity &&
               !isConfiguredActivity(uploadSector, uploadActivity) && (
                 <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-brand/40 bg-brand/10 px-3 py-2">
@@ -2899,6 +2868,58 @@ export function DashboardView({
             </>
           )}
         </p>
+
+        {uploadActivitiesFor(uploadSector).length > 0 && (
+          <div className="relative -mx-6 -mb-6 mt-5 overflow-hidden rounded-b-3xl">
+            {/* Which department the next file is for, as quiet tabs along
+                the card's bottom edge (like a spreadsheet's sheet tabs):
+                one per department the plan allows. */}
+            <div
+              className="flex items-stretch gap-0.5 overflow-x-auto border-t border-border bg-muted/40 px-4 [scrollbar-width:none]"
+              role="group"
+              aria-describedby="upload-activity-help"
+            >
+              <p
+                className="flex shrink-0 items-center pr-2 text-[11px] font-medium text-muted-foreground"
+                title={tx(
+                  "Elle décide des contrôles appliqués et de la chaîne affichée.",
+                  "It decides which checks run and which chain is shown."
+                )}
+              >
+                {tx("Activité de ce fichier", "Activity for this file")}
+              </p>
+              {uploadActivitiesFor(uploadSector).map((activity) => {
+                const on = uploadActivity === activity.id
+                return (
+                  <button
+                    key={activity.id}
+                    type="button"
+                    onClick={() => setUploadActivity(activity.id)}
+                    aria-pressed={on}
+                    title={px(activity.description)}
+                    className={cn(
+                      "relative -mt-px shrink-0 whitespace-nowrap rounded-b-lg px-3.5 py-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                      on
+                        ? "border-x border-b border-border bg-card font-semibold text-foreground shadow-sm"
+                        : "text-muted-foreground hover:bg-card/70 hover:text-foreground"
+                    )}
+                  >
+                    {on && (
+                      <span className="absolute inset-x-2.5 bottom-1 h-0.5 rounded-full bg-brand" aria-hidden="true" />
+                    )}
+                    {px(activity.label)}
+                  </button>
+                )
+              })}
+            </div>
+            <p id="upload-activity-help" className="sr-only">
+              {tx(
+                "Elle décide des contrôles appliqués et de la chaîne affichée. Changez-la ici pour importer un fichier d'une autre activité.",
+                "It decides which checks run and which chain is shown. Change it here to import a file for a different activity."
+              )}
+            </p>
+          </div>
+        )}
       </div>
 
       <div

@@ -106,7 +106,7 @@ function MetricCard({
         className={cn(
           "mt-2 font-heading text-2xl font-bold",
           tone === "critical" && "text-destructive",
-          tone === "warning" && "text-amber-600",
+          tone === "warning" && "text-warning",
           tone === "positive" && "text-accent-foreground"
         )}
       >
@@ -354,7 +354,7 @@ export function IndustryMotorsView({ alerts }: { alerts: Alert[] }) {
                   className={cn(
                     "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold",
                     isProgressive
-                      ? "bg-amber-500/15 text-amber-600"
+                      ? "bg-warning/12 text-warning"
                       : "bg-muted text-muted-foreground"
                   )}
                 >
@@ -463,7 +463,7 @@ export function IndustryTemperatureView({ alerts }: { alerts: Alert[] }) {
                     "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold",
                     hours === 0
                       ? "bg-destructive/10 text-destructive"
-                      : "bg-amber-500/15 text-amber-600"
+                      : "bg-warning/12 text-warning"
                   )}
                 >
                   <Clock3 className="h-3.5 w-3.5" />

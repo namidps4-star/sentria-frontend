@@ -452,7 +452,7 @@ export function RecommendationsPanel({
                     <div
                       className={cn(
                         "h-full rounded-full transition-all duration-500",
-                        topCritical ? "bg-destructive" : "bg-amber-500"
+                        topCritical ? "bg-destructive" : "bg-warning"
                       )}
                       style={{ width: `${topRiskPct}%` }}
                     />
@@ -600,7 +600,7 @@ export function RecommendationsPanel({
                         "flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold tabular-nums",
                         isCritical
                           ? "bg-destructive/10 text-destructive"
-                          : "bg-amber-500/15 text-amber-600"
+                          : "bg-warning/12 text-warning"
                       )}
                     >
                       {String(rank).padStart(2, "0")}

@@ -9,7 +9,6 @@ import {
   ChevronRight,
   Building2,
   Globe2,
-  Languages,
   Layers,
   Factory,
   HeartPulse,
@@ -24,6 +23,7 @@ import {
   Clock3,
   Sparkles,
   Store,
+  type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
@@ -41,7 +41,6 @@ import {
   COUNTRIES,
   CURRENCIES,
   writeCurrency,
-  LANGUAGES,
   countryFor,
   readLanguage,
   languagePromise,
@@ -61,7 +60,7 @@ import { uploadProblemMessage } from "@/lib/upload-problem"
 import { runUpload, type UploadState } from "@/lib/upload"
 import { UploadProgress } from "./upload-progress"
 import { StatusTag } from "./status-tag"
-import { prioritiesFor } from "@/lib/priorities"
+import { prioritiesFor, priorityEdge } from "@/lib/priorities"
 import {
   ACTIVITIES_BY_SECTOR,
   normalizeOpsType,
@@ -75,6 +74,8 @@ import {
   type OpsType,
 } from "@/lib/logistics-signals"
 import { STAGE_ICONS } from "./flow-track"
+
+type StepKey = "country" | "company" | "sector" | "subType" | "equipment" | "sources"
 
 type Sector =
   | "industry"
@@ -887,29 +888,32 @@ export function OnboardingView({
   const canMultiDepartment =
     atLeast(plan, "business") && Boolean(sector && DEPARTMENT_GROUPS[sector])
 
-  const langStepNumber = 1
+  // Nothing is asked twice. The language was picked on the sign-in
+  // screen (and stays switchable in this header); the company name was
+  // typed at sign-up, so its step only shows for accounts without one.
+  // Decided once, so the step doesn't vanish while it's being typed.
+  const [askCompany] = useState(
+    () => typeof window === "undefined" || !readCompanyName().trim()
+  )
   // Country, currency and time zone share one step: the zone is detected
   // before the user gets there, so it only needs to be visible and
   // editable, not a step of its own.
-  const countryStepNumber = 2
-  const companyStepNumber = 3
-  const sectorStepNumber = 4
-  const subTypeStepNumber = 5
-  const equipmentStepNumber = 6
-  const sourcesStepNumber = 7
+  const stepKeys: StepKey[] = askCompany
+    ? ["country", "company", "sector", "subType", "equipment", "sources"]
+    : ["country", "sector", "subType", "equipment", "sources"]
+  // 1-based; 0 for a step this account skips (step is never 0).
+  const numberOf = (key: StepKey) => stepKeys.indexOf(key) + 1
+  const countryStepNumber = numberOf("country")
+  const companyStepNumber = numberOf("company")
+  const sectorStepNumber = numberOf("sector")
+  const subTypeStepNumber = numberOf("subType")
+  const equipmentStepNumber = numberOf("equipment")
+  const sourcesStepNumber = numberOf("sources")
 
-  const totalSteps = 7
+  const totalSteps = stepKeys.length
 
-  const STEP_META = [
-    {
-      title: tx("Votre langue", "Your language"),
-      description: tx(
-        "SentrIA vous répond dans la langue que vous choisissez.",
-        "SentrIA answers you in the language you choose."
-      ),
-      icon: Languages,
-    },
-    {
+  const STEP_META: Record<StepKey, { title: string; description: string; icon: LucideIcon }> = {
+    country: {
       title: tx("Votre pays", "Your country"),
       description: tx(
         "Il fixe la devise de vos montants. Vérifiez aussi votre fuseau horaire.",
@@ -917,7 +921,7 @@ export function OnboardingView({
       ),
       icon: Globe2,
     },
-    {
+    company: {
       title: tx("Votre entreprise", "Your company"),
       description: tx(
         "Le nom qui apparaît dans vos rapports et dans Ask SentrIA.",
@@ -925,7 +929,7 @@ export function OnboardingView({
       ),
       icon: Building2,
     },
-    {
+    sector: {
       title: tx("Votre secteur", "Your sector"),
       description: tx(
         "Choisissez le secteur que SentrIA doit surveiller.",
@@ -933,7 +937,7 @@ export function OnboardingView({
       ),
       icon: Layers,
     },
-    {
+    subType: {
       title: tx("Votre activité", "Your activity"),
       description: tx(
         "Précisez votre activité pour adapter les seuils d'alerte.",
@@ -941,7 +945,7 @@ export function OnboardingView({
       ),
       icon: Store,
     },
-    {
+    equipment: {
       title: isLogistics
         ? tx("Vos priorités", "Your priorities")
         : tx("Que voulez-vous surveiller ?", "What do you want to monitor?"),
@@ -951,7 +955,7 @@ export function OnboardingView({
       ),
       icon: Sparkles,
     },
-    {
+    sources: {
       title: tx("Vos données", "Your data"),
       description: tx(
         "Connectez une source, ou configurez plus tard.",
@@ -959,9 +963,10 @@ export function OnboardingView({
       ),
       icon: Database,
     },
-  ]
+  }
 
-  const currentMeta = STEP_META[step - 1] ?? STEP_META[0]
+  const steps = stepKeys.map((key) => STEP_META[key])
+  const currentMeta = steps[step - 1] ?? steps[0]
   const CurrentStepIcon = currentMeta.icon
 
   const headingRef = useRef<HTMLHeadingElement>(null)
@@ -1280,16 +1285,42 @@ export function OnboardingView({
                 </span>
               </div>
 
-              <p className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
-                {tx(
-                  `Étape ${step} sur ${totalSteps}`,
-                  `Step ${step} of ${totalSteps}`
-                )}
-              </p>
+              <div className="flex shrink-0 items-center gap-3">
+                {/* Picked on the sign-in screen; switchable here, no step. */}
+                <div
+                  className="flex items-center rounded-full bg-muted p-0.5 text-[11px]"
+                  role="group"
+                  aria-label={tx("Langue", "Language")}
+                >
+                  {(["fr", "en"] as const).map((code) => (
+                    <button
+                      key={code}
+                      type="button"
+                      onClick={() => chooseLanguage(code)}
+                      aria-pressed={language === code}
+                      className={cn(
+                        "rounded-full px-2.5 py-1 font-semibold uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        language === code
+                          ? "bg-foreground text-background"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {code}
+                    </button>
+                  ))}
+                </div>
+
+                <p className="text-xs font-semibold tabular-nums text-muted-foreground">
+                  {tx(
+                    `Étape ${step} sur ${totalSteps}`,
+                    `Step ${step} of ${totalSteps}`
+                  )}
+                </p>
+              </div>
             </div>
 
             <ol className="flex items-center gap-1.5">
-              {STEP_META.map((meta, index) => {
+              {steps.map((meta, index) => {
                 const stepNumber = index + 1
                 const done = stepNumber < step
                 const active = stepNumber === step
@@ -1362,75 +1393,7 @@ export function OnboardingView({
               </div>
             </div>
 
-            {/* STEP 1: LANGUAGE */}
-            {step === langStepNumber && (
-              <div className="flex flex-col items-center justify-center py-8">
-                <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/90 shadow-2xl backdrop-blur-xl ring-1 ring-black/5">
-                  <div className="flex items-center justify-between border-b border-white/5 bg-black/20 px-6 py-4">
-                    <span className="text-sm font-medium text-zinc-400">
-                      {tx("Language", "Language")}
-                    </span>
-                    <Languages className="h-4 w-4 text-zinc-500" />
-                  </div>
-
-                  <div className="flex flex-col divide-y divide-white/5">
-                    {LANGUAGES.filter(l => l.code === 'fr' || l.code === 'en').map((item) => {
-                      const active = language === item.code
-                      return (
-                        <button
-                          key={item.code}
-                          type="button"
-                          onClick={() => chooseLanguage(item.code)}
-                          className={cn(
-                            "group relative flex items-center justify-between px-6 py-5 text-left transition-all duration-300",
-                            "hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500/50 focus-visible:ring-inset"
-                          )}
-                        >
-                          <div
-                            className={cn(
-                              "absolute left-0 top-0 bottom-0 w-1 transition-all duration-300",
-                              active ? "bg-lime-500 shadow-[0_0_12px_rgba(132,204,22,0.6)]" : "bg-transparent"
-                            )}
-                          />
-
-                          <div className="flex flex-col gap-1 pl-2">
-                            <span
-                              className={cn(
-                                "text-lg font-medium tracking-wide transition-colors duration-300",
-                                active ? "text-lime-400 drop-shadow-[0_0_8px_rgba(163,230,53,0.3)]" : "text-zinc-300 group-hover:text-white"
-                              )}
-                            >
-                              {item.label}
-                            </span>
-                            {!active && (
-                              <span className="text-[10px] text-zinc-600">
-                                {px(item.region)}
-                              </span>
-                            )}
-                          </div>
-
-                          {active && (
-                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-lime-500/20 text-lime-400">
-                              <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                            </div>
-                          )}
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <div className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 h-12 w-3/4 bg-lime-500/10 blur-2xl rounded-full" />
-                </div>
-
-                <p className="mt-6 text-center text-xs text-muted-foreground max-w-sm">
-                  {tx(
-                    "SentrIA s'adaptera à votre choix pour toutes les interactions futures.",
-                    "SentrIA will adapt to your choice for all future interactions."
-                  )}
-                </p>
-              </div>
-            )}
-
-            {/* STEP 2: COUNTRY */}
+            {/* COUNTRY */}
             {step === countryStepNumber && (
               <div className="flex flex-col items-center justify-center py-8">
                 <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/90 shadow-2xl backdrop-blur-xl ring-1 ring-black/5">
@@ -1572,7 +1535,7 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 3: COMPANY */}
+            {/* COMPANY (only when sign-up gave none) */}
             {step === companyStepNumber && (
               <div className="flex flex-col items-center justify-center py-8">
                 <div className="relative w-full max-w-xl group">
@@ -1628,7 +1591,7 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 4: SECTOR */}
+            {/* SECTOR */}
             {step === sectorStepNumber && (
               <>
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-12">
@@ -1801,7 +1764,7 @@ export function OnboardingView({
               </>
             )}
 
-            {/* STEP 5: BUSINESS TYPE (ACTIVITY) */}
+            {/* BUSINESS TYPE (ACTIVITY) */}
             {step === subTypeStepNumber && sector && (
               <div>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -1997,7 +1960,7 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 6: MONITORING PRIORITIES */}
+            {/* MONITORING PRIORITIES */}
             {step === equipmentStepNumber && sector && (
               <div>
                 <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
@@ -2029,15 +1992,15 @@ export function OnboardingView({
                   )}
                 />
 
-                <div
-                  className="mx-auto flex flex-wrap justify-center gap-4"
-                  style={{ maxWidth: cardRowWidth(equipment.length) }}
-                >
-                  {equipment.map((item, index) => {
+                {/* Compact rows, two per line: the name, what it watches,
+                    and what only this card does. */}
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  {equipment.map((item) => {
                     const Icon = item.icon
                     const active = selectedEquipment.includes(item.id)
                     const disabled = Boolean(item.comingSoon)
                     const img = imageForPriority(item.id)
+                    const edge = priorityEdge(sector, item.id, tx)
 
                     return (
                       <button
@@ -2045,73 +2008,68 @@ export function OnboardingView({
                         type="button"
                         onClick={() => !disabled && toggleEquipment(item.id)}
                         disabled={disabled}
+                        aria-pressed={disabled ? undefined : active}
                         className={cn(
-                          "group relative flex flex-col items-center rounded-2xl border px-3 pb-5 pt-6 text-center transition-all duration-300",
-                          // Two per row on phones, a fixed width from sm up so
-                          // every row lines up whatever the card count.
-                          "w-[calc(50%-0.5rem)] sm:w-[208px]",
+                          "group relative flex items-start gap-3.5 rounded-2xl border p-3.5 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                           disabled
-                            ? "cursor-not-allowed border-neutral-200 bg-white opacity-60"
+                            ? "cursor-not-allowed border-dashed border-border bg-card/60 opacity-60"
                             : active
-                              ? "border-lime-500 bg-lime-50 shadow-md ring-1 ring-lime-500/20"
-                              : "border-neutral-200 bg-white shadow-sm hover:-translate-y-1 hover:border-lime-500 hover:shadow-md"
+                              ? "border-transparent bg-[#141414] text-white shadow-md dark:ring-1 dark:ring-brand/60"
+                              : "border-border bg-card shadow-sm hover:-translate-y-0.5 hover:border-foreground/30 hover:shadow-md"
                         )}
                       >
-                        {disabled && (
-                          <span className="absolute right-2 top-2 whitespace-nowrap rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-amber-700">
-                            {tx("Bientôt", "Soon")}
-                          </span>
-                        )}
-
-                        <div className="flex w-full flex-col items-center">
-                          {img ? (
-                            <div className="mb-3 flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
-                              <img
-                                src={img}
-                                alt=""
-                                className={cn(
-                                  "h-full w-full object-contain transition-transform duration-300",
-                                  active ? "scale-110" : "group-hover:scale-105"
-                                )}
-                              />
-                            </div>
-                          ) : (
-                            <div
-                              className={cn(
-                                "flex h-24 w-24 items-center justify-center rounded-xl transition-all duration-300 mb-3",
-                                active
-                                  ? "bg-lime-100 text-lime-700 scale-105"
-                                  : "bg-neutral-100 text-neutral-500 group-hover:text-lime-600"
-                              )}
-                            >
-                              <Icon className="h-9 w-9 stroke-[1.5]" />
-                            </div>
-                          )}
-
-                          <span
-                            className={cn(
-                              "min-h-[2.5em] text-sm font-bold leading-tight tracking-tight transition-colors duration-300 line-clamp-2",
-                              active ? "text-lime-700" : "text-neutral-900 group-hover:text-neutral-950"
-                            )}
-                          >
-                            {px(item.label)}
-                          </span>
-                        </div>
-
                         <span
                           className={cn(
-                            "mt-1.5 min-h-[2.8em] w-full text-xs leading-snug transition-colors duration-300 line-clamp-3 sm:line-clamp-2",
-                            active
-                              ? "text-lime-800/80"
-                              : "text-neutral-500 group-hover:text-neutral-600"
+                            "flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl",
+                            active ? "bg-white" : "bg-muted"
                           )}
                         >
-                          {px(item.description)}
+                          {img ? (
+                            <img src={img} alt="" className="h-11 w-11 object-contain" />
+                          ) : (
+                            <Icon className="h-6 w-6 stroke-[1.75] text-neutral-700" aria-hidden="true" />
+                          )}
                         </span>
 
-                        {active && !disabled && (
-                          <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-lime-500 text-white ring-2 ring-white shadow-sm">
-                            <Check className="h-3 w-3" strokeWidth={3} />
+                        <span className="min-w-0 flex-1 pr-7">
+                          <span className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-bold leading-snug">{px(item.label)}</span>
+                            {disabled && (
+                              <StatusTag tone="neutral" size="xs">
+                                {tx("Bientôt", "Soon")}
+                              </StatusTag>
+                            )}
+                          </span>
+                          <span
+                            className={cn(
+                              "mt-0.5 block text-xs leading-snug",
+                              active ? "text-white/65" : "text-muted-foreground"
+                            )}
+                          >
+                            {px(item.description)}
+                          </span>
+                          {edge && (
+                            <span
+                              className={cn(
+                                "mt-2 flex items-start gap-1.5 text-xs font-medium leading-snug",
+                                active ? "text-brand" : "text-foreground/80"
+                              )}
+                            >
+                              <Sparkles className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
+                              <span>{edge}</span>
+                            </span>
+                          )}
+                        </span>
+
+                        {!disabled && (
+                          <span
+                            className={cn(
+                              "absolute right-3.5 top-3.5 flex h-6 w-6 items-center justify-center rounded-full border transition-colors",
+                              active ? "border-brand bg-brand text-[#141414]" : "border-border bg-background text-transparent"
+                            )}
+                            aria-hidden="true"
+                          >
+                            <Check className="h-3.5 w-3.5" strokeWidth={3} />
                           </span>
                         )}
                       </button>
@@ -2125,7 +2083,7 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 7: DATA SOURCES */}
+            {/* DATA SOURCES */}
             {step === sourcesStepNumber && (
               <div>
                 <BulkSelect

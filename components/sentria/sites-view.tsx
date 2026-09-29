@@ -105,8 +105,8 @@ const STATUS_META = {
   warning: {
     label: localized("Attention", "Attention"),
     icon: AlertTriangle,
-    className: "bg-amber-500/15 text-amber-600",
-    dot: "bg-amber-500",
+    className: "bg-warning/12 text-warning",
+    dot: "bg-warning",
   },
   offline: {
     label: localized("Hors ligne", "Offline"),
@@ -163,7 +163,7 @@ function HealthScore({ value }: { value: number }) {
               value >= 80
                 ? "text-green-500"
                 : value >= 50
-                  ? "text-amber-500"
+                  ? "text-warning"
                   : "text-destructive"
             }
           />
@@ -527,10 +527,10 @@ export function SitesView() {
                 )}
 
                 {activeSite.warnings > 0 && (
-                  <div className="flex items-center justify-between rounded-2xl bg-amber-500/5 p-4">
+                  <div className="flex items-center justify-between rounded-2xl bg-warning/5 p-4">
                     <div className="flex items-center gap-3">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10">
-                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-warning/10">
+                        <AlertTriangle className="h-4 w-4 text-warning" />
                       </span>
 
                       <div>

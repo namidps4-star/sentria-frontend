@@ -7,6 +7,8 @@ import { formatInCompanyZone, initialsOf, useCompanyIdentity } from "@/lib/compa
 import { useT, useTx } from "@/lib/i18n"
 import { sectorLabel } from "@/lib/priorities"
 
+import { WorkspaceContext } from "./workspace-context"
+
 /** One critical alert waiting in the bell: a task nobody has marked
  *  handled yet, keyed like the tracking board's cards. */
 export type Notification = {
@@ -93,7 +95,7 @@ export function Topbar({
   const { name: companyName } = useCompanyIdentity()
 
   return (
-    <header className="sticky top-0 z-20 flex items-center gap-4 border-b border-border bg-background/80 px-4 py-3.5 backdrop-blur-md lg:px-8">
+    <header className="sticky top-0 z-20 flex items-center gap-4 border-b border-border bg-canvas/80 px-4 py-3.5 backdrop-blur-md lg:px-8">
       <button
         onClick={onMenu}
         type="button"
@@ -104,7 +106,10 @@ export function Topbar({
       </button>
 
       <div className="min-w-0 flex-1">
-        <h1 className="truncate font-heading text-lg font-bold tracking-tight md:text-xl">{title}</h1>
+        <div className="flex min-w-0 items-center gap-3">
+          <h1 className="shrink-0 truncate font-heading text-lg font-bold tracking-tight md:text-xl">{title}</h1>
+          <WorkspaceContext />
+        </div>
         <p className="truncate text-sm text-muted-foreground">{subtitle}</p>
       </div>
 

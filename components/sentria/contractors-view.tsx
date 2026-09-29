@@ -50,7 +50,7 @@ const AVAILABILITY_ORDER: Availability[] = ["available", "busy", "off"]
 
 const AVAILABILITY_TONE: Record<Availability, string> = {
   available: "bg-accent/20 text-accent-foreground",
-  busy: "bg-amber-500/15 text-amber-600",
+  busy: "bg-warning/12 text-warning",
   off: "bg-muted text-muted-foreground",
 }
 
@@ -63,7 +63,7 @@ const AVAILABILITY_ICON = {
 
 const WORKLOAD_BAR_TONE: Record<Availability, string> = {
   available: "bg-accent",
-  busy: "bg-amber-500",
+  busy: "bg-warning",
   off: "bg-muted-foreground/40",
 }
 
@@ -347,7 +347,7 @@ export function ContractorsView({
       </div>
 
       {/* HEADER */}
-      <div className="rounded-3xl border border-border bg-card p-5 shadow-sm md:p-6">
+      <div className="rounded-3xl border border-border bg-card bg-[radial-gradient(ellipse_at_top_right,color-mix(in_oklch,var(--color-brand)_24%,transparent),transparent_60%)] p-5 shadow-sm md:p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">

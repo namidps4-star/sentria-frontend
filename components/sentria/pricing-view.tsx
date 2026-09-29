@@ -146,7 +146,7 @@ export function PricingView() {
   return (
     // Negative margins: the page fills the whole content box, padding
     // included, instead of leaving a strip of the box around it.
-    <div className="-m-4 min-h-[calc(100%+2rem)] bg-[#f1f1ef] px-4 py-10 text-foreground dark:bg-background lg:-m-8 lg:min-h-[calc(100%+4rem)] lg:px-10 lg:py-14">
+    <div className="-m-4 min-h-[calc(100%+2rem)] bg-canvas px-4 py-10 text-foreground lg:-m-8 lg:min-h-[calc(100%+4rem)] lg:px-10 lg:py-14">
       <div className="mx-auto flex max-w-7xl flex-col gap-10">
         {/* Header */}
         <header className="flex flex-col items-center text-center">

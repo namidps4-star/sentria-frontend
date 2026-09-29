@@ -183,7 +183,7 @@ const PRIORITY_LABEL: Record<Priority, Localized> = {
 const CATEGORY_TONE: Record<string, { pill: string; dot: string }> = {
   maintenance: { pill: "bg-blue-500/12 text-foreground", dot: "bg-blue-500" },
   fuel: { pill: "bg-orange-500/12 text-foreground", dot: "bg-orange-500" },
-  delay: { pill: "bg-amber-500/12 text-foreground", dot: "bg-amber-500" },
+  delay: { pill: "bg-warning/12 text-foreground", dot: "bg-warning" },
   stock: { pill: "bg-purple-500/12 text-foreground", dot: "bg-purple-500" },
   cold_chain: { pill: "bg-cyan-500/12 text-foreground", dot: "bg-cyan-500" },
   expiry: { pill: "bg-rose-500/12 text-foreground", dot: "bg-rose-500" },
@@ -197,7 +197,7 @@ const CATEGORY_TONE: Record<string, { pill: string; dot: string }> = {
 
 const PRIORITY_TONE: Record<Priority, { pill: string; dot: string; tag: TagTone }> = {
   critical: { pill: "bg-destructive/12 text-foreground", dot: "bg-destructive", tag: "danger" },
-  high: { pill: "bg-orange-500/12 text-foreground", dot: "bg-orange-500", tag: "warning" },
+  high: { pill: "bg-warning/12 text-foreground", dot: "bg-warning", tag: "warning" },
   medium: { pill: "bg-warning/15 text-foreground", dot: "bg-warning", tag: "info" },
   low: { pill: "bg-muted text-muted-foreground", dot: "bg-muted-foreground", tag: "neutral" },
 }
@@ -1468,7 +1468,7 @@ export function RecommendationsBoard({
       {/* ------------------------------------------------------------------
           Title band: what this is, and the three numbers that describe it.
           ------------------------------------------------------------------ */}
-      <div className="flex flex-col gap-5 p-5 md:flex-row md:items-end md:justify-between md:p-6">
+      <div className="flex flex-col gap-5 bg-[radial-gradient(ellipse_at_top_right,color-mix(in_oklch,var(--color-brand)_24%,transparent),transparent_60%)] p-5 md:flex-row md:items-end md:justify-between md:p-6">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
             {opsLabel ?? tx("Toutes priorités", "All priorities")}

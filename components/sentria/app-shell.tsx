@@ -270,7 +270,7 @@ export function AppShell({
           collapsed ? "lg:ml-[92px]" : "lg:ml-[274px]",
         ].join(" ")}
       >
-        <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[28px] border border-border bg-card shadow-lg">
+        <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[28px] border border-border bg-canvas shadow-lg">
           <div className="shrink-0">
             <Topbar
               title={t(META[view].title)}
