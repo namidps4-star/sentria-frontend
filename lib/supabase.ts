@@ -9,6 +9,14 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL
 const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
+/** The variables this build was made without. Next.js writes
+ *  NEXT_PUBLIC_* values in at build time: adding one on Vercel only
+ *  takes effect after a new deployment. */
+export const missingSupabaseEnv: string[] = [
+  ...(url ? [] : ["NEXT_PUBLIC_SUPABASE_URL"]),
+  ...(anonKey ? [] : ["NEXT_PUBLIC_SUPABASE_ANON_KEY"]),
+]
+
 export const supabase: SupabaseClient | null =
   url && anonKey
     ? createClient(url, anonKey, {

@@ -14,7 +14,7 @@ import type { AuthError } from "@supabase/supabase-js"
 
 import { useLocale, writeLanguage } from "@/lib/locale"
 import { useTx, type Tx } from "@/lib/i18n"
-import { supabase } from "@/lib/supabase"
+import { missingSupabaseEnv, supabase } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
 
 type Mode = "sign-in" | "sign-up" | "forgot" | "reset"
@@ -301,8 +301,8 @@ export function AuthScreen({
           {!supabase ? (
             <p role="alert" className="mt-6 rounded-xl bg-background/70 p-4 text-sm text-foreground">
               {tx(
-                "La connexion n'est pas configurée : NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY manquent.",
-                "Sign-in is not configured: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY are missing."
+                `La connexion n'est pas configurée : ce site a été construit sans ${missingSupabaseEnv.join(" ni ")}. Ajoutez-la sur Vercel pour cet environnement, puis redéployez.`,
+                `Sign-in is not configured: this site was built without ${missingSupabaseEnv.join(" or ")}. Add it on Vercel for this environment, then redeploy.`
               )}
             </p>
           ) : (
