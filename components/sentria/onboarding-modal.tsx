@@ -43,7 +43,7 @@ import {
   writeCurrency,
   LANGUAGES,
   countryFor,
-  detectLanguage,
+  readLanguage,
   languagePromise,
   writeCountryCode,
   writeLanguage,
@@ -803,8 +803,10 @@ export function OnboardingView({
     // The company typed at sign-up (S-3), so it isn't asked twice.
     setCompanyName((current) => current || readCompanyName())
     setTimezoneId(detectTimezoneId())
-    const detected = detectLanguage()
-    const safeLang = detected === "en" ? "en" : "fr"
+    // The language already stored (e.g. picked on the sign-in screen a
+    // moment ago) wins; the browser's is only the fallback.
+    const stored = readLanguage()
+    const safeLang = stored === "en" ? "en" : "fr"
     setLanguage(safeLang)
     writeLanguage(safeLang)
   }, [])
@@ -879,15 +881,17 @@ export function OnboardingView({
     atLeast(plan, "business") && Boolean(sector && DEPARTMENT_GROUPS[sector])
 
   const langStepNumber = 1
+  // Country, currency and time zone share one step: the zone is detected
+  // before the user gets there, so it only needs to be visible and
+  // editable, not a step of its own.
   const countryStepNumber = 2
-  const zoneStepNumber = 3
-  const companyStepNumber = 4
-  const sectorStepNumber = 5
-  const subTypeStepNumber = 6
-  const equipmentStepNumber = 7
-  const sourcesStepNumber = 8
+  const companyStepNumber = 3
+  const sectorStepNumber = 4
+  const subTypeStepNumber = 5
+  const equipmentStepNumber = 6
+  const sourcesStepNumber = 7
 
-  const totalSteps = 8
+  const totalSteps = 7
 
   const STEP_META = [
     {
@@ -901,18 +905,10 @@ export function OnboardingView({
     {
       title: tx("Votre pays", "Your country"),
       description: tx(
-        "Il détermine la devise de vos montants et votre fuseau.",
-        "It sets the currency your amounts are in, and your time zone."
+        "Il fixe la devise de vos montants. Vérifiez aussi votre fuseau horaire.",
+        "It sets the currency your amounts are in. Check your time zone too."
       ),
       icon: Globe2,
-    },
-    {
-      title: tx("Votre fuseau horaire", "Your time zone"),
-      description: tx(
-        "Vos seuils sont en heures : ils doivent suivre votre journée.",
-        "Your thresholds are in hours, so they have to follow your day."
-      ),
-      icon: Clock3,
     },
     {
       title: tx("Votre entreprise", "Your company"),
@@ -1560,91 +1556,57 @@ export function OnboardingView({
                   </select>
                 </label>
 
-                <p className="mt-4 text-center text-xs text-muted-foreground max-w-sm">
-                  {tx(
-                    "La devise étiquette vos montants et fixe le prix de votre offre. Aucune conversion n'est faite.",
-                    "The currency labels your figures and sets your plan's price. Nothing is converted."
-                  )}
-                </p>
-              </div>
-            )}
-
-            {/* STEP 3: TIMEZONE */}
-            {step === zoneStepNumber && (
-              <div className="flex flex-col items-center justify-center py-8">
-                <div className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/10 bg-zinc-900/90 shadow-2xl backdrop-blur-xl ring-1 ring-black/5">
-                  <div className="flex items-center justify-between border-b border-white/5 bg-black/20 px-6 py-4">
-                    <span className="text-sm font-medium text-zinc-400">
-                      {tx("Time Zone", "Time Zone")}
-                    </span>
-                    <Clock3 className="h-4 w-4 text-zinc-500" />
+                {/* Time zone: already detected (then set from the country
+                    picked above), shown here to confirm or correct. */}
+                <div
+                  role="group"
+                  aria-label={tx("Fuseau horaire", "Time zone")}
+                  className="mt-3 w-full max-w-md rounded-2xl border border-white/10 bg-zinc-900/90 px-5 py-4 text-sm text-zinc-300"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{tx("Fuseau horaire", "Time zone")}</span>
+                    <Clock3 className="h-4 w-4 text-zinc-500" aria-hidden="true" />
                   </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {TIMEZONES.map((zone) => {
+                      const active = timezoneId === zone.id
+                      const suggested = countryFor(countryCode)?.timezoneId === zone.id
 
-                  <div className="max-h-[60vh] overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
-                    <div className="flex flex-col divide-y divide-white/5">
-                      {TIMEZONES.map((zone) => {
-                        const active = timezoneId === zone.id
-                        const suggested =
-                          countryFor(countryCode)?.timezoneId === zone.id
-
-                        return (
-                          <button
-                            key={zone.id}
-                            type="button"
-                            onClick={() => setTimezoneId(zone.id)}
-                            aria-pressed={active}
-                            className={cn(
-                              "group relative flex items-center justify-between px-6 py-4 text-left transition-all duration-300",
-                              "hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500/50 focus-visible:ring-inset"
-                            )}
-                          >
-                            <div
-                              className={cn(
-                                "absolute left-0 top-0 bottom-0 w-1 transition-all duration-300",
-                                active ? "bg-lime-500 shadow-[0_0_12px_rgba(132,204,22,0.6)]" : "bg-transparent"
-                              )}
-                            />
-
-                            <div className="flex flex-col gap-0.5 pl-2">
-                              <span
-                                className={cn(
-                                  "text-base font-medium transition-colors duration-300",
-                                  active ? "text-lime-400 drop-shadow-[0_0_8px_rgba(163,230,53,0.3)]" : "text-zinc-200 group-hover:text-white"
-                                )}
-                              >
-                                {zone.label}
-                              </span>
-
-                              {suggested && (
-                                <span className="text-[10px] text-lime-500/80 font-medium">
-                                  {tx("Déduit de votre pays", "From your country")}
-                                </span>
-                              )}
-                            </div>
-
-                            {active && (
-                              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-lime-500/20 text-lime-400">
-                                <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                              </div>
-                            )}
-                          </button>
-                        )
-                      })}
-                    </div>
+                      return (
+                        <button
+                          key={zone.id}
+                          type="button"
+                          onClick={() => setTimezoneId(zone.id)}
+                          aria-pressed={active}
+                          className={cn(
+                            "flex flex-col items-start rounded-xl border px-3 py-2 text-left text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500/50",
+                            active
+                              ? "border-lime-500/70 bg-lime-500/10 text-lime-300"
+                              : "border-white/10 text-zinc-300 hover:bg-white/5 hover:text-white"
+                          )}
+                        >
+                          <span className="font-medium">{zone.label}</span>
+                          {suggested && (
+                            <span className="text-[10px] font-medium text-lime-500/80">
+                              {tx("Déduit de votre pays", "From your country")}
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })}
                   </div>
-                  <div className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 h-12 w-3/4 bg-lime-500/10 blur-2xl rounded-full" />
                 </div>
 
-                <p className="mt-6 text-center text-xs text-muted-foreground max-w-sm">
+                <p className="mt-4 text-center text-xs text-muted-foreground max-w-sm">
                   {tx(
-                    "Vos seuils sont en heures : ils doivent suivre votre journée locale.",
-                    "Your thresholds are in hours, so they have to follow your local day."
+                    "La devise étiquette vos montants et fixe le prix de votre offre, sans conversion. Vos seuils sont en heures : ils suivent votre fuseau.",
+                    "The currency labels your figures and sets your plan's price, with no conversion. Your thresholds are in hours, so they follow your time zone."
                   )}
                 </p>
               </div>
             )}
 
-            {/* STEP 4: COMPANY */}
+            {/* STEP 3: COMPANY */}
             {step === companyStepNumber && (
               <div className="flex flex-col items-center justify-center py-8">
                 <div className="relative w-full max-w-xl group">
@@ -1700,7 +1662,7 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 5: SECTOR */}
+            {/* STEP 4: SECTOR */}
             {step === sectorStepNumber && (
               <>
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-12">
@@ -1873,7 +1835,7 @@ export function OnboardingView({
               </>
             )}
 
-            {/* STEP 6: BUSINESS TYPE (ACTIVITY) */}
+            {/* STEP 5: BUSINESS TYPE (ACTIVITY) */}
             {step === subTypeStepNumber && sector && (
               <div>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -2069,7 +2031,7 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 7: MONITORING PRIORITIES */}
+            {/* STEP 6: MONITORING PRIORITIES */}
             {step === equipmentStepNumber && sector && (
               <div>
                 <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
@@ -2197,7 +2159,7 @@ export function OnboardingView({
               </div>
             )}
 
-            {/* STEP 8: DATA SOURCES */}
+            {/* STEP 7: DATA SOURCES */}
             {step === sourcesStepNumber && (
               <div>
                 <BulkSelect

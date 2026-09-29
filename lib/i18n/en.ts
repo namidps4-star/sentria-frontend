@@ -47,6 +47,7 @@ export const en: Record<keyof typeof fr, string> = {
   "nav.pricing": "Subscription",
   "nav.profile": "Profile",
   "nav.settings": "Settings",
+  "nav.admin": "Admin",
 
   /* ---------------------------------------------------------------- */
   /*  Top bar                                                          */
@@ -88,6 +89,8 @@ export const en: Record<keyof typeof fr, string> = {
 
   "view.settings.title": "Settings",
   "view.settings.subtitle": "Language, notifications and organisation",
+  "view.admin.title": "Admin",
+  "view.admin.subtitle": "Every account, its plan and its trial",
 
   "view.report.title": "Report",
   "view.report.subtitle": "A detailed read on your operations",

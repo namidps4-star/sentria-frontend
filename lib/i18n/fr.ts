@@ -66,6 +66,7 @@ export const fr = {
   "nav.pricing": "Abonnement",
   "nav.profile": "Profil",
   "nav.settings": "Paramètres",
+  "nav.admin": "Admin",
 
   /* ---------------------------------------------------------------- */
   /*  Top bar                                                          */
@@ -110,6 +111,8 @@ export const fr = {
 
   "view.settings.title": "Paramètres",
   "view.settings.subtitle": "Langue, notifications et organisation",
+  "view.admin.title": "Admin",
+  "view.admin.subtitle": "Tous les comptes, leur offre et leur essai",
 
   "view.report.title": "Rapport",
   "view.report.subtitle": "Analyse détaillée de vos opérations",

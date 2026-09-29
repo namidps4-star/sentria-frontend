@@ -23,6 +23,8 @@ import { OnboardingView } from "./onboarding-modal"
 import { ReportView } from "./report-view"
 import { ContractorsView } from "./contractors-view"
 import { TrackingView } from "./tracking-view"
+import { AdminView } from "./admin-view"
+import { readAccountPlan } from "@/lib/plans"
 
 /* Message keys, not labels. app-shell was holding a second copy of
    every view name next to the sidebar's. */
@@ -67,6 +69,10 @@ const META: Record<ViewKey, { title: MessageKey; subtitle: MessageKey }> = {
     title: "view.contractors.title",
     subtitle: "view.contractors.subtitle",
   },
+  admin: {
+    title: "view.admin.title",
+    subtitle: "view.admin.subtitle",
+  },
 }
 
 /** When the bell was last opened: alerts dated after it are unread. */
@@ -82,6 +88,10 @@ export function AppShell({
   const t = useT()
 
   const [view, setView] = useState<ViewKey>("dashboard")
+  // SentrIA staff (read at sign-in). Only shows the page: the API checks
+  // the flag itself on every admin call.
+  const [isAdmin, setIsAdmin] = useState(false)
+  useEffect(() => setIsAdmin(readAccountPlan().isAdmin), [])
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [showOnboarding, setShowOnboarding] = useState(false)
@@ -242,6 +252,7 @@ export function AppShell({
         onToggleCollapse={() => setCollapsed((current) => !current)}
         email={email}
         onSignOut={onSignOut}
+        isAdmin={isAdmin}
       />
 
       <div
@@ -279,6 +290,7 @@ export function AppShell({
             {view === "contractors" && (
               <ContractorsView onNavigate={setView} />
             )}
+            {view === "admin" && isAdmin && <AdminView />}
           </main>
         </div>
       </div>

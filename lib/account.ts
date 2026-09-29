@@ -1,6 +1,6 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js"
 
-import { PLAN_KEY, PLAN_UPDATED_EVENT, TRIAL_KEY, isPlanId } from "@/lib/plans"
+import { ADMIN_KEY, PLAN_KEY, PLAN_UPDATED_EVENT, TRIAL_KEY, isPlanId } from "@/lib/plans"
 
 /** The account (S-3 step 1).
  *
@@ -42,6 +42,7 @@ const LOCAL_ONLY_USER_KEYS = [
   // only an admin (or, later, payment) changes a plan.
   PLAN_KEY,
   TRIAL_KEY,
+  ADMIN_KEY,
 ]
 
 /** Whose values localStorage holds. */
@@ -96,23 +97,33 @@ function asProfile(value: unknown): Profile {
  *  row on first sign-in. Throws when the account can't be read, so the
  *  app never runs on someone else's leftover values. */
 export async function loadAccount(client: SupabaseClient, user: User) {
+  // The richest row the database has: before migrations/005 there is no
+  // is_admin (nobody is admin), before 004 no plan (the free plan).
   const readRow = async () => {
-    const full = await client
+    const missingColumn = (error: { message?: string } | null) =>
+      Boolean(error && /is_admin|plan|trial_ends_at/.test(error.message ?? ""))
+
+    const withAdmin = await client
+      .from("accounts")
+      .select("profile, plan, trial_ends_at, is_admin")
+      .eq("user_id", user.id)
+      .maybeSingle()
+
+    if (!missingColumn(withAdmin.error)) return withAdmin
+
+    const withPlan = await client
       .from("accounts")
       .select("profile, plan, trial_ends_at")
       .eq("user_id", user.id)
       .maybeSingle()
 
-    // Before migrations/004_plans.sql: no plan columns, the free plan.
-    if (full.error && /plan|trial_ends_at/.test(full.error.message ?? "")) {
-      return client
-        .from("accounts")
-        .select("profile")
-        .eq("user_id", user.id)
-        .maybeSingle()
-    }
+    if (!missingColumn(withPlan.error)) return withPlan
 
-    return full
+    return client
+      .from("accounts")
+      .select("profile")
+      .eq("user_id", user.id)
+      .maybeSingle()
   }
 
   let { data, error } = await readRow()
@@ -158,8 +169,13 @@ export async function loadAccount(client: SupabaseClient, user: User) {
     localStorage.setItem("sentria_company_name", signedUpAs.trim())
   }
 
-  const row = (data ?? {}) as { plan?: unknown; trial_ends_at?: unknown }
+  const row = (data ?? {}) as { plan?: unknown; trial_ends_at?: unknown; is_admin?: unknown }
   localStorage.setItem(PLAN_KEY, isPlanId(row.plan) ? row.plan : "decouverte")
+
+  // Shows the Admin page. The API checks the flag itself on every admin
+  // call, so editing this in the browser opens nothing.
+  if (row.is_admin === true) localStorage.setItem(ADMIN_KEY, "true")
+  else localStorage.removeItem(ADMIN_KEY)
 
   if (typeof row.trial_ends_at === "string") {
     localStorage.setItem(TRIAL_KEY, row.trial_ends_at)

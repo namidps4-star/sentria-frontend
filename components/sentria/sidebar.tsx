@@ -17,6 +17,7 @@ import {
   Bot,
   UsersRound,
   LogOut,
+  ShieldCheck,
 } from "lucide-react"
 
 interface SidebarProps {
@@ -29,6 +30,8 @@ interface SidebarProps {
   /** The signed-in user's email, shown above the sign-out button. */
   email?: string
   onSignOut?: () => void
+  /** SentrIA staff: adds the Admin page. */
+  isAdmin?: boolean
 }
 
 type SidebarItem = {
@@ -124,8 +127,23 @@ export function Sidebar({
   onToggleCollapse,
   email,
   onSignOut,
+  isAdmin = false,
 }: SidebarProps) {
   const t = useT()
+
+  const visibleSections: typeof sections = isAdmin
+    ? sections.map((section) =>
+        section.title === "sidebar.section.studio"
+          ? {
+              ...section,
+              items: [
+                ...section.items,
+                { id: "admin", label: "nav.admin", icon: ShieldCheck } satisfies SidebarItem,
+              ],
+            }
+          : section
+      )
+    : sections
 
   return (
     <>
@@ -203,11 +221,19 @@ export function Sidebar({
           </div>
 
           {/* NAVIGATION */}
-          <nav className="flex flex-1 flex-col overflow-visible px-3 py-3">
-            {sections.map((section, sectionIndex) => (
+          {/* Scrolls on short screens so the sign-out button below always
+              fits. Collapsed, it stays unclipped: its labels pop out to
+              the right. */}
+          <nav
+            className={[
+              "flex flex-1 flex-col px-3 py-3",
+              collapsed ? "overflow-visible" : "min-h-0 overflow-y-auto overscroll-contain",
+            ].join(" ")}
+          >
+            {visibleSections.map((section, sectionIndex) => (
               <div key={section.title}>
                 {sectionIndex > 0 && (
-                  <div className="my-4 h-px w-full bg-white/15" />
+                  <div className="my-4 h-px w-full bg-white/15 [@media(max-height:820px)]:my-2" />
                 )}
 
                 {!collapsed && (
@@ -231,7 +257,7 @@ export function Sidebar({
                         }}
                         aria-current={isActive ? "page" : undefined}
                         className={[
-                          "group relative flex h-11 w-full items-center rounded-xl transition-all duration-200",
+                          "group relative flex h-11 w-full items-center rounded-xl transition-all duration-200 [@media(max-height:820px)]:h-9",
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar",
                           collapsed
                             ? "justify-center px-0"
@@ -296,8 +322,10 @@ export function Sidebar({
             ))}
 
             {/* SENTRIA ACTIVE CARD */}
+            {/* Decorative: gives way on short screens so the sign-out
+                button (below) always fits. */}
             {!collapsed && (
-              <div className="mt-auto pt-6">
+              <div className="mt-auto pt-6 [@media(max-height:960px)]:hidden">
                 <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
                   <div className="flex items-center gap-2">
                     <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/10">

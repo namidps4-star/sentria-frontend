@@ -214,20 +214,35 @@ export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
 export const PLAN_KEY = "sentria_plan"
 export const TRIAL_KEY = "sentria_trial_ends_at"
 export const PLAN_UPDATED_EVENT = "sentria_plan_updated"
+/** SentrIA staff (accounts.is_admin): full access and the Admin page. */
+export const ADMIN_KEY = "sentria_is_admin"
 
-export type AccountPlan = { plan: PlanId; trialEndsAt: string | null; effective: PlanId }
+export type AccountPlan = {
+  plan: PlanId
+  trialEndsAt: string | null
+  effective: PlanId
+  isAdmin: boolean
+}
 
 export function readAccountPlan(): AccountPlan {
   let plan: PlanId = "decouverte"
   let trialEndsAt: string | null = null
+  let isAdmin = false
   try {
     const stored = localStorage.getItem(PLAN_KEY)
     if (isPlanId(stored)) plan = stored
     trialEndsAt = localStorage.getItem(TRIAL_KEY)
+    isAdmin = localStorage.getItem(ADMIN_KEY) === "true"
   } catch {
     /* no storage: the free plan */
   }
-  return { plan, trialEndsAt, effective: effectivePlan(plan, trialEndsAt) }
+  return {
+    plan,
+    trialEndsAt,
+    // Admins get everything, whatever their own plan says.
+    effective: isAdmin ? "entreprise" : effectivePlan(plan, trialEndsAt),
+    isAdmin,
+  }
 }
 
 /* ------------------------------------------------------------------ */

@@ -74,7 +74,7 @@ function Field({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="block text-xs font-bold">
+      <label htmlFor={id} className="block text-sm font-bold">
         {label}
       </label>
       {children}
@@ -83,7 +83,7 @@ function Field({
 }
 
 const INPUT =
-  "mt-1 block w-full border-0 border-b-2 border-brand-foreground/80 bg-transparent px-0 py-2 text-sm text-brand-foreground placeholder:text-brand-foreground/45 focus:border-brand-foreground focus:outline-none focus-visible:ring-0"
+  "mt-1.5 block w-full border-0 border-b-2 border-brand-foreground/80 bg-transparent px-0 py-2.5 text-base text-brand-foreground placeholder:text-brand-foreground/45 focus:border-brand-foreground focus:outline-none focus-visible:ring-0"
 
 /** Sign in, create an account, and reset a password (S-3 step 1).
  *
@@ -237,55 +237,86 @@ export function AuthScreen({
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-[radial-gradient(ellipse_at_top_left,var(--color-brand)_0%,transparent_55%),radial-gradient(ellipse_at_bottom_right,color-mix(in_oklch,var(--color-brand)_60%,transparent)_0%,transparent_60%)] bg-background px-4 py-8">
-      <main className="grid w-full max-w-4xl overflow-hidden rounded-[28px] border-2 border-foreground bg-card shadow-xl md:grid-cols-[1fr_1.15fr]">
+      <main className="grid w-full max-w-[1150px] overflow-hidden rounded-[32px] border-2 border-foreground bg-card shadow-2xl md:min-h-[640px] md:grid-cols-[1.05fr_1fr]">
         {/* Left: what SentrIA does */}
-        <section className="flex flex-col gap-8 p-7 md:p-9">
-          <div className="flex items-center gap-2.5">
-            <img src="/logo-mark.png" alt="" className="h-9 w-9 object-contain" />
-            <span className="font-heading text-lg font-bold">SentrIA</span>
+        <section className="flex flex-col gap-8 p-7 md:gap-10 md:p-12">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <img src="/logo-mark.png" alt="" className="h-11 w-11 object-contain" />
+              <span className="font-heading text-2xl font-bold">SentrIA</span>
+            </div>
+
+            <div
+              className="flex items-center gap-1 text-xs"
+              role="group"
+              aria-label={tx("Langue", "Language")}
+            >
+              {(["fr", "en"] as const).map((code) => (
+                <button
+                  key={code}
+                  type="button"
+                  onClick={() => writeLanguage(code)}
+                  aria-pressed={ui === code}
+                  className={cn(
+                    "rounded-full px-3 py-1.5 font-semibold uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    ui === code
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {code}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="hidden md:block">
+            <p className="font-heading text-3xl font-bold leading-tight lg:text-4xl">
+              {tx("Voyez les problèmes avant qu'ils ne coûtent.", "See problems before they cost you.")}
+            </p>
+            <p className="mt-3 max-w-md text-base text-muted-foreground">
+              {tx(
+                "SentrIA lit vos données d'exploitation et vous dit quoi faire, et quand.",
+                "SentrIA reads your operating data and tells you what to do, and when."
+              )}
+            </p>
           </div>
 
           <ul className="hidden flex-col gap-6 md:flex">
             {features.map(({ icon: Icon, title, body }) => (
-              <li key={title} className="flex gap-3">
-                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-border">
-                  <Icon className="h-4 w-4" aria-hidden="true" />
+              <li key={title} className="flex gap-4">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand/25 text-foreground">
+                  <Icon className="h-5 w-5" aria-hidden="true" />
                 </span>
                 <div>
-                  <p className="text-sm font-bold">{title}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{body}</p>
+                  <p className="text-base font-bold">{title}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{body}</p>
                 </div>
               </li>
             ))}
           </ul>
 
-          <div
-            className="mt-auto flex items-center gap-1 text-xs"
-            role="group"
-            aria-label={tx("Langue", "Language")}
-          >
-            {(["fr", "en"] as const).map((code) => (
-              <button
-                key={code}
-                type="button"
-                onClick={() => writeLanguage(code)}
-                aria-pressed={ui === code}
-                className={cn(
-                  "rounded-full px-3 py-1 font-semibold uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  ui === code
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {code}
-              </button>
-            ))}
+          {/* What an alert looks like: an example, labelled as one. */}
+          <div className="mt-auto hidden rounded-2xl border border-border bg-background p-4 shadow-sm lg:block">
+            <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <span>{tx("Exemple d'alerte", "Example alert")}</span>
+              <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-destructive">{tx("Critique", "Critical")}</span>
+            </div>
+            <p className="mt-2 text-sm font-semibold">
+              {tx("Paracétamol 500 mg : rupture dans 3 jours", "Paracetamol 500 mg: out of stock in 3 days")}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {tx(
+                "Commandez 120 boîtes aujourd'hui : votre fournisseur livre en 5 jours.",
+                "Order 120 boxes today: your supplier delivers in 5 days."
+              )}
+            </p>
           </div>
         </section>
 
         {/* Right: the form */}
-        <section className="m-2 rounded-[22px] bg-brand p-7 text-brand-foreground md:p-9">
-          <h1 className="font-heading text-3xl font-bold leading-tight md:text-4xl">
+        <section className="m-2 flex flex-col justify-center rounded-[26px] bg-brand p-7 text-brand-foreground md:p-12">
+          <h1 className="font-heading text-3xl font-bold leading-tight md:text-5xl">
             {heading}
           </h1>
 
@@ -306,7 +337,7 @@ export function AuthScreen({
               )}
             </p>
           ) : (
-            <form onSubmit={submit} className="mt-7 flex flex-col gap-5" noValidate>
+            <form onSubmit={submit} className="mt-8 flex w-full max-w-md flex-col gap-6" noValidate>
               {mode === "sign-up" && (
                 <>
                   <Field id="auth-name" label={tx("Nom", "Name")}>
@@ -406,7 +437,7 @@ export function AuthScreen({
               <button
                 type="submit"
                 disabled={busy}
-                className="mt-2 inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-foreground px-5 text-sm font-bold text-background transition-opacity hover:opacity-90 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-brand"
+                className="mt-2 inline-flex h-14 items-center justify-center gap-2 rounded-2xl bg-foreground px-6 text-base font-bold text-background transition-opacity hover:opacity-90 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-brand"
               >
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
                 {button}
