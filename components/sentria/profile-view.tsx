@@ -9,10 +9,8 @@ import {
   Building2,
   Clock3,
   Globe2,
-  Inbox,
   Layers,
   Pencil,
-  Sparkles,
   User,
 } from "@/lib/icons"
 import { useEffect, useMemo, useState } from "react"
@@ -247,327 +245,227 @@ export function ProfileView({
 
   const zoneLabel = timezoneId ? timezoneFor(timezoneId).label : "—"
 
-  return (
-    <div className="space-y-6">
-      {/* IDENTITY */}
-      <div className="overflow-hidden rounded-3xl border border-border bg-card">
-        <div className="relative h-28 bg-foreground">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_50%,rgba(174,255,0,0.25),transparent_35%)]" />
+  const [assetsStat, signalsStat, criticalStat, weekStat, resolvedStat] = stats
+  const resolvedShare =
+    typeof resolvedStat.value === "string" && resolvedStat.value.endsWith("%")
+      ? Number(resolvedStat.value.replace(/[^\d]/g, "")) / 100
+      : 0
 
-          <div className="absolute bottom-4 left-6 flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-accent" aria-hidden="true" />
-            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-background/50">
-              {tx("Espace SentrIA", "SentrIA workspace")}
-            </span>
+  /* The Ask SentrIA layout, as on Calendar: lime card (who), grey panel
+     (what happened lately, in a chat line, then the signals), black card
+     (the counters). */
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-[250px_minmax(0,1fr)] xl:grid-cols-[250px_minmax(0,1fr)_290px]">
+        {/* -------------------------------------------------------- LEFT */}
+        <div className="flex flex-col gap-4">
+          <div className="rounded-[28px] bg-brand p-5 text-[#141414]">
+            <div className="flex items-center justify-between gap-2">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--ink)] text-lg font-bold text-brand">
+                {companyName ? initialsOf(companyName) : <User className="h-6 w-6" aria-hidden="true" />}
+              </span>
+              <button
+                type="button"
+                onClick={() => onNavigate?.("settings")}
+                aria-label={tx("Modifier", "Edit")}
+                title={tx("Modifier", "Edit")}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#141414] shadow-sm transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#141414]"
+              >
+                <Pencil className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+
+            <h2 className="mt-5 break-words font-heading text-2xl font-semibold leading-tight tracking-tight">
+              {companyName || tx("Organisation non renseignée", "Organisation not set")}
+            </h2>
+            <p className="mt-1 text-xs font-semibold text-[#141414]/70">{activityLabel}</p>
+
+            <div className="mt-4">
+              <div
+                className="h-2 overflow-hidden rounded-full bg-white/70"
+                role="progressbar"
+                aria-label={tx("Tâches résolues", "Tasks resolved")}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(resolvedShare * 100)}
+              >
+                <div
+                  className="h-full rounded-full bg-[var(--ink)] transition-[width] duration-500"
+                  style={{ width: `${Math.round(resolvedShare * 100)}%` }}
+                />
+              </div>
+              <div className="mt-1.5 flex items-center justify-between text-[11px] font-semibold">
+                <span>{resolvedStat.label}</span>
+                <span className="tabular-nums">{loaded ? resolvedStat.value : "—"}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[28px] bg-card p-5 shadow-sm">
+            <h3 className="font-heading text-xl font-semibold tracking-tight">{tx("Mon espace", "My workspace")}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {tx("Ce qui a été renseigné à l'onboarding", "What was filled in during setup")}
+            </p>
+            <dl className="mt-4 flex flex-col gap-2 text-sm">
+              {[
+                { icon: Building2, label: tx("Organisation", "Organisation"), value: companyName || tx("Non renseignée", "Not set") },
+                { icon: Globe2, label: tx("Fuseau horaire", "Time zone"), value: zoneLabel },
+                {
+                  icon: Layers,
+                  label: tx("Activités suivies", "Activities monitored"),
+                  value: monitoredActivities.length > 0 ? monitoredActivities.join(", ") : tx("Aucune", "None"),
+                },
+              ].map((row) => (
+                <div key={row.label} className="rounded-2xl bg-muted px-4 py-2.5">
+                  <dt className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <row.icon className="h-3.5 w-3.5" aria-hidden="true" />
+                    {row.label}
+                  </dt>
+                  <dd className="mt-0.5 font-semibold">{row.value}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
         </div>
 
-        <div className="px-6 pb-6 pt-6">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-card bg-accent text-xl font-bold text-accent-foreground shadow-sm">
-            {companyName ? (
-              initialsOf(companyName)
-            ) : (
-              <User className="h-7 w-7" aria-hidden="true" />
-            )}
-          </div>
-
-          <div className="mt-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        {/* ------------------------------------------------------ CENTER */}
+        <section className="flex min-w-0 flex-col rounded-[28px] bg-foreground/[0.055] p-5 sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
-              <h2 className="truncate font-heading text-2xl font-bold tracking-tight">
-                {companyName ||
-                  tx("Organisation non renseignée", "Organisation not set")}
+              <h2 className="font-heading text-3xl font-semibold leading-[1.05] tracking-tight">
+                {tx("Signaux récents", "Recent signals")}
               </h2>
-
-              <p className="mt-1 text-sm text-muted-foreground">
-                {activityLabel}
+              <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="h-2 w-2 rounded-full bg-brand ring-2 ring-brand/30" aria-hidden="true" />
+                {tx("À l'heure de votre fuseau", "In your own time zone")}
               </p>
-
-              <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted-foreground">
-                <span className="flex items-center gap-2">
-                  <Globe2 className="h-4 w-4" aria-hidden="true" />
-                  {zoneLabel}
-                </span>
-
-                <span className="flex items-center gap-2">
-                  <Layers className="h-4 w-4" aria-hidden="true" />
-                  {sectorRows.length > 0
-                    ? sectorRows.map((s) => s.label).join(", ")
-                    : tx("Aucun secteur sélectionné", "No sector selected")}
-                </span>
-              </div>
             </div>
-
             <button
               type="button"
-              onClick={() => onNavigate?.("settings")}
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              onClick={() => onNavigate?.("dashboard")}
+              className="shrink-0 rounded-full bg-card px-4 py-2 text-sm font-medium transition-colors hover:bg-card/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <Pencil className="h-4 w-4" aria-hidden="true" />
-              {tx("Modifier", "Edit")}
+              {tx("Voir le tableau de bord", "See the dashboard")}
             </button>
+          </div>
+
+          <div className="mt-5 max-w-[85%] self-start rounded-[22px] bg-[var(--ink)] p-4 text-sm leading-relaxed text-white">
+            {!loaded
+              ? tx("Je charge votre activité…", "Loading your activity…")
+              : empty
+                ? tx(
+                    "Ces compteurs sont à zéro parce qu'aucun signal n'a encore été importé, pas parce que tout va bien. Importez un CSV depuis le tableau de bord pour les remplir.",
+                    "These counters are at zero because no signal has been imported yet, not because all is well. Import a CSV from the dashboard to fill them."
+                  )
+                : tx(
+                    `${assetsStat.value} équipement${Number(assetsStat.value) > 1 ? "s" : ""} suivi${Number(assetsStat.value) > 1 ? "s" : ""}, ${criticalStat.value} signal${Number(criticalStat.value) > 1 ? "aux" : ""} critique${Number(criticalStat.value) > 1 ? "s" : ""}, ${weekStat.value} sur les 7 derniers jours.`,
+                    `${assetsStat.value} asset${assetsStat.value === 1 ? "" : "s"} monitored, ${criticalStat.value} critical signal${criticalStat.value === 1 ? "" : "s"}, ${weekStat.value} over the last 7 days.`
+                  )}
+          </div>
+
+          {recent.length > 0 && (
+            <ul className="mt-4 flex flex-col gap-2">
+              {recent.map((alert, index) => {
+                const critical = alert.severity === "CRITICAL"
+                const when = formatInCompanyZone(alert.date, tx, timezoneId)
+
+                return (
+                  <li
+                    key={`${alert.equipment}-${alert.date}-${index}`}
+                    className="flex items-center gap-3 rounded-[22px] bg-card px-4 py-3 shadow-sm"
+                  >
+                    <span
+                      className={cn(
+                        "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+                        critical
+                          ? "bg-[var(--tag-danger-bg)] text-[var(--tag-danger-fg)]"
+                          : "bg-muted text-foreground"
+                      )}
+                    >
+                      {critical ? (
+                        <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                      ) : (
+                        <Bell className="h-4 w-4" aria-hidden="true" />
+                      )}
+                    </span>
+
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold">
+                        {alert.equipment || tx("Équipement non nommé", "Unnamed asset")}
+                      </span>
+                      <span className="mt-0.5 block truncate text-xs text-muted-foreground">{alert.message}</span>
+                    </span>
+
+                    {when && (
+                      <span className="hidden shrink-0 items-center gap-1.5 text-[11px] text-muted-foreground sm:flex">
+                        <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
+                        {when}
+                      </span>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+
+          {/* The sectors, each with the number of signals it received. A
+              sector with nothing against it shows a zero, which is true. */}
+          <p className="mt-5 px-1 text-xs text-muted-foreground">{tx("Secteurs actifs :", "Active sectors:")}</p>
+          {sectorRows.length === 0 ? (
+            <p className="mt-2 self-start rounded-full bg-card px-4 py-2 text-sm">
+              {tx("Aucun secteur n'a été sélectionné à l'onboarding.", "No sector was selected during setup.")}
+            </p>
+          ) : (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {sectorRows.map((sector) => (
+                <span
+                  key={sector.id}
+                  className="inline-flex items-center gap-2 rounded-full bg-card py-1.5 pl-4 pr-1.5 text-sm font-medium"
+                >
+                  {sector.label}
+                  <span className="flex h-7 min-w-7 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-bold tabular-nums">
+                    {loaded ? sector.count : "—"}
+                  </span>
+                </span>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ------------------------------------------------------- RIGHT */}
+        <div className="rounded-[28px] bg-[var(--ink)] p-5 text-white lg:col-start-2 xl:col-start-auto xl:self-start">
+          <div className="flex items-center justify-between">
+            <p className="font-heading text-xl font-semibold tracking-tight">{tx("Votre activité", "Your activity")}</p>
+            <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold">{tx("En direct", "Live")}</span>
+          </div>
+          <dl className="mt-4 space-y-2.5 text-xs">
+            {[assetsStat, signalsStat, criticalStat, weekStat].map((stat) => (
+              <div key={stat.label} className="flex items-center justify-between gap-3">
+                <dt className="flex items-center gap-2 text-white/55">
+                  <stat.icon className="h-3.5 w-3.5" aria-hidden="true" />
+                  {stat.label}
+                </dt>
+                <dd
+                  className={cn(
+                    "font-semibold tabular-nums",
+                    stat === criticalStat && loaded && Number(stat.value) > 0 && "text-[#ff9a9a]"
+                  )}
+                >
+                  {loaded ? stat.value : "—"}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          <div className="mt-4 flex items-end justify-between border-t border-white/10 pt-4">
+            <span className="text-xs text-white/55">{resolvedStat.label}</span>
+            <span className="font-heading text-4xl font-bold leading-none text-brand tabular-nums">
+              {loaded ? resolvedStat.value : "—"}
+            </span>
           </div>
         </div>
       </div>
 
       <UsernameCard username={username} />
-
-      {/* COUNTERS */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {stats.map((stat, index) => {
-          const Icon = stat.icon
-
-          return (
-            <div
-              key={stat.label}
-              className={cn(
-                "rounded-3xl border border-border bg-card p-5 transition-all hover:-translate-y-0.5 hover:shadow-sm",
-                // Five cards: the last one fills the row at two columns.
-                index === stats.length - 1 && "sm:col-span-2 lg:col-span-1"
-              )}
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-                <Icon className="h-4 w-4" aria-hidden="true" />
-              </div>
-
-              <p className="mt-5 font-heading text-3xl font-bold tracking-tight">
-                {loaded ? stat.value : "—"}
-              </p>
-
-              <p className="mt-1 text-sm text-muted-foreground">{stat.label}</p>
-            </div>
-          )
-        })}
-      </div>
-
-      {empty && (
-        <p className="rounded-2xl border border-dashed border-border bg-card px-5 py-4 text-sm leading-6 text-muted-foreground">
-          Ces compteurs sont à zéro parce qu&apos;aucun signal n&apos;a
-          encore été importé, pas parce que tout va bien. Importez un CSV
-          depuis le tableau de bord pour les remplir.
-        </p>
-      )}
-
-      {/* ACCOUNT + SECTORS */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="rounded-3xl border border-border bg-card p-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-muted">
-              <Building2 className="h-4 w-4" aria-hidden="true" />
-            </div>
-
-            <div>
-              <h3 className="font-heading text-lg font-bold">
-                {tx("Mon espace", "My workspace")}
-              </h3>
-
-              <p className="text-sm text-muted-foreground">
-                {tx(
-                  "Ce qui a été renseigné à l'onboarding",
-                  "What was filled in during setup"
-                )}
-              </p>
-            </div>
-          </div>
-
-          <dl className="mt-6 space-y-5">
-            <div>
-              <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {tx("Organisation", "Organisation")}
-              </dt>
-
-              <dd className="mt-1 text-sm font-semibold">
-                {companyName || tx("Non renseignée", "Not set")}
-              </dd>
-            </div>
-
-            <div>
-              <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {tx("Fuseau horaire", "Time zone")}
-              </dt>
-
-              <dd className="mt-1 text-sm font-semibold">{zoneLabel}</dd>
-            </div>
-
-            <div>
-              <dt className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {tx("Activités suivies", "Activities monitored")}
-              </dt>
-
-              <dd className="mt-1 text-sm font-semibold">
-                {monitoredActivities.length > 0
-                  ? monitoredActivities.join(", ")
-                  : tx("Aucune", "None")}
-              </dd>
-            </div>
-          </dl>
-        </div>
-
-        <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-heading text-lg font-bold">
-                {tx("Secteurs actifs", "Active sectors")}
-              </h3>
-
-              <p className="mt-1 text-sm text-muted-foreground">
-                {tx(
-                  "Vos secteurs, et les signaux reçus pour chacun.",
-                  "Your sectors, and the signals received for each."
-                )}
-              </p>
-            </div>
-
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent">
-              <Layers className="h-4 w-4 text-accent-foreground" aria-hidden="true" />
-            </div>
-          </div>
-
-          {sectorRows.length === 0 ? (
-            <p className="mt-6 rounded-2xl border border-dashed border-border px-4 py-5 text-sm text-muted-foreground">
-              {tx(
-                "Aucun secteur n'a été sélectionné à l'onboarding.",
-                "No sector was selected during setup."
-              )}
-            </p>
-          ) : (
-            <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {sectorRows.map((sector) => (
-                <div
-                  key={sector.id}
-                  className="flex items-center justify-between rounded-2xl border border-border bg-background px-4 py-3 transition-colors hover:bg-muted"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span
-                      className="h-2 w-2 shrink-0 rounded-full bg-accent"
-                      aria-hidden="true"
-                    />
-
-                    <span className="truncate text-sm font-semibold">
-                      {sector.label}
-                    </span>
-                  </div>
-
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {loaded ? sector.count : "—"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* RECENT SIGNALS */}
-      <div className="rounded-3xl border border-border bg-card p-6">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h3 className="font-heading text-lg font-bold">
-              {tx("Signaux récents", "Recent signals")}
-            </h3>
-
-            <p className="text-sm text-muted-foreground">
-              {tx(
-                "Les dernières alertes reçues, à l'heure de votre fuseau.",
-                "The latest alerts received, in your own time zone."
-              )}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => onNavigate?.("dashboard")}
-            className="rounded text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            {tx("Voir le tableau de bord →", "See the dashboard →")}
-          </button>
-        </div>
-
-        {recent.length === 0 ? (
-          <div className="mt-5 rounded-2xl border border-dashed border-border px-4 py-8 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
-              <Inbox className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
-            </div>
-
-            <p className="mx-auto mt-4 max-w-md text-sm leading-6 text-muted-foreground">
-              {loaded
-                ? tx(
-                    "Aucun signal reçu pour l'instant. Cette liste se remplira dès le premier import.",
-                    "No signal received yet. This list fills up from the first import."
-                  )
-                : tx("Chargement des signaux…", "Loading signals…")}
-            </p>
-          </div>
-        ) : (
-          <ul className="mt-5 divide-y divide-border">
-            {recent.map((alert, index) => {
-              const critical = alert.severity === "CRITICAL"
-              const when = formatInCompanyZone(alert.date, tx, timezoneId)
-
-              return (
-                <li
-                  key={`${alert.equipment}-${alert.date}-${index}`}
-                  className="flex items-center gap-4 py-4 first:pt-0 last:pb-0"
-                >
-                  <div
-                    className={cn(
-                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-                      critical
-                        ? "bg-destructive/10 text-destructive"
-                        : "bg-muted text-foreground"
-                    )}
-                  >
-                    {critical ? (
-                      <AlertTriangle className="h-4 w-4" aria-hidden="true" />
-                    ) : (
-                      <Bell className="h-4 w-4" aria-hidden="true" />
-                    )}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">
-                      {alert.equipment ||
-                        tx("Équipement non nommé", "Unnamed asset")}
-                    </p>
-
-                    <p className="mt-0.5 truncate text-sm text-muted-foreground">
-                      {alert.message}
-                    </p>
-                  </div>
-
-                  {when && (
-                    <div className="hidden shrink-0 items-center gap-1.5 text-xs text-muted-foreground sm:flex">
-                      <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
-                      {when}
-                    </div>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </div>
-
-      {/* PRODUCT */}
-      <div className="rounded-3xl bg-foreground p-6 text-background">
-        <div className="flex items-start gap-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent">
-            <Sparkles className="h-4 w-4 text-accent-foreground" aria-hidden="true" />
-          </div>
-
-          <div>
-            <h3 className="font-heading font-bold">
-              {tx("Intelligence SentrIA", "SentrIA intelligence")}
-            </h3>
-
-            <p className="mt-1 text-sm text-background/60">
-              {tx(
-                "Analyse prédictive et recommandations pour anticiper les risques opérationnels.",
-                "Predictive analysis and recommendations, so operational risk is seen coming."
-              )}
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }

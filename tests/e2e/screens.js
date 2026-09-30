@@ -26,15 +26,15 @@ const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y
     const warn = p.locator('span.rounded-full', { hasText: /^Warning$/ }).first();
     await p.locator('#alerts-table').scrollIntoViewIfNeeded().catch(() => {});
     const c = await style(crit);
-    pass(c.bg === 'rgb(220, 38, 38)' && c.fg === 'rgb(255, 255, 255)', `${label}: Critical is solid red with white text (${c.bg} / ${c.fg})`);
-    if (await warn.count()) { const w = await style(warn); pass(w.bg === 'rgb(245, 158, 11)' && contrast(w.bg, w.fg) >= 4.5, `${label}: Warning is solid amber, readable (${w.bg}, ${contrast(w.bg, w.fg).toFixed(1)}:1)`); }
+    pass(c.bg === 'rgb(201, 64, 64)' && c.fg === 'rgb(255, 255, 255)', `${label}: Critical is solid red with white text (${c.bg} / ${c.fg})`);
+    if (await warn.count()) { const w = await style(warn); pass(w.bg === 'rgb(227, 165, 74)' && contrast(w.bg, w.fg) >= 4.5, `${label}: Warning is solid amber, readable (${w.bg}, ${contrast(w.bg, w.fg).toFixed(1)}:1)`); }
     pass(contrast(c.bg, c.fg) >= 4.5, `${label}: Critical text contrast ${contrast(c.bg, c.fg).toFixed(2)}:1`);
     const tags = await p.$$eval('span.rounded-full.border.font-semibold', els => els.filter(e => e.offsetParent).map(e => { const s = getComputedStyle(e); return { t: e.innerText.trim(), bg: s.backgroundColor, fg: s.color }; }));
     // Solid fills only: the see-through chips on the black banner are not status tags.
     const solid = t => /^rgb\(/.test(t.bg);
     const bad = tags.filter(t => solid(t) && contrast(t.bg, t.fg) < 4.5);
     pass(tags.length > 0 && bad.length === 0, `${label}: all ${tags.length} tags on the dashboard ≥ 4.5:1` + (bad.length ? ' — ' + JSON.stringify(bad.slice(0, 3)) : ''));
-    if (theme !== 'light') { const calm = tags.filter(t => solid(t) && !['rgb(220, 38, 38)', 'rgb(245, 158, 11)'].includes(t.bg)); pass(calm.length > 0 && calm.every(t => lum(t.bg) < 0.12), `${label}: calm tags are dark tints, not bright pastels (${calm.map(t => t.t + ' ' + t.bg).slice(0, 4).join(', ')})`); }
+    if (theme !== 'light') { const calm = tags.filter(t => solid(t) && !['rgb(201, 64, 64)', 'rgb(227, 165, 74)'].includes(t.bg)); pass(calm.length > 0 && calm.every(t => lum(t.bg) < 0.12), `${label}: calm tags are dark tints, not bright pastels (${calm.map(t => t.t + ' ' + t.bg).slice(0, 4).join(', ')})`); }
     pass(p._errs.length === 0, `${label}: no page errors ` + p._errs.join('|'));
     await p._ctx.close();
   }
@@ -74,7 +74,7 @@ const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y
     const chips = p.locator('#calendar-grid [role=button]');
     pass(await chips.count() > 0, `events on the week grid (${await chips.count()})`);
     const colours = await chips.evaluateAll(els => els.map(e => getComputedStyle(e).backgroundColor));
-    pass(colours.includes('rgb(220, 38, 38)'), 'a critical incident is red on the grid, like its tag (was amber)');
+    pass(colours.includes('rgb(201, 64, 64)'), 'a critical incident is red on the grid, like its tag (was amber)');
     await p.getByRole('button', { name: 'Month', exact: true }).click(); await p.waitForTimeout(600);
     t = await p.evaluate(() => document.querySelector('main').innerText);
     pass(/Upcoming/.test(t) && /This month/.test(t) && !/À venir|Ce mois|Rien\b|événements/.test(t), 'month panel in English (French and English were swapped)');
@@ -99,12 +99,52 @@ const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y
     pass(p._errs.length === 0, 'no page errors ' + p._errs.join('|'));
     await p._ctx.close(); }
 
+  console.log('== login: floating glossy cards, pill fields');
+  { const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, locale: 'en-US' }); const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
+    const { mockSupabase } = require('./auth-mock'); await mockSupabase(p, { users: {}, accounts: {} });
+    await p.addInitScript(() => localStorage.setItem('sentria_language', 'en'));
+    await p.goto(APP_URL); await p.waitForTimeout(1200);
+    const main = await p.locator('main').evaluate(e => getComputedStyle(e).borderTopWidth);
+    pass(main === '0px', 'no black outline around the page (was a 2px frame)');
+    const f = await p.locator('#auth-email').evaluate(e => { const s = getComputedStyle(e); return { r: parseFloat(s.borderTopLeftRadius), under: s.borderBottomWidth, bg: s.backgroundColor }; });
+    pass(f.r >= 12 && f.bg !== 'rgba(0, 0, 0, 0)', `fields are filled pills, not underlines (radius ${f.r}px)`);
+    pass(await p.locator('.gloss').count() >= 4, 'glossy cards: ' + await p.locator('.gloss').count());
+    pass(/Hello\. Sign in with your email or your @username\./.test(await p.evaluate(() => document.body.innerText)), 'the form opens with a chat line');
+    const sc = await p.locator('section[aria-roledescription=carousel]').boundingBox(), panel = await p.locator('#showcase-panel').boundingBox();
+    pass(panel.y + panel.height > sc.y + sc.height * 0.6, 'the example alert sits low in its card, no empty bottom');
+    pass(errs.length === 0, 'no page errors ' + errs.join('|'));
+    await ctx.close(); }
+
+  console.log('== Tracking, Field team, Profile: the Calendar layout');
+  { const p = await open();
+    await go(p, 'Tracking'); let t = await p.evaluate(() => document.querySelector('main').innerText);
+    pass(/What matters now/.test(t) && /The board/.test(t) && /\d+ priorit(y|ies), \d+ critical/.test(t), 'Tracking: grey panel with the summary line, black "The board" card');
+    pass(await p.locator('main').getByRole('progressbar').count() >= 1, 'Tracking: lime card progress bar');
+    await go(p, 'Field team'); t = await p.evaluate(() => document.querySelector('main').innerText);
+    pass(/Contractors/.test(t) && /The team/.test(t) && /Nobody is on file yet/.test(t), 'Field team: same layout, says nobody is on file');
+    await p.getByRole('button', { name: 'Add a contractor' }).first().click(); await p.waitForTimeout(300);
+    t = await p.evaluate(() => document.querySelector('main').innerText);
+    pass(/Only your company's accounts can see these contact details/.test(t) && !/no authentication/.test(t), 'Field team: the old "API has no authentication" warning is gone');
+    await go(p, 'Profile'); t = await p.evaluate(() => document.querySelector('main').innerText);
+    pass(/Recent signals/.test(t) && /Your activity/.test(t) && /My workspace/.test(t) && /Username/.test(t), 'Profile: same layout, username card kept');
+    pass(p._errs.length === 0, 'no page errors ' + p._errs.join('|'));
+    await p._ctx.close(); }
+  { // No alerts yet: the note used to be French-only.
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, locale: 'en-US' }); const p = await ctx.newPage();
+    await p.route(/onrender\.com\//, r => r.fulfill({ status: 200, contentType: 'application/json', body: /\/alerts/.test(r.request().url()) ? '[]' : '{"recommendations":[],"assignments":[],"contractors":[]}' }));
+    await p.addInitScript(ls => { if (!sessionStorage.x) { sessionStorage.x = 1; localStorage.clear(); Object.entries(ls).forEach(([k, v]) => localStorage.setItem(k, v)); } }, LS);
+    await signedIn(p, 'u', 'a@b.c', { plan: 'business' }); await p.goto(APP_URL); await p.waitForTimeout(1500);
+    p._ctx = ctx; await go(p, 'Profile');
+    const t = await p.evaluate(() => document.querySelector('main').innerText);
+    pass(/These counters are at zero because no signal has been imported yet/.test(t) && !/Ces compteurs/.test(t), 'Profile, no data: the note is in English (was French only)');
+    await ctx.close(); }
+
   console.log('== phone, both themes: no sideways scroll');
   for (const theme of ['light', 'dark']) {
     const p = await open({ theme, vw: 390 });
     const wide = [];
-    for (const v of ['Calendar', 'Sites', 'Report', 'Settings']) { await go(p, v); if (!(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.querySelector('main').scrollWidth <= document.querySelector('main').clientWidth + 1))) wide.push(v); await p.screenshot({ path: `screens-${v}-${theme}-390.png` }); }
-    pass(wide.length === 0, `${theme}: Calendar, Sites, Report, Settings fit 390 px` + (wide.length ? ' — too wide: ' + wide.join(', ') : ''));
+    for (const v of ['Calendar', 'Sites', 'Report', 'Settings', 'Tracking', 'Field team', 'Profile']) { await go(p, v); if (!(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.querySelector('main').scrollWidth <= document.querySelector('main').clientWidth + 1))) wide.push(v); await p.screenshot({ path: `screens-${v}-${theme}-390.png` }); }
+    pass(wide.length === 0, `${theme}: Calendar, Sites, Report, Settings, Tracking, Field team, Profile fit 390 px` + (wide.length ? ' — too wide: ' + wide.join(', ') : ''));
     pass(p._errs.length === 0, `${theme}: no page errors ` + p._errs.join('|'));
     await p._ctx.close();
   }

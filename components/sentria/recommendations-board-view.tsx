@@ -1,12 +1,11 @@
 "use client"
 
-import { StatBento } from "./stat-bento"
+import { AskHeader } from "./ask-header"
 import { StatusTag, type TagTone } from "./status-tag"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   ListChecks,
   TriangleAlert,
-  ArrowUpRight,
   CalendarDays,
   Check,
   ChevronLeft,
@@ -24,7 +23,6 @@ import {
   Waypoints,
   Wrench,
   X,
-  Zap,
 } from "@/lib/icons"
 import type { LucideIcon } from "@/lib/icons"
 import { cn } from "@/lib/utils"
@@ -1416,89 +1414,38 @@ export function RecommendationsBoard({
 
   return (
     <div className="flex flex-col gap-6">
-      {/* BANNER — same bg-sidebar / accent-pill / accent-CTA treatment as
-          the Dashboard hero, for a consistent look across views. */}
-      <div className="flex flex-col gap-4 rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
-        <div className="max-w-xl">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
-            <Zap className="h-3.5 w-3.5" />
-            {tx("Temps réel", "Live")}
-          </span>
-
-          <h2 className="mt-3 text-balance font-heading text-2xl font-bold leading-tight md:text-3xl">
-            {tx(
-              "Que faut-il traiter maintenant ?",
-              "What needs handling right now?"
-            )}
-          </h2>
-
-          <p className="mt-2 text-pretty text-sm text-sidebar-foreground/70">
-            {tx(
-              "Chaque priorité montre sa preuve, sa confiance et son impact.",
-              "Every priority shows its evidence, its confidence and its impact."
-            )}
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() =>
-            document
-              .getElementById("priorities-board")
-              ?.scrollIntoView({ behavior: "smooth" })
-          }
-          className="inline-flex items-center gap-2 self-start rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02]"
-        >
-          {tx("Voir les priorités", "See the priorities")}
-          <ArrowUpRight className="h-4 w-4" />
-        </button>
-      </div>
-
-      <div
-        id="priorities-board"
-        className="overflow-hidden rounded-3xl border border-border bg-card"
+      {/* The Ask SentrIA layout, as on Calendar: lime card (how far
+          along), grey panel (the question, then search and filters), black
+          card (the numbers). */}
+      <AskHeader
+        icon={ListChecks}
+        eyebrow={opsLabel ?? tx("Toutes priorités", "All priorities")}
+        title={tx("Que faut-il traiter maintenant ?", "What needs handling right now?")}
+        progress={{
+          share: cards.length ? doneCount / cards.length : 0,
+          label: tx(`${doneCount} traitée${doneCount > 1 ? "s" : ""}`, `${doneCount} handled`),
+          value: `${doneCount} / ${cards.length}`,
+        }}
+        heading={tx("Priorités du moment", "What matters now")}
+        status={tx("Classées par urgence", "Ranked by urgency")}
+        message={tx(
+          `${cards.length} priorité${cards.length > 1 ? "s" : ""}, dont ${criticalCount} critique${criticalCount > 1 ? "s" : ""}. ${unassignedCount > 0 ? `${unassignedCount} n'${unassignedCount > 1 ? "ont" : "a"} encore personne.` : "Chacune a un responsable."} Chaque carte montre sa preuve, sa confiance et son impact.`,
+          `${cards.length} priorit${cards.length === 1 ? "y" : "ies"}, ${criticalCount} critical. ${unassignedCount > 0 ? `${unassignedCount} still ${unassignedCount === 1 ? "has" : "have"} no one on ${unassignedCount === 1 ? "it" : "them"}.` : "Every one has an owner."} Each card shows its evidence, confidence and impact.`
+        )}
+        statsTitle={tx("Le tableau", "The board")}
+        statsBadge={tx("En direct", "Live")}
+        rows={[
+          { label: tx("Critiques", "Critical"), value: String(criticalCount), icon: TriangleAlert, tone: criticalCount > 0 ? "danger" : undefined },
+          { label: tx("Non assignées", "Unassigned"), value: String(unassignedCount) },
+          { label: tx("Traitées", "Handled"), value: String(doneCount) },
+          ...(totalExposure > 0
+            ? [{ label: tx("Exposition", "Exposure"), value: formatMoney(totalExposure, currency, tx) }]
+            : []),
+        ]}
+        big={{ label: tx("Priorités", "Priorities"), value: String(cards.length) }}
       >
-      {/* ------------------------------------------------------------------
-          Title band: what this is, and the three numbers that describe it.
-          ------------------------------------------------------------------ */}
-      <div className="bg-[radial-gradient(ellipse_at_top_right,color-mix(in_oklch,var(--color-brand)_24%,transparent),transparent_60%)] p-5 md:p-6">
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            {opsLabel ?? tx("Toutes priorités", "All priorities")}
-          </p>
-
-          <h3 className="mt-1.5 font-heading text-2xl font-bold tracking-tight">
-            {tx("Priorités du moment", "What matters now")}
-          </h3>
-        </div>
-
-        <StatBento
-          className="mt-5"
-          primary={{
-            label: tx("Priorités", "Priorities"),
-            value: String(cards.length),
-            caption: tx("classées par urgence", "ranked by urgency"),
-            icon: ListChecks,
-            progress: {
-              share: cards.length ? doneCount / cards.length : 0,
-              label: tx(`${doneCount} traitée${doneCount > 1 ? "s" : ""}`, `${doneCount} handled`),
-            },
-          }}
-          dark={{ label: tx("Critiques", "Critical"), value: String(criticalCount), icon: TriangleAlert }}
-          soft={[
-            { label: tx("Non assignées", "Unassigned"), value: String(unassignedCount) },
-            ...(totalExposure > 0
-              ? [{ label: tx("Exposition", "Exposure"), value: formatMoney(totalExposure, currency, tx) }]
-              : []),
-          ]}
-        />
-      </div>
-
-      {/* ------------------------------------------------------------------
-          Toolbar: find a card, then narrow the board.
-          ------------------------------------------------------------------ */}
-      <div className="flex flex-col gap-3 border-t border-border px-5 py-3.5 md:flex-row md:items-center md:justify-between md:px-6">
-        <div className="relative min-w-0 md:max-w-xs md:flex-1">
+        <div className="flex flex-col gap-3">
+        <div className="relative w-full max-w-md">
           <label htmlFor="board-search" className="sr-only">
             {tx("Rechercher une priorité", "Search a priority")}
           </label>
@@ -1517,7 +1464,7 @@ export function RecommendationsBoard({
               "Équipement, action, responsable…",
               "Asset, action, owner…"
             )}
-            className="h-9 w-full rounded-xl border border-border bg-background pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-ring"
+            className="h-10 w-full rounded-full border border-transparent bg-card pl-9 pr-4 text-sm outline-none transition-colors placeholder:text-muted-foreground focus:border-brand"
           />
         </div>
 
@@ -1534,19 +1481,19 @@ export function RecommendationsBoard({
                 onClick={() => setFilter(item.id)}
                 aria-pressed={active}
                 className={cn(
-                  "flex items-center gap-2 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors",
+                  "flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   active
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    ? "bg-brand text-[#141414]"
+                    : "bg-card hover:bg-card/70"
                 )}
               >
                 {item.label}
 
                 <span
                   className={cn(
-                    "rounded-md px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
+                    "rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums",
                     active
-                      ? "bg-brand text-brand-foreground"
+                      ? "bg-[var(--ink)] text-brand"
                       : "bg-muted text-muted-foreground"
                   )}
                 >
@@ -1556,27 +1503,23 @@ export function RecommendationsBoard({
             )
           })}
         </div>
-      </div>
+        </div>
 
-      {/* Sector/department filters, adapted to a single shared board rather
-          than one board per sector: only shown once there's more than one
-          real choice on screen, since a department that only has one
-          option isn't a filter, it's a label. */}
       {(sectorKeys.length > 1 || roleKeys.length > 1) && (
-        <div className="flex flex-wrap items-center gap-2 border-t border-border px-5 py-3 md:px-6">
+        <div className="flex flex-wrap items-center gap-2">
           {sectorKeys.length > 1 && (
             <>
-              <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <span className="px-1 text-xs text-muted-foreground">
                 {tx("Secteur", "Sector")}
               </span>
               <button
                 type="button"
                 onClick={() => setActiveSector(null)}
                 className={cn(
-                  "rounded-xl px-3 py-1 text-[11px] font-semibold transition-colors",
+                  "rounded-full px-4 py-1.5 text-xs font-semibold transition-colors",
                   activeSector === null
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    ? "bg-brand text-[#141414]"
+                    : "bg-card hover:bg-card/70"
                 )}
               >
                 {tx("Tous", "All")}
@@ -1587,7 +1530,7 @@ export function RecommendationsBoard({
                   type="button"
                   onClick={() => setActiveSector(key)}
                   className={cn(
-                    "rounded-xl px-3 py-1 text-[11px] font-semibold transition-colors",
+                    "rounded-full px-4 py-1.5 text-xs font-semibold transition-colors",
                     activeSector === key
                       ? "bg-foreground text-background"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -1605,17 +1548,17 @@ export function RecommendationsBoard({
 
           {roleKeys.length > 1 && (
             <>
-              <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <span className="px-1 text-xs text-muted-foreground">
                 {tx("Département", "Department")}
               </span>
               <button
                 type="button"
                 onClick={() => setActiveRole(null)}
                 className={cn(
-                  "rounded-xl px-3 py-1 text-[11px] font-semibold transition-colors",
+                  "rounded-full px-4 py-1.5 text-xs font-semibold transition-colors",
                   activeRole === null
-                    ? "bg-foreground text-background"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    ? "bg-brand text-[#141414]"
+                    : "bg-card hover:bg-card/70"
                 )}
               >
                 {tx("Tous", "All")}
@@ -1626,7 +1569,7 @@ export function RecommendationsBoard({
                   type="button"
                   onClick={() => setActiveRole(key)}
                   className={cn(
-                    "rounded-xl px-3 py-1 text-[11px] font-semibold transition-colors",
+                    "rounded-full px-4 py-1.5 text-xs font-semibold transition-colors",
                     activeRole === key
                       ? "bg-foreground text-background"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -1639,7 +1582,12 @@ export function RecommendationsBoard({
           )}
         </div>
       )}
+      </AskHeader>
 
+      <div
+        id="priorities-board"
+        className="overflow-hidden rounded-[28px] bg-card shadow-sm"
+      >
       {/* One atomic sentence rather than four competing live regions, so a
           screen reader hears what the board holds instead of a bare number
           every time a card moves. */}

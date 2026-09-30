@@ -98,7 +98,7 @@ export function UsernameCard({ username }: { username: string | null }) {
   }
 
   return (
-    <div className="rounded-3xl border border-border bg-card p-6" data-testid="username-card">
+    <div className="rounded-[28px] bg-card p-6 shadow-sm" data-testid="username-card">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="font-heading text-lg font-bold">{tx("Nom d'utilisateur", "Username")}</h3>

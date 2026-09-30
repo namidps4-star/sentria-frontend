@@ -51,7 +51,7 @@ const pass = (ok, l) => console.log(`   ${ok ? 'PASS' : 'FAIL'} ${l}`);
   console.log('== B-18 profile');
   await p.getByRole('button', { name: /^Profile$/ }).first().click(); await p.waitForTimeout(1000);
   const pt = await p.evaluate(() => document.body.innerText);
-  { const i = pt.indexOf('Tasks resolved'); console.log('     ', JSON.stringify(pt.slice(i-30, i+15))); pass(/33 %\s*Tasks resolved/.test(pt), 'Tasks resolved = 33 % (1 done of Doliprane, Amox, Riz)'); }
+  { const i = pt.indexOf('Tasks resolved'); console.log('     ', JSON.stringify(pt.slice(i-30, i+15))); pass(/Tasks resolved\s*33 %/.test(pt), 'Tasks resolved = 33 % (1 done of Doliprane, Amox, Riz)'); }
   console.log('== B-19 calendar');
   await p.getByRole('button', { name: /^Calendar$/ }).first().click(); await p.waitForTimeout(1200);
   const ct = await p.evaluate(() => document.body.innerText);

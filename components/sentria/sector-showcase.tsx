@@ -135,7 +135,7 @@ export function SectorShowcase({ tx, className }: { tx: Tx; className?: string }
       aria-roledescription={tx("carrousel", "carousel")}
       aria-label={tx("Exemples d'alertes par secteur", "Example alerts by sector")}
       className={cn(
-        "relative overflow-hidden rounded-[28px] bg-[#141414] p-5 text-white shadow-xl ring-1 ring-black/5 dark:ring-white/10",
+        "relative flex flex-col overflow-hidden rounded-[28px] bg-[#141414] p-5 text-white shadow-xl ring-1 ring-black/5 dark:ring-white/10",
         className
       )}
       onMouseEnter={() => setHovered(true)}
@@ -202,6 +202,8 @@ export function SectorShowcase({ tx, className }: { tx: Tx; className?: string }
       </div>
 
       {/* The alert */}
+      {/* Takes the spare height when the card is stretched, so the alert sits low. */}
+      <div className="flex-1" aria-hidden="true" />
       <div
         id="showcase-panel"
         role="tabpanel"

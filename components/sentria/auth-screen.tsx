@@ -137,8 +137,10 @@ function Field({
   )
 }
 
+/* Glossy pill fields: a soft inset shade with a light lower edge, and a
+   lime glow when focused (the black underline read as a hard line). */
 const INPUT =
-  "mt-1.5 block w-full border-0 border-b-2 border-brand-foreground/80 bg-transparent px-0 py-2.5 text-base text-brand-foreground placeholder:text-brand-foreground/45 focus:border-brand-foreground focus:outline-none focus-visible:ring-0"
+  "mt-1.5 block w-full rounded-2xl border border-transparent bg-muted px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/70 shadow-[inset_0_1px_2px_rgb(0_0_0/0.07),0_1px_0_var(--field-hi)] transition-[background-color,border-color,box-shadow] focus:border-brand focus:bg-card focus:outline-none focus:ring-4 focus:ring-brand/30"
 
 /** Sign in, create an account, and reset a password (S-3 step 1).
  *
@@ -349,85 +351,95 @@ export function AuthScreen({
     },
   ]
 
+  /* The Ask SentrIA layout: lime card (who we are, what we do), white card
+     (the form, introduced like a chat), black card (an example alert).
+     Glossy cards floating on the canvas instead of one outlined frame. */
   return (
     <div className="flex min-h-dvh items-center justify-center bg-[radial-gradient(ellipse_at_top_left,var(--auth-glow)_0%,transparent_55%),radial-gradient(ellipse_at_bottom_right,var(--auth-glow)_0%,transparent_60%)] bg-[var(--auth-bg)] px-4 py-8">
-      <main className="grid w-full max-w-[1150px] overflow-hidden rounded-[32px] border-2 border-foreground bg-card shadow-2xl md:min-h-[640px] md:grid-cols-[1.05fr_1fr]">
-        {/* Left: what SentrIA does */}
-        <section className="flex flex-col gap-8 p-7 md:gap-7 md:p-12">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <img src="/logo-mark.png" alt="" className="h-11 w-11 object-contain" />
-              <span className="font-heading text-2xl font-bold">SentrIA</span>
+      <main className="grid w-full max-w-[1240px] gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:grid-cols-[300px_minmax(0,1fr)_360px]">
+        {/* --------------------------------------------------------- LEFT */}
+        <div className="flex flex-col gap-4">
+          <section className="gloss rounded-[28px] bg-brand p-6 text-[#141414]">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--ink)]">
+                  <img src="/logo-mark.png" alt="" className="h-7 w-7 object-contain" />
+                </span>
+                <span className="font-heading text-xl font-bold">SentrIA</span>
+              </div>
+
+              <div
+                className="flex items-center rounded-full bg-white/60 p-0.5 text-xs"
+                role="group"
+                aria-label={tx("Langue", "Language")}
+              >
+                {(["fr", "en"] as const).map((code) => (
+                  <button
+                    key={code}
+                    type="button"
+                    onClick={() => writeLanguage(code)}
+                    aria-pressed={ui === code}
+                    className={cn(
+                      "rounded-full px-3 py-1.5 font-semibold uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#141414]",
+                      ui === code ? "bg-[var(--ink)] text-white" : "text-[#141414]/70 hover:text-[#141414]"
+                    )}
+                  >
+                    {code}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div
-              className="flex items-center gap-1 text-xs"
-              role="group"
-              aria-label={tx("Langue", "Language")}
-            >
-              {(["fr", "en"] as const).map((code) => (
-                <button
-                  key={code}
-                  type="button"
-                  onClick={() => writeLanguage(code)}
-                  aria-pressed={ui === code}
-                  className={cn(
-                    "rounded-full px-3 py-1.5 font-semibold uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    ui === code
-                      ? "bg-foreground text-background"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {code}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="hidden md:block">
-            <p className="font-heading text-3xl font-bold leading-tight lg:text-4xl">
+            <p className="mt-6 font-heading text-2xl font-bold leading-tight md:text-3xl">
               {tx("Voyez les problèmes avant qu'ils ne coûtent.", "See problems before they cost you.")}
             </p>
-            <p className="mt-3 max-w-md text-base text-muted-foreground">
+            <p className="mt-2 text-sm text-[#141414]/70">
               {tx(
                 "SentrIA lit vos données d'exploitation et vous dit quoi faire, et quand.",
                 "SentrIA reads your operating data and tells you what to do, and when."
               )}
             </p>
-          </div>
+          </section>
 
-          {/* Three promises, editorial: numbered, hairline-separated. */}
-          <ul className="hidden border-y border-border md:grid md:grid-cols-3 md:divide-x md:divide-border">
-            {features.map(({ icon: Icon, title, body }, i) => (
-              <li key={title} className="flex flex-col gap-3 py-5 md:px-5 md:first:pl-0 md:last:pr-0">
-                <div className="flex items-center justify-between">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#141414] text-brand shadow-sm">
+          {/* Three promises, as rows. */}
+          <section className="gloss hidden rounded-[28px] bg-card p-5 md:block">
+            <ul className="flex flex-col gap-2">
+              {features.map(({ icon: Icon, title, body }) => (
+                <li key={title} className="flex items-start gap-3 rounded-2xl bg-muted p-3.5">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-brand">
                     <Icon className="h-4 w-4" aria-hidden="true" />
                   </span>
-                  <span className="font-mono text-[10px] font-semibold tracking-widest text-muted-foreground/70" aria-hidden="true">
-                    0{i + 1}
+                  <span className="min-w-0">
+                    <span className="block text-sm font-bold leading-snug tracking-tight">{title}</span>
+                    <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">{body}</span>
                   </span>
-                </div>
-                <div>
-                  <p className="text-sm font-bold leading-snug tracking-tight">{title}</p>
-                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{body}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
 
-          {/* What SentrIA says, sector by sector: examples, labelled as such. */}
-          <SectorShowcase tx={tx} className="mt-auto hidden md:block" />
-        </section>
-
-        {/* Right: the form */}
-        <section className="m-2 flex flex-col justify-center rounded-[26px] bg-brand p-7 text-brand-foreground md:p-12">
+        {/* ------------------------------------------------------- CENTER */}
+        <section className="gloss flex flex-col justify-center rounded-[28px] bg-card p-6 md:p-10">
           <h1 className="font-heading text-3xl font-bold leading-tight md:text-5xl">
             {heading}
           </h1>
+          <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="h-2 w-2 rounded-full bg-brand ring-2 ring-brand/30" aria-hidden="true" />
+            {tx("Connexion sécurisée", "Secure sign-in")}
+          </p>
+
+          {mode === "sign-in" && (
+            <p className="mt-5 max-w-md self-start rounded-[22px] bg-[var(--ink)] p-4 text-sm leading-relaxed text-white">
+              {tx(
+                "Bonjour. Connectez-vous avec votre email ou votre @nom d'utilisateur.",
+                "Hello. Sign in with your email or your @username."
+              )}
+            </p>
+          )}
 
           {mode === "forgot" && (
-            <p className="mt-3 text-sm text-brand-foreground/75">
+            <p className="mt-3 text-sm text-muted-foreground">
               {tx(
                 "Entrez votre email : nous vous envoyons un lien pour en choisir un nouveau.",
                 "Enter your email: we'll send you a link to choose a new one."
@@ -436,14 +448,14 @@ export function AuthScreen({
           )}
 
           {!supabase ? (
-            <p role="alert" className="mt-6 rounded-xl bg-background/70 p-4 text-sm text-foreground">
+            <p role="alert" className="mt-6 rounded-2xl bg-muted p-4 text-sm text-foreground">
               {tx(
                 `La connexion n'est pas configurée : ce site a été construit sans ${missingSupabaseEnv.join(" ni ")}. Ajoutez-la sur Vercel pour cet environnement, puis redéployez.`,
                 `Sign-in is not configured: this site was built without ${missingSupabaseEnv.join(" or ")}. Add it on Vercel for this environment, then redeploy.`
               )}
             </p>
           ) : (
-            <form onSubmit={submit} className="mt-8 flex w-full max-w-md flex-col gap-6" noValidate>
+            <form onSubmit={submit} className="mt-6 flex w-full flex-col gap-4" noValidate>
               {mode === "sign-up" && (
                 <>
                   <Field id="auth-name" label={tx("Nom", "Name")}>
@@ -458,10 +470,10 @@ export function AuthScreen({
                   </Field>
                   <Field id="auth-username" label={tx("Nom d'utilisateur", "Username")}>
                     <div className="relative">
-                      <span className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 text-base text-brand-foreground/60">@</span>
+                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-base text-muted-foreground">@</span>
                       <input
                         id="auth-username"
-                        className={cn(INPUT, "pl-5")}
+                        className={cn(INPUT, "pl-9")}
                         value={username}
                         onChange={(e) => setUsername(e.target.value.replace(/\s/g, "").toLowerCase())}
                         autoComplete="username"
@@ -477,12 +489,12 @@ export function AuthScreen({
                       id="auth-username-status"
                       aria-live="polite"
                       className={cn(
-                        "mt-1.5 text-[11px]",
+                        "mt-1.5 px-1 text-[11px]",
                         usernameStatus === "taken" || usernameStatus === "invalid"
                           ? "font-semibold text-destructive"
                           : usernameStatus === "free"
-                            ? "font-semibold text-brand-foreground"
-                            : "text-brand-foreground/70"
+                            ? "font-semibold text-foreground"
+                            : "text-muted-foreground"
                       )}
                     >
                       {usernameStatus === "taken"
@@ -539,7 +551,7 @@ export function AuthScreen({
                     <input
                       id="auth-password"
                       type={showPassword ? "text" : "password"}
-                      className={cn(INPUT, "pr-10")}
+                      className={cn(INPUT, "pr-12")}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
@@ -551,13 +563,13 @@ export function AuthScreen({
                       onClick={() => setShowPassword((v) => !v)}
                       aria-label={showPassword ? tx("Masquer le mot de passe", "Hide the password") : tx("Afficher le mot de passe", "Show the password")}
                       aria-pressed={showPassword}
-                      className="absolute right-0 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-brand-foreground/70 hover:text-brand-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-foreground"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
                     </button>
                   </div>
                   {mode !== "sign-in" && (
-                    <p className="mt-1.5 text-[11px] text-brand-foreground/70">
+                    <p className="mt-1.5 px-1 text-[11px] text-muted-foreground">
                       {tx(`Au moins ${MIN_PASSWORD} caractères.`, `At least ${MIN_PASSWORD} characters.`)}
                     </p>
                   )}
@@ -568,20 +580,20 @@ export function AuthScreen({
                 <button
                   type="button"
                   onClick={() => switchTo("forgot")}
-                  className="-mt-2 self-end text-xs font-semibold underline underline-offset-2 hover:no-underline"
+                  className="-mt-1 self-end px-1 text-xs font-semibold underline underline-offset-2 hover:no-underline"
                 >
                   {tx("Mot de passe oublié ?", "Forgot your password?")}
                 </button>
               )}
 
               {error && (
-                <p role="alert" className="rounded-xl bg-background/80 px-3 py-2 text-sm font-medium text-destructive">
+                <p role="alert" className="rounded-2xl bg-destructive/10 px-4 py-2.5 text-sm font-medium text-destructive">
                   {error}
                 </p>
               )}
 
               {notice && (
-                <p role="status" className="rounded-xl bg-background/80 px-3 py-2 text-sm font-medium text-foreground">
+                <p role="status" className="rounded-2xl bg-muted px-4 py-2.5 text-sm font-medium text-foreground">
                   {notice}
                 </p>
               )}
@@ -589,11 +601,12 @@ export function AuthScreen({
               <button
                 type="submit"
                 disabled={busy}
-                className="mt-2 inline-flex h-14 items-center justify-center gap-2 rounded-2xl bg-foreground px-6 text-base font-bold text-background transition-opacity hover:opacity-90 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-brand"
+                className="gloss mt-2 flex h-14 items-center justify-between rounded-full bg-brand pl-6 pr-2 text-base font-bold text-[#141414] transition-opacity hover:opacity-90 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-card"
               >
-                {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
                 {button}
-                {!busy && <ArrowRight className="h-4 w-4" aria-hidden="true" />}
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--ink)] text-brand">
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ArrowRight className="h-4 w-4" aria-hidden="true" />}
+                </span>
               </button>
 
               {mode !== "reset" && (
@@ -618,6 +631,10 @@ export function AuthScreen({
             </form>
           )}
         </section>
+
+        {/* -------------------------------------------------------- RIGHT */}
+        {/* What SentrIA says, sector by sector: examples, labelled as such. */}
+        <SectorShowcase tx={tx} className="gloss hidden md:col-span-2 md:flex lg:col-span-1 lg:self-stretch" />
       </main>
     </div>
   )

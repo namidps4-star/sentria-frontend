@@ -1,10 +1,9 @@
 "use client"
 
-import { StatBento } from "./stat-bento"
+import { AskHeader } from "./ask-header"
 import { useEffect, useState } from "react"
 import {
   AlertTriangle,
-  ArrowUpRight,
   Check,
   CheckCircle2,
   Clock,
@@ -16,7 +15,6 @@ import {
   UserPlus,
   UserRound,
   XCircle,
-  Zap,
   Briefcase,
   UsersRound,
 } from "@/lib/icons"
@@ -233,7 +231,7 @@ export function ContractorsView({
      more use than an empty list. */
   if (loaded && !companyName) {
     return (
-      <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
+      <div className="rounded-[28px] bg-card p-8 text-center shadow-sm">
         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
           <UserRound
             className="h-5 w-5 text-muted-foreground"
@@ -312,91 +310,57 @@ export function ContractorsView({
       "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
       active
-        ? "bg-foreground text-background"
+        ? "bg-brand text-[#141414]"
         : "bg-muted text-muted-foreground hover:bg-muted/70"
     )
   }
 
   return (
     <div className="space-y-6">
-      {/* BANNER — same bg-sidebar / accent-pill / accent-CTA treatment as
-          the Dashboard hero, for a consistent look across views. */}
-      <div className="flex flex-col gap-4 rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
-        <div className="max-w-xl">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
-            <Zap className="h-3.5 w-3.5" />
-            {tx("Temps réel", "Live")}
-          </span>
-
-          <h2 className="mt-3 text-balance font-heading text-2xl font-bold leading-tight md:text-3xl">
-            {tx(
-              "Qui peut être envoyé maintenant ?",
-              "Who can be sent out right now?"
-            )}
-          </h2>
-
-          <p className="mt-2 text-pretty text-sm text-sidebar-foreground/70">
-            {tx(
-              "La disponibilité déclarée et la charge réelle de chacun, avant d'assigner une nouvelle tâche.",
-              "Everyone's declared availability and real workload, before you hand out a new task."
-            )}
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setAdding(true)}
-          className="inline-flex items-center gap-2 self-start rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02]"
-        >
-          {tx("Ajouter un intervenant", "Add a contractor")}
-          <ArrowUpRight className="h-4 w-4" />
-        </button>
-      </div>
-
-      {/* HEADER */}
-      <div className="rounded-3xl border border-border bg-card bg-[radial-gradient(ellipse_at_top_right,color-mix(in_oklch,var(--color-brand)_24%,transparent),transparent_60%)] p-5 shadow-sm md:p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              {companyName || tx("Organisation", "Organisation")}
-            </p>
-
-            <h3 className="mt-1 font-heading text-2xl font-bold tracking-tight">
-              {tx("Intervenants", "Contractors")}
-            </h3>
-
-            <p className="mt-1 text-sm text-muted-foreground">
-              {tx(
-                "Qui peut être envoyé, et ce qu'ils portent déjà.",
-                "Who can be sent out, and what they are already carrying."
-              )}
-            </p>
-          </div>
-
-        </div>
-
-        <StatBento
-          className="mt-5"
-          primary={{
-            label: tx("Enregistrés", "On file"),
-            value: loaded ? String(contractors.length) : "—",
-            caption: tx("personnes que vous pouvez envoyer", "people you can send out"),
-            icon: UsersRound,
-            progress: {
-              share: contractors.length ? declaredAvailable / contractors.length : 0,
-              label: tx(`${declaredAvailable} se disent dispo`, `${declaredAvailable} say they are free`),
-            },
-          }}
-          dark={{ label: tx("Avec du travail", "Carrying work"), value: loaded ? String(carryingWork) : "—", icon: Briefcase }}
-          soft={[
-            { label: tx("Libres, rien en cours", "Free, nothing open"), value: loaded ? String(reallyFree) : "—" },
-          ]}
-        />
-
+      {/* The Ask SentrIA layout, as on Calendar: lime card (who is
+          free), grey panel (the question, then adding someone), black card
+          (the numbers). */}
+      <AskHeader
+        icon={UsersRound}
+        eyebrow={companyName || tx("Équipe terrain", "Field team")}
+        title={tx("Qui peut être envoyé maintenant ?", "Who can be sent out right now?")}
+        action={{ label: tx("Ajouter un intervenant", "Add a contractor"), icon: Plus, onClick: () => setAdding(true) }}
+        progress={{
+          share: contractors.length ? declaredAvailable / contractors.length : 0,
+          label: tx(`${declaredAvailable} se disent dispo`, `${declaredAvailable} say they are free`),
+          value: `${declaredAvailable} / ${contractors.length}`,
+        }}
+        heading={tx("Intervenants", "Contractors")}
+        status={tx(
+          "Disponibilité déclarée et charge réelle",
+          "Declared availability and real workload"
+        )}
+        message={
+          !loaded
+            ? tx("Je charge votre équipe…", "Loading your team…")
+            : contractors.length === 0
+              ? tx(
+                  "Personne n'est encore enregistré. Ajoutez un intervenant pour pouvoir lui confier des priorités.",
+                  "Nobody is on file yet. Add a contractor so priorities can be handed to them."
+                )
+              : tx(
+                  `${reallyFree} ${reallyFree > 1 ? "sont libres" : "est libre"} sans rien en cours, ${carryingWork} ${carryingWork > 1 ? "portent" : "porte"} déjà du travail. Vérifiez avant d'assigner une nouvelle tâche.`,
+                  `${reallyFree} ${reallyFree === 1 ? "is" : "are"} free with nothing open, ${carryingWork} ${carryingWork === 1 ? "is" : "are"} already carrying work. Check before you hand out a new task.`
+                )
+        }
+        statsTitle={tx("L'équipe", "The team")}
+        statsBadge={tx("En direct", "Live")}
+        rows={[
+          { label: tx("Avec du travail", "Carrying work"), value: loaded ? String(carryingWork) : "—", icon: Briefcase },
+          { label: tx("Libres, rien en cours", "Free, nothing open"), value: loaded ? String(reallyFree) : "—" },
+          { label: tx("Se disent dispo", "Say they are free"), value: loaded ? String(declaredAvailable) : "—" },
+        ]}
+        big={{ label: tx("Enregistrés", "On file"), value: loaded ? String(contractors.length) : "—" }}
+      >
         {error && (
           <p
             role="alert"
-            className="mt-5 rounded-2xl border border-destructive/30 bg-destructive/[0.06] px-4 py-3 text-xs leading-5"
+            className="rounded-2xl border border-destructive/30 bg-destructive/[0.06] px-4 py-3 text-xs leading-5"
           >
             <span className="inline-flex items-center gap-1.5 font-semibold text-destructive">
               <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
@@ -413,7 +377,7 @@ export function ContractorsView({
               event.preventDefault()
               submit()
             }}
-            className="mt-5 rounded-2xl border border-border bg-background p-4"
+            className="rounded-[22px] bg-card p-4 shadow-sm"
           >
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block">
@@ -483,8 +447,8 @@ export function ContractorsView({
 
             <p className="mt-3 text-[10px] leading-4 text-muted-foreground">
               {tx(
-                "L'API SentrIA n'a pas d'authentification. Ne mettez ici que des coordonnées que vous accepteriez de voir lues par un tiers.",
-                "The SentrIA API has no authentication. Only put contact details here that you would accept a stranger reading."
+                "Seuls les comptes de votre entreprise voient ces coordonnées.",
+                "Only your company's accounts can see these contact details."
               )}
             </p>
 
@@ -518,22 +482,22 @@ export function ContractorsView({
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-foreground px-4 py-2.5 text-sm font-semibold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="inline-flex items-center gap-2 self-start rounded-full bg-brand px-4 py-2 text-sm font-semibold text-[#141414] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <Plus className="h-4 w-4" aria-hidden="true" />
             {tx("Ajouter un intervenant", "Add a contractor")}
           </button>
         )}
-      </div>
+      </AskHeader>
 
       {/* LIST */}
       {!loaded ? (
-        <p className="rounded-3xl border border-dashed border-border bg-card px-5 py-8 text-center text-sm text-muted-foreground">
+        <p className="rounded-[28px] bg-card px-5 py-8 text-center text-sm text-muted-foreground shadow-sm">
           {tx("Chargement des intervenants…", "Loading contractors…")}
         </p>
       ) : contractors.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
+        <div className="rounded-[28px] bg-card p-8 text-center shadow-sm">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
             <UserPlus
               className="h-5 w-5 text-muted-foreground"
               aria-hidden="true"
@@ -554,7 +518,7 @@ export function ContractorsView({
       ) : (
         <div className="space-y-6">
           {/* FILTERS — only the fields the CRM actually has. */}
-          <div className="flex flex-wrap items-center gap-2 rounded-3xl border border-border bg-card p-4">
+          <div className="flex flex-wrap items-center gap-2 rounded-[28px] bg-card p-4 shadow-sm">
             <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               {tx("Fonction", "Role")}
             </span>
@@ -603,7 +567,7 @@ export function ContractorsView({
           </div>
 
           {groups.size === 0 ? (
-            <p className="rounded-3xl border border-dashed border-border bg-card px-5 py-8 text-center text-sm text-muted-foreground">
+            <p className="rounded-[28px] bg-card px-5 py-8 shadow-sm text-center text-sm text-muted-foreground">
               {tx(
                 "Aucun intervenant ne correspond à ces filtres.",
                 "No contractor matches these filters."
@@ -633,7 +597,7 @@ export function ContractorsView({
                     return (
                       <li
                         key={person.id}
-                        className="rounded-3xl border border-border bg-card p-5"
+                        className="rounded-[28px] bg-card shadow-sm p-5"
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex min-w-0 items-center gap-3">
