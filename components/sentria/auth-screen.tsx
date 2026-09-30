@@ -88,12 +88,6 @@ function authErrorMessage(error: AuthError | Error, tx: Tx): string {
         "Confirmez d'abord votre email : cliquez sur le lien que nous vous avons envoyé.",
         "Confirm your email first: click the link we sent you."
       )
-    case "user_already_exists":
-    case "email_exists":
-      return tx(
-        "Un compte existe déjà avec cet email. Connectez-vous.",
-        "An account already exists with this email. Sign in instead."
-      )
     case "weak_password":
       return tx(
         `Mot de passe trop faible : au moins ${MIN_PASSWORD} caractères, avec lettres et chiffres.`,
@@ -266,14 +260,20 @@ export function AuthScreen({
           setError(tx("Ce nom d'utilisateur vient d'être pris. Choisissez-en un autre.", "This username was just taken. Choose another one."))
           return
         }
-        if (error) throw error
+        // S-4: an address that already has an account gets the same answer
+        // as a new one, so the form can't be used to find out who has an
+        // account. (With email confirmation on, Supabase already does this;
+        // this covers the setting where it reports the clash instead.)
+        const alreadyRegistered =
+          !!error && ((error as AuthError).code === "user_already_exists" || (error as AuthError).code === "email_exists")
+        if (error && !alreadyRegistered) throw error
 
-        if (!data.session) {
+        if (alreadyRegistered || !data.session) {
           // Email confirmation is on: nothing to do until they click.
           setNotice(
             tx(
-              `Compte créé. Ouvrez l'email envoyé à ${email.trim()} et cliquez sur le lien pour l'activer.`,
-              `Account created. Open the email sent to ${email.trim()} and click the link to activate it.`
+              `Ouvrez l'email envoyé à ${email.trim()} et cliquez sur le lien pour continuer. Si vous avez déjà un compte, connectez-vous ou réinitialisez votre mot de passe.`,
+              `Open the email sent to ${email.trim()} and click the link to continue. If you already have an account, sign in or reset your password.`
             )
           )
           setMode("sign-in")
