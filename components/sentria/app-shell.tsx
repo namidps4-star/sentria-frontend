@@ -289,7 +289,7 @@ export function AppShell({
             {view === "dashboard" && <DashboardView search={search} onNavigate={setView} />}
             {view === "tracking" && <TrackingView />}
             {view === "calendar" && <CalendarView />}
-            {view === "sites" && <SitesView />}
+            {view === "sites" && <SitesView onNavigate={setView} />}
             {view === "ask" && (
               <AskView name={name} email={email} openCritical={bellAlerts} onNavigate={setView} />
             )}

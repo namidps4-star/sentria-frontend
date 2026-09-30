@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   Activity,
   AlertTriangle,
@@ -23,12 +23,15 @@ import {
   Upload,
   Wifi,
   Wheat,
+  X,
   XCircle,
   Zap,
   type LucideIcon,
 } from "@/lib/icons"
 import { cn } from "@/lib/utils"
+import { PLAN_NAMES, PLAN_UPDATED_EVENT, maxSitesFor, readAccountPlan, type PlanId } from "@/lib/plans"
 import { StatusTag, type TagTone } from "./status-tag"
+import type { ViewKey } from "./types"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
 
 type Sector =
@@ -195,7 +198,7 @@ function HealthScore({ value }: { value: number }) {
   )
 }
 
-export function SitesView() {
+export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void } = {}) {
   const tx = useTx()
 
   /** Resolve a module-level pair. */
@@ -213,6 +216,18 @@ export function SitesView() {
 
   const [showAddSite, setShowAddSite] =
     useState(false)
+
+  // F-SITEGATE: sites are capped by plan (lib/plans.ts maxSitesFor). At the
+  // cap, "Add a site" explains the upgrade instead of opening the form.
+  const [plan, setPlan] = useState<PlanId>("decouverte")
+  const [showUpgrade, setShowUpgrade] = useState(false)
+
+  useEffect(() => {
+    const load = () => setPlan(readAccountPlan().effective)
+    load()
+    window.addEventListener(PLAN_UPDATED_EVENT, load)
+    return () => window.removeEventListener(PLAN_UPDATED_EVENT, load)
+  }, [])
 
   const [newSiteName, setNewSiteName] =
     useState("")
@@ -234,8 +249,16 @@ export function SitesView() {
   const connectedCount = sites.filter((site) => site.status === "connected").length
   const criticalCount = sites.reduce((total, site) => total + site.critical, 0)
 
+  const siteCap = maxSitesFor(plan)
+  const atSiteCap = sites.length >= siteCap
+
+  function requestAddSite() {
+    if (atSiteCap) setShowUpgrade(true)
+    else setShowAddSite(true)
+  }
+
   function createSite() {
-    if (!newSiteName.trim()) return
+    if (!newSiteName.trim() || atSiteCap) return
 
     const site: Site = {
       id: `site-${Date.now()}`,
@@ -771,7 +794,7 @@ export function SitesView() {
               </div>
               <button
                 type="button"
-                onClick={() => setShowAddSite(true)}
+                onClick={requestAddSite}
                 aria-label={tx("Ajouter un site", "Add a site")}
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#141414] shadow-sm transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#141414]"
               >
@@ -811,7 +834,7 @@ export function SitesView() {
               <h3 className="font-heading text-xl font-semibold tracking-tight">{tx("Vos sites", "Your sites")}</h3>
               <button
                 type="button"
-                onClick={() => setShowAddSite(true)}
+                onClick={requestAddSite}
                 aria-label={tx("Ajouter un site", "Add a site")}
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--ink)] text-white transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
@@ -868,7 +891,7 @@ export function SitesView() {
               </div>
               <button
                 type="button"
-                onClick={() => setShowAddSite(true)}
+                onClick={requestAddSite}
                 className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-[#141414] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <Plus className="h-4 w-4" aria-hidden="true" />
@@ -989,7 +1012,7 @@ export function SitesView() {
             </p>
             <button
               type="button"
-              onClick={() => setShowAddSite(true)}
+              onClick={requestAddSite}
               className="mt-4 flex w-full items-center justify-between rounded-full bg-brand py-2 pl-5 pr-2 text-sm font-semibold text-[#141414] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {tx("Ajouter un site", "Add a site")}
@@ -1000,6 +1023,71 @@ export function SitesView() {
           </div>
         </div>
       </div>
+
+      {/* UPGRADE: the plan's site limit is reached (F-SITEGATE) */}
+      {showUpgrade && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={tx("Limite de sites atteinte", "Site limit reached")}
+            className="w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <h3 className="font-heading text-xl font-bold">
+                {plan === "business"
+                  ? tx("Plus de sites avec l'offre Entreprise", "More sites with the Entreprise plan")
+                  : tx("Plus de sites avec l'offre Business", "More sites with the Business plan")}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowUpgrade(false)}
+                aria-label={tx("Fermer", "Close")}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              {Number.isFinite(siteCap)
+                ? tx(
+                    `Votre offre ${PLAN_NAMES[plan]} inclut ${siteCap} site${siteCap > 1 ? "s" : ""}, et vous les utilisez. ${
+                      plan === "business"
+                        ? "Passez à l'offre Entreprise pour des sites illimités."
+                        : "Passez à une offre supérieure pour en ajouter d'autres : Business inclut 3 sites, Entreprise est illimitée."
+                    }`,
+                    `Your ${PLAN_NAMES[plan]} plan includes ${siteCap} site${siteCap > 1 ? "s" : ""}, and you are using them. ${
+                      plan === "business"
+                        ? "Upgrade to the Entreprise plan for unlimited sites."
+                        : "Upgrade to add more: Business includes 3 sites, Entreprise is unlimited."
+                    }`
+                  )
+                : ""}
+            </p>
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowUpgrade(false)}
+                className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                {tx("Plus tard", "Not now")}
+              </button>
+              {onNavigate && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUpgrade(false)
+                    onNavigate("pricing")
+                  }}
+                  className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-[#141414] transition-opacity hover:opacity-90"
+                >
+                  {tx("Voir les offres", "See the plans")}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ADD SITE MODAL */}
       {showAddSite && (

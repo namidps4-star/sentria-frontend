@@ -157,6 +157,9 @@ export type PlanLimits = {
   sectors: Localized
   departments: Localized
   sitesUsers: Localized
+  /** How many sites the plan allows. The number behind `sitesUsers`; use
+   *  maxSitesFor() rather than reading it or repeating it. */
+  maxSites: number
   alerts: Localized
   ask: Localized
   history: Localized
@@ -169,6 +172,7 @@ export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
     sectors: localized("1 secteur", "1 sector"),
     departments: localized("1 département", "1 department"),
     sitesUsers: localized("1 site · 1 utilisateur", "1 site · 1 user"),
+    maxSites: 1,
     alerts: localized("Alertes dans l'app", "In-app alerts"),
     ask: localized("Ask SentrIA · 20 questions/mois", "Ask SentrIA · 20 questions/month"),
     history: localized("Historique 30 jours", "30-day history"),
@@ -179,6 +183,7 @@ export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
     sectors: localized("1 secteur", "1 sector"),
     departments: localized("1 département", "1 department"),
     sitesUsers: localized("1 site · 3 utilisateurs", "1 site · 3 users"),
+    maxSites: 1,
     alerts: localized("Alertes app + SMS", "App + SMS alerts"),
     ask: localized("Ask SentrIA illimité", "Unlimited Ask SentrIA"),
     history: localized("Historique 12 mois", "12-month history"),
@@ -189,6 +194,7 @@ export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
     sectors: localized("1 secteur", "1 sector"),
     departments: localized("Plusieurs départements liés", "Several linked departments"),
     sitesUsers: localized("3 sites · 10 utilisateurs", "3 sites · 10 users"),
+    maxSites: 3,
     alerts: localized("Alertes app + SMS", "App + SMS alerts"),
     ask: localized("Ask SentrIA illimité", "Unlimited Ask SentrIA"),
     history: localized("Historique 24 mois", "24-month history"),
@@ -199,12 +205,19 @@ export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
     sectors: localized("Plusieurs secteurs", "Several sectors"),
     departments: localized("Tous les départements", "All departments"),
     sitesUsers: localized("Sites et utilisateurs illimités", "Unlimited sites and users"),
+    maxSites: Infinity,
     alerts: localized("Alertes app + SMS", "App + SMS alerts"),
     ask: localized("Ask SentrIA illimité", "Unlimited Ask SentrIA"),
     history: localized("Historique illimité", "Unlimited history"),
     tracking: true,
     ml: true,
   },
+}
+
+/** The most sites a plan allows: 1, 1, 3, then no cap. The one place the
+ *  Sites page and the pricing table both read. */
+export function maxSitesFor(plan: PlanId): number {
+  return PLAN_LIMITS[plan].maxSites
 }
 
 /* ------------------------------------------------------------------ */
