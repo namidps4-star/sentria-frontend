@@ -1,10 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { AlertTriangle, Check, FileUp, Loader2, SearchCheck } from "@/lib/icons"
+import { AlertTriangle, Check, FileDown, FileUp, Loader2, SearchCheck } from "@/lib/icons"
 
 import { useTx } from "@/lib/i18n"
 import type { UploadState } from "@/lib/upload"
+import { templateCsv, type UploadTeach } from "@/lib/upload-problem"
 import { cn } from "@/lib/utils"
 
 /** The two real stages of an import, then its result.
@@ -141,6 +142,88 @@ export function UploadProgress({ state, compact = false }: { state: UploadState;
           </div>
         </div>
       )}
+
+      {state.phase === "refused" && state.teach && <HowToFix teach={state.teach} />}
     </div>
+  )
+}
+
+/** F-TEACH: what each missing column is for, one example value, and a
+ *  ready-made template, so a first import can be fixed without support. */
+function HowToFix({ teach }: { teach: UploadTeach }) {
+  const tx = useTx()
+
+  const download = () => {
+    if (!teach.example) return
+    const blob = new Blob([templateCsv(teach.example)], { type: "text/csv;charset=utf-8" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = tx("modele-sentria.csv", "sentria-template.csv")
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  return (
+    <section
+      className="mt-3 rounded-2xl border border-border bg-card p-4"
+      aria-labelledby="upload-fix-title"
+      data-testid="upload-teach"
+    >
+      <h3 id="upload-fix-title" className="text-sm font-bold">
+        {tx("Comment corriger le fichier", "How to fix the file")}
+      </h3>
+
+      <ul className="mt-2 divide-y divide-border">
+        {teach.explain.map((item) => (
+          <li key={item.column} className="py-2.5">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <p className="min-w-0 text-sm">
+                <code className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[12px] font-semibold">
+                  {item.column}
+                </code>
+                {item.alternatives.length > 1 && (
+                  <span className="ml-1.5 text-xs text-muted-foreground">
+                    {tx("ou", "or")} {item.alternatives.slice(1).join(", ")}
+                    {item.more_alternatives > 0 &&
+                      tx(` (+${item.more_alternatives} autres)`, ` (+${item.more_alternatives} more)`)}
+                  </span>
+                )}
+              </p>
+              {item.example && (
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {tx("ex. ", "e.g. ")}
+                  <code className="font-mono text-[12px] text-foreground">{item.example}</code>
+                </span>
+              )}
+            </div>
+            {item.why && <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.why}</p>}
+          </li>
+        ))}
+      </ul>
+
+      {teach.example && (
+        <div className="mt-3">
+          <p className="text-xs font-semibold">
+            {tx("Une ligne d'exemple qui passe :", "An example line that works:")}
+          </p>
+          <pre className="mt-1.5 overflow-x-auto rounded-xl bg-muted px-3 py-2 font-mono text-[11px] leading-5">
+            {teach.example.header.join(",")}
+            {"\n"}
+            {teach.example.row.join(",")}
+          </pre>
+          <button
+            type="button"
+            onClick={download}
+            className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-[var(--ink)] px-3.5 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-85"
+          >
+            <FileDown className="h-3.5 w-3.5" aria-hidden="true" />
+            {tx("Télécharger le modèle CSV", "Download the CSV template")}
+          </button>
+        </div>
+      )}
+    </section>
   )
 }

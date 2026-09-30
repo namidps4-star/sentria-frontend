@@ -48,3 +48,36 @@ export function uploadProblemMessage(problem: unknown, tx: Tx): string | null {
     "This file looks like data for:"
   )} ${names.join(", ")}.`
 }
+
+/** F-TEACH: per missing column, why SentrIA needs it and one example
+ *  value, plus a filled example line under the suggested header. Sent by
+ *  /upload with the 422 (pipeline/column_guide.py), already in the
+ *  upload's language. */
+export type UploadTeach = {
+  explain: {
+    column: string
+    alternatives: string[]
+    more_alternatives: number
+    why: string
+    example: string
+  }[]
+  example?: { header: string[]; row: string[] }
+}
+
+export function uploadTeach(problem: unknown): UploadTeach | null {
+  if (!problem || typeof problem !== "object") return null
+  const { explain, example } = problem as Partial<UploadTeach>
+  if (!Array.isArray(explain) || explain.length === 0) return null
+  const valid =
+    example && Array.isArray(example.header) && Array.isArray(example.row) && example.header.length === example.row.length
+  return {
+    explain: explain.filter((e) => e && typeof e.column === "string"),
+    example: valid ? example : undefined,
+  }
+}
+
+/** The example as a CSV file: the header, then the example line. */
+export function templateCsv(example: { header: string[]; row: string[] }): string {
+  const cell = (value: string) => (/[",;\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value)
+  return `${example.header.map(cell).join(",")}\n${example.row.map(cell).join(",")}\n`
+}

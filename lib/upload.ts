@@ -1,4 +1,5 @@
 import { supabase } from "./supabase"
+import { uploadTeach, type UploadTeach } from "./upload-problem"
 
 /** Where an import is. `sending` has a real percentage (the browser
  *  reports bytes sent); `analysing` is the server checking the columns
@@ -22,6 +23,8 @@ export type UploadState = {
   failedSaves?: number
   /** The server's refusal (422/403) or the error, in the user's language. */
   message?: string
+  /** On a refusal for missing columns: what each is for, with examples. */
+  teach?: UploadTeach
 }
 
 export type UploadResponse = { status: number; body: unknown }
@@ -108,7 +111,7 @@ export async function runUpload(
     })
 
     if (status === 422 || status === 403) {
-      final = { phase: "refused", fileName, message: refusal(body) }
+      final = { phase: "refused", fileName, message: refusal(body), teach: uploadTeach(body) ?? undefined }
     } else if (status < 200 || status >= 300) {
       final = { phase: "failed", fileName, message: `${networkError} (HTTP ${status})` }
     } else {
