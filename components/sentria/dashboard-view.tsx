@@ -1,6 +1,7 @@
 "use client"
 
 import { SeverityTag, StatusTag } from "./status-tag"
+import { SheetTabs } from "./sheet-tabs"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import {
@@ -2597,50 +2598,16 @@ export function DashboardView({
         )
       : []
 
+  const pickDepartment = (id: string) => {
+    if (!tabSector) return
+    applyActivityToDashboard(tabSector, id)
+    setFilterSector(tabSector)
+    localStorage.setItem("sentria_sector", tabSector)
+  }
+
   return (
     <div className="space-y-6">
       {importPortal}
-
-      {/* The departments as browser-style tabs, pinned while the page
-          scrolls. (The import is the upload icon in the top bar.) */}
-      {departmentTabs.length > 1 && (
-      <div className="sticky -top-4 z-20 -mx-4 -mt-4 flex items-end gap-3 border-b border-border bg-canvas/90 px-4 pt-3 backdrop-blur-md lg:-top-8 lg:-mx-8 lg:-mt-8 lg:px-8 lg:pt-4">
-          <div
-            role="tablist"
-            aria-label={tx("Vos départements", "Your departments")}
-            className="-mb-px flex min-w-0 flex-1 items-end gap-1 overflow-x-auto [scrollbar-width:none]"
-          >
-            {departmentTabs.map((id) => {
-              const active = activityIn(tabSector) === id
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => {
-                    applyActivityToDashboard(tabSector, id)
-                    setFilterSector(tabSector)
-                    localStorage.setItem("sentria_sector", tabSector)
-                  }}
-                  className={cn(
-                    "relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-t-2xl border px-4 py-2.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                    active
-                      ? "border-border border-b-card bg-card font-semibold text-foreground"
-                      : "border-transparent text-muted-foreground hover:bg-card/60 hover:text-foreground"
-                  )}
-                >
-                  <span
-                    className={cn("h-1.5 w-1.5 rounded-full", active ? "bg-brand" : "bg-muted-foreground/40")}
-                    aria-hidden="true"
-                  />
-                  {activityLabel(tabSector, id, tx) ?? id}
-                </button>
-              )
-            })}
-          </div>
-      </div>
-      )}
 
       <div className="flex flex-col gap-4 rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-xl">
@@ -3875,6 +3842,26 @@ export function DashboardView({
             </div>
           </div>
         </div>
+      )}
+
+      {/* The departments as sheet tabs pinned to the bottom of the page.
+          (The import is the upload icon in the top bar.) */}
+      {tabSector && departmentTabs.length > 1 && (
+        <SheetTabs
+          label={tx("Vos départements", "Your departments")}
+          tx={tx}
+          activeId={activityIn(tabSector)}
+          onSelect={pickDepartment}
+          tabs={departmentTabs.map((id) => {
+            const own = alerts.filter((a) => a.sector === tabSector && activityOf(a) === id)
+            return {
+              id,
+              label: activityLabel(tabSector, id, tx) ?? id,
+              count: own.length,
+              critical: own.filter((a) => a.severity === "CRITICAL").length,
+            }
+          })}
+        />
       )}
     </div>
   )

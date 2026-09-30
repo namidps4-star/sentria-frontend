@@ -13,15 +13,15 @@ import {
   Wrench,
   ShieldAlert,
   Truck,
-  AlertTriangle,
 } from "@/lib/icons"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useId, useMemo, useState } from "react"
 import { API_BASE, apiFetch } from "@/lib/api"
 import { readCompanyName, readTimezoneId } from "@/lib/company"
 import { buildReport } from "@/lib/report"
 import type { LogisticsAlert } from "@/lib/logistics-signals"
 import { SECTOR_LABELS, sectorLabel, type Sector } from "@/lib/priorities"
 import { cn } from "@/lib/utils"
+import { StatusTag } from "./status-tag"
 import { localized, resolve, useTx, type Localized } from "@/lib/i18n"
 
 // ---------------------------------------------------------------------------
@@ -285,7 +285,7 @@ function KpiCard({ point }: { point: KpiPoint }) {
   const Icon = point.icon
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5">
+    <div className="rounded-[22px] bg-card p-5 shadow-sm print:border print:border-border print:shadow-none">
       <div className="flex items-start justify-between">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent">
           <Icon className="h-5 w-5" />
@@ -332,24 +332,24 @@ function OffendersCallout({ offenders }: { offenders: Offender[] }) {
   if (offenders.length === 0) return null
 
   return (
-    <div className="rounded-2xl border border-warning/30 bg-warning/[0.06] p-5">
-      <SectionLabel>
+    <div className="rounded-[28px] bg-card p-5 shadow-sm print:border print:border-border print:shadow-none">
+      <p className="font-heading text-xl font-semibold tracking-tight">
         {tx("Ça revient souvent", "Keeps coming back")}
-      </SectionLabel>
+      </p>
 
       <ul className="mt-3 space-y-2">
         {offenders.map((offender) => (
           <li
             key={offender.equipment}
-            className="flex items-center justify-between gap-3 text-sm"
+            className="flex items-center justify-between gap-3 rounded-2xl bg-muted px-4 py-2.5 text-sm"
           >
-            <span className="font-semibold">{offender.equipment}</span>
-            <span className="shrink-0 rounded-full bg-warning/12 px-2.5 py-0.5 text-xs font-bold text-warning">
+            <span className="min-w-0 truncate font-semibold">{offender.equipment}</span>
+            <StatusTag tone="warning" size="xs">
               {tx(
                 `${offender.count} alertes`,
                 `${offender.count} alerts`
               )}
-            </span>
+            </StatusTag>
           </li>
         ))}
       </ul>
@@ -380,10 +380,7 @@ function Sparkline({ data }: { data: TrendPoint[] }) {
     .join(" ")
 
   const areaD = `${pathD} L ${points[points.length - 1].x.toFixed(1)} ${height} L ${points[0].x.toFixed(1)} ${height} Z`
-  const gradientId = useMemo(
-    () => `spark-${Math.random().toString(36).slice(2)}`,
-    []
-  )
+  const gradientId = `spark-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`
 
   return (
     <svg
@@ -443,7 +440,7 @@ function TrendCard({
   const weekTotal = data.reduce((sum, point) => sum + point.value, 0)
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-5">
+    <div className="rounded-[22px] bg-card p-5 shadow-sm print:border print:border-border print:shadow-none">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10 text-accent">
@@ -499,7 +496,7 @@ function AlertsTable({ alerts }: { alerts: AlertRow[] }) {
   ]
 
   return (
-    <div className="rounded-2xl border border-border bg-card">
+    <div className="rounded-[22px] bg-card shadow-sm print:border print:border-border print:shadow-none">
       <div className="flex items-center justify-between px-5 py-4">
         <SectionLabel>{tx("Alertes & anomalies", "Alerts & anomalies")}</SectionLabel>
 
@@ -725,15 +722,8 @@ export function ReportView({ data }: { data?: ReportData }) {
           />
         )}
 
-        <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
-            <FileDown
-              className="h-5 w-5 text-muted-foreground"
-              aria-hidden="true"
-            />
-          </div>
-
-          <h2 className="mt-4 font-heading text-lg font-bold">
+        <section className="rounded-[28px] bg-foreground/[0.055] p-5 sm:p-6">
+          <h2 className="font-heading text-3xl font-semibold leading-[1.05] tracking-tight">
             {activeSectorLabel
               ? tx(
                   `Aucune alerte pour ${activeSectorLabel}`,
@@ -741,21 +731,25 @@ export function ReportView({ data }: { data?: ReportData }) {
                 )
               : tx("Aucun rapport à produire", "No report to produce")}
           </h2>
+          <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <FileDown className="h-3.5 w-3.5" aria-hidden="true" />
+            {tx("Rapport", "Report")}
+          </p>
 
-          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+          <div className="mt-5 max-w-xl rounded-[22px] bg-[var(--ink)] p-4 text-sm leading-relaxed text-white">
             {tx(
               "Le rapport est construit à partir de vos alertes. Tant qu'aucun fichier n'a été importé, il n'y a rien à rapporter, et remplir la page de chiffres inventés ne vous aiderait pas.",
               "The report is built from your alerts. Until a file has been imported there is nothing to report, and filling the page with invented figures would not help you."
             )}
-          </p>
+          </div>
 
-          <p className="mt-3 text-xs text-muted-foreground">
+          <p className="mt-3 inline-block rounded-full bg-card px-4 py-2 text-sm font-medium">
             {tx(
               "Importez un CSV depuis le tableau de bord pour générer votre premier rapport.",
               "Import a CSV from the dashboard to produce your first report."
             )}
           </p>
-        </div>
+        </section>
       </div>
     )
   }
@@ -794,6 +788,8 @@ function ReportBody({
   const tx = useTx()
 
   const openAlerts = data.alerts.filter((a) => a.status === "open").length
+  const criticalAlerts = data.alerts.filter((a) => a.severity === "critical").length
+  const warningAlerts = data.alerts.filter((a) => a.severity === "warning").length
   const resolvedAlerts = data.alerts.filter((a) => a.status === "resolved").length
 
   const kpiEntries = useMemo(
@@ -817,7 +813,7 @@ function ReportBody({
   )
 
   return (
-    <div className="mx-auto max-w-5xl space-y-8 print:space-y-4">
+    <div className="print:space-y-4">
       <style jsx global>{`
         @media print {
           body * {
@@ -836,98 +832,149 @@ function ReportBody({
         }
       `}</style>
 
-      <div id="sentria-report" className="space-y-8 print:space-y-4">
-        {/* Header */}
-        <div className="rounded-2xl border border-border bg-card p-6 print:rounded-none print:border-0 print:p-0">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <SectionLabel>{tx("Rapport", "Report")}</SectionLabel>
+      {/* The Ask SentrIA layout: lime card (whose report, which
+          period), grey panel (figures, trends, alerts), black card (the
+          count that matters). Printing falls back to one column. */}
+      <div
+        id="sentria-report"
+        className="grid gap-4 lg:grid-cols-[250px_minmax(0,1fr)] xl:grid-cols-[250px_minmax(0,1fr)_290px] print:block print:space-y-4"
+      >
+        {/* -------------------------------------------------------- LEFT */}
+        <div className="flex flex-col gap-4">
+          <div className="rounded-[28px] bg-brand p-5 text-[#141414] print:rounded-none print:bg-transparent print:p-0">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--ink)] text-brand print:hidden">
+                <FileDown className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <span className="leading-tight">
+                <span className="block text-sm font-bold">SentrIA</span>
+                <span className="block text-[11px] text-[#141414]/65">{tx("Rapport", "Report")}</span>
+              </span>
+            </div>
 
-                {sectorContext && (
-                  <span className="rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                    {sectorContext}
-                  </span>
-                )}
-              </div>
+            <h1 className="mt-5 break-words font-heading text-2xl font-semibold leading-tight tracking-tight">
+              {data.siteName}
+            </h1>
 
-              <h1 className="mt-1.5 font-heading text-2xl font-bold tracking-tight">
-                {data.siteName}
-              </h1>
-              <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
-                <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
+            {sectorContext && (
+              <span className="mt-2 inline-block rounded-full bg-[var(--ink)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand">
+                {sectorContext}
+              </span>
+            )}
+
+            <p className="mt-3 flex items-start gap-1.5 text-xs font-medium text-[#141414]/75">
+              <Calendar className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span>
                 {data.dateRange}
-
                 {timezoneLabel && (
-                  <span className="text-xs">
-                    {" · "}
+                  <span className="block text-[11px]">
                     {tx("heures en", "times in")} {timezoneLabel}
                   </span>
                 )}
-              </p>
-            </div>
+              </span>
+            </p>
 
             <button
               type="button"
               onClick={() => window.print()}
-              className="inline-flex h-10 items-center gap-2 rounded-xl bg-foreground px-4 text-sm font-semibold text-background transition-opacity hover:opacity-90 print:hidden"
+              className="mt-4 flex w-full items-center justify-between rounded-full bg-[var(--ink)] py-2 pl-5 pr-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#141414] print:hidden"
             >
-              <FileDown className="h-4 w-4" />
               {tx("Exporter en PDF", "Export as PDF")}
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-[#141414]">
+                <FileDown className="h-4 w-4" aria-hidden="true" />
+              </span>
             </button>
           </div>
-        </div>
 
-        {/* Repeat offenders */}
-        <OffendersCallout offenders={data.topOffenders} />
-
-        {/* KPI summary */}
-        <div>
-          <SectionLabel>{tx("Indicateurs clés", "Key figures")}</SectionLabel>
-          <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4 print:grid-cols-4">
-            {kpiEntries.map((point) => (
-              <KpiCard key={point.label} point={point} />
-            ))}
+          {/* Auto-generated summary */}
+          <div className="rounded-[28px] bg-card p-5 shadow-sm print:shadow-none">
+            <p className="font-heading text-xl font-semibold tracking-tight">{tx("En bref", "In short")}</p>
+            <ul className="mt-3 flex flex-col gap-2 text-sm">
+              <li className="flex items-center justify-between rounded-2xl bg-muted px-4 py-2.5">
+                <span>{tx("Ouvertes", "Open")}</span>
+                <span className="font-bold tabular-nums">{openAlerts}</span>
+              </li>
+              <li className="flex items-center justify-between rounded-2xl bg-muted px-4 py-2.5">
+                <span>{tx("Résolues", "Resolved")}</span>
+                <span className="font-bold tabular-nums">{resolvedAlerts}</span>
+              </li>
+            </ul>
+            <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+              {tx(
+                `${openAlerts} alerte${openAlerts > 1 ? "s" : ""} ouverte${openAlerts > 1 ? "s" : ""}, ${resolvedAlerts} résolue${resolvedAlerts > 1 ? "s" : ""} sur la période sélectionnée.`,
+                `${openAlerts} alert${openAlerts > 1 ? "s" : ""} open, ${resolvedAlerts} resolved over the selected period.`
+              )}
+            </p>
           </div>
         </div>
 
-        {/* Trends */}
-        {trendEntries.length > 0 && (
+        {/* ------------------------------------------------------ CENTER */}
+        <section className="min-w-0 space-y-6 rounded-[28px] bg-foreground/[0.055] p-5 sm:p-6 print:bg-transparent print:p-0">
           <div>
-            <SectionLabel>{tx("Tendances", "Trends")}</SectionLabel>
-            <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 print:grid-cols-2">
-              {trendEntries.map(({ key, points, delta }) => (
-                <TrendCard
-                  key={key}
-                  monitoringKey={key}
-                  data={points}
-                  delta={delta}
-                />
+            <h2 className="font-heading text-3xl font-semibold leading-[1.05] tracking-tight">
+              {tx("Votre rapport", "Your report")}
+            </h2>
+            <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="h-2 w-2 rounded-full bg-brand ring-2 ring-brand/30" aria-hidden="true" />
+              {tx("Construit à partir de vos alertes", "Built from your alerts")}
+            </p>
+          </div>
+
+          {/* KPI summary */}
+          <div>
+            <SectionLabel>{tx("Indicateurs clés", "Key figures")}</SectionLabel>
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3 print:grid-cols-4">
+              {kpiEntries.map((point) => (
+                <KpiCard key={point.label} point={point} />
               ))}
             </div>
           </div>
-        )}
 
-        {/* Alerts */}
-        <AlertsTable alerts={data.alerts} />
+          {/* Trends */}
+          {trendEntries.length > 0 && (
+            <div>
+              <SectionLabel>{tx("Tendances", "Trends")}</SectionLabel>
+              <div className="mt-3 grid grid-cols-1 gap-3 2xl:grid-cols-2 print:grid-cols-2">
+                {trendEntries.map(({ key, points, delta }) => (
+                  <TrendCard key={key} monitoringKey={key} data={points} delta={delta} />
+                ))}
+              </div>
+            </div>
+          )}
 
-        {/* Auto-generated summary */}
-        <div className="flex items-start gap-3 rounded-2xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-background">
-            <AlertTriangle className="h-4 w-4" />
+          {/* Alerts */}
+          <AlertsTable alerts={data.alerts} />
+        </section>
+
+        {/* ------------------------------------------------------- RIGHT */}
+        <div className="flex flex-col gap-4 lg:col-start-2 xl:col-start-auto">
+          <div className="rounded-[28px] bg-[var(--ink)] p-5 text-white print:hidden">
+            <div className="flex items-center justify-between">
+              <p className="font-heading text-xl font-semibold tracking-tight">{tx("La période", "The period")}</p>
+              <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold">{tx("Alertes", "Alerts")}</span>
+            </div>
+            <dl className="mt-4 space-y-2.5 text-xs">
+              <div className="flex items-center justify-between">
+                <dt className="text-white/55">{tx("Critiques", "Critical")}</dt>
+                <dd className="font-semibold tabular-nums">{criticalAlerts}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-white/55">{tx("Attention", "Warning")}</dt>
+                <dd className="font-semibold tabular-nums">{warningAlerts}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-white/55">{tx("Résolues", "Resolved")}</dt>
+                <dd className="font-semibold tabular-nums">{resolvedAlerts}</dd>
+              </div>
+            </dl>
+            <div className="mt-4 flex items-end justify-between border-t border-white/10 pt-4">
+              <span className="text-xs text-white/55">{tx("Alertes au total", "Alerts in all")}</span>
+              <span className="font-heading text-4xl font-bold leading-none text-brand">{data.alerts.length}</span>
+            </div>
           </div>
-          <p className="pt-1.5">
-            {tx(
-              `${openAlerts} alerte${
-                openAlerts > 1 ? "s" : ""
-              } ouverte${openAlerts > 1 ? "s" : ""}, ${resolvedAlerts} résolue${
-                resolvedAlerts > 1 ? "s" : ""
-              } sur la période sélectionnée.`,
-              `${openAlerts} alert${
-                openAlerts > 1 ? "s" : ""
-              } open, ${resolvedAlerts} resolved over the selected period.`
-            )}
-          </p>
+
+          {/* Repeat offenders */}
+          <OffendersCallout offenders={data.topOffenders} />
         </div>
       </div>
     </div>

@@ -1,0 +1,37 @@
+// Login: example alert per sector, rotating, pausable, keyboard, reduced motion. Top-bar context pill.
+const { LAUNCH, APP_URL } = require('./env');
+const { chromium } = require('playwright'); const { mockSupabase, signedIn } = require('./auth-mock');
+let fails = 0; const pass = (ok, l) => { fails += !ok; console.log(`   ${ok ? 'PASS' : 'FAIL'} ${l}`); };
+(async () => { const b = await chromium.launch(LAUNCH);
+  const open = async (opts = {}) => { const p = await b.newPage({ viewport: { width: 1440, height: 900 }, locale: 'en-US', ...opts }); p._e = []; p.on('pageerror', e => p._e.push(e.message)); await mockSupabase(p, { users: {}, accounts: {} }); await p.goto(APP_URL); await p.waitForTimeout(1000); await p.mouse.move(1300, 850); return p; };
+  const sel = p => p.evaluate(() => document.querySelector('[role=tab][aria-selected=true]')?.id);
+  let p = await open();
+  pass(await p.locator('[role=tab]').count() === 6, '6 sectors offered');
+  pass(await sel(p) === 'showcase-tab-health' && /example alert/i.test(await p.locator('section[aria-roledescription]').innerText()), 'starts on Health, labelled "Example alert"');
+  await p.waitForTimeout(6600);
+  pass(await sel(p) === 'showcase-tab-industry', 'after 6 s: Industry (' + await sel(p) + ')');
+  await p.getByRole('button', { name: 'Pause the slideshow' }).click(); await p.mouse.move(1300, 850);
+  const at = await sel(p); await p.waitForTimeout(7000);
+  pass(await sel(p) === at, 'paused: stays on ' + at);
+  await p.getByRole('button', { name: 'Resume the slideshow' }).click();
+  await p.locator('#showcase-tab-logistics').focus(); await p.keyboard.press('ArrowRight'); await p.waitForTimeout(200);
+  pass(await sel(p) === 'showcase-tab-commerce' && await p.evaluate(() => document.activeElement.id) === 'showcase-tab-commerce', 'arrow key moves to the next sector and focus follows');
+  await p.keyboard.press('End'); await p.waitForTimeout(100); pass(await sel(p) === 'showcase-tab-energy', 'End → last sector');
+  const t = await p.locator('#showcase-panel').innerText();
+  pass(/Inverter 2/.test(t) && /−18%/.test(t) && /Warning/.test(t), 'energy example: text, figure, warning tag');
+  pass(p._e.length === 0, 'no page errors'); await p.close();
+  p = await open({ reducedMotion: 'reduce' }); await p.waitForTimeout(7000);
+  pass(await sel(p) === 'showcase-tab-health', 'reduced motion: never advances on its own'); await p.close();
+  p = await open({ locale: 'fr-FR' }); const tf = await p.locator('#showcase-panel').innerText();
+  pass(/Paracétamol/.test(tf) && /3 j/.test(tf), 'French: French example, "3 j"'); await p.close();
+  // top bar pill
+  p = await b.newPage({ viewport: { width: 1440, height: 900 }, locale: 'en-US' });
+  await p.route(/onrender\.com\//, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  await p.addInitScript(() => { if (!sessionStorage.x) { sessionStorage.x = 1; localStorage.clear(); Object.entries({ sentria_language: 'en', sentria_onboarded: 'true', sentria_sector: 'logistics', sentria_sectors: '["logistics"]', sentria_business_type: "port-conteneurs", sentria_departments: '{"logistics":["port-conteneurs","entrepot-manutention","chaine-froid"]}' }).forEach(([k, v]) => localStorage.setItem(k, v)); } });
+  await signedIn(p, 'u', 'a@b.c', { plan: 'business' }); await p.goto(APP_URL); await p.waitForTimeout(1800);
+  const pill = await p.locator('[data-testid=workspace-context]').innerText().catch(() => '');
+  pass(/^Logistics/.test(pill) && /Port/.test(pill) && /\+1/.test(pill), 'top bar says where you are: ' + pill.replace(/\n/g, ' '));
+  await p.locator('aside nav button', { hasText: 'Tracking' }).click(); await p.waitForTimeout(600);
+  pass(await p.locator('[data-testid=workspace-context]').count() === 1, 'pill on every page (Tracking)');
+  await p.close();
+  await b.close(); console.log(`\n${fails ? fails + ' failure(s)' : 'ALL OK'}`); process.exit(fails ? 1 : 0); })();

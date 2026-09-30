@@ -12,6 +12,7 @@ import {
 } from "@/lib/icons"
 import type { AuthError } from "@supabase/supabase-js"
 
+import { API_BASE } from "@/lib/api"
 import { useLocale, writeLanguage } from "@/lib/locale"
 import { useTx, type Tx } from "@/lib/i18n"
 import { missingSupabaseEnv, supabase } from "@/lib/supabase"
@@ -27,6 +28,53 @@ const MIN_PASSWORD = 8
 const USERNAME = /^[a-z0-9_]{3,24}$/
 
 type UsernameStatus = "empty" | "invalid" | "checking" | "free" | "taken" | "unknown"
+
+/** Sign in with @username: the API finds the account and signs in with
+ *  Supabase for us (Sentria api/username_login.py), so the email behind a
+ *  username never reaches the browser. It answers with the session tokens. */
+async function signInWithUsername(username: string, password: string, tx: Tx) {
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE}/auth/username-sign-in`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    })
+  } catch {
+    throw new Error(
+      tx(
+        "Connexion par nom d'utilisateur indisponible. Utilisez votre email.",
+        "Signing in with a username is unavailable. Use your email."
+      )
+    )
+  }
+
+  const body = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    const code = body?.detail?.error_code
+    throw new Error(
+      code === "invalid_credentials"
+        ? tx("Nom d'utilisateur ou mot de passe incorrect.", "Wrong username or password.")
+        : code === "email_not_confirmed"
+          ? tx(
+              "Confirmez d'abord votre email : cliquez sur le lien que nous vous avons envoyé.",
+              "Confirm your email first: click the link we sent you."
+            )
+          : code === "too_many_attempts"
+            ? tx(
+                "Trop d'essais. Patientez quelques minutes puis réessayez.",
+                "Too many tries. Wait a few minutes, then try again."
+              )
+            : tx(
+                "Connexion par nom d'utilisateur indisponible. Utilisez votre email.",
+                "Signing in with a username is unavailable. Use your email."
+              )
+    )
+  }
+
+  return body as { access_token: string; refresh_token: string }
+}
 
 /** Supabase's errors, in the user's language. */
 function authErrorMessage(error: AuthError | Error, tx: Tx): string {
@@ -189,11 +237,16 @@ export function AuthScreen({
       const origin = window.location.origin
 
       if (mode === "sign-in") {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        })
-        if (error) throw error
+        const id = email.trim()
+        // "ama@pharma.bj" is an email; "ama_pharma" or "@ama_pharma" a username.
+        if (id.indexOf("@") > 0) {
+          const { error } = await supabase.auth.signInWithPassword({ email: id, password })
+          if (error) throw error
+        } else {
+          const tokens = await signInWithUsername(id.replace(/^@/, "").toLowerCase(), password, tx)
+          const { error } = await supabase.auth.setSession(tokens)
+          if (error) throw error
+        }
         // AuthGate takes over on the auth state change.
       } else if (mode === "sign-up") {
         const { data, error } = await supabase.auth.signUp({
@@ -244,7 +297,12 @@ export function AuthScreen({
         onPasswordUpdated?.()
       }
     } catch (caught) {
-      setError(authErrorMessage(caught as AuthError, tx))
+      // Our own messages (username sign-in) are already in the user's language.
+      setError(
+        caught instanceof Error && !("code" in caught) && !("status" in caught)
+          ? caught.message
+          : authErrorMessage(caught as AuthError, tx)
+      )
     } finally {
       setBusy(false)
     }
@@ -452,15 +510,21 @@ export function AuthScreen({
               )}
 
               {mode !== "reset" && (
-                <Field id="auth-email" label="Email">
+                <Field
+                  id="auth-email"
+                  label={mode === "sign-in" ? tx("Email ou nom d'utilisateur", "Email or username") : "Email"}
+                >
                   <input
                     id="auth-email"
-                    type="email"
+                    type={mode === "sign-in" ? "text" : "email"}
                     className={INPUT}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    autoComplete="email"
-                    inputMode="email"
+                    autoComplete={mode === "sign-in" ? "username" : "email"}
+                    inputMode={mode === "sign-in" ? undefined : "email"}
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    placeholder={mode === "sign-in" ? tx("vous@entreprise.com ou @nom", "you@company.com or @name") : undefined}
                     required
                   />
                 </Field>

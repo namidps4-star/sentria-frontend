@@ -1,0 +1,24 @@
+const { chromium } = require('playwright'); const { signedIn } = require('./auth-mock');
+const { LAUNCH, APP_URL } = require('./env');
+(async () => { const b = await chromium.launch(LAUNCH);
+  const p = await b.newPage({ viewport: { width: 1440, height: 900 }, locale: 'en-US' });
+  await p.addInitScript(() => { if (!sessionStorage.x) { sessionStorage.x = 1; localStorage.clear(); Object.entries({ sentria_language: 'en', sentria_onboarded: 'true', sentria_sector: 'health', sentria_sectors: '["health"]', sentria_business_type: 'pharmacie' }).forEach(([k, v]) => localStorage.setItem(k, v)); } });
+  await signedIn(p); await p.goto(APP_URL); await p.waitForTimeout(1500);
+  const cdp = await p.context().newCDPSession(p);
+  await cdp.send('Network.enable'); await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 20, downloadThroughput: 5e6, uploadThroughput: 400 * 1024 });
+  const big = Buffer.from('medicine_name,stock_qty\n' + 'Doliprane 500mg,12\n'.repeat(120000));
+  console.log('file MB', (big.length / 1e6).toFixed(1));
+  await p.setInputFiles('input[type=file]', { name: 'big.csv', mimeType: 'text/csv', buffer: big });
+  const seen = new Set(); let analysing = false, done = '';
+  for (let i = 0; i < 80; i++) { await p.waitForTimeout(250);
+    const t = await p.evaluate(() => document.querySelector('[role=dialog][aria-label="Data import"]')?.innerText ?? '');
+    const m = t.match(/(\d+) %/); if (m) seen.add(+m[1]);
+    if (/Checking the columns and analysing\s*Working/.test(t)) analysing = true;
+    if (i === 12) await p.screenshot({ path: 'import-panel-pct.png' });
+    if (/Import complete/.test(t)) { done = t.match(/[\d,]+ rows analysed · \d+ alerts/)?.[0]; break; } }
+  const pcts = [...seen].sort((a, b) => a - b);
+  const ok1 = pcts.length >= 3 && pcts.some(x => x > 0 && x < 100); const ok2 = analysing; const ok3 = /1,234 rows analysed · 7 alerts/.test(done || '');
+  console.log(`${ok1 ? 'PASS' : 'FAIL'} real upload percentages shown: ${pcts.join(', ')}`);
+  console.log(`${ok2 ? 'PASS' : 'FAIL'} then the analysing stage with its counter`);
+  console.log(`${ok3 ? 'PASS' : 'FAIL'} then the real result: ${done}`);
+  await b.close(); process.exit(ok1 && ok2 && ok3 ? 0 : 1); })();

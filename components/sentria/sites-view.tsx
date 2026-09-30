@@ -25,8 +25,10 @@ import {
   Wheat,
   XCircle,
   Zap,
+  type LucideIcon,
 } from "@/lib/icons"
 import { cn } from "@/lib/utils"
+import { StatusTag, type TagTone } from "./status-tag"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
 
 type Sector =
@@ -68,7 +70,7 @@ type Site = {
 const SECTORS: {
   key: Sector
   label: Localized
-  icon: any
+  icon: LucideIcon
 }[] = [
   { key: "industry", label: localized("Industrie", "Industry"), icon: Cog },
   { key: "health", label: localized("Santé", "Health"), icon: HeartPulse },
@@ -98,18 +100,21 @@ const INITIAL_SITES: Site[] = []
 const STATUS_META = {
   connected: {
     label: localized("Connecté", "Connected"),
+    tone: "success" as TagTone,
     icon: CheckCircle2,
     className: "bg-accent/20 text-accent-foreground",
     dot: "bg-green-500",
   },
   warning: {
     label: localized("Attention", "Attention"),
+    tone: "warning" as TagTone,
     icon: AlertTriangle,
     className: "bg-warning/12 text-warning",
     dot: "bg-warning",
   },
   offline: {
     label: localized("Hors ligne", "Offline"),
+    tone: "danger" as TagTone,
     icon: XCircle,
     className: "bg-destructive/10 text-destructive",
     dot: "bg-destructive",
@@ -225,6 +230,9 @@ export function SitesView() {
       ) ?? null,
     [sites, activeSiteId]
   )
+
+  const connectedCount = sites.filter((site) => site.status === "connected").length
+  const criticalCount = sites.reduce((total, site) => total + site.critical, 0)
 
   function createSite() {
     if (!newSiteName.trim()) return
@@ -745,225 +753,253 @@ export function SitesView() {
 
   return (
     <div className="space-y-6">
-      {/* HERO */}
-      <div className="flex flex-col gap-5 rounded-3xl bg-foreground p-6 text-background md:flex-row md:items-center md:justify-between md:p-8">
-        <div className="max-w-2xl">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
-            <Building2 className="h-3.5 w-3.5" />
-            {tx("Infrastructure", "Infrastructure")}
-          </span>
+      {/* The Ask SentrIA layout: lime card and the site list on the left,
+          the sites in the grey panel, the totals in the black card. */}
+      <div className="grid gap-4 lg:grid-cols-[250px_minmax(0,1fr)] xl:grid-cols-[250px_minmax(0,1fr)_290px]">
+        {/* -------------------------------------------------------- LEFT */}
+        <div className="flex flex-col gap-4">
+          <div className="rounded-[28px] bg-brand p-5 text-[#141414]">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--ink)] text-brand">
+                  <Building2 className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <span className="leading-tight">
+                  <span className="block text-sm font-bold">SentrIA</span>
+                  <span className="block text-[11px] text-[#141414]/65">{tx("Infrastructure", "Infrastructure")}</span>
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddSite(true)}
+                aria-label={tx("Ajouter un site", "Add a site")}
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#141414] shadow-sm transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#141414]"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
 
-          <h2 className="mt-3 font-heading text-2xl font-bold tracking-tight md:text-3xl">
-            {tx(
-              "Vos opérations, site par site.",
-              "Your operations, site by site."
+            <p className="mt-5 font-heading text-2xl font-semibold leading-tight tracking-tight">
+              {tx("Vos opérations, site par site.", "Your operations, site by site.")}
+            </p>
+
+            <div className="mt-4">
+              <div
+                className="h-2 overflow-hidden rounded-full bg-white/70"
+                role="progressbar"
+                aria-label={tx("Sites connectés", "Sites connected")}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={sites.length ? Math.round((connectedCount / sites.length) * 100) : 0}
+              >
+                <div
+                  className="h-full rounded-full bg-[var(--ink)] transition-[width] duration-500"
+                  style={{ width: `${sites.length ? Math.round((connectedCount / sites.length) * 100) : 0}%` }}
+                />
+              </div>
+              <div className="mt-1.5 flex items-center justify-between text-[11px] font-semibold">
+                <span>{tx("Connectés", "Connected")}</span>
+                <span className="tabular-nums">
+                  {connectedCount} / {sites.length}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="hidden rounded-[28px] bg-card p-5 shadow-sm lg:block">
+            <div className="flex items-center justify-between">
+              <h3 className="font-heading text-xl font-semibold tracking-tight">{tx("Vos sites", "Your sites")}</h3>
+              <button
+                type="button"
+                onClick={() => setShowAddSite(true)}
+                aria-label={tx("Ajouter un site", "Add a site")}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--ink)] text-white transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+            {sites.length === 0 ? (
+              <p className="mt-4 rounded-2xl bg-muted px-4 py-3 text-xs text-muted-foreground">
+                {tx("Aucun site pour l'instant.", "No site yet.")}
+              </p>
+            ) : (
+              <ul className="mt-4 flex flex-col gap-2">
+                {sites.map((site) => (
+                  <li key={site.id}>
+                    <button
+                      type="button"
+                      onClick={() => setActiveSiteId(site.id)}
+                      className="w-full rounded-2xl bg-muted px-4 py-3 text-left transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-semibold">{site.name}</span>
+                        <span className={cn("h-2 w-2 shrink-0 rounded-full", STATUS_META[site.status].dot)} aria-hidden="true" />
+                      </span>
+                      <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{site.location}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
             )}
-          </h2>
+          </div>
+        </div>
 
-          <p className="mt-2 text-sm leading-relaxed text-background/70">
+        {/* ------------------------------------------------------ CENTER */}
+        <section className="flex min-h-[420px] flex-col rounded-[28px] bg-foreground/[0.055] p-5 sm:p-6">
+          <h2 className="font-heading text-3xl font-semibold leading-[1.05] tracking-tight">{tx("Sites", "Sites")}</h2>
+          <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="h-2 w-2 rounded-full bg-brand ring-2 ring-brand/30" aria-hidden="true" />
             {tx(
-              "Centralisez vos sites, actifs, sources de données et alertes dans un seul espace.",
+              "Vos sites, actifs, sources de données et alertes dans un seul espace.",
               "Your sites, assets, data sources and alerts in one place."
             )}
           </p>
-        </div>
 
-        <button
-          onClick={() => setShowAddSite(true)}
-          className="inline-flex items-center gap-2 self-start rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02]"
-        >
-          <Plus className="h-4 w-4" />
-          {tx("Ajouter un site", "Add a site")}
-        </button>
-      </div>
-
-      {/* SUMMARY */}
-      {sites.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className="rounded-3xl border border-border bg-card p-5">
-            <p className="text-sm text-muted-foreground">
-              {tx("Sites", "Sites")}
-            </p>
-
-            <p className="mt-2 font-heading text-3xl font-bold">
-              {sites.length}
-            </p>
-          </div>
-
-          <div className="rounded-3xl border border-border bg-card p-5">
-            <p className="text-sm text-muted-foreground">
-              {tx("Connectés", "Connected")}
-            </p>
-
-            <p className="mt-2 font-heading text-3xl font-bold">
-              {
-                sites.filter(
-                  (site) =>
-                    site.status === "connected"
-                ).length
-              }
-            </p>
-          </div>
-
-          <div className="rounded-3xl border border-border bg-card p-5">
-            <p className="text-sm text-muted-foreground">
-              {tx("Alertes critiques", "Critical alerts")}
-            </p>
-
-            <p className="mt-2 font-heading text-3xl font-bold text-destructive">
-              {sites.reduce(
-                (total, site) =>
-                  total + site.critical,
-                0
-              )}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* EMPTY STATE */}
-      {sites.length === 0 && (
-        <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center md:p-16">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-muted">
-            <Building2 className="h-7 w-7 text-muted-foreground" />
-          </div>
-
-          <h3 className="mt-5 font-heading text-xl font-bold">
-            {tx("Aucun site configuré", "No site set up")}
-          </h3>
-
-          <p className="mx-auto mt-2 max-w-lg text-sm leading-relaxed text-muted-foreground">
-            {tx(
-              "Commencez par ajouter votre premier site. Vous pourrez ensuite connecter vos données, importer un historique et surveiller vos actifs.",
-              "Start by adding your first site. You can then connect your data, import a history and monitor your assets."
-            )}
-          </p>
-
-          <button
-            onClick={() => setShowAddSite(true)}
-            className="mt-6 inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-semibold text-background"
-          >
-            <Plus className="h-4 w-4" />
-            {tx("Créer mon premier site", "Create my first site")}
-          </button>
-        </div>
-      )}
-
-      {/* SITE GRID */}
-      {sites.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {sites.map((site) => {
-            const sector = getSector(site.sector)
-            const SectorIcon = sector.icon
-            const status =
-              STATUS_META[site.status]
-
-            return (
+          {sites.length === 0 ? (
+            <div className="mt-5 flex flex-col items-start gap-3">
+              <div className="max-w-[85%] rounded-[22px] bg-[var(--ink)] p-4 text-sm leading-relaxed text-white">
+                <p className="font-semibold">{tx("Aucun site configuré", "No site set up")}</p>
+                <p className="mt-1 text-white/75">
+                  {tx(
+                    "Commencez par ajouter votre premier site. Vous pourrez ensuite connecter vos données, importer un historique et surveiller vos actifs.",
+                    "Start by adding your first site. You can then connect your data, import a history and monitor your assets."
+                  )}
+                </p>
+              </div>
               <button
-                key={site.id}
-                onClick={() =>
-                  setActiveSiteId(site.id)
-                }
-                className="group rounded-3xl border border-border bg-card p-6 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg"
+                type="button"
+                onClick={() => setShowAddSite(true)}
+                className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-[#141414] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
-                      <SectorIcon className="h-5 w-5" />
-                    </div>
-
-                    <div>
-                      <h3 className="font-heading text-lg font-bold">
-                        {site.name}
-                      </h3>
-
-                      <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <MapPin className="h-3 w-3" />
-                        {site.location}
-                      </p>
-                    </div>
-                  </div>
-
-                  <ChevronRight className="h-5 w-5 text-muted-foreground transition-transform group-hover:translate-x-1" />
-                </div>
-
-                <div className="mt-5 flex flex-wrap items-center gap-2">
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
-                      status.className
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "h-1.5 w-1.5 rounded-full",
-                        status.dot
-                      )}
-                    />
-                    {px(status.label)}
-                  </span>
-
-                  <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
-                    {px(sector.label)}
-                  </span>
-                </div>
-
-                <div className="mt-6 grid grid-cols-3 gap-2">
-                  <div className="rounded-2xl bg-muted p-3">
-                    <p className="text-[11px] text-muted-foreground">
-                      {tx("Actifs", "Assets")}
-                    </p>
-
-                    <p className="mt-1 font-heading text-xl font-bold">
-                      {site.assets}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl bg-muted p-3">
-                    <p className="text-[11px] text-muted-foreground">
-                      {tx("Warnings", "Warnings")}
-                    </p>
-
-                    <p className="mt-1 font-heading text-xl font-bold">
-                      {site.warnings}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl bg-muted p-3">
-                    <p className="text-[11px] text-muted-foreground">
-                      {tx("Critiques", "Critical")}
-                    </p>
-
-                    <p
-                      className={cn(
-                        "mt-1 font-heading text-xl font-bold",
-                        site.critical > 0 &&
-                          "text-destructive"
-                      )}
-                    >
-                      {site.critical}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-5 flex items-center justify-between">
-                  <HealthScore value={site.health} />
-
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">
-                      {tx("Dernière donnée", "Last data")}
-                    </p>
-
-                    <p className="mt-1 text-sm font-semibold">
-                      {freshnessLabel(site.lastData, tx)}
-                    </p>
-                  </div>
-                </div>
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                {tx("Créer mon premier site", "Create my first site")}
               </button>
-            )
-          })}
+            </div>
+          ) : (
+            <div className="mt-5 grid grid-cols-1 gap-3 2xl:grid-cols-2">
+              {sites.map((site) => {
+                const sector = getSector(site.sector)
+                const SectorIcon = sector.icon
+                const status = STATUS_META[site.status]
+
+                return (
+                  <button
+                    key={site.id}
+                    type="button"
+                    onClick={() => setActiveSiteId(site.id)}
+                    className="group rounded-[22px] bg-card p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted">
+                          <SectorIcon className="h-5 w-5" aria-hidden="true" />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate font-heading text-lg font-semibold">{site.name}</span>
+                          <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <MapPin className="h-3 w-3" aria-hidden="true" />
+                            <span className="truncate">{site.location}</span>
+                          </span>
+                        </span>
+                      </div>
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted transition-transform group-hover:translate-x-0.5">
+                        <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                      </span>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap items-center gap-2">
+                      <StatusTag tone={status.tone} size="xs">
+                        {px(status.label)}
+                      </StatusTag>
+                      <StatusTag tone="neutral" size="xs" icon={false}>
+                        {px(sector.label)}
+                      </StatusTag>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-3 gap-2">
+                      {[
+                        { label: tx("Actifs", "Assets"), value: site.assets, hot: false },
+                        { label: tx("Warnings", "Warnings"), value: site.warnings, hot: false },
+                        { label: tx("Critiques", "Critical"), value: site.critical, hot: site.critical > 0 },
+                      ].map((cell) => (
+                        <div key={cell.label} className="rounded-2xl bg-muted p-3">
+                          <p className="text-[11px] text-muted-foreground">{cell.label}</p>
+                          <p className={cn("mt-1 font-heading text-xl font-bold", cell.hot && "text-destructive")}>{cell.value}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between">
+                      <HealthScore value={site.health} />
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">{tx("Dernière donnée", "Last data")}</p>
+                        <p className="mt-1 text-sm font-semibold">{freshnessLabel(site.lastData, tx)}</p>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* ------------------------------------------------------- RIGHT */}
+        <div className="flex flex-col gap-4 lg:col-start-2 xl:col-start-auto">
+          <div className="rounded-[28px] bg-[var(--ink)] p-5 text-white">
+            <div className="flex items-center justify-between">
+              <p className="font-heading text-xl font-semibold tracking-tight">{tx("En un coup d'œil", "At a glance")}</p>
+              <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold">{tx("Sites", "Sites")}</span>
+            </div>
+            <dl className="mt-4 space-y-2.5 text-xs">
+              <div className="flex items-center justify-between">
+                <dt className="text-white/55">{tx("Sites", "Sites")}</dt>
+                <dd className="font-semibold tabular-nums">{sites.length}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-white/55">{tx("Connectés", "Connected")}</dt>
+                <dd className="font-semibold tabular-nums">{connectedCount}</dd>
+              </div>
+              <div className="flex items-center justify-between">
+                <dt className="text-white/55">{tx("Actifs suivis", "Assets tracked")}</dt>
+                <dd className="font-semibold tabular-nums">{sites.reduce((total, site) => total + site.assets, 0)}</dd>
+              </div>
+            </dl>
+            <div className="mt-4 flex items-end justify-between border-t border-white/10 pt-4">
+              <span className="text-xs text-white/55">{tx("Alertes critiques", "Critical alerts")}</span>
+              <span className="font-heading text-4xl font-bold leading-none text-brand">{criticalCount}</span>
+            </div>
+          </div>
+
+          <div className="rounded-[28px] bg-card p-5 shadow-sm">
+            <p className="font-heading text-xl font-semibold tracking-tight">{tx("Sources de données", "Data sources")}</p>
+            <ul className="mt-3 flex flex-col gap-2">
+              {[
+                { icon: Upload, label: tx("Import CSV", "CSV import") },
+                { icon: Database, label: tx("API", "API") },
+                { icon: Wifi, label: tx("Capteurs IoT", "IoT sensors") },
+              ].map((row) => (
+                <li key={row.label} className="flex items-center gap-3 rounded-2xl bg-muted px-4 py-3 text-sm font-medium">
+                  <row.icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                  {row.label}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+              {tx("Chaque site se connecte à une ou plusieurs sources.", "Each site connects to one or more sources.")}
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowAddSite(true)}
+              className="mt-4 flex w-full items-center justify-between rounded-full bg-brand py-2 pl-5 pr-2 text-sm font-semibold text-[#141414] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {tx("Ajouter un site", "Add a site")}
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--ink)] text-brand">
+                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              </span>
+            </button>
+          </div>
         </div>
-      )}
+      </div>
 
       {/* ADD SITE MODAL */}
       {showAddSite && (

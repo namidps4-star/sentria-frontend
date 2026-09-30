@@ -1,0 +1,86 @@
+// Onboarding: nothing asked twice (language from sign-in, company from sign-up), time zone inline in the country step.
+const { LAUNCH, APP_URL } = require('./env');
+const { chromium } = require('playwright');
+const { mockSupabase, signedIn } = require('./auth-mock');
+const APP = APP_URL;
+let fails = 0;
+const pass = (ok, l) => { fails += !ok; console.log(`   ${ok ? 'PASS' : 'FAIL'} ${l}`); };
+const text = p => p.evaluate(() => document.body.innerText);
+(async () => {
+  const browser = await chromium.launch(LAUNCH);
+  // A French browser; the user picks English on the sign-in screen.
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'fr-FR' });
+  const p = await ctx.newPage(); const errors = []; p.on('pageerror', e => errors.push(e.message));
+  await p.route(/onrender\.com\//, r => r.fulfill({ status: 200, contentType: 'application/json', body: r.request().url().includes('/alerts') ? '[]' : '{"recommendations":[],"assignments":[],"contractors":[]}' }));
+  const db = { users: { 'new@co.bj': { uid: 'u-new', password: 'newpass12' } }, accounts: {} };
+  await mockSupabase(p, db);
+  await p.goto(APP); await p.waitForTimeout(1200);
+  pass(/Content de vous revoir/.test(await text(p)), 'French browser: sign-in screen in French');
+  await p.getByRole('button', { name: 'en', exact: true }).click(); await p.waitForTimeout(200);
+  await p.fill('#auth-email', 'new@co.bj'); await p.fill('#auth-password', 'newpass12');
+  await p.getByRole('button', { name: /^Sign in$/ }).click(); await p.waitForTimeout(2500);
+  const t1 = await text(p);
+  pass(/Step 1 of 6/.test(t1), 'no company at sign-up: 6 steps ("Step 1 of 6"), no language step');
+  pass(!/Your language/.test(t1) && /Your country/.test(t1) && !/Votre pays/.test(t1), 'opens in English (picked at sign-in) on the country step');
+  const lang = p.getByRole('group', { name: 'Language' });
+  pass(await lang.getByRole('button', { name: 'en' }).getAttribute('aria-pressed') === 'true', 'header language switch shows EN');
+  await lang.getByRole('button', { name: 'fr' }).click(); await p.waitForTimeout(250);
+  pass(/Votre pays/.test(await text(p)), 'header switch → French');
+  await p.getByRole('group', { name: 'Langue' }).getByRole('button', { name: 'en' }).click(); await p.waitForTimeout(250);
+  const next = async () => { await p.getByRole('button', { name: /^Continue/ }).last().click(); await p.waitForTimeout(400); };
+  let t = await text(p);
+  pass(/Step 1 of 6/.test(t) && /Your country/.test(t), 'step 1: country (back in English)');
+  const zones = p.getByRole('group', { name: 'Time zone' });
+  pass(await zones.count() === 1, 'time zone shown on the country screen');
+  await p.getByText('Nigeria', { exact: true }).first().click(); await p.waitForTimeout(200);
+  const wat = zones.locator('button', { hasText: 'WAT' });
+  pass(await wat.getAttribute('aria-pressed') === 'true' && /From your country/.test(await wat.innerText()), 'Nigeria: WAT pre-selected, tagged "From your country"');
+  pass(await p.locator('select[aria-label="Account currency"]').inputValue() === 'NGN', 'currency: NGN');
+  await zones.locator('button', { hasText: 'CET' }).click(); await p.waitForTimeout(150);
+  pass(await zones.locator('button', { hasText: 'CET' }).getAttribute('aria-pressed') === 'true' && await wat.getAttribute('aria-pressed') === 'false', 'time zone can be changed on the same screen');
+  await p.screenshot({ path: 'onb7-country.png', fullPage: true });
+  await next();
+  t = await text(p);
+  pass(/Step 2 of 6/.test(t) && /Your company/.test(t), 'step 2: company (no separate time-zone step)');
+  pass(!/Your time zone/.test(t), 'no "Your time zone" step');
+  await p.locator('input').first().fill('Pharma Lagos'); await next();
+  pass(/Step 3 of 6/.test(await text(p)), 'step 3: sector');
+  await p.getByText(/^Health$/).first().click(); await next();
+  pass(/Step 4 of 6/.test(await text(p)), 'step 4: activity');
+  await p.locator('button[aria-pressed]', { hasText: /Pharmac/ }).first().click(); await next();
+  pass(/Step 5 of 6/.test(await text(p)), 'step 5: priorities');
+  const card = p.locator('[role=dialog] button[aria-pressed]', { hasText: /Stock/ }).first();
+  await card.click(); await p.waitForTimeout(200);
+  pass(await card.getAttribute('aria-pressed') === 'true', 'priority card toggles (aria-pressed)');
+  const edges = await p.evaluate(() => [...document.querySelectorAll('[role=dialog] .grid > button[aria-pressed]')].map(b => b.innerText.split('\n').pop()));
+  pass(edges.length >= 3 && new Set(edges).size === edges.length && edges.every(e => e.length > 15), 'each card says what sets it apart, all different (' + edges.length + ')');
+  await p.screenshot({ path: 'onb-priorities.png' });
+  await next();
+  pass(/Step 6 of 6/.test(await text(p)), 'step 6: data (last)');
+  await p.getByRole('button', { name: /Open my dashboard/ }).click(); await p.waitForTimeout(1500);
+  const ls = await p.evaluate(() => ({ tz: localStorage.getItem('sentria_timezone'), c: localStorage.getItem('sentria_country'), cur: localStorage.getItem('sentria_currency'), lang: localStorage.getItem('sentria_language'), done: localStorage.getItem('sentria_onboarded') }));
+  pass(ls.done === 'true' && ls.tz === 'cet' && ls.c === 'NG' && ls.cur === 'NGN' && ls.lang === 'en', 'saved: country NG, currency NGN, time zone CET, language en ' + JSON.stringify(ls));
+  pass(errors.length === 0, 'no page errors ' + errors.join('|'));
+  await ctx.close();
+
+  // Nothing stored: the browser's language is still the fallback.
+  const c2 = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'en-US' });
+  const p2 = await c2.newPage();
+  await p2.route(/onrender\.com\//, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  await signedIn(p2); await p2.goto(APP); await p2.waitForTimeout(2000);
+  pass(/Step 1 of 6/.test(await text(p2)) && /Your country/.test(await text(p2)), 'no stored language: English browser → English onboarding');
+  await c2.close();
+
+  // Company typed at sign-up: its step is skipped, the name is kept.
+  const c3 = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'en-US' });
+  const p3 = await c3.newPage();
+  await p3.route(/onrender\.com\//, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  await signedIn(p3, 'u-co', 'co@x.bj', { meta: { company_name: 'Clinique Sud' } }); await p3.goto(APP); await p3.waitForTimeout(2000);
+  pass(/Step 1 of 5/.test(await text(p3)), 'company known from sign-up: 5 steps');
+  const n3 = async () => { await p3.getByRole('button', { name: /^Continue/ }).last().click(); await p3.waitForTimeout(400); };
+  await p3.getByText('Benin', { exact: true }).first().click(); await n3();
+  pass(/Step 2 of 5/.test(await text(p3)) && /Your sector/.test(await text(p3)) && !/Your company/.test(await text(p3)), 'country → sector directly, no company step');
+  await c3.close();
+  await browser.close();
+  console.log(`\n${fails ? fails + ' failure(s)' : 'ALL OK'}`); process.exit(fails ? 1 : 0);
+})();

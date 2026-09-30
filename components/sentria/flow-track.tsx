@@ -87,13 +87,14 @@ export function FlowTrack({
   selectedId,
   className,
 }: FlowTrackProps) {
+  // Hooks run before the early return so their order never changes.
+  const tx = useTx()
+
   if (nodes.length === 0) return null
 
   /* Nothing blocking means the whole chain is flowing, so every
      connector is filled. */
   const fillUpTo = blockingIndex < 0 ? nodes.length - 1 : blockingIndex
-
-  const tx = useTx()
 
   /** The stage status word, or "blocking" for the stage holding the flow
    *  up. Used by both the visible label and the screen-reader one. */

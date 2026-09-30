@@ -243,7 +243,7 @@ export function AppShell({
       <UploadPanelHost />
 
       {showOnboarding && (
-        <OnboardingView onComplete={() => setShowOnboarding(false)} />
+        <OnboardingView name={name} onComplete={() => setShowOnboarding(false)} />
       )}
 
       <Sidebar

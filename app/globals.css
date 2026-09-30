@@ -314,16 +314,39 @@
   to { transform: scaleX(1); }
 }
 
-/* Status tags: bright pastel fills (mint, butter, periwinkle, pink),
-   a slightly deeper edge and dark text, as in the reference. Bright in
-   both themes so they stand out on dark surfaces too. */
+/* Status tags. Severity is never pastel: critical is solid red with white
+   text and warning solid amber with dark text, identical in both themes so
+   the two can't be mistaken for anything calmer. The other tones are soft
+   pastels in light mode and dark tinted fills with light text in dark mode,
+   so they don't glare on dark surfaces. Every pair is at least 4.5:1. */
 :root {
-  --tag-warning-bg: #fde8a6; --tag-warning-bd: #f3cf62; --tag-warning-fg: #6e4a00;
-  --tag-danger-bg: #ffdbe9; --tag-danger-bd: #f7a6c6; --tag-danger-fg: #b0124f;
+  --tag-danger-bg: #dc2626; --tag-danger-bd: #b91c1c; --tag-danger-fg: #ffffff;
+  --tag-warning-bg: #f59e0b; --tag-warning-bd: #d97706; --tag-warning-fg: #231a00;
   --tag-success-bg: #c9f2dc; --tag-success-bd: #92dcb6; --tag-success-fg: #0f6139;
   --tag-info-bg: #e2e5ff; --tag-info-bd: #b7bdfa; --tag-info-fg: #2b36a8;
   --tag-neutral-bg: #eceef2; --tag-neutral-bd: #cdd1d9; --tag-neutral-fg: #3c4350;
   --tag-brand-bg: #e3f7a3; --tag-brand-bd: #c3e656; --tag-brand-fg: #3d5700;
+  --tag-hi: rgb(255 255 255 / 0.45);
+}
+.dark {
+  --tag-danger-bd: #f87171;
+  --tag-warning-bd: #fbbf24;
+  --tag-success-bg: #123526; --tag-success-bd: #1f6b48; --tag-success-fg: #7ee2ad;
+  --tag-info-bg: #1d2150; --tag-info-bd: #3a43a0; --tag-info-fg: #b3baff;
+  --tag-neutral-bg: #2a2d33; --tag-neutral-bd: #454a54; --tag-neutral-fg: #c9ced8;
+  --tag-brand-bg: #27330c; --tag-brand-bd: #4d6317; --tag-brand-fg: #c8ec6a;
+  --tag-hi: rgb(255 255 255 / 0.08);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --tag-danger-bd: #f87171;
+    --tag-warning-bd: #fbbf24;
+    --tag-success-bg: #123526; --tag-success-bd: #1f6b48; --tag-success-fg: #7ee2ad;
+    --tag-info-bg: #1d2150; --tag-info-bd: #3a43a0; --tag-info-fg: #b3baff;
+    --tag-neutral-bg: #2a2d33; --tag-neutral-bd: #454a54; --tag-neutral-fg: #c9ced8;
+    --tag-brand-bg: #27330c; --tag-brand-bd: #4d6317; --tag-brand-fg: #c8ec6a;
+    --tag-hi: rgb(255 255 255 / 0.08);
+  }
 }
 
 /* Sign-in backdrop: warm cream with a soft olive glow (no bright lime). */

@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react"
 import {
   AlertTriangle,
-  ArrowUpRight,
   CalendarClock,
   CheckCircle2,
   ChevronLeft,
@@ -14,7 +13,6 @@ import {
   UserRound,
   Wrench,
   X,
-  Zap,
 } from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import { useCompanyIdentity } from "@/lib/company"
@@ -82,10 +80,12 @@ const TYPE_ICON: Record<EventKind, typeof AlertTriangle> = {
   resolved: CheckCircle2,
 }
 
+/* The same colours as the severity tags: an incident is a critical alert
+   (solid red), a threshold at risk a warning (solid amber). */
 const TYPE_TONE: Record<EventKind, string> = {
   resolved: "bg-primary text-primary-foreground",
-  threshold: "bg-red-500/15 text-red-700 dark:bg-red-500/20 dark:text-red-300",
-  incident: "bg-warning text-white",
+  threshold: "bg-[var(--tag-warning-bg)] text-[var(--tag-warning-fg)]",
+  incident: "bg-[var(--tag-danger-bg)] text-[var(--tag-danger-fg)]",
   deadline: "bg-accent text-accent-foreground",
 }
 
@@ -485,431 +485,202 @@ export function CalendarView() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* BANNER */}
-      <div className="flex flex-col gap-4 rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
-        <div className="max-w-xl">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
-            <Zap className="h-3.5 w-3.5" />
-            {tx("Temps réel", "Live")}
-          </span>
-
-          <h2 className="mt-3 text-balance font-heading text-2xl font-bold leading-tight md:text-3xl">
-            {tx(
-              "Qu'est-ce qui arrive cette semaine ?",
-              "What's coming up this week?"
-            )}
-          </h2>
-
-          <p className="mt-2 text-pretty text-sm text-sidebar-foreground/70">
-            {tx(
-              "Échéances, seuils critiques et incidents, réunis en un coup d'œil.",
-              "Deadlines, critical thresholds and incidents, brought together at a glance."
-            )}
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() =>
-            document
-              .getElementById("calendar-grid")
-              ?.scrollIntoView({ behavior: "smooth" })
-          }
-          className="inline-flex items-center gap-2 self-start rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02]"
-        >
-          {tx("Voir le calendrier", "View calendar")}
-          <ArrowUpRight className="h-4 w-4" />
-        </button>
-      </div>
-
-      {!companyName && (
-        <p className="rounded-2xl border border-dashed border-border bg-card px-4 py-3 text-xs leading-5 text-muted-foreground">
-          {tx(
-            "Renseignez le nom de votre entreprise dans les Paramètres pour voir les échéances et qui est assigné.",
-            "Set your company name in Settings to see deadlines and who's assigned."
-          )}
-        </p>
-      )}
-
-      {/* HEADER */}
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h2 className="font-heading text-3xl font-black leading-tight tracking-tight text-foreground sm:text-4xl">
-            {viewMode === "week" ? rangeLabel : `${monthName} ${monthYear}`}
-          </h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {viewMode === "week"
-              ? tx("Semaine de travail", "Work week")
-              : tx("Vue mensuelle", "Monthly view")}
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center rounded-xl border border-border bg-card p-1">
-            <button
-              type="button"
-              onClick={() => setViewMode("week")}
-              className={cn(
-                "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
-                viewMode === "week"
-                  ? "bg-foreground text-background"
-                  : "text-muted-foreground hover:bg-muted"
-              )}
-            >
-              {tx("Semaine", "Week")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("month")}
-              className={cn(
-                "rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors",
-                viewMode === "month"
-                  ? "bg-foreground text-background"
-                  : "text-muted-foreground hover:bg-muted"
-              )}
-            >
-              {tx("Mois", "Month")}
-            </button>
+      {/* The Ask SentrIA layout: lime card (which view), grey panel (the
+          period, its controls and filters, in words), black card (the
+          week's three counts). */}
+      <div className="grid gap-4 lg:grid-cols-[250px_minmax(0,1fr)] xl:grid-cols-[250px_minmax(0,1fr)_290px]">
+        {/* -------------------------------------------------------- LEFT */}
+        <div className="rounded-[28px] bg-brand p-5 text-[#141414]">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--ink)] text-brand">
+              <CalendarClock className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <span className="leading-tight">
+              <span className="block text-sm font-bold">SentrIA</span>
+              <span className="block text-[11px] text-[#141414]/65">{tx("Calendrier", "Calendar")}</span>
+            </span>
           </div>
 
-          {viewMode === "week" ? (
-            <>
-              <button
-                type="button"
-                onClick={() => setWeekOffset((w) => w - 1)}
-                aria-label={tx("Semaine précédente", "Previous week")}
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:bg-muted"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
+          <p className="mt-5 font-heading text-2xl font-semibold leading-tight tracking-tight">
+            {tx("Qu'est-ce qui arrive cette semaine ?", "What's coming up this week?")}
+          </p>
 
+          <div className="mt-4 flex items-center rounded-full bg-white/70 p-1" role="group" aria-label={tx("Affichage", "View")}>
+            {(["week", "month"] as const).map((mode) => (
               <button
+                key={mode}
                 type="button"
-                onClick={() => setWeekOffset(0)}
-                disabled={weekOffset === 0}
-                className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+                onClick={() => setViewMode(mode)}
+                aria-pressed={viewMode === mode}
+                className={cn(
+                  "flex-1 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#141414]",
+                  viewMode === mode ? "bg-[var(--ink)] text-white" : "text-[#141414]/70 hover:text-[#141414]"
+                )}
               >
-                {tx("Aujourd'hui", "Today")}
+                {mode === "week" ? tx("Semaine", "Week") : tx("Mois", "Month")}
               </button>
+            ))}
+          </div>
 
-              <button
-                type="button"
-                onClick={() => setWeekOffset((w) => w + 1)}
-                aria-label={tx("Semaine suivante", "Next week")}
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:bg-muted"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                type="button"
-                onClick={() => setMonthOffset((m) => m - 1)}
-                aria-label={tx("Mois précédent", "Previous month")}
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:bg-muted"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setMonthOffset(0)}
-                disabled={monthOffset === 0}
-                className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-medium hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {tx("Ce mois", "This month")}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setMonthOffset((m) => m + 1)}
-                aria-label={tx("Mois suivant", "Next month")}
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground transition-colors hover:bg-muted"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </>
-          )}
-
-          <span className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-medium text-primary-foreground">
-            <Wrench className="h-3.5 w-3.5 text-accent" />
+          <p className="mt-3 flex items-center gap-1.5 text-[11px] font-semibold">
+            <Wrench className="h-3.5 w-3.5" aria-hidden="true" />
             {equipmentCount}{" "}
             {equipmentCount > 1
               ? tx("équipements suivis", "assets tracked")
               : tx("équipement suivi", "asset tracked")}
-          </span>
+          </p>
         </div>
-      </div>
 
-      {/* STATS */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div
-          className="relative flex flex-col justify-between overflow-hidden rounded-3xl p-6"
-          style={{
-            background: "linear-gradient(135deg, #d9f36e 0%, #b8d84a 100%)",
-            minHeight: "180px",
-          }}
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <p
-                className="text-[10px] font-bold uppercase tracking-wider"
-                style={{ color: "#1d1d1b", opacity: 0.6 }}
-              >
-                {tx("Échéances", "Deadlines")}
-              </p>
-              <p
-                className="mt-1 text-sm font-semibold"
-                style={{ color: "#1d1d1b" }}
-              >
-                {tx("à traiter cette semaine", "due this week")}
+        {/* ------------------------------------------------------ CENTER */}
+        <section className="flex flex-col rounded-[28px] bg-foreground/[0.055] p-5 sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="font-heading text-3xl font-semibold leading-[1.05] tracking-tight">
+                {viewMode === "week" ? rangeLabel : `${monthName} ${monthYear}`}
+              </h2>
+              <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="h-2 w-2 rounded-full bg-brand ring-2 ring-brand/30" aria-hidden="true" />
+                {viewMode === "week" ? tx("Semaine de travail", "Work week") : tx("Vue mensuelle", "Monthly view")}
               </p>
             </div>
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-full"
-              style={{ backgroundColor: "rgba(29, 29, 27, 0.1)" }}
-            >
-              <CalendarClock
-                className="h-5 w-5"
-                style={{ color: "#1d1d1b" }}
-              />
+
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => (viewMode === "week" ? setWeekOffset((w) => w - 1) : setMonthOffset((m) => m - 1))}
+                aria-label={viewMode === "week" ? tx("Semaine précédente", "Previous week") : tx("Mois précédent", "Previous month")}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-card transition-colors hover:bg-card/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => (viewMode === "week" ? setWeekOffset(0) : setMonthOffset(0))}
+                disabled={viewMode === "week" ? weekOffset === 0 : monthOffset === 0}
+                className="rounded-full bg-card px-4 py-2 text-xs font-semibold transition-colors hover:bg-card/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {viewMode === "week" ? tx("Aujourd'hui", "Today") : tx("Ce mois", "This month")}
+              </button>
+              <button
+                type="button"
+                onClick={() => (viewMode === "week" ? setWeekOffset((w) => w + 1) : setMonthOffset((m) => m + 1))}
+                aria-label={viewMode === "week" ? tx("Semaine suivante", "Next week") : tx("Mois suivant", "Next month")}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-card transition-colors hover:bg-card/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
             </div>
           </div>
 
-          <div className="mt-4">
-            <p
-              className="font-heading text-6xl font-black leading-none tracking-tight"
-              style={{ color: "#1d1d1b" }}
-            >
-              {loaded ? stats.deadlines : "—"}
-            </p>
+          <div className="mt-5 max-w-[85%] self-start rounded-[22px] bg-[var(--ink)] p-4 text-sm leading-relaxed text-white">
+            {!companyName
+              ? tx(
+                  "Renseignez le nom de votre entreprise dans les Paramètres pour voir les échéances et qui est assigné.",
+                  "Set your company name in Settings to see deadlines and who's assigned."
+                )
+              : !loaded
+                ? tx("Je rassemble vos échéances…", "Gathering your deadlines…")
+                : tx(
+                    `Cette semaine : ${stats.deadlines} échéance${stats.deadlines > 1 ? "s" : ""}, ${stats.incidents} incident${stats.incidents > 1 ? "s" : ""} actif${stats.incidents > 1 ? "s" : ""} et ${stats.thresholds} seuil${stats.thresholds > 1 ? "s" : ""} critique${stats.thresholds > 1 ? "s" : ""} à surveiller.`,
+                    `This week: ${stats.deadlines} deadline${stats.deadlines === 1 ? "" : "s"}, ${stats.incidents} active incident${stats.incidents === 1 ? "" : "s"} and ${stats.thresholds} critical threshold${stats.thresholds === 1 ? "" : "s"} to watch.`
+                  )}
           </div>
 
-          <div
-            className="absolute -right-6 -bottom-6 h-24 w-24 rounded-full opacity-20"
-            style={{ backgroundColor: "#1d1d1b" }}
-          />
-        </div>
+          {/* FILTERS */}
+          {(sectorKeys.length > 1 || roleKeys.length > 1) && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {sectorKeys.length > 1 && (
+                <>
+                  <span className="px-1 text-xs text-muted-foreground">{tx("Secteur :", "Sector:")}</span>
+                  {[null, ...sectorKeys].map((key) => (
+                    <button
+                      key={key ?? "all"}
+                      type="button"
+                      onClick={() => setActiveSector(key)}
+                      aria-pressed={activeSector === key}
+                      className={cn(
+                        "rounded-full px-4 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        activeSector === key ? "bg-brand text-[#141414]" : "bg-card hover:bg-card/70"
+                      )}
+                    >
+                      {key === null ? tx("Tous", "All") : sectorLabel(key, tx)}
+                    </button>
+                  ))}
+                </>
+              )}
 
-        <div
-          className="relative flex flex-col justify-between overflow-hidden rounded-3xl p-6"
-          style={{
-            background: "#1d1d1b",
-            border: "1px solid rgba(217, 243, 110, 0.2)",
-            minHeight: "180px",
-          }}
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <p
-                className="text-[10px] font-bold uppercase tracking-wider"
-                style={{ color: "#d9f36e", opacity: 0.7 }}
-              >
+              {roleKeys.length > 1 && (
+                <>
+                  <span className="px-1 text-xs text-muted-foreground">{tx("Département :", "Department:")}</span>
+                  {[null, ...roleKeys].map((key) => (
+                    <button
+                      key={key ?? "all"}
+                      type="button"
+                      onClick={() => setActiveRole(key)}
+                      aria-pressed={activeRole === key}
+                      className={cn(
+                        "rounded-full px-4 py-1.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        activeRole === key ? "bg-brand text-[#141414]" : "bg-card hover:bg-card/70"
+                      )}
+                    >
+                      {key === null ? tx("Tous", "All") : key === NO_ROLE ? tx("Sans fonction", "No role") : key}
+                    </button>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+        </section>
+
+        {/* ------------------------------------------------------- RIGHT */}
+        <div className="rounded-[28px] bg-[var(--ink)] p-5 text-white lg:col-start-2 xl:col-start-auto">
+          <div className="flex items-center justify-between">
+            <p className="font-heading text-xl font-semibold tracking-tight">{tx("Cette semaine", "This week")}</p>
+            <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold">{tx("En direct", "Live")}</span>
+          </div>
+          <dl className="mt-4 space-y-2.5 text-xs">
+            <div className="flex items-center justify-between gap-3">
+              <dt className="flex items-center gap-2 text-white/55">
+                <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
+                {tx("Échéances à traiter", "Deadlines due")}
+              </dt>
+              <dd className="font-semibold tabular-nums">{loaded ? stats.deadlines : "—"}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <dt className="flex items-center gap-2 text-white/55">
+                <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
                 {tx("Incidents actifs", "Active incidents")}
-              </p>
-              <p
-                className="mt-1 text-sm font-semibold"
-                style={{ color: "#e8e8e6" }}
-              >
-                {tx("détectés cette semaine", "detected this week")}
-              </p>
+              </dt>
+              <dd className="font-semibold tabular-nums">{loaded ? stats.incidents : "—"}</dd>
             </div>
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-full"
-              style={{ backgroundColor: "rgba(217, 243, 110, 0.15)" }}
-            >
-              <AlertTriangle
-                className="h-5 w-5"
-                style={{ color: "#d9f36e" }}
-              />
+            <div className="flex items-center justify-between gap-3">
+              <dt className="flex items-center gap-2 text-white/55">
+                <Timer className="h-3.5 w-3.5" aria-hidden="true" />
+                {tx("Seuils à risque", "Thresholds at risk")}
+              </dt>
+              <dd className={cn("font-semibold tabular-nums", loaded && stats.thresholds > 0 && "text-[#fbbf24]")}>
+                {loaded ? stats.thresholds : "—"}
+              </dd>
             </div>
+          </dl>
+          <div className="mt-4 flex items-end justify-between border-t border-white/10 pt-4">
+            <span className="text-xs text-white/55">{tx("Échéances cette semaine", "Deadlines this week")}</span>
+            <span className="font-heading text-4xl font-bold leading-none text-brand">{loaded ? stats.deadlines : "—"}</span>
           </div>
-
-          <div className="mt-4">
-            <p
-              className="font-heading text-6xl font-black leading-none tracking-tight"
-              style={{ color: "#d9f36e" }}
-            >
-              {loaded ? stats.incidents : "—"}
-            </p>
-          </div>
-
-          <div
-            className="absolute -right-6 -bottom-6 h-24 w-24 rounded-full opacity-10"
-            style={{ backgroundColor: "#d9f36e" }}
-          />
-        </div>
-
-        <div
-          className="relative flex flex-col justify-between overflow-hidden rounded-3xl p-6"
-          style={{
-            background: "#1d1d1b",
-            border: "1px solid rgba(239, 68, 68, 0.2)",
-            minHeight: "180px",
-          }}
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <p
-                className="text-[10px] font-bold uppercase tracking-wider"
-                style={{ color: "#ef4444", opacity: 0.8 }}
-              >
-                {tx("Seuils critiques", "Critical thresholds")}
-              </p>
-              <p
-                className="mt-1 text-sm font-semibold"
-                style={{ color: "#e8e8e6" }}
-              >
-                {tx("à risque de dépassement", "at risk of being breached")}
-              </p>
-            </div>
-            <div
-              className="flex h-10 w-10 items-center justify-center rounded-full"
-              style={{ backgroundColor: "rgba(239, 68, 68, 0.15)" }}
-            >
-              <Timer
-                className="h-5 w-5"
-                style={{ color: "#ef4444" }}
-              />
-            </div>
-          </div>
-
-          <div className="mt-4">
-            <p
-              className="font-heading text-6xl font-black leading-none tracking-tight"
-              style={{ color: "#ef4444" }}
-            >
-              {loaded ? stats.thresholds : "—"}
-            </p>
-          </div>
-
-          <div
-            className="absolute -right-6 -bottom-6 h-24 w-24 rounded-full opacity-10"
-            style={{ backgroundColor: "#ef4444" }}
-          />
         </div>
       </div>
-
-      {/* FILTERS */}
-      {(sectorKeys.length > 1 || roleKeys.length > 1) && (
-        <div className="flex flex-wrap items-center gap-2 rounded-3xl border border-border bg-card p-4">
-          {sectorKeys.length > 1 && (
-            <>
-              <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                {tx("Secteur", "Sector")}
-              </span>
-              <button
-                type="button"
-                onClick={() => setActiveSector(null)}
-                className={cn(
-                  "rounded-full px-3 py-1 text-[11px] font-semibold transition-colors",
-                  activeSector === null
-                    ? "bg-foreground text-background"
-                    : "bg-muted text-muted-foreground hover:bg-muted/70"
-                )}
-              >
-                {tx("Tous", "All")}
-              </button>
-              {sectorKeys.map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setActiveSector(key)}
-                  className={cn(
-                    "rounded-full px-3 py-1 text-[11px] font-semibold transition-colors",
-                    activeSector === key
-                      ? "bg-foreground text-background"
-                      : "bg-muted text-muted-foreground hover:bg-muted/70"
-                  )}
-                >
-                  {sectorLabel(key, tx)}
-                </button>
-              ))}
-            </>
-          )}
-
-          {sectorKeys.length > 1 && roleKeys.length > 1 && (
-            <span className="mx-1 h-5 w-px shrink-0 bg-border" />
-          )}
-
-          {roleKeys.length > 1 && (
-            <>
-              <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                {tx("Département", "Department")}
-              </span>
-              <button
-                type="button"
-                onClick={() => setActiveRole(null)}
-                className={cn(
-                  "rounded-full px-3 py-1 text-[11px] font-semibold transition-colors",
-                  activeRole === null
-                    ? "bg-foreground text-background"
-                    : "bg-muted text-muted-foreground hover:bg-muted/70"
-                )}
-              >
-                {tx("Tous", "All")}
-              </button>
-              {roleKeys.map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setActiveRole(key)}
-                  className={cn(
-                    "rounded-full px-3 py-1 text-[11px] font-semibold transition-colors",
-                    activeRole === key
-                      ? "bg-foreground text-background"
-                      : "bg-muted text-muted-foreground hover:bg-muted/70"
-                  )}
-                >
-                  {key === NO_ROLE ? tx("Sans fonction", "No role") : key}
-                </button>
-              ))}
-            </>
-          )}
-        </div>
-      )}
 
       {/* MONTH VIEW */}
       {viewMode === "month" && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px]">
           {/* October-style calendar */}
-          <div className="overflow-hidden rounded-3xl border border-border bg-white">
+          <div className="overflow-hidden rounded-[28px] bg-card shadow-sm">
             <div
               className="px-6 pt-6 pb-4"
               style={{
                 background: "linear-gradient(135deg, #d9f36e 0%, #c8e06a 100%)",
               }}
             >
-              <div className="flex items-center justify-end mb-4">
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setMonthOffset((m) => m - 1)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-[#1d1d1b]/20 bg-white/40 text-[#1d1d1b] transition-colors hover:bg-white/60"
-                    aria-label={tx("Mois précédent", "Previous month")}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMonthOffset(0)}
-                    disabled={monthOffset === 0}
-                    className="rounded-full border border-[#1d1d1b]/20 bg-white/40 px-3 py-1.5 text-xs font-semibold text-[#1d1d1b] transition-colors hover:bg-white/60 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    {tx("Aujourd'hui", "Today")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMonthOffset((m) => m + 1)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border border-[#1d1d1b]/20 bg-white/40 text-[#1d1d1b] transition-colors hover:bg-white/60"
-                    aria-label={tx("Mois suivant", "Next month")}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-
               <h1
                 className="font-heading leading-none tracking-tighter"
                 style={{
@@ -923,13 +694,13 @@ export function CalendarView() {
               </h1>
             </div>
 
-            <div className="grid grid-cols-7 border-b border-[#1d1d1b]/10 bg-white">
+            <div className="grid grid-cols-7 border-b border-border bg-card">
               {Array.from({ length: 7 }, (_, i) => {
                 const d = addDays(mondayOf(new Date()), i)
                 return (
                   <div
                     key={i}
-                    className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-[#1d1d1b]/60"
+                    className="px-2 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
                   >
                     {dayLabelShort.format(d)}
                   </div>
@@ -937,13 +708,13 @@ export function CalendarView() {
               })}
             </div>
 
-            <div className="bg-white px-4 py-2 text-center border-b border-[#1d1d1b]/5">
-              <span className="text-xs font-semibold text-[#1d1d1b]/70">
+            <div className="bg-card px-4 py-2 text-center border-b border-border">
+              <span className="text-xs font-semibold text-muted-foreground">
                 {monthName} {monthYear}
               </span>
             </div>
 
-            <div className="grid grid-cols-7 bg-white">
+            <div className="grid grid-cols-7 bg-card">
               {monthGrid.flat().map((day, idx) => {
                 const isCurrentMonth = day.getMonth() === currentMonth.getMonth()
                 const isToday = sameDay(day, today)
@@ -962,10 +733,10 @@ export function CalendarView() {
                       setSelectedDay(isSelected ? null : day)
                     }
                     className={cn(
-                      "relative flex min-h-[90px] flex-col border-b border-r border-[#1d1d1b]/8 p-1.5 text-left transition-all",
-                      !isCurrentMonth && "bg-[#f5f5f0] opacity-40",
-                      isSelected && "bg-[#1d1d1b]/5",
-                      hasDeadline && !isSelected && "bg-[#d9f36e]/15"
+                      "relative flex min-h-[90px] flex-col border-b border-r border-border p-1.5 text-left transition-all",
+                      !isCurrentMonth && "bg-muted opacity-40",
+                      isSelected && "bg-foreground/5",
+                      hasDeadline && !isSelected && "bg-brand/15"
                     )}
                   >
                     <div className="flex items-center justify-between mb-1">
@@ -973,10 +744,10 @@ export function CalendarView() {
                         className={cn(
                           "text-[11px] font-bold",
                           isToday
-                            ? "flex h-5 w-5 items-center justify-center rounded-full bg-[#1d1d1b] text-[#d9f36e]"
+                            ? "flex h-5 w-5 items-center justify-center rounded-full bg-[var(--ink)] text-brand"
                             : isSelected
-                            ? "text-[#1d1d1b]"
-                            : "text-[#1d1d1b]/70"
+                            ? "text-foreground"
+                            : "text-foreground/70"
                         )}
                       >
                         {day.getDate()}
@@ -989,7 +760,7 @@ export function CalendarView() {
                             color: "#1d1d1b",
                           }}
                         >
-                          {dayEvts.length}X
+                          {dayEvts.length}
                         </span>
                       )}
                     </div>
@@ -1000,26 +771,17 @@ export function CalendarView() {
                         return (
                           <div
                             key={event.id}
-                            className="flex items-center gap-1 rounded-md bg-[#1d1d1b] px-1.5 py-1 shadow-sm"
+                            className="flex items-center gap-1 rounded-md bg-[var(--ink)] px-1.5 py-1 shadow-sm"
                           >
                             <Icon className="h-2 w-2 shrink-0 text-[#d9f36e]" />
                             <span className="truncate text-[8px] font-bold leading-tight text-white">
                               {event.title}
                             </span>
-                            <span
-                              className="ml-auto shrink-0 rounded-sm px-1 py-0.5 text-[7px] font-black"
-                              style={{
-                                backgroundColor: "#d9f36e",
-                                color: "#1d1d1b",
-                              }}
-                            >
-                              2X
-                            </span>
                           </div>
                         )
                       })}
                       {dayEvts.length > 2 && (
-                        <span className="text-[8px] font-bold text-[#1d1d1b]/50">
+                        <span className="text-[8px] font-bold text-muted-foreground">
                           +{dayEvts.length - 2}
                         </span>
                       )}
@@ -1039,11 +801,7 @@ export function CalendarView() {
 
           {/* RIGHT PANEL — Compact Wegrow-style, limited to 5 upcoming days */}
           <div
-            className="rounded-3xl overflow-hidden flex flex-col"
-            style={{
-              background: "#1d1d1b",
-              border: "1px solid rgba(200, 224, 106, 0.15)",
-            }}
+            className="flex flex-col overflow-hidden rounded-[28px] bg-[var(--ink)]"
           >
             {/* Panel header */}
             <div className="px-5 pt-5 pb-3">
@@ -1059,7 +817,7 @@ export function CalendarView() {
                     className="text-sm font-semibold"
                     style={{ color: "#c8e06a" }}
                   >
-                    {tx("Upcoming", "À venir")}
+                    {tx("À venir", "Upcoming")}
                   </span>
                 </div>
 
@@ -1113,7 +871,7 @@ export function CalendarView() {
                               color: "#c8e06a",
                             }}
                           >
-                            {tx("Today", "Aujourd'hui")}
+                            {tx("Aujourd'hui", "Today")}
                           </span>
                         )}
                       </div>
@@ -1137,7 +895,7 @@ export function CalendarView() {
                         className="text-[10px] font-semibold italic"
                         style={{ color: "#1d1d1b", opacity: 0.5 }}
                       >
-                        {tx("Nothing", "Rien")}
+                        {tx("Rien", "Nothing")}
                       </p>
                     ) : (
                       <div className="space-y-1.5">
@@ -1161,9 +919,9 @@ export function CalendarView() {
                                       event.kind === "deadline"
                                         ? "#1d1d1b"
                                         : event.kind === "incident"
-                                        ? "var(--warning)"
+                                        ? "var(--tag-danger-bg)"
                                         : event.kind === "threshold"
-                                        ? "#ef4444"
+                                        ? "var(--tag-warning-bg)"
                                         : "rgba(29, 29, 27, 0.2)",
                                   }}
                                 >
@@ -1173,9 +931,10 @@ export function CalendarView() {
                                       color:
                                         event.kind === "deadline"
                                           ? "#c8e06a"
-                                          : event.kind === "incident" ||
-                                            event.kind === "threshold"
-                                          ? "#ffffff"
+                                          : event.kind === "incident"
+                                          ? "var(--tag-danger-fg)"
+                                          : event.kind === "threshold"
+                                          ? "var(--tag-warning-fg)"
                                           : "#1d1d1b",
                                     }}
                                   />
@@ -1208,7 +967,7 @@ export function CalendarView() {
                             style={{ color: "#1d1d1b", opacity: 0.6 }}
                           >
                             +{dayEvts.length - 2}{" "}
-                            {tx("more", "autres")}
+                            {tx("autres", "more")}
                           </p>
                         )}
                       </div>
@@ -1229,14 +988,14 @@ export function CalendarView() {
                   className="text-[10px] font-semibold"
                   style={{ color: "#c8e06a" }}
                 >
-                  {tx("This month", "Ce mois")}
+                  {tx("Ce mois", "This month")}
                 </span>
                 <div className="flex items-center gap-2">
                   <span
                     className="text-[10px] font-bold"
                     style={{ color: "#c8e06a" }}
                   >
-                    {visibleEvents.length} {tx("events", "événements")}
+                    {visibleEvents.length} {tx("événements", "events")}
                   </span>
                 </div>
               </div>
@@ -1247,7 +1006,7 @@ export function CalendarView() {
 
       {/* WEEK AGENDA */}
       {viewMode === "week" && (
-        <div id="calendar-grid" className="rounded-3xl border border-border bg-card p-4 shadow-sm">
+        <div id="calendar-grid" className="rounded-[28px] bg-card p-4 shadow-sm">
           {!loaded ? (
             <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
