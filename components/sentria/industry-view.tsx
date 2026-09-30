@@ -1,6 +1,7 @@
 "use client"
 
-import { SeverityTag, StatusTag } from "./status-tag"
+import { SeverityTag, StatusTag, ValueTag } from "./status-tag"
+import type { AlertParams } from "@/lib/value-at-risk"
 import {
   Cog,
   Activity,
@@ -23,6 +24,7 @@ type Alert = {
   date: string
   sector?: string | null
   alert_key?: string | null
+  params?: AlertParams
 }
 
 /** Grouped thousands in the reader's own convention. */
@@ -191,6 +193,7 @@ function AlertRow({
           </p>
 
           <SeverityTag severity={alert.severity} tx={tx} size="xs" />
+          <ValueTag params={alert.params} tx={tx} size="xs" />
         </div>
 
         <p className="mt-1 truncate text-xs text-muted-foreground">
