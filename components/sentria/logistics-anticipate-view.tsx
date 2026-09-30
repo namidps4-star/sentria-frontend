@@ -11,6 +11,7 @@ import {
   StatTile,
   TONE_CHIP,
   ViewHeader,
+  STAT_STRIP,
 } from "./logistics-ui"
 import {
   countOf,
@@ -286,7 +287,7 @@ export function LogisticsAnticipateView({
         </p>
       </FlowCard>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className={STAT_STRIP}>
         <StatTile
           label={tx("Alertes préventives", "Early warnings")}
           value={String(lines.length)}
@@ -340,22 +341,22 @@ export function LogisticsAnticipateView({
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <section className="rounded-3xl border border-border bg-card p-6 lg:col-span-3">
+        <section className="rounded-[28px] border border-border bg-card p-5 lg:col-span-3">
           <SectionTitle
             note={tx("Avance la plus longue en premier", "Longest lead time first")}
           >
             {tx("Chaque alerte préventive", "Every early warning")}
           </SectionTitle>
 
-          <ul className="space-y-2">
+          <ul className="-mx-2 divide-y divide-border">
             {lines.slice(0, 10).map((line, index) => (
               <li
                 key={`${line.equipment}-${index}`}
-                className="rounded-2xl border border-border bg-muted/30 p-4"
+                className="px-2 py-3"
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-sm font-bold">{line.equipment}</p>
+                    <p className="text-sm font-semibold">{line.equipment}</p>
 
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {line.stageName}
@@ -385,7 +386,7 @@ export function LogisticsAnticipateView({
                   </span>
                 </div>
 
-                <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
                   {line.leadHours !== null ? (
                     <>
                       {tx("Confirmé ensuite par", "Later confirmed by")}{" "}
@@ -438,7 +439,7 @@ export function LogisticsAnticipateView({
           )}
         </section>
 
-        <section className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
+        <section className="rounded-[28px] border border-border bg-card p-5 lg:col-span-2">
           <SectionTitle note={tx("7 derniers jours", "Last 7 days")}>
             {tx("Alertes préventives", "Early warnings")}
           </SectionTitle>

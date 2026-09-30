@@ -14,11 +14,13 @@ import {
   Cpu,
   Fuel,
   Inbox,
+  Menu,
   MoreHorizontal,
   Package,
   Radar,
   Search,
   Sparkles,
+  SquareKanban,
   UserRound,
   Waypoints,
   Wrench,
@@ -65,6 +67,8 @@ type Recommendation = {
 }
 
 type Status = "todo" | "in_progress" | "done"
+
+const LAYOUT_KEY = "sentria_board_layout"
 
 type Priority = "low" | "medium" | "high" | "critical"
 
@@ -194,13 +198,6 @@ const CATEGORY_TONE: Record<string, { pill: string; dot: string }> = {
     dot: "bg-fuchsia-500",
   },
   other: { pill: "bg-muted text-muted-foreground", dot: "bg-muted-foreground" },
-}
-
-const PRIORITY_TONE: Record<Priority, { pill: string; dot: string; tag: TagTone }> = {
-  critical: { pill: "bg-destructive/12 text-foreground", dot: "bg-destructive", tag: "danger" },
-  high: { pill: "bg-warning/12 text-foreground", dot: "bg-warning", tag: "warning" },
-  medium: { pill: "bg-warning/15 text-foreground", dot: "bg-warning", tag: "info" },
-  low: { pill: "bg-muted text-muted-foreground", dot: "bg-muted-foreground", tag: "neutral" },
 }
 
 const COLUMN_TONE: Record<Status, { pill: string; dot: string; tag: TagTone }> = {
@@ -1159,6 +1156,25 @@ export function RecommendationsBoard({
   const [assigningId, setAssigningId] = useState<string | null>(null)
   const [filter, setFilter] = useState<Filter>("all")
   const [query, setQuery] = useState("")
+
+  /* Board (columns to drag between) or List (one dense row per priority,
+     easier to scan when there are many). Remembered on this browser. */
+  const [layout, setLayout] = useState<"board" | "list">("board")
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(LAYOUT_KEY) === "list") setLayout("list")
+    } catch {
+      /* Storage blocked: stay on the board. */
+    }
+  }, [])
+  const chooseLayout = (next: "board" | "list") => {
+    setLayout(next)
+    try {
+      localStorage.setItem(LAYOUT_KEY, next)
+    } catch {
+      /* Storage blocked: the choice lasts until reload. */
+    }
+  }
   const [activeSector, setActiveSector] = useState<string | null>(null)
   const [activeRole, setActiveRole] = useState<string | null>(null)
 
@@ -1412,6 +1428,57 @@ export function RecommendationsBoard({
 
   const doneCount = cards.filter((card) => card.task.status === "done").length
 
+  /* Shared by the card and the list row: the owner (opens the picker in
+     place) and the due date (set in place). */
+  const ownerButton = (id: string, assignees: Contractor[], compact: boolean) => (
+    <button
+      type="button"
+      onClick={() => setAssigningId(assigningId === id ? null : id)}
+      aria-expanded={assigningId === id}
+      aria-haspopup="dialog"
+      className={cn(
+        "flex min-w-0 shrink-0 items-center gap-1.5 rounded-full text-left transition-opacity hover:opacity-70",
+        compact && "[&_span.h-6]:h-5 [&_span.h-6]:w-5"
+      )}
+    >
+      <Owner assignees={assignees} tx={tx} />
+    </button>
+  )
+
+  const dueDate = (
+    id: string,
+    equipment: string,
+    deadline: string | null | undefined,
+    overdue: boolean
+  ) => (
+    <label
+      className={cn(
+        "relative flex shrink-0 cursor-pointer items-center gap-1 rounded-lg px-1 py-0.5 text-[11px] transition-colors hover:bg-muted",
+        "focus-within:outline-none focus-within:ring-2 focus-within:ring-ring",
+        overdue ? "font-semibold text-destructive" : "text-muted-foreground"
+      )}
+    >
+      <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" />
+
+      {deadline ? formatDeadline(deadline, tx) : tx("Échéance", "Due")}
+
+      <input
+        type="date"
+        value={deadline ?? ""}
+        onChange={(event) => updateTask(id, { deadline: event.target.value || null })}
+        onClick={(event) => {
+          try {
+            event.currentTarget.showPicker?.()
+          } catch {
+            /* Older browsers focus the field instead. */
+          }
+        }}
+        aria-label={tx(`Échéance de ${equipment}`, `Due date for ${equipment}`)}
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+      />
+    </label>
+  )
+
   return (
     <div className="flex flex-col gap-6">
       {/* The Ask SentrIA layout, as on Calendar: lime card (how far
@@ -1638,6 +1705,152 @@ export function RecommendationsBoard({
           out of it under either theme. A trough tinted with --muted would
           have inverted in the dark.
           ------------------------------------------------------------------ */}
+      {/* Board or list: the same priorities, two densities. */}
+      <div className="flex items-center justify-between gap-2 px-4 py-2.5 md:px-5">
+        <p className="text-xs text-muted-foreground">
+          {tx(
+            `${visible.length} priorité${visible.length > 1 ? "s" : ""}`,
+            `${visible.length} ${visible.length === 1 ? "priority" : "priorities"}`
+          )}
+        </p>
+
+        <div
+          role="group"
+          aria-label={tx("Affichage", "Layout")}
+          className="flex items-center gap-0.5 rounded-full bg-muted p-0.5"
+        >
+          {(
+            [
+              ["board", SquareKanban, tx("Tableau", "Board")],
+              ["list", Menu, tx("Liste", "List")],
+            ] as const
+          ).map(([value, Glyph, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={layout === value}
+              onClick={() => chooseLayout(value)}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+                layout === value
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Glyph className="h-3.5 w-3.5" aria-hidden="true" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {layout === "list" ? (
+        <ul
+          className="divide-y divide-border border-t border-border"
+          aria-label={tx("Priorités", "Priorities")}
+          data-testid="priority-list"
+        >
+          {visible.length === 0 && (
+            <li className="px-5 py-10 text-center text-xs text-muted-foreground">
+              {tx("Rien ne correspond.", "Nothing matches.")}
+            </li>
+          )}
+
+          {[...visible]
+            .sort(
+              (a, b) =>
+                COLUMNS.findIndex((c) => c.id === a.task.status) -
+                  COLUMNS.findIndex((c) => c.id === b.task.status) ||
+                PRIORITY_RANK[b.task.priority] - PRIORITY_RANK[a.task.priority]
+            )
+            .map(({ id, rec, task }) => {
+              const tone = toneOf(rec)
+              const risk = riskOf(rec)
+              const assignees = task.contractor_ids
+                .map((cid) => contractors.find((person) => person.id === cid))
+                .filter((person): person is Contractor => Boolean(person))
+
+              return (
+                <li
+                  key={id}
+                  className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2.5 transition-colors hover:bg-muted/40 md:px-5"
+                >
+                  {/* A fixed slot, so every title starts on the same line. */}
+                  <span className="w-[6.5rem] shrink-0">
+                    <StatusTag tone={tone.tag} size="xs">
+                      {px(tone.word)}
+                      {risk !== null && (
+                        <span className="tabular-nums opacity-70">{` · ${risk}`}</span>
+                      )}
+                    </StatusTag>
+                  </span>
+
+                  <div className="min-w-[12rem] flex-1">
+                    <p className="truncate text-sm font-semibold">
+                      {rec.equipment}
+                      {rec.stageName && (
+                        <span className="font-normal text-muted-foreground">
+                          {` · ${rec.stageName}`}
+                        </span>
+                      )}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground" title={rec.recommended_action}>
+                      {rec.recommended_action}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={task.status}
+                      onChange={(event) => moveTo(id, event.target.value as Status)}
+                      aria-label={tx(`Statut de ${rec.equipment}`, `Status of ${rec.equipment}`)}
+                      className="h-7 rounded-full border border-border bg-card px-2.5 text-[11px] font-semibold"
+                    >
+                      {COLUMNS.map((column) => (
+                        <option key={column.id} value={column.id}>
+                          {px(column.label)}
+                        </option>
+                      ))}
+                    </select>
+
+                    <span className="relative flex items-center">
+                      {ownerButton(id, assignees, true)}
+                      {assigningId === id && (
+                        <AssignPopover
+                          task={task}
+                          contractors={contractors}
+                          contractorsLoaded={loaded}
+                          onPatch={(patch) => updateTask(id, patch)}
+                          onClose={closeAssign}
+                        />
+                      )}
+                    </span>
+
+                    {dueDate(id, rec.equipment, task.deadline, isDeadlineOverdue(task.deadline))}
+
+                    {(rec.exposureEUR ?? 0) > 0 && (
+                      <span className="hidden w-20 text-right text-[11px] font-semibold tabular-nums lg:inline">
+                        {formatMoney(rec.exposureEUR!, currency, tx)}
+                      </span>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => setEditingId(id)}
+                      aria-label={tx(
+                        `Détails de la priorité ${rec.equipment}`,
+                        `Priority detail for ${rec.equipment}`
+                      )}
+                      className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </button>
+                  </div>
+                </li>
+              )
+            })}
+        </ul>
+      ) : (
       <div className="grid grid-cols-1 gap-3 border-t border-border bg-background p-3 md:grid-cols-3 md:gap-4 md:p-4">
         {COLUMNS.map((column, columnIndex) => {
           const columnCards = visible
@@ -1759,36 +1972,28 @@ export function RecommendationsBoard({
                       onDragEnd={handleDragEnd}
                       aria-labelledby={`board-card-${id}`}
                       className={cn(
-                        "group relative cursor-grab rounded-2xl border border-border bg-card p-3.5 shadow-sm",
+                        "group relative cursor-grab rounded-2xl border border-border bg-card px-3 py-2.5 shadow-sm",
                         "transition-[box-shadow,border-color,transform] duration-200 ease-out",
                         "hover:border-foreground/15 hover:shadow-md active:cursor-grabbing",
                         isDragging &&
                           "scale-[1.02] opacity-95 shadow-xl ring-2 ring-brand"
                       )}
                     >
-                      {/* Row 1 — who owns it, and how bad it is. */}
-                      <div className="relative flex items-center justify-between gap-2">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setAssigningId(assigningId === id ? null : id)
-                          }
-                          aria-expanded={assigningId === id}
-                          aria-haspopup="dialog"
-                          className="flex min-w-0 items-center gap-2 rounded-full text-left transition-opacity hover:opacity-70"
+                      {/* Three lines: what and how bad; what to do; who,
+                          by when, for how much. The rest is in the detail. */}
+                      <div className="flex items-center gap-2">
+                        <h5
+                          id={`board-card-${id}`}
+                          className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight"
+                          title={subtitle ? `${rec.equipment} · ${subtitle}` : rec.equipment}
                         >
-                          <Owner assignees={assignees} tx={tx} />
-                        </button>
-
-                        {assigningId === id && (
-                          <AssignPopover
-                            task={task}
-                            contractors={contractors}
-                            contractorsLoaded={loaded}
-                            onPatch={(patch) => updateTask(id, patch)}
-                            onClose={closeAssign}
-                          />
-                        )}
+                          {rec.equipment}
+                          {subtitle && (
+                            <span className="font-normal text-muted-foreground">
+                              {` · ${subtitle}`}
+                            </span>
+                          )}
+                        </h5>
 
                         <StatusTag tone={tone.tag} size="xs">
                           {px(tone.word)}
@@ -1800,178 +2005,80 @@ export function RecommendationsBoard({
                         </StatusTag>
                       </div>
 
-                      {/* Row 2 — the asset, and where it sits in the chain. */}
-                      <h5
-                        id={`board-card-${id}`}
-                        className="mt-3 text-[15px] font-semibold leading-tight tracking-tight"
+                      <p
+                        className="mt-1 flex items-start gap-1.5 text-xs leading-5 text-muted-foreground"
+                        title={rec.recommended_action}
                       >
-                        {rec.equipment}
-                      </h5>
-
-                      {subtitle && (
-                        <p className="mt-1 truncate text-xs text-muted-foreground">
-                          {subtitle}
-                        </p>
-                      )}
-
-                      {/* Row 3 — what to do about it. */}
-                      <p className="mt-2.5 line-clamp-2 text-[13px] leading-5 text-muted-foreground">
-                        {rec.recommended_action}
+                        <Icon
+                          className="mt-1 h-3 w-3 shrink-0"
+                          aria-label={px(
+                            CATEGORY_LABEL[rec.action_category] ?? CATEGORY_LABEL.other
+                          )}
+                        />
+                        <span className="line-clamp-1">{rec.recommended_action}</span>
                       </p>
 
-                      {/* Row 4 — three chips at most. The board carried five
-                          before, which turned the busiest cards into a wall
-                          of grey boxes and hid the one chip that mattered. */}
-                      <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                        <Chip
-                          icon={Icon}
-                          pillClassName={
-                            (
-                              CATEGORY_TONE[rec.action_category] ??
-                              CATEGORY_TONE.other
-                            ).pill
-                          }
-                          dotClassName={
-                            (
-                              CATEGORY_TONE[rec.action_category] ??
-                              CATEGORY_TONE.other
-                            ).dot
-                          }
-                        >
-                          {px(
-                            CATEGORY_LABEL[rec.action_category] ??
-                              CATEGORY_LABEL.other
-                          )}
-                        </Chip>
+                      <div className="relative mt-2 flex items-center gap-1.5">
+                        {ownerButton(id, assignees, true)}
 
-                        <StatusTag
-                          size="xs"
-                          tone={(PRIORITY_TONE[task.priority] ?? PRIORITY_TONE.medium).tag}
-                        >
-                          {px(
-                            PRIORITY_LABEL[task.priority] ??
-                              PRIORITY_LABEL.medium
-                          )}
-                        </StatusTag>
-
-                        {(rec.downstream ?? 0) > 0 && (
-                          <Chip icon={Waypoints} tone="brand">
-                            {tx(
-                              `${rec.downstream} en aval`,
-                              `${rec.downstream} downstream`
-                            )}
-                          </Chip>
+                        {assigningId === id && (
+                          <AssignPopover
+                            task={task}
+                            contractors={contractors}
+                            contractorsLoaded={loaded}
+                            onPatch={(patch) => updateTask(id, patch)}
+                            onClose={closeAssign}
+                          />
                         )}
-                      </div>
 
-                      {/* Row 5 — by when, and for how much. */}
-                      <div className="mt-3.5 flex items-center justify-between gap-2 border-t border-border pt-3">
-                        {/* Sets the date in place (B-16): it opened the
-                            detail dialog, like the owner button. */}
-                        <label
-                          className={cn(
-                            "relative -ml-1 flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-1 py-0.5 text-[11px] transition-colors hover:bg-muted",
-                            "focus-within:outline-none focus-within:ring-2 focus-within:ring-ring",
-                            overdue
-                              ? "font-semibold text-destructive"
-                              : "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarDays
-                            className="h-3.5 w-3.5"
-                            aria-hidden="true"
-                          />
+                        {dueDate(id, rec.equipment, task.deadline, overdue)}
 
-                          {task.deadline
-                            ? formatDeadline(task.deadline, tx)
-                            : tx("Échéance", "Due date")}
-
-                          <input
-                            type="date"
-                            value={task.deadline ?? ""}
-                            onChange={(event) =>
-                              updateTask(id, {
-                                deadline: event.target.value || null,
-                              })
-                            }
-                            onClick={(event) => {
-                              try {
-                                event.currentTarget.showPicker?.()
-                              } catch {
-                                /* Older browsers focus the field instead. */
-                              }
-                            }}
-                            aria-label={tx(
-                              `Échéance de ${rec.equipment}`,
-                              `Due date for ${rec.equipment}`
-                            )}
-                            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                          />
-                        </label>
-
+                        {/* Priority is the column's sort order, and the
+                            severity tag already says how bad it is. */}
                         {(rec.exposureEUR ?? 0) > 0 && (
-                          <span className="truncate text-[11px] font-semibold tabular-nums">
-                            {tx(
-                              `${formatMoney(
-                                rec.exposureEUR!,
-                                currency,
-                                tx
-                              )} exposés`,
-                              `${formatMoney(
-                                rec.exposureEUR!,
-                                currency,
-                                tx
-                              )} exposed`
-                            )}
+                          <span className="min-w-0 truncate text-[11px] font-semibold tabular-nums">
+                            {formatMoney(rec.exposureEUR!, currency, tx)}
                           </span>
                         )}
-                      </div>
 
-                      {/* The card's controls, floating on its top edge so
-                          they never sit on top of the content the way the
-                          old bottom-right pair did. Hidden until hover or
-                          focus; a pointer-free route to all three lives in
-                          the detail dialog, which the owner row and the due
-                          date both open. */}
-                      <div className="pointer-events-none absolute -top-2.5 right-3 flex items-center gap-0.5 rounded-full border border-border bg-card p-0.5 opacity-0 shadow-md transition-opacity focus-within:pointer-events-auto focus-within:opacity-100 group-hover:pointer-events-auto group-hover:opacity-100">
-                        <button
-                          type="button"
-                          aria-label={tx(
-                            "Déplacer vers la colonne précédente",
-                            "Move to the previous column"
-                          )}
-                          disabled={columnIndex === 0}
-                          onClick={() => {
-                            if (columnIndex > 0) {
-                              moveTo(id, COLUMNS[columnIndex - 1].id)
-                            }
-                          }}
-                          className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-25"
-                        >
-                          <ChevronLeft className="h-3.5 w-3.5" />
-                        </button>
+                        {/* Move arrows appear on hover or keyboard focus;
+                            the detail button is always there (touch has
+                            no hover). */}
+                        <div className="ml-auto flex shrink-0 items-center opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                          <button
+                            type="button"
+                            aria-label={tx(
+                              "Déplacer vers la colonne précédente",
+                              "Move to the previous column"
+                            )}
+                            disabled={columnIndex === 0}
+                            onClick={() => {
+                              if (columnIndex > 0) {
+                                moveTo(id, COLUMNS[columnIndex - 1].id)
+                              }
+                            }}
+                            className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-25"
+                          >
+                            <ChevronLeft className="h-3.5 w-3.5" />
+                          </button>
 
-                        <button
-                          type="button"
-                          aria-label={tx(
-                            "Déplacer vers la colonne suivante",
-                            "Move to the next column"
-                          )}
-                          disabled={columnIndex === COLUMNS.length - 1}
-                          onClick={() => {
-                            if (columnIndex < COLUMNS.length - 1) {
-                              moveTo(id, COLUMNS[columnIndex + 1].id)
-                            }
-                          }}
-                          className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-25"
-                        >
-                          <ChevronRight className="h-3.5 w-3.5" />
-                        </button>
-
-                        <span
-                          className="mx-0.5 h-3.5 w-px bg-border"
-                          aria-hidden="true"
-                        />
+                          <button
+                            type="button"
+                            aria-label={tx(
+                              "Déplacer vers la colonne suivante",
+                              "Move to the next column"
+                            )}
+                            disabled={columnIndex === COLUMNS.length - 1}
+                            onClick={() => {
+                              if (columnIndex < COLUMNS.length - 1) {
+                                moveTo(id, COLUMNS[columnIndex + 1].id)
+                              }
+                            }}
+                            className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-25"
+                          >
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
 
                         <button
                           type="button"
@@ -1993,6 +2100,7 @@ export function RecommendationsBoard({
           )
         })}
       </div>
+      )}
       </div>
 
       {editingCard && (

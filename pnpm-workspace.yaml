@@ -1,3 +1,8 @@
+# Which dependencies may run install scripts.
+# sharp: downloads its native image library, which next/image uses to resize.
+# msw, unrs-resolver: not needed (msw's script only copies a worker file;
+# unrs-resolver ships prebuilt binaries).
 allowBuilds:
-  msw: set this to true or false
-  sharp: set this to true or false
+  msw: false
+  sharp: true
+  unrs-resolver: false

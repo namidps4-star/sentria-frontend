@@ -18,6 +18,7 @@ import {
   StatTile,
   TONE_CHIP,
   ViewHeader,
+  STAT_STRIP,
 } from "./logistics-ui"
 import {
   convergenceOf,
@@ -324,7 +325,7 @@ export function LogisticsBlockagesView({
       </FlowCard>
 
       {selected && (
-        <section className="rounded-3xl border border-border bg-card p-6">
+        <section className="rounded-[28px] border border-border bg-card p-5">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex items-start gap-3">
               {(() => {
@@ -388,11 +389,11 @@ export function LogisticsBlockagesView({
           )}
 
           {selected.alerts.length > 0 && selected.signals.length === 0 && (
-            <ul className="mt-4 space-y-2">
+            <ul className="mt-3 divide-y divide-border">
               {selected.alerts.slice(0, 5).map((alert, index) => (
                 <li
                   key={`${alert.equipment}-${index}`}
-                  className="rounded-xl border border-border bg-muted/30 px-3 py-2 text-sm"
+                  className="py-2 text-sm"
                 >
                   <span className="font-semibold">{alert.equipment}</span>
                   {" · "}
@@ -406,7 +407,7 @@ export function LogisticsBlockagesView({
         </section>
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className={STAT_STRIP}>
         <StatTile
           label={tx("Signaux sur la chaîne", "Signals on the chain")}
           value={String(attributed.length)}
@@ -442,59 +443,50 @@ export function LogisticsBlockagesView({
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <section className="rounded-3xl border border-border bg-card p-6 lg:col-span-3">
+        <section className="rounded-[28px] border border-border bg-card p-5 lg:col-span-3">
           <SectionTitle note={tx("Classés par risque mesuré", "Ranked by measured risk")}>
             {tx("Points de rupture", "Breaking points")}
           </SectionTitle>
 
-          <ul className="space-y-2">
-            {breakpoints.map((bp) => (
+          {/* Rows, not cards: rank, what breaks, where, and the score. */}
+          <ol className="-mx-2 divide-y divide-border" data-testid="breakpoints">
+            {breakpoints.map((bp, index) => (
               <li
                 key={`${bp.stage}-${bp.title}`}
-                className="rounded-2xl border border-border bg-muted/30 p-4"
+                className="flex items-center gap-3 px-2 py-2.5"
               >
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold">{bp.title}</p>
+                <span className="w-5 shrink-0 text-right text-xs font-semibold tabular-nums text-muted-foreground">
+                  {index + 1}
+                </span>
 
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {bp.stageName} ·{" "}
-                      {tx(
-                        countOf(bp.equipmentCount, "équipement"),
-                        countOf(bp.equipmentCount, "asset")
-                      )}{" "}
-                      ·{" "}
-                      {bp.equipment.slice(0, 2).join(", ")}
-                      {bp.equipment.length > 2 &&
-                        ` +${bp.equipment.length - 2}`}
-                    </p>
-                  </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{bp.title}</p>
 
-                  <span
-                    className={cn(
-                      "shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-bold tabular-nums",
-                      TONE_CHIP[bp.tone]
-                    )}
-                  >
-                    {bp.risk}/100
-                  </span>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {bp.stageName} ·{" "}
+                    {tx(
+                      countOf(bp.equipmentCount, "équipement"),
+                      countOf(bp.equipmentCount, "asset")
+                    )}{" "}
+                    · {bp.equipment.slice(0, 2).join(", ")}
+                    {bp.equipment.length > 2 && ` +${bp.equipment.length - 2}`}
+                  </p>
                 </div>
 
-                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className={cn(
-                      "h-full rounded-full",
-                      bp.tone === "risk" ? "bg-destructive" : "bg-brand"
-                    )}
-                    style={{ width: `${bp.risk}%` }}
-                  />
-                </div>
+                <span
+                  className={cn(
+                    "shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-bold tabular-nums",
+                    TONE_CHIP[bp.tone]
+                  )}
+                >
+                  {bp.risk}/100
+                </span>
               </li>
             ))}
-          </ul>
+          </ol>
         </section>
 
-        <section className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
+        <section className="rounded-[28px] border border-border bg-card p-5 lg:col-span-2">
           <SectionTitle>
             {tx("Ce qui se passe ensuite", "What happens next")}
           </SectionTitle>

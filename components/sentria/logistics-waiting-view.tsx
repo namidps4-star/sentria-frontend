@@ -12,6 +12,7 @@ import {
   StatTile,
   TONE_CHIP,
   ViewHeader,
+  STAT_STRIP,
 } from "./logistics-ui"
 import {
   countOf,
@@ -216,7 +217,7 @@ export function LogisticsWaitingView({
         </p>
       </FlowCard>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className={STAT_STRIP}>
         <StatTile
           label={tx("File la plus longue", "Longest queue")}
           value={formatHours(maxHours)}
@@ -261,7 +262,7 @@ export function LogisticsWaitingView({
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <section className="rounded-3xl border border-border bg-card p-6 lg:col-span-3">
+        <section className="rounded-[28px] border border-border bg-card p-5 lg:col-span-3">
           <SectionTitle
             note={tx(
               `Seuil critique ${WAIT_THRESHOLD_HOURS} h`,
@@ -315,7 +316,7 @@ export function LogisticsWaitingView({
           )}
         </section>
 
-        <section className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
+        <section className="rounded-[28px] border border-border bg-card p-5 lg:col-span-2">
           <SectionTitle note={tx("7 derniers jours", "Last 7 days")}>
             {tx("Alertes d'attente", "Waiting alerts")}
           </SectionTitle>
@@ -347,11 +348,11 @@ export function LogisticsWaitingView({
             </p>
           )}
 
-          <div className="mt-5 space-y-2">
+          <div className="mt-4 divide-y divide-border border-t border-border">
             {queues.slice(0, 3).map((line, index) => (
               <div
                 key={`top-${line.equipment}-${index}`}
-                className="flex items-center justify-between gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2"
+                className="flex items-center justify-between gap-2 py-2"
               >
                 <span className="min-w-0 truncate text-xs font-semibold">
                   {line.equipment}

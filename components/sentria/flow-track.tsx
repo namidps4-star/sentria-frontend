@@ -113,7 +113,7 @@ export function FlowTrack({
               no seam, and the labels live outside the capsule rather
               than crowding it. */}
           <ol
-            className="flex w-full items-center rounded-full bg-track px-3 py-3 sm:px-4 sm:py-4"
+            className="flex w-full items-center rounded-full bg-track px-3 py-2 sm:px-4 sm:py-2.5"
             aria-label={tx(
               "Chaîne logistique, étape par étape",
               "Logistics chain, stage by stage"
@@ -129,7 +129,7 @@ export function FlowTrack({
               const circle = (
                 <span
                   className={cn(
-                    "relative z-10 flex h-14 w-14 items-center justify-center rounded-full transition-colors sm:h-16 sm:w-16",
+                    "relative z-10 flex h-11 w-11 items-center justify-center rounded-full transition-colors sm:h-12 sm:w-12",
                     reached
                       ? "bg-brand text-track"
                       : "bg-track-muted text-track-muted-foreground",
@@ -139,7 +139,7 @@ export function FlowTrack({
                       "ring-2 ring-white/70 ring-offset-2 ring-offset-track"
                   )}
                 >
-                  <Icon className="h-6 w-6 sm:h-7 sm:w-7" aria-hidden="true" />
+                  <Icon className="h-5 w-5" aria-hidden="true" />
                 </span>
               )
 
@@ -189,7 +189,7 @@ export function FlowTrack({
                     <span
                       aria-hidden="true"
                       className={cn(
-                        "-mx-2 h-8 min-w-12 flex-1 sm:h-9",
+                        "-mx-2 h-6 min-w-12 flex-1 sm:h-7",
                         nextReached ? "bg-brand" : "bg-track-muted"
                       )}
                     />
@@ -284,43 +284,44 @@ export function FlowCard({
   aside?: React.ReactNode
 }) {
   return (
-    <section className="rounded-3xl border border-border bg-card p-6 sm:p-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <section className="rounded-[28px] border border-border bg-card p-5 sm:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div className="min-w-0 max-w-xl">
-          <h2 className="text-balance font-heading text-3xl font-bold leading-[1.05] tracking-tight sm:text-4xl">
+          <h2 className="text-balance font-heading text-xl font-bold leading-tight tracking-tight sm:text-2xl">
             {title}
           </h2>
 
-          <p className="mt-2 text-pretty text-base leading-6 text-muted-foreground">
+          <p className="mt-1 text-pretty text-sm leading-5 text-muted-foreground">
             {subtitle}
           </p>
         </div>
 
+        {/* The headline number sits beside the title, not under the track. */}
+        {figure && (
+          <div className="shrink-0 text-right" data-testid="flow-figure">
+            {figureLabel && (
+              <p className="text-xs text-muted-foreground">{figureLabel}</p>
+            )}
+
+            <p
+              className={cn(
+                "font-heading text-3xl font-bold leading-tight tabular-nums tracking-tight",
+                tone === "risk" ? "text-destructive" : "text-foreground"
+              )}
+            >
+              {figure}
+            </p>
+
+            {figureNote && (
+              <p className="max-w-[22rem] text-xs text-muted-foreground">{figureNote}</p>
+            )}
+          </div>
+        )}
+
         {aside}
       </div>
 
-      <div className="mt-6">{children}</div>
-
-      {figure && (
-        <div className="mt-6">
-          {figureLabel && (
-            <p className="text-sm text-muted-foreground">{figureLabel}</p>
-          )}
-
-          <p
-            className={cn(
-              "mt-1 font-heading text-5xl font-bold tabular-nums tracking-tight sm:text-6xl",
-              tone === "risk" ? "text-destructive" : "text-foreground"
-            )}
-          >
-            {figure}
-          </p>
-
-          {figureNote && (
-            <p className="mt-1 text-sm text-muted-foreground">{figureNote}</p>
-          )}
-        </div>
-      )}
+      <div className="mt-4">{children}</div>
     </section>
   )
 }

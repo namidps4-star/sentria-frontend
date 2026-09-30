@@ -17,6 +17,7 @@ import {
   StatTile,
   TONE_CHIP,
   ViewHeader,
+  STAT_STRIP,
 } from "./logistics-ui"
 import {
   countOf,
@@ -270,7 +271,7 @@ export function LogisticsCostView({
         </p>
       </FlowCard>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className={STAT_STRIP}>
         <StatTile
           label={tx("Exposition totale", "Total exposure")}
           value={formatMoney(totalExposure, currency, tx)}
@@ -308,7 +309,7 @@ export function LogisticsCostView({
         />
       </div>
 
-      <section className="rounded-3xl border border-border bg-card p-6">
+      <section className="rounded-[28px] border border-border bg-card p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <SectionTitle
             note={tx(
@@ -474,7 +475,7 @@ export function LogisticsCostView({
         </div>
       </section>
 
-      <section className="rounded-3xl border border-border bg-card p-6">
+      <section className="rounded-[28px] border border-border bg-card p-5">
         <SectionTitle
           note={tx("Par nature de dépassement", "By kind of overrun")}
         >

@@ -64,8 +64,8 @@ export function ViewHeader({
   const activity = opsLabelFor(opsType, tx, selectedOpsTypes)
 
   return (
-    <section className="rounded-3xl bg-sidebar p-6 text-sidebar-foreground sm:p-8">
-      <div className="flex flex-wrap items-start justify-between gap-6">
+    <section className="rounded-[28px] bg-sidebar px-5 py-4 text-sidebar-foreground sm:px-6 sm:py-5">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0 max-w-2xl">
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1 text-xs font-semibold text-brand-foreground">
@@ -80,11 +80,11 @@ export function ViewHeader({
             )}
           </div>
 
-          <h2 className="mt-4 text-balance font-heading text-2xl font-bold leading-[1.1] sm:text-3xl">
+          <h2 className="mt-2.5 text-balance font-heading text-xl font-bold leading-tight sm:text-2xl">
             {title}
           </h2>
 
-          <p className="mt-2 text-pretty text-sm leading-6 text-sidebar-foreground/70">
+          <p className="mt-1 text-pretty text-sm leading-5 text-sidebar-foreground/70">
             {lede}
           </p>
         </div>
@@ -122,7 +122,7 @@ export function RiskDial({
 
   return (
     <div className="flex shrink-0 items-center gap-3">
-      <div className="relative h-24 w-24">
+      <div className="relative h-16 w-16">
         <svg viewBox="0 0 80 80" className="h-full w-full -rotate-90">
           <circle
             cx="40"
@@ -151,7 +151,7 @@ export function RiskDial({
           />
         </svg>
 
-        <span className="absolute inset-0 flex items-center justify-center font-heading text-xl font-bold tabular-nums">
+        <span className="absolute inset-0 flex items-center justify-center font-heading text-lg font-bold tabular-nums">
           {clamped}
         </span>
       </div>
@@ -171,7 +171,12 @@ export function RiskDial({
   )
 }
 
-/** Dense KPI tile. `note` carries where the number came from. */
+/** The four numbers of a view as one strip: flat cells, divided by the
+ *  1px gap showing the border colour through, instead of four cards. */
+export const STAT_STRIP =
+  "grid grid-cols-2 gap-px overflow-hidden rounded-[22px] bg-border shadow-sm lg:grid-cols-4"
+
+/** Dense KPI cell of a STAT_STRIP. `note` carries where the number came from. */
 export function StatTile({
   label,
   value,
@@ -188,7 +193,7 @@ export function StatTile({
   icon?: LucideIcon
 }) {
   return (
-    <div className="rounded-2xl border border-border bg-card p-4">
+    <div className="bg-card px-4 py-3">
       <div className="flex items-start justify-between gap-2">
         <p className="text-xs font-medium text-muted-foreground">{label}</p>
 
@@ -202,7 +207,7 @@ export function StatTile({
 
       <p
         className={cn(
-          "mt-2 font-heading text-2xl font-bold tabular-nums tracking-tight",
+          "mt-1 font-heading text-2xl font-bold tabular-nums tracking-tight",
           tone === "risk" ? "text-destructive" : "text-foreground"
         )}
       >
@@ -216,7 +221,7 @@ export function StatTile({
       </p>
 
       {note && (
-        <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
+        <p className="mt-0.5 truncate text-[11px] leading-4 text-muted-foreground" title={note}>
           {note}
         </p>
       )}
