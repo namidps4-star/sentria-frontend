@@ -17,6 +17,10 @@ export type ValueAtRisk = {
   value: number
   /** The symbol the backend printed, or "" when the currency is unknown. */
   currency: string
+  /** True when the amount is an estimate of the sales lost while waiting
+   *  for a delivery (a stock-out with nothing left to value), not the
+   *  value of stock on the shelf. The backend marks it basis "sales". */
+  estimate: boolean
 }
 
 function asRecord(params: AlertParams): Record<string, unknown> | null {
@@ -41,5 +45,5 @@ export function valueAtRisk(params: AlertParams): ValueAtRisk | null {
   if (!Number.isFinite(value) || value <= 0) return null
 
   const currency = typeof record.currency === "string" ? record.currency.trim() : ""
-  return { value, currency }
+  return { value, currency, estimate: record.basis === "sales" }
 }

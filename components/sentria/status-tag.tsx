@@ -147,11 +147,15 @@ export function ValueTag({
   if (!risk) return null
 
   const amount = formatAmount(risk.value, risk.currency, tx)
+  const label = risk.estimate
+    ? tx("Ventes en jeu (estimation) : ", "Sales at risk (estimate): ")
+    : tx("Valeur en jeu : ", "Value at risk: ")
 
   return (
-    <span title={tx(`Valeur en jeu : ${amount}`, `Value at risk: ${amount}`)} className="inline-flex">
+    <span title={`${label}${amount}`} className="inline-flex">
       <StatusTag tone="neutral" size={size} icon={Wallet} className={cn("tabular-nums", className)}>
-        <span className="sr-only">{tx("Valeur en jeu : ", "Value at risk: ")}</span>
+        <span className="sr-only">{label}</span>
+        {risk.estimate ? "≈ " : ""}
         {amount}
       </StatusTag>
     </span>

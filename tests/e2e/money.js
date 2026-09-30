@@ -19,6 +19,9 @@ const ALERTS = [
     params: [['stock', 20], ['value', 400], ['currency', '']] },
   { equipment: 'Store A', severity: 'CRITICAL', sector: 'health', business_type: 'pharmacie', date: now, alert_key: 'retail.shrinkage.critical',
     message: 'Critical shrinkage: 5%', params: [['risk_score', 25], ['value', 5]] },
+  { equipment: 'Ceftriaxone', severity: 'CRITICAL', sector: 'health', business_type: 'pharmacie', date: now, alert_key: 'health.stock.critical_low',
+    message: 'Stock-out: 0 units left (minimum: 100), about 120 $ of sales at risk before the next delivery : order now',
+    params: [['risk_score', 30], ['stock', 0], ['min_stock', 100], ['category', 'Unknown'], ['value', 120], ['currency', '$'], ['basis', 'sales']] },
   { equipment: 'Paracetamol', severity: 'WARNING', sector: 'health', business_type: 'pharmacie', date: now, alert_key: 'health.stock.low',
     message: 'Low stock: 12 units remaining : anticipate reorder' },
 ];
@@ -43,6 +46,10 @@ const ONB = { sentria_onboarded: 'true', sentria_company_name: 'Pharmacie A', se
     const amox = (await row(p, 'Amoxicillin').locator('td').nth(3).innerText()).replace(/\s+/g, ' ');
     pass(/Warning .*600 \$/.test(amox), 'stock-out row shows "600 $" beside severity: ' + amox);
     pass(/1,250,000 F CFA/.test(await row(p, 'Insulin').locator('td').nth(3).innerText()), 'large amount grouped the English way: 1,250,000 F CFA');
+    const cef = (await row(p, 'Ceftriaxone').locator('td').nth(3).innerText()).replace(/\s+/g, ' ');
+    pass(/Critical .*≈ 120 \$/.test(cef), 'empty shelf: the estimate is marked with ≈ : ' + cef);
+    pass(await row(p, 'Ceftriaxone').getByText('Sales at risk (estimate):', { exact: false }).count() === 1, 'screen readers hear "Sales at risk (estimate)"');
+    pass(!/≈/.test(amox), 'stock value (not an estimate) has no ≈');
     const ibu = await row(p, 'Ibuprofen').locator('td').nth(3).innerText();
     pass(/^\s*Warning\s*(Value at risk:\s*)?400\s*$/.test(ibu.replace(/\n/g, ' ')), 'unknown currency: the amount alone, no guessed symbol: ' + JSON.stringify(ibu));
     const shrink = await row(p, 'Store A').locator('td').nth(3).innerText();
