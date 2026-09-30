@@ -22,6 +22,7 @@ import type { LogisticsAlert } from "@/lib/logistics-signals"
 import { SECTOR_LABELS, sectorLabel, type Sector } from "@/lib/priorities"
 import { cn } from "@/lib/utils"
 import { StatusTag } from "./status-tag"
+import { WeekCard } from "./week-card"
 import { localized, resolve, useTx, type Localized } from "@/lib/i18n"
 
 // ---------------------------------------------------------------------------
@@ -764,6 +765,9 @@ export function ReportView({ data }: { data?: ReportData }) {
           onChange={setActiveSector}
         />
       )}
+
+      {/* F-REPORT: the week in the numbers the Monday email sends. */}
+      {!data && <WeekCard />}
 
       <ReportBody
         data={resolved}

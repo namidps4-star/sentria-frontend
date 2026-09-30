@@ -6,7 +6,7 @@ const path = require('path');
 
 const SUITES = ['auth', 'usernames', 'dash2', 'ask', 'showcase', 'onb7', 'admin', 'plans',
   'imports', 'verify', 'b25', 'p2', 'track', 'slide', 'allviews', 'sidebarfit',
-  'sheettabs', 'userlogin', 'screens', 'logicompact', 'indtiles', 'teach'];
+  'sheettabs', 'userlogin', 'screens', 'logicompact', 'indtiles', 'teach', 'weekrep'];
 const only = process.argv.slice(2);
 const list = only.length ? SUITES.filter(s => only.includes(s)) : SUITES;
 

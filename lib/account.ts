@@ -31,6 +31,9 @@ export const ACCOUNT_KEYS = [
   "sentria_configure_later",
   "sentria_cost_rates",
   "sentria_actions_log",
+  // "on" when the weekly email is wanted (Settings; read by the API's
+  // POST /reports/weekly/send).
+  "sentria_weekly_report",
 ] as const
 
 /** Per-user values that are not worth saving but must not be shown to

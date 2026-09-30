@@ -216,6 +216,8 @@ function Toggle({
   )
 }
 
+const WEEKLY_REPORT_KEY = "sentria_weekly_report"
+
 export function SettingsView() {
   /* This was useState("fr") and nothing ever wrote it down: the picker
      offered six languages, stored none of them, and no other screen
@@ -230,11 +232,29 @@ export function SettingsView() {
   })
 
   const toggle = (key: keyof typeof toggles) => {
-    setToggles((state) => ({
-      ...state,
-      [key]: !state[key],
-    }))
+    setToggles((state) => {
+      const next = { ...state, [key]: !state[key] }
+      /* The weekly email is real (F-REPORT): saved with the account, so
+         the server knows who asked for it. Off unless turned on. */
+      if (key === "weekly") {
+        try {
+          localStorage.setItem(WEEKLY_REPORT_KEY, next.weekly ? "on" : "off")
+        } catch {
+          /* Storage blocked: the switch lasts for this visit only. */
+        }
+      }
+      return next
+    })
   }
+
+  useEffect(() => {
+    try {
+      const on = localStorage.getItem(WEEKLY_REPORT_KEY) === "on"
+      setToggles((state) => (state.weekly === on ? state : { ...state, weekly: on }))
+    } catch {
+      /* Storage blocked: stays off. */
+    }
+  }, [])
 
   /* The dark switch used to flip a boolean nothing read. It now drives
      the real theme class, read after mount so the server and the client
