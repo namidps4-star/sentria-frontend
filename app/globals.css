@@ -350,3 +350,11 @@
 @media (prefers-color-scheme: dark) {
   :root:not(.light) { --auth-bg: #11120e; --auth-glow: rgb(128 142 60 / 0.22); }
 }
+
+/* "Ink": the app's black surfaces (chat bubbles, dark cards). Lifted in
+   dark mode so they still read against a near-black background. */
+:root { --ink: #141414; }
+.dark { --ink: #2d2e2a; }
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) { --ink: #2d2e2a; }
+}

@@ -290,7 +290,9 @@ export function AppShell({
             {view === "tracking" && <TrackingView />}
             {view === "calendar" && <CalendarView />}
             {view === "sites" && <SitesView />}
-            {view === "ask" && <AskView />}
+            {view === "ask" && (
+              <AskView name={name} email={email} openCritical={bellAlerts} onNavigate={setView} />
+            )}
             {view === "pricing" && <PricingView />}
             {view === "profile" && <ProfileView onNavigate={setView} />}
             {view === "settings" && <SettingsView />}
