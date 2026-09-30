@@ -44,6 +44,7 @@ import {
   IndustryProductionView,
   IndustryMaintenanceView,
   IndustryKeyAlertsView,
+  industryPriorityAlerts,
 } from "./industry-view"
 
 import { API_BASE as API, apiFetch } from "@/lib/api"
@@ -2262,6 +2263,26 @@ export function DashboardView({
       .filter(matchesActivity)
 
     if (industryPriority === null) {
+      const industryCritical = industryAlerts.filter((a) => a.severity === "CRITICAL").length
+      /* Each tile counts what its screen shows (the view's own filter).
+         No numbers before any data: an empty account is not "all clear". */
+      const industryStats: Record<string, PriorityStat> | undefined =
+        industryAlerts.length === 0
+          ? undefined
+          : Object.fromEntries(
+              selectedIndustryPriorities.map((id) => {
+                const own = industryPriorityAlerts(id, industryAlerts)
+                const crit = own.filter((a) => a.severity === "CRITICAL").length
+                const stat: PriorityStat =
+                  crit > 0
+                    ? { value: String(crit), label: tx(crit > 1 ? "alertes critiques" : "alerte critique", crit === 1 ? "critical alert" : "critical alerts"), tone: "risk" }
+                    : own.length > 0
+                      ? { value: String(own.length), label: tx(own.length > 1 ? "alertes à suivre" : "alerte à suivre", own.length === 1 ? "alert to watch" : "alerts to watch"), tone: "watch" }
+                      : { value: "0", label: tx("rien à signaler", "all clear"), tone: "good" }
+                return [id, stat]
+              })
+            )
+
       return (
         <div className="space-y-6">
           {importPortal}
@@ -2275,26 +2296,31 @@ export function DashboardView({
             </button>
           </div>
 
-          <div className="rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:p-8">
-            <div className="max-w-2xl">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
-                <Shield className="h-3.5 w-3.5" />
+          {/* A header line, not a banner: the tiles below are the page. */}
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 {tx("Industrie", "Industry")}
-              </span>
-
-              <h2 className="mt-4 font-heading text-2xl font-bold leading-tight md:text-3xl">
-                {tx(
-                  "Vue d'ensemble de votre production.",
-                  "An overview of your production."
-                )}
-              </h2>
-
-              <p className="mt-2 text-sm leading-6 text-sidebar-foreground/70">
-                {tx(
-                  "Retrouvez ici les priorités que vous avez sélectionnées pendant la configuration de SentrIA. Choisissez une priorité pour accéder directement à son espace de pilotage.",
-                  "These are the priorities you picked while setting SentrIA up. Choose one to go straight to its workspace."
-                )}
               </p>
+              <h2 className="mt-1 font-heading text-2xl font-bold leading-tight tracking-tight sm:text-3xl">
+                {tx("Vue d'ensemble de votre production", "An overview of your production")}
+              </h2>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {subtypeName && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-card px-3 py-1.5 text-xs font-semibold shadow-sm">
+                  <Shield className="h-3.5 w-3.5 text-muted-foreground" />
+                  {subtypeName}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--ink)] px-3 py-1.5 text-xs font-semibold text-white">
+                <span className={cn("h-1.5 w-1.5 rounded-full", industryCritical > 0 ? "bg-[var(--tag-danger-bg)]" : "bg-brand")} aria-hidden="true" />
+                {tx(
+                  `${industryAlerts.length} signaux · ${industryCritical} critique${industryCritical > 1 ? "s" : ""}`,
+                  `${industryAlerts.length} signals · ${industryCritical} critical`
+                )}
+              </span>
             </div>
           </div>
 
@@ -2307,6 +2333,7 @@ export function DashboardView({
             <PriorityCards
               sector="industry"
               ids={selectedIndustryPriorities}
+              stats={industryStats}
               onOpen={(id) =>
                 openIndustryPriority(id as IndustryPriority)
               }

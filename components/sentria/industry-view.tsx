@@ -53,6 +53,22 @@ const MATCH_KEYWORDS = {
 }
 /* i18n-ignore-end */
 
+/** The alert_key priorities, by the key(s) that feed them. */
+const KEY_PRIORITIES: Record<string, string[]> = {
+  "hygiene-lead-time": ["industry.hygiene.shutdown_risk"],
+  "maintenance-production-link": ["industry.maintenance.production_link"],
+  "failure-signature": ["industry.failure.signature_match"],
+}
+
+/** The alerts a priority's view shows, with the view's own rule, so the
+ *  overview tile and the screen behind it always count the same thing. */
+export function industryPriorityAlerts<T extends Alert>(id: string, alerts: T[]): T[] {
+  const keys = KEY_PRIORITIES[id]
+  if (keys) return alerts.filter((a) => a.alert_key != null && keys.includes(a.alert_key))
+  const words = MATCH_KEYWORDS[id as keyof typeof MATCH_KEYWORDS]
+  return words ? alerts.filter((a) => matchAny(a.message, words)) : []
+}
+
 function HeaderCard({
   icon: Icon,
   title,

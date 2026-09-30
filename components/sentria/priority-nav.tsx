@@ -50,6 +50,21 @@ const STAT_TONE: Record<NonNullable<PriorityStat["tone"]>, string> = {
   good: "text-[var(--tag-success-fg)]",
 }
 
+const LG_SPAN = ["", "lg:col-span-1", "lg:col-span-2", "lg:col-span-3", "lg:col-span-4"]
+
+/** Widen the last small tile so its row closes with no empty cell:
+ *  on a phone (2 columns), and on desktop, where the first four small
+ *  tiles sit in the 2×2 beside the lead and any others in full rows. */
+function closingSpan(i: number, count: number, bento: boolean) {
+  if (i !== count - 1) return ""
+  const phone = count % 2 === 1 ? "col-span-2" : ""
+  if (!bento) return cn(phone, phone && "md:col-span-1")
+  let lg: number
+  if (count <= 4) lg = count % 2 === 1 ? 2 : 1
+  else lg = 4 - ((i - 4) % 4)
+  return cn(phone, LG_SPAN[lg] || (phone ? "lg:col-span-1" : ""))
+}
+
 /** Bento of entry tiles for a sector overview.
  *
  *  The first priority leads as a large lime tile with its explanation;
@@ -171,8 +186,7 @@ export function PriorityCards({
             className={cn(
               "group relative flex min-h-[9.5rem] flex-col rounded-[24px] bg-card p-4 text-left shadow-sm ring-1 ring-transparent transition-all",
               "hover:-translate-y-0.5 hover:shadow-md hover:ring-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]",
-              // An odd tile left over on a phone takes the full row.
-              index === ids.length - 1 && (ids.length - 1) % 2 === 1 && "col-span-2 lg:col-span-1"
+              closingSpan(index - 1, ids.length - 1, bento)
             )}
           >
             <div className="flex items-center justify-between gap-2">
