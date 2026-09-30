@@ -314,39 +314,37 @@
   to { transform: scaleX(1); }
 }
 
-/* Status tags. Severity is never pastel: critical is solid brick red with
-   white text and warning solid muted amber with dark text (toned down from
-   pure #dc2626 / #f59e0b, which glared), identical in both themes so
-   the two can't be mistaken for anything calmer. The other tones are soft
-   pastels in light mode and dark tinted fills with light text in dark mode,
-   so they don't glare on dark surfaces. Every pair is at least 4.5:1. */
+/* Status tags: joyful pastels. Light mode: a pastel fill (coral pink,
+   butter, mint, periwinkle...) with deep text of the same hue. Dark mode:
+   the same hue deepened into the dark surface with bright pastel text, so
+   the tags stay clear without glaring. Every pair is at least 5:1. */
 :root {
-  --tag-danger-bg: #c94040; --tag-danger-bd: #b33636; --tag-danger-fg: #ffffff;
-  --tag-warning-bg: #e3a54a; --tag-warning-bd: #cf9036; --tag-warning-fg: #2b1d00;
+  --tag-danger-bg: #ffd6da; --tag-danger-bd: #ffb3bc; --tag-danger-fg: #b3202e;
+  --tag-warning-bg: #ffe6a8; --tag-warning-bd: #f5cf6a; --tag-warning-fg: #7a4a00;
   --tag-success-bg: #c9f2dc; --tag-success-bd: #92dcb6; --tag-success-fg: #0f6139;
-  --tag-info-bg: #e2e5ff; --tag-info-bd: #b7bdfa; --tag-info-fg: #2b36a8;
+  --tag-info-bg: #dfe3ff; --tag-info-bd: #b7bdfa; --tag-info-fg: #2b36a8;
   --tag-neutral-bg: #eceef2; --tag-neutral-bd: #cdd1d9; --tag-neutral-fg: #3c4350;
   --tag-brand-bg: #e3f7a3; --tag-brand-bd: #c3e656; --tag-brand-fg: #3d5700;
-  --tag-hi: rgb(255 255 255 / 0.45);
+  --tag-hi: rgb(255 255 255 / 0.6);
 }
 .dark {
-  --tag-danger-bd: #d86a6a;
-  --tag-warning-bd: #ebb865;
-  --tag-success-bg: #123526; --tag-success-bd: #1f6b48; --tag-success-fg: #7ee2ad;
-  --tag-info-bg: #1d2150; --tag-info-bd: #3a43a0; --tag-info-fg: #b3baff;
-  --tag-neutral-bg: #2a2d33; --tag-neutral-bd: #454a54; --tag-neutral-fg: #c9ced8;
-  --tag-brand-bg: #27330c; --tag-brand-bd: #4d6317; --tag-brand-fg: #c8ec6a;
-  --tag-hi: rgb(255 255 255 / 0.08);
+  --tag-danger-bg: #4f3536; --tag-danger-bd: #7a4a4e; --tag-danger-fg: #ffb8bf;
+  --tag-warning-bg: #4b422a; --tag-warning-bd: #6e5e33; --tag-warning-fg: #ffd97a;
+  --tag-success-bg: #2b4437; --tag-success-bd: #3d6a52; --tag-success-fg: #8ee8bb;
+  --tag-info-bg: #3a3d53; --tag-info-bd: #545a86; --tag-info-fg: #c3c9ff;
+  --tag-neutral-bg: #3a3c3b; --tag-neutral-bd: #50534f; --tag-neutral-fg: #d9dde5;
+  --tag-brand-bg: #3d442e; --tag-brand-bd: #5a6a36; --tag-brand-fg: #d6f28a;
+  --tag-hi: rgb(255 255 255 / 0.06);
 }
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
-    --tag-danger-bd: #d86a6a;
-    --tag-warning-bd: #ebb865;
-    --tag-success-bg: #123526; --tag-success-bd: #1f6b48; --tag-success-fg: #7ee2ad;
-    --tag-info-bg: #1d2150; --tag-info-bd: #3a43a0; --tag-info-fg: #b3baff;
-    --tag-neutral-bg: #2a2d33; --tag-neutral-bd: #454a54; --tag-neutral-fg: #c9ced8;
-    --tag-brand-bg: #27330c; --tag-brand-bd: #4d6317; --tag-brand-fg: #c8ec6a;
-    --tag-hi: rgb(255 255 255 / 0.08);
+    --tag-danger-bg: #4f3536; --tag-danger-bd: #7a4a4e; --tag-danger-fg: #ffb8bf;
+    --tag-warning-bg: #4b422a; --tag-warning-bd: #6e5e33; --tag-warning-fg: #ffd97a;
+    --tag-success-bg: #2b4437; --tag-success-bd: #3d6a52; --tag-success-fg: #8ee8bb;
+    --tag-info-bg: #3a3d53; --tag-info-bd: #545a86; --tag-info-fg: #c3c9ff;
+    --tag-neutral-bg: #3a3c3b; --tag-neutral-bd: #50534f; --tag-neutral-fg: #d9dde5;
+    --tag-brand-bg: #3d442e; --tag-brand-bd: #5a6a36; --tag-brand-fg: #d6f28a;
+    --tag-hi: rgb(255 255 255 / 0.06);
   }
 }
 

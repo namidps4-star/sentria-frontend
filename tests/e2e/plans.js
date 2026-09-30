@@ -58,12 +58,12 @@ const text = p => p.evaluate(() => document.body.innerText);
     const t = await text(p);
     const sectorBtns = await p.evaluate(() => [...document.querySelectorAll('button[aria-pressed]')].map(b => b.innerText.trim()).filter(x => /^(Health|Industry|Santé|Industrie)$/.test(x)));
     pass(!sectorBtns.includes('Industry'), 'Découverte with 2 sectors stored: only Health offered (' + sectorBtns.join(',') + ')');
-    const acts = await p.evaluate(() => { const h = [...document.querySelectorAll('p')].find(e => /Activity for this file/.test(e.innerText)); return h ? [...h.parentElement.querySelectorAll('button')].map(b => b.innerText.trim()) : []; });
-    pass(acts.length <= 1, 'Découverte: upload offers only its department (' + acts.join(', ') + ')');
+    const acts = await p.evaluate(() => { const g = document.querySelector('#import-panel [role=group][aria-labelledby=upload-activity-help]'); return g ? [...g.querySelectorAll('button')].map(b => (b.querySelector('.min-w-0 > span') || b).textContent.trim()) : null; });
+    pass(acts === null || acts.length <= 1, 'Découverte: upload offers only its department (' + (acts || ['no department step']).join(', ') + ')');
     await p.close(); }
   { const p = await open({ ls: { ...ONB, sentria_sector: 'health', sentria_sectors: '["health"]', sentria_business_type: 'pharmacie', sentria_departments: '{"health":["pharmacie"]}' }, trialEndsAt: soon });
-    const acts = await p.evaluate(() => { const h = [...document.querySelectorAll('p')].find(e => /Activity for this file/.test(e.innerText)); return h ? [...h.parentElement.querySelectorAll('button')].map(b => b.innerText.trim()) : []; });
-    pass(acts.length === 3 && !acts.some(a => /wholesal/i.test(a)), 'Business trial: pharmacy + hospital + lab, not the wholesaler (' + acts.join(', ') + ')');
+    const acts = await p.evaluate(() => { const g = document.querySelector('#import-panel [role=group][aria-labelledby=upload-activity-help]'); return g ? [...g.querySelectorAll('button')].map(b => (b.querySelector('.min-w-0 > span') || b).textContent.trim()) : null; });
+    pass(acts !== null && acts.length === 3 && !acts.some(a => /wholesal/i.test(a)), 'Business trial: pharmacy + hospital + lab, not the wholesaler (' + (acts || []).join(', ') + ')');
     await p.close(); }
   { const p = await open({ ls: { ...ONB, sentria_sector: 'health', sentria_sectors: '["health"]', sentria_business_type: 'pharmacie' }, onUpload: r => r.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ success: false, error_code: 'plan_departments', message: 'Your plan covers one department. Several linked departments: Business plan.' }) }) });
     await p.setInputFiles('input[type=file]', { name: 'x.csv', mimeType: 'text/csv', buffer: Buffer.from('a,b\n1,2\n') }); await p.waitForTimeout(1200);

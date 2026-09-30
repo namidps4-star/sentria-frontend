@@ -10,7 +10,11 @@ import {
   Clock3,
   Globe2,
   Layers,
+  Mail,
   Pencil,
+  AtSign,
+  CreditCard,
+  Upload,
   User,
 } from "@/lib/icons"
 import { useEffect, useMemo, useState } from "react"
@@ -41,6 +45,7 @@ import { useTx } from "@/lib/i18n"
 import { sectorLabel } from "@/lib/priorities"
 import { withOurSector } from "@/lib/sector"
 import { cn } from "@/lib/utils"
+import { PLAN_NAMES, readAccountPlan, readDepartments, trialDaysLeft, type AccountPlan } from "@/lib/plans"
 import type { ViewKey } from "./types"
 
 /* -------------------------------------------------------------------------- */
@@ -76,7 +81,10 @@ function timeOf(alert: LogisticsAlert): number {
 export function ProfileView({
   onNavigate,
   username = null,
+  email = "",
 }: {
+  /** The sign-in email, shown with the username under "How you sign in". */
+  email?: string
   /** The account's @username (migrations/006); null when it has none. */
   username?: string | null
   /** Lets the two buttons on this page actually go somewhere. They were
@@ -148,6 +156,31 @@ export function ProfileView({
   )
 
   const empty = loaded && accountAlerts.length === 0
+
+  // The plan and departments, read after mount (localStorage).
+  const [account, setAccount] = useState<AccountPlan | null>(null)
+  const [departmentCount, setDepartmentCount] = useState(0)
+  useEffect(() => {
+    setAccount(readAccountPlan())
+    setDepartmentCount(Object.values(readDepartments()).reduce((n, ids) => n + ids.length, 0))
+  }, [])
+
+  /* SentrIA's job is to warn before something breaks or runs out, so the
+     profile says how fresh the data is (stale data means late alerts) and
+     which open critical alert has waited longest. */
+  const mission = useMemo(() => {
+    const times = accountAlerts.map(timeOf).filter((t) => Number.isFinite(t) && t > 0)
+    const latest = times.length ? Math.max(...times) : null
+    const hours = latest === null ? null : Math.max(0, (Date.now() - latest) / 3_600_000)
+
+    const done = new Set((assignments ?? []).filter((a) => a.status === "done").map((a) => a.task_key))
+    const openCritical = accountAlerts
+      .filter((a) => a.severity === "CRITICAL")
+      .filter((a) => !done.has(taskKeyFor({ ...a, id: String((a as { id?: unknown }).id ?? "") })))
+      .sort((a, b) => timeOf(a) - timeOf(b))
+
+    return { latest, hours, openCritical, next: openCritical[0] ?? null }
+  }, [accountAlerts, assignments])
 
   const stats = useMemo(() => {
     const equipment = new Set(
@@ -363,6 +396,84 @@ export function ProfileView({
                   )}
           </div>
 
+          {/* Mission: is the data fresh enough to warn in time, and what
+              to act on first. */}
+          {loaded && !empty && (
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {(() => {
+                const h = mission.hours ?? 0
+                const tone = h < 24 ? "success" : h < 24 * 7 ? "warning" : "danger"
+                const age =
+                  h < 1
+                    ? tx("il y a moins d'une heure", "less than an hour ago")
+                    : h < 48
+                      ? tx(`il y a ${Math.round(h)} h`, `${Math.round(h)} h ago`)
+                      : tx(`il y a ${Math.round(h / 24)} jours`, `${Math.round(h / 24)} days ago`)
+                return (
+                  <div
+                    className="rounded-[22px] p-4"
+                    style={{ background: `var(--tag-${tone}-bg)`, color: `var(--tag-${tone}-fg)` }}
+                    data-testid="profile-freshness"
+                  >
+                    <p className="text-[11px] font-semibold uppercase tracking-wide opacity-80">
+                      {tx("Fraîcheur des données", "Data freshness")}
+                    </p>
+                    <p className="mt-1 font-heading text-xl font-bold">{age}</p>
+                    <p className="mt-1 text-xs leading-snug opacity-90">
+                      {tone === "success"
+                        ? tx("À jour : les alertes partent à temps.", "Up to date: alerts go out in time.")
+                        : tx(
+                            "Importez des données récentes, sinon SentrIA prévient trop tard.",
+                            "Import recent data, or SentrIA warns too late."
+                          )}
+                    </p>
+                    {tone !== "success" && (
+                      <button
+                        type="button"
+                        onClick={() => onNavigate?.("dashboard")}
+                        className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[var(--ink)] px-3 py-1.5 text-xs font-semibold text-white"
+                      >
+                        <Upload className="h-3.5 w-3.5" aria-hidden="true" />
+                        {tx("Importer", "Import")}
+                      </button>
+                    )}
+                  </div>
+                )
+              })()}
+
+              <div className="rounded-[22px] bg-card p-4 shadow-sm" data-testid="profile-next">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {tx("Critique en attente depuis le plus longtemps", "Critical waiting longest")}
+                </p>
+                {mission.next ? (
+                  <>
+                    <p className="mt-1 truncate font-heading text-xl font-bold">
+                      {mission.next.equipment || tx("Équipement non nommé", "Unnamed asset")}
+                    </p>
+                    <p className="mt-1 line-clamp-2 text-xs leading-snug text-muted-foreground">{mission.next.message}</p>
+                    <button
+                      type="button"
+                      onClick={() => onNavigate?.("tracking")}
+                      className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-xs font-semibold text-[#141414]"
+                    >
+                      {tx("Ouvrir le suivi", "Open Tracking")}
+                      <span className="rounded-full bg-[var(--ink)] px-1.5 text-[10px] text-brand tabular-nums">
+                        {mission.openCritical.length}
+                      </span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="mt-1 font-heading text-xl font-bold">{tx("Rien de critique", "Nothing critical")}</p>
+                    <p className="mt-1 text-xs leading-snug text-muted-foreground">
+                      {tx("Toutes les alertes critiques sont traitées.", "Every critical alert has been handled.")}
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
           {recent.length > 0 && (
             <ul className="mt-4 flex flex-col gap-2">
               {recent.map((alert, index) => {
@@ -433,7 +544,8 @@ export function ProfileView({
         </section>
 
         {/* ------------------------------------------------------- RIGHT */}
-        <div className="rounded-[28px] bg-[var(--ink)] p-5 text-white lg:col-start-2 xl:col-start-auto xl:self-start">
+        <div className="flex flex-col gap-4 lg:col-start-2 xl:col-start-auto">
+        <div className="rounded-[28px] bg-[var(--ink)] p-5 text-white">
           <div className="flex items-center justify-between">
             <p className="font-heading text-xl font-semibold tracking-tight">{tx("Votre activité", "Your activity")}</p>
             <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold">{tx("En direct", "Live")}</span>
@@ -448,7 +560,7 @@ export function ProfileView({
                 <dd
                   className={cn(
                     "font-semibold tabular-nums",
-                    stat === criticalStat && loaded && Number(stat.value) > 0 && "text-[#ff9a9a]"
+                    stat === criticalStat && loaded && Number(stat.value) > 0 && "text-[#ffb8bf]"
                   )}
                 >
                   {loaded ? stat.value : "—"}
@@ -462,6 +574,63 @@ export function ProfileView({
               {loaded ? resolvedStat.value : "—"}
             </span>
           </div>
+        </div>
+
+        {/* The plan: what the account may do, and until when. */}
+        {account && (
+          <div className="rounded-[28px] bg-card p-5 shadow-sm" data-testid="profile-plan">
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-heading text-xl font-semibold tracking-tight">{tx("Votre offre", "Your plan")}</p>
+              <CreditCard className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            </div>
+            <p className="mt-2 font-heading text-2xl font-bold">
+              {account.isAdmin ? tx("Admin SentrIA", "SentrIA admin") : PLAN_NAMES[account.effective]}
+            </p>
+            {!account.isAdmin && account.trialEndsAt && account.effective !== account.plan && (
+              <p className="mt-1 inline-block rounded-full bg-[var(--tag-info-bg)] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--tag-info-fg)]">
+                {tx(
+                  `Essai : encore ${trialDaysLeft(account.trialEndsAt)} jour${trialDaysLeft(account.trialEndsAt) > 1 ? "s" : ""}`,
+                  `Trial: ${trialDaysLeft(account.trialEndsAt)} day${trialDaysLeft(account.trialEndsAt) === 1 ? "" : "s"} left`
+                )}
+              </p>
+            )}
+            <p className="mt-2 text-xs text-muted-foreground">
+              {tx(
+                `${departmentCount} département${departmentCount > 1 ? "s" : ""} surveillé${departmentCount > 1 ? "s" : ""}`,
+                `${departmentCount} department${departmentCount === 1 ? "" : "s"} monitored`
+              )}
+            </p>
+            <button
+              type="button"
+              onClick={() => onNavigate?.("pricing")}
+              className="mt-3 rounded-full bg-muted px-4 py-1.5 text-xs font-semibold transition-colors hover:bg-muted/70"
+            >
+              {tx("Voir les offres", "See the plans")}
+            </button>
+          </div>
+        )}
+
+        {/* How this account signs in: both work. */}
+        <div className="rounded-[28px] bg-card p-5 shadow-sm" data-testid="profile-signin">
+          <p className="font-heading text-xl font-semibold tracking-tight">{tx("Connexion", "How you sign in")}</p>
+          <ul className="mt-3 flex flex-col gap-2 text-sm">
+            <li className="flex items-center gap-2 rounded-2xl bg-muted px-3.5 py-2.5">
+              <Mail className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <span className="truncate">{email || "—"}</span>
+            </li>
+            <li className="flex items-center gap-2 rounded-2xl bg-muted px-3.5 py-2.5">
+              <AtSign className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <span className="truncate">
+                {username ? `@${username}` : tx("Pas encore de nom d'utilisateur", "No username yet")}
+              </span>
+            </li>
+          </ul>
+          <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+            {username
+              ? tx("L'un ou l'autre, avec votre mot de passe.", "Either one, with your password.")
+              : tx("Choisissez-en un ci-dessous pour vous connecter avec.", "Choose one below to sign in with it.")}
+          </p>
+        </div>
         </div>
       </div>
 

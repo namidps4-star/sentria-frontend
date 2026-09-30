@@ -40,7 +40,7 @@ const text = p => p.evaluate(() => document.body.innerText);
     pass(/Email or username/.test(label), `sign-in field is labelled "${label}"`);
     pass(await p.locator('#auth-email').getAttribute('type') === 'text' && await p.locator('#auth-email').getAttribute('autocomplete') === 'username', 'type=text, autocomplete=username (password managers still fill it)');
     await p.getByRole('button', { name: 'Create one' }).click(); await p.waitForTimeout(300);
-    pass(await p.locator('#auth-username').count() === 1 && await p.locator('#auth-email').getAttribute('type') === 'email' && /^Email$/.test(await p.locator('label[for=auth-email]').innerText()), 'sign-up still asks for a real email');
+    pass(await p.locator('#auth-username').count() === 1 && await p.locator('#auth-email').getAttribute('type') === 'email' && /^Email \(to sign in and reset your password\)$/.test(await p.locator('label[for=auth-email]').innerText()), 'sign-up still asks for a real email');
     await ctx.close(); }
 
   console.log('== right username and password');

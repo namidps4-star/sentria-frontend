@@ -1952,7 +1952,7 @@ export function DashboardView({
           role="dialog"
           aria-label={tx("Importer des données", "Import data")}
           hidden={!importOpen}
-          className="absolute right-0 top-full z-30 mt-2 w-[min(460px,calc(100vw-2.5rem))] rounded-3xl border border-border bg-card p-6 shadow-2xl"
+          className="absolute right-0 top-full z-30 mt-2 max-h-[80vh] w-[min(480px,calc(100vw-2.5rem))] overflow-y-auto rounded-[28px] bg-card p-6 shadow-2xl"
         >
           <div className="flex items-start justify-between gap-3">
             <h3 className="font-heading text-lg font-bold">
@@ -1970,70 +1970,91 @@ export function DashboardView({
 
           <p className="mt-1 text-sm text-muted-foreground">
             {tx(
-              "Choisissez un secteur puis importez votre CSV.",
-              "Choose a sector, then import your CSV."
+              "Dites à SentrIA d'où vient le fichier, puis importez-le.",
+              "Tell SentrIA where the file comes from, then import it."
             )}
           </p>
 
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <div className="flex flex-wrap gap-2">
-              {SECTORS.filter(
-                (s) =>
-                  s.key !== "all" &&
-                  activeSectors.includes(s.key)
-              ).map((s) => (
-                <button
-                  key={s.key}
-                  type="button"
-                  onClick={() => setUploadSector(s.key)}
-                  aria-pressed={uploadSector === s.key}
-                  className={cn(
-                    "rounded-full border px-4 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                    uploadSector === s.key
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
-                  )}
-                >
-                  {px(s.label)}
-                </button>
-              ))}
-            </div>
-
-            <label className="relative inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90 focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-              <Upload className="h-4 w-4" aria-hidden="true" />
-
-              {uploading
-                ? tx("Traitement...", "Processing...")
-                : tx("Importer CSV", "Import CSV")}
-
-              <input
-                type="file"
-                accept=".csv"
-                className="sr-only"
-                onChange={handleUpload}
-                disabled={uploading}
-                aria-label={tx("Importer un fichier CSV", "Import a CSV file")}
-              />
-            </label>
+          {/* 1. The sector */}
+          <p className="mt-5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {tx("1 · Secteur", "1 · Sector")}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {SECTORS.filter(
+              (s) =>
+                s.key !== "all" &&
+                activeSectors.includes(s.key)
+            ).map((s) => (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => setUploadSector(s.key)}
+                aria-pressed={uploadSector === s.key}
+                className={cn(
+                  "rounded-full px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  uploadSector === s.key
+                    ? "bg-[var(--ink)] text-white"
+                    : "bg-muted hover:bg-muted/70"
+                )}
+              >
+                {px(s.label)}
+              </button>
+            ))}
           </div>
 
-          {uploadMsg && (
-            <p
-              role={uploadFailed ? "alert" : "status"}
-              className={cn(
-                "mt-3 text-sm font-medium",
-                uploadFailed ? "text-destructive" : "text-green-600"
-              )}
-            >
-              {uploadMsg}
-            </p>
-          )}
-
+          {/* 2. The department: large, readable choices (they used to be
+              small tabs squeezed along the card's bottom edge). */}
           {uploadActivitiesFor(uploadSector).length > 0 && (
-            <div>
+            <>
+              <p
+                id="upload-activity-help"
+                className="mt-5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
+              >
+                {tx("2 · Pour quel département est ce fichier ?", "2 · Which department is this file for?")}
+              </p>
+              <div
+                className="mt-2 grid max-h-[40vh] grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2"
+                role="group"
+                aria-labelledby="upload-activity-help"
+              >
+                {uploadActivitiesFor(uploadSector).map((activity) => {
+                  const on = uploadActivity === activity.id
+                  return (
+                    <button
+                      key={activity.id}
+                      type="button"
+                      onClick={() => setUploadActivity(activity.id)}
+                      aria-pressed={on}
+                      className={cn(
+                        "flex items-start gap-2.5 rounded-2xl px-3.5 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        on ? "bg-brand text-[#141414]" : "bg-muted hover:bg-muted/70"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
+                          on ? "bg-[var(--ink)] text-brand" : "border-2 border-foreground/25"
+                        )}
+                        aria-hidden="true"
+                      >
+                        {on && <Check className="h-3 w-3" />}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold leading-snug">{px(activity.label)}</span>
+                        {activity.description && (
+                          <span className={cn("mt-0.5 block text-[11px] leading-snug", on ? "text-[#141414]/70" : "text-muted-foreground")}>
+                            {px(activity.description)}
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+
               {uploadActivity &&
                 !isConfiguredActivity(uploadSector, uploadActivity) && (
-                  <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border border-brand/40 bg-brand/10 px-3 py-2">
+                  <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl bg-[var(--tag-warning-bg)] px-3.5 py-2.5 text-[var(--tag-warning-fg)]">
                     <p className="text-xs">
                       {tx(
                         "Vous importez une activité différente de celle configurée",
@@ -2053,7 +2074,7 @@ export function DashboardView({
                       onClick={() =>
                         applyActivityToDashboard(uploadSector, uploadActivity)
                       }
-                      className="rounded-full border border-foreground bg-foreground px-3 py-1 text-[11px] font-semibold text-background transition-opacity hover:opacity-90"
+                      className="rounded-full bg-[var(--ink)] px-3 py-1 text-[11px] font-semibold text-white transition-opacity hover:opacity-90"
                     >
                       {tx(
                         "Basculer le tableau de bord dessus",
@@ -2062,7 +2083,47 @@ export function DashboardView({
                     </button>
                   </div>
                 )}
-            </div>
+            </>
+          )}
+
+          {/* 3. The file */}
+          <p className="mt-5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            {uploadActivitiesFor(uploadSector).length > 0
+              ? tx("3 · Le fichier", "3 · The file")
+              : tx("2 · Le fichier", "2 · The file")}
+          </p>
+          <label className="relative mt-2 flex cursor-pointer items-center justify-between gap-3 rounded-full bg-brand py-2.5 pl-5 pr-5 text-sm font-semibold text-[#141414] transition-opacity hover:opacity-90 focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+            <span className="flex items-center gap-2">
+              <Upload className="h-4 w-4" aria-hidden="true" />
+              {uploading
+                ? tx("Traitement...", "Processing...")
+                : tx("Importer CSV", "Import CSV")}
+            </span>
+            <span className="min-w-0 truncate text-xs font-medium text-[#141414]/70">
+              {sectorName(uploadSector)}
+              {uploadActivity ? ` · ${activityLabel(uploadSector, uploadActivity, tx) ?? uploadActivity}` : ""}
+            </span>
+
+            <input
+              type="file"
+              accept=".csv"
+              className="sr-only"
+              onChange={handleUpload}
+              disabled={uploading}
+              aria-label={tx("Importer un fichier CSV", "Import a CSV file")}
+            />
+          </label>
+
+          {uploadMsg && (
+            <p
+              role={uploadFailed ? "alert" : "status"}
+              className={cn(
+                "mt-3 text-sm font-medium",
+                uploadFailed ? "text-destructive" : "text-green-600"
+              )}
+            >
+              {uploadMsg}
+            </p>
           )}
 
           <p className="mt-3 text-xs text-muted-foreground">
@@ -2081,58 +2142,6 @@ export function DashboardView({
               </>
             )}
           </p>
-
-          {uploadActivitiesFor(uploadSector).length > 0 && (
-            <div className="relative -mx-6 -mb-6 mt-5 overflow-hidden rounded-b-3xl">
-              {/* Which department the next file is for, as quiet tabs along
-                  the card's bottom edge (like a spreadsheet's sheet tabs):
-                  one per department the plan allows. */}
-              <div
-                className="flex items-stretch gap-0.5 overflow-x-auto border-t border-border bg-muted/40 px-4 [scrollbar-width:none]"
-                role="group"
-                aria-describedby="upload-activity-help"
-              >
-                <p
-                  className="flex shrink-0 items-center pr-2 text-[11px] font-medium text-muted-foreground"
-                  title={tx(
-                    "Elle décide des contrôles appliqués et de la chaîne affichée.",
-                    "It decides which checks run and which chain is shown."
-                  )}
-                >
-                  {tx("Activité de ce fichier", "Activity for this file")}
-                </p>
-                {uploadActivitiesFor(uploadSector).map((activity) => {
-                  const on = uploadActivity === activity.id
-                  return (
-                    <button
-                      key={activity.id}
-                      type="button"
-                      onClick={() => setUploadActivity(activity.id)}
-                      aria-pressed={on}
-                      title={px(activity.description)}
-                      className={cn(
-                        "relative -mt-px shrink-0 whitespace-nowrap rounded-b-lg px-3.5 py-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                        on
-                          ? "border-x border-b border-border bg-card font-semibold text-foreground shadow-sm"
-                          : "text-muted-foreground hover:bg-card/70 hover:text-foreground"
-                      )}
-                    >
-                      {on && (
-                        <span className="absolute inset-x-2.5 bottom-1 h-0.5 rounded-full bg-brand" aria-hidden="true" />
-                      )}
-                      {px(activity.label)}
-                    </button>
-                  )
-                })}
-              </div>
-              <p id="upload-activity-help" className="sr-only">
-                {tx(
-                  "Elle décide des contrôles appliqués et de la chaîne affichée. Changez-la ici pour importer un fichier d'une autre activité.",
-                  "It decides which checks run and which chain is shown. Change it here to import a file for a different activity."
-                )}
-              </p>
-            </div>
-          )}
         </div>
         </div>,
         actionsSlot

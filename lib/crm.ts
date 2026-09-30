@@ -173,11 +173,21 @@ async function call<T>(
       text
     )
 
+    // The API's own reason when it gave one (sign-in expired, no
+    // account yet...), not just the status.
+    let reason = ""
+    try {
+      const parsed = JSON.parse(text) as { detail?: { message?: unknown; error_code?: unknown } }
+      reason = typeof parsed?.detail?.message === "string" ? parsed.detail.message : ""
+    } catch {
+      reason = ""
+    }
+
     return failed(
       "http_error",
       localized(
-        `L'API a répondu ${res.status}.`,
-        `The API answered ${res.status}.`
+        `L'API a répondu ${res.status}.${reason ? ` ${reason}` : ""}`,
+        `The API answered ${res.status}.${reason ? ` ${reason}` : ""}`
       )
     )
   }

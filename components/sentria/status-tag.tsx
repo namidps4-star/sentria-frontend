@@ -12,9 +12,8 @@ import {
 import type { Tx } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
-/** The app's status tags: a pill with a circled icon. Critical and warning
- *  are solid red and amber in both themes; the rest are soft tints
- *  (tokens in app/globals.css).
+/** The app's status tags: a pastel pill with a circled icon (tokens in
+ *  app/globals.css, deepened for dark mode).
  *
  *  warning  pending, needs attention   (amber)
  *  info     in progress, submitted     (blue)

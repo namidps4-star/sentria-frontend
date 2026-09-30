@@ -658,7 +658,7 @@ export function CalendarView() {
                 <Timer className="h-3.5 w-3.5" aria-hidden="true" />
                 {tx("Seuils à risque", "Thresholds at risk")}
               </dt>
-              <dd className={cn("font-semibold tabular-nums", loaded && stats.thresholds > 0 && "text-[#ebb865]")}>
+              <dd className={cn("font-semibold tabular-nums", loaded && stats.thresholds > 0 && "text-[#ffd97a]")}>
                 {loaded ? stats.thresholds : "—"}
               </dd>
             </div>

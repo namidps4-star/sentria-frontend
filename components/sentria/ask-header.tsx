@@ -148,8 +148,8 @@ export function AskHeader({
                 <dd
                   className={cn(
                     "font-semibold tabular-nums",
-                    row.tone === "danger" && "text-[#ff9a9a]",
-                    row.tone === "warning" && "text-[#ebb865]"
+                    row.tone === "danger" && "text-[#ffb8bf]",
+                    row.tone === "warning" && "text-[#ffd97a]"
                   )}
                 >
                   {row.value}

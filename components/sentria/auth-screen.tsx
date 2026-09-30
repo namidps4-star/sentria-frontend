@@ -356,7 +356,7 @@ export function AuthScreen({
      Glossy cards floating on the canvas instead of one outlined frame. */
   return (
     <div className="flex min-h-dvh items-center justify-center bg-[radial-gradient(ellipse_at_top_left,var(--auth-glow)_0%,transparent_55%),radial-gradient(ellipse_at_bottom_right,var(--auth-glow)_0%,transparent_60%)] bg-[var(--auth-bg)] px-4 py-8">
-      <main className="grid w-full max-w-[1240px] gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:grid-cols-[300px_minmax(0,1fr)_360px]">
+      <main className="grid w-full max-w-[1120px] gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         {/* --------------------------------------------------------- LEFT */}
         <div className="flex flex-col gap-4">
           <section className="gloss rounded-[28px] bg-brand p-6 text-[#141414]">
@@ -399,24 +399,26 @@ export function AuthScreen({
                 "SentrIA reads your operating data and tells you what to do, and when."
               )}
             </p>
-          </section>
 
-          {/* Three promises, as rows. */}
-          <section className="gloss hidden rounded-[28px] bg-card p-5 md:block">
-            <ul className="flex flex-col gap-2">
+            {/* Three promises, as rows. */}
+            <ul className="mt-5 hidden flex-col gap-2 md:flex">
               {features.map(({ icon: Icon, title, body }) => (
-                <li key={title} className="flex items-start gap-3 rounded-2xl bg-muted p-3.5">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-brand">
+                <li key={title} className="flex items-start gap-3 rounded-2xl bg-white/55 p-3">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-brand">
                     <Icon className="h-4 w-4" aria-hidden="true" />
                   </span>
                   <span className="min-w-0">
                     <span className="block text-sm font-bold leading-snug tracking-tight">{title}</span>
-                    <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">{body}</span>
+                    <span className="mt-0.5 block text-xs leading-relaxed text-[#141414]/70">{body}</span>
                   </span>
                 </li>
               ))}
             </ul>
           </section>
+
+          {/* The example alert, right under the pitch: what SentrIA says,
+              sector by sector (examples, labelled as such). */}
+          <SectorShowcase tx={tx} className="gloss hidden md:flex" />
         </div>
 
         {/* ------------------------------------------------------- CENTER */}
@@ -505,7 +507,10 @@ export function AuthScreen({
                             ? tx("Vérification…", "Checking…")
                             : usernameStatus === "invalid"
                               ? tx("3 à 24 caractères : lettres minuscules, chiffres ou _.", "3 to 24 characters: lowercase letters, digits or _.")
-                              : tx("Lettres minuscules, chiffres ou _.", "Lowercase letters, digits or _.")}
+                              : tx(
+                                  "Vous vous connecterez avec ce @nom ou votre email. Lettres minuscules, chiffres ou _.",
+                                  "You'll sign in with this @name or your email. Lowercase letters, digits or _."
+                                )}
                     </p>
                   </Field>
                   <Field id="auth-company" label={tx("Entreprise", "Company")}>
@@ -524,7 +529,13 @@ export function AuthScreen({
               {mode !== "reset" && (
                 <Field
                   id="auth-email"
-                  label={mode === "sign-in" ? tx("Email ou nom d'utilisateur", "Email or username") : "Email"}
+                  label={
+                    mode === "sign-in"
+                      ? tx("Email ou nom d'utilisateur", "Email or username")
+                      : mode === "sign-up"
+                        ? tx("Email (connexion et mot de passe oublié)", "Email (to sign in and reset your password)")
+                        : "Email"
+                  }
                 >
                   <input
                     id="auth-email"
@@ -632,9 +643,6 @@ export function AuthScreen({
           )}
         </section>
 
-        {/* -------------------------------------------------------- RIGHT */}
-        {/* What SentrIA says, sector by sector: examples, labelled as such. */}
-        <SectorShowcase tx={tx} className="gloss hidden md:col-span-2 md:flex lg:col-span-1 lg:self-stretch" />
       </main>
     </div>
   )

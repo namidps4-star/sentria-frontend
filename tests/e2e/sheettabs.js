@@ -25,9 +25,9 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_sector: 
   pass(await tabs.getByRole('tab', { name: /Pharmacy/ }).getAttribute('aria-selected') === 'true', 'the configured department is the selected tab');
   const pharmaBadge = tabs.getByRole('tab', { name: /Pharmacy/ }).locator('span[aria-label]');
   pass(await pharmaBadge.innerText() === '6' && /6 alerts, 6 critical/.test(await pharmaBadge.getAttribute('aria-label')), 'Pharmacy badge: 6, read as "6 alerts, 6 critical"');
-  pass(await pharmaBadge.evaluate(e => getComputedStyle(e).backgroundColor) === 'rgb(201, 64, 64)', 'a department with critical alerts gets a red badge');
+  pass(await pharmaBadge.evaluate(e => getComputedStyle(e).backgroundColor) === 'rgb(255, 214, 218)', 'a department with critical alerts gets a red badge');
   const clinicBadge = tabs.getByRole('tab', { name: /Clinic/ }).locator('span[aria-label]');
-  pass(await clinicBadge.getAttribute('aria-label') === '6 alerts' && await clinicBadge.evaluate(e => getComputedStyle(e).backgroundColor) !== 'rgb(201, 64, 64)', 'warnings only: a grey badge');
+  pass(await clinicBadge.getAttribute('aria-label') === '6 alerts' && await clinicBadge.evaluate(e => getComputedStyle(e).backgroundColor) !== 'rgb(255, 214, 218)', 'warnings only: a grey badge');
   pass(await tabs.getByRole('tab', { name: /wholesaler/ }).locator('span[aria-label]').count() === 0, 'no alerts: no badge');
   pass(await p.getByRole('button', { name: 'Previous tabs' }).isDisabled() && await p.getByRole('button', { name: 'More tabs' }).isDisabled(), 'everything fits: both arrows off');
   await p.evaluate(() => document.querySelector('main').scrollTo(0, 400)); await p.waitForTimeout(150);

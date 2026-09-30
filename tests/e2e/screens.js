@@ -26,15 +26,18 @@ const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y
     const warn = p.locator('span.rounded-full', { hasText: /^Warning$/ }).first();
     await p.locator('#alerts-table').scrollIntoViewIfNeeded().catch(() => {});
     const c = await style(crit);
-    pass(c.bg === 'rgb(201, 64, 64)' && c.fg === 'rgb(255, 255, 255)', `${label}: Critical is solid red with white text (${c.bg} / ${c.fg})`);
-    if (await warn.count()) { const w = await style(warn); pass(w.bg === 'rgb(227, 165, 74)' && contrast(w.bg, w.fg) >= 4.5, `${label}: Warning is solid amber, readable (${w.bg}, ${contrast(w.bg, w.fg).toFixed(1)}:1)`); }
+    const dark = theme !== 'light';
+    const want = dark ? { crit: 'rgb(79, 53, 54)', critFg: 'rgb(255, 184, 191)', warn: 'rgb(75, 66, 42)' } : { crit: 'rgb(255, 214, 218)', critFg: 'rgb(179, 32, 46)', warn: 'rgb(255, 230, 168)' };
+    pass(c.bg === want.crit && c.fg === want.critFg, `${label}: Critical is a pastel pink with deep/bright text (${c.bg} / ${c.fg})`);
+    if (await warn.count()) { const w = await style(warn); pass(w.bg === want.warn && contrast(w.bg, w.fg) >= 4.5, `${label}: Warning is butter pastel, readable (${w.bg}, ${contrast(w.bg, w.fg).toFixed(1)}:1)`); }
     pass(contrast(c.bg, c.fg) >= 4.5, `${label}: Critical text contrast ${contrast(c.bg, c.fg).toFixed(2)}:1`);
     const tags = await p.$$eval('span.rounded-full.border.font-semibold', els => els.filter(e => e.offsetParent).map(e => { const s = getComputedStyle(e); return { t: e.innerText.trim(), bg: s.backgroundColor, fg: s.color }; }));
     // Solid fills only: the see-through chips on the black banner are not status tags.
     const solid = t => /^rgb\(/.test(t.bg);
     const bad = tags.filter(t => solid(t) && contrast(t.bg, t.fg) < 4.5);
     pass(tags.length > 0 && bad.length === 0, `${label}: all ${tags.length} tags on the dashboard ≥ 4.5:1` + (bad.length ? ' — ' + JSON.stringify(bad.slice(0, 3)) : ''));
-    if (theme !== 'light') { const calm = tags.filter(t => solid(t) && !['rgb(201, 64, 64)', 'rgb(227, 165, 74)'].includes(t.bg)); pass(calm.length > 0 && calm.every(t => lum(t.bg) < 0.12), `${label}: calm tags are dark tints, not bright pastels (${calm.map(t => t.t + ' ' + t.bg).slice(0, 4).join(', ')})`); }
+    if (theme !== 'light') { const all = tags.filter(solid); pass(all.length > 0 && all.every(t => lum(t.bg) < 0.12 && lum(t.fg) > 0.4), `${label}: every tag is a deep tint with bright pastel text, no glare (${all.map(t => t.t).slice(0, 5).join(', ')})`); }
+    else { const all = tags.filter(solid); pass(all.length > 0 && all.every(t => lum(t.bg) > 0.6), `${label}: every tag is a light pastel fill`); }
     pass(p._errs.length === 0, `${label}: no page errors ` + p._errs.join('|'));
     await p._ctx.close();
   }
@@ -74,7 +77,7 @@ const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y
     const chips = p.locator('#calendar-grid [role=button]');
     pass(await chips.count() > 0, `events on the week grid (${await chips.count()})`);
     const colours = await chips.evaluateAll(els => els.map(e => getComputedStyle(e).backgroundColor));
-    pass(colours.includes('rgb(201, 64, 64)'), 'a critical incident is red on the grid, like its tag (was amber)');
+    pass(colours.includes('rgb(255, 214, 218)'), 'a critical incident is pastel pink on the grid, like its tag (was amber)');
     await p.getByRole('button', { name: 'Month', exact: true }).click(); await p.waitForTimeout(600);
     t = await p.evaluate(() => document.querySelector('main').innerText);
     pass(/Upcoming/.test(t) && /This month/.test(t) && !/À venir|Ce mois|Rien\b|événements/.test(t), 'month panel in English (French and English were swapped)');
@@ -137,6 +140,60 @@ const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y
     p._ctx = ctx; await go(p, 'Profile');
     const t = await p.evaluate(() => document.querySelector('main').innerText);
     pass(/These counters are at zero because no signal has been imported yet/.test(t) && !/Ces compteurs/.test(t), 'Profile, no data: the note is in English (was French only)');
+    await ctx.close(); }
+
+  console.log('== import panel: departments as a clear step, not hidden tabs');
+  { const p = await open();
+    await p.click('button[aria-controls=import-panel]'); await p.waitForTimeout(250);
+    const panel = p.locator('#import-panel'); const t = await panel.innerText();
+    pass(/1 · SECTOR/i.test(t) && /2 · WHICH DEPARTMENT IS THIS FILE FOR\?/i.test(t) && /3 · THE FILE/i.test(t), 'three numbered steps: sector, department, file');
+    const choices = panel.getByRole('group', { name: /Which department/ }).getByRole('button');
+    pass(await choices.count() === 3, 'one choice per department (3)');
+    const boxes = await choices.evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { h: r.height, fs: parseFloat(getComputedStyle(e.querySelector('span span')).fontSize) }; }));
+    pass(boxes.every(b => b.h >= 44 && b.fs >= 14), 'big enough to read and tap: ' + JSON.stringify(boxes));
+    const dep = await choices.first().boundingBox(), file = await panel.locator('label:has(input[type=file])').boundingBox();
+    pass(dep.y < file.y, 'the department is chosen before the file');
+    await choices.filter({ hasText: 'Laboratory' }).click(); await p.waitForTimeout(150);
+    pass(await choices.filter({ hasText: 'Laboratory' }).getAttribute('aria-pressed') === 'true' && /Health · Laboratory/.test(await panel.locator('label:has(input[type=file])').innerText()), 'picking Laboratory: pressed, and the import button says where it goes');
+    pass(/other than the configured one/.test(await panel.innerText()), 'importing another department is flagged');
+    await p._ctx.close(); }
+
+  console.log('== login: example alert under the pitch');
+  { const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, locale: 'en-US' }); const p = await ctx.newPage();
+    const { mockSupabase } = require('./auth-mock'); await mockSupabase(p, { users: {}, accounts: {} });
+    await p.addInitScript(() => localStorage.setItem('sentria_language', 'en'));
+    await p.goto(APP_URL); await p.waitForTimeout(1200);
+    const lime = await p.locator('main > div > section').first().boundingBox(), sc = await p.locator('section[aria-roledescription=carousel]').boundingBox(), form = await p.locator('main > section').boundingBox();
+    pass(Math.abs(sc.x - lime.x) < 2 && sc.y > lime.y + lime.height, 'the example alert sits right under the lime card, same column');
+    pass(form.x > lime.x + lime.width && Math.abs(form.y + form.height - (sc.y + sc.height)) < 3, 'the form fills the other column, bottoms aligned');
+    await p.getByRole('button', { name: 'Create one' }).click(); await p.waitForTimeout(300);
+    const t = await p.evaluate(() => document.body.innerText);
+    pass(/You'll sign in with this @name or your email/.test(t) && /Email \(to sign in and reset your password\)/.test(t), 'sign-up says both @username and email sign you in');
+    await ctx.close(); }
+
+  console.log('== Profile: what matters for the mission');
+  { const p = await open(); await go(p, 'Profile');
+    const fresh = p.getByTestId('profile-freshness'), next = p.getByTestId('profile-next');
+    pass(/Data freshness/i.test(await fresh.innerText()) && /ago/.test(await fresh.innerText()), 'data freshness: ' + (await fresh.innerText()).replace(/\n/g, ' | '));
+    pass(/Critical waiting longest/i.test(await next.innerText()) && /Med 9/.test(await next.innerText()), 'the critical alert waiting longest (Med 9, the oldest open one)');
+    pass(/Business/.test(await p.getByTestId('profile-plan').innerText()), 'the plan is shown');
+    pass(/ama@pharma\.bj/.test(await p.getByTestId('profile-signin').innerText()), 'how you sign in: the email');
+    pass(p._errs.length === 0, 'no page errors ' + p._errs.join('|'));
+    await p._ctx.close(); }
+
+  console.log('== Field team: a clear message when its tables are missing');
+  { const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, locale: 'en-US' }); const p = await ctx.newPage(); p._ctx = ctx; p._errs = [];
+    await p.route(/onrender\.com\//, r => { const u = r.request().url();
+      if (/\/contractors/.test(u)) return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ contractors: [], error_code: 'crm_setup_missing', error_detail: 'The Field team tables are not set up in the database yet. Run migrations/008_crm_repair.sql in the Supabase SQL editor, then reload.' }) });
+      if (/\/assignments/.test(u)) return r.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ detail: { error_code: 'account_missing', message: 'No account for this user yet. Reload the app.' } }) });
+      r.fulfill({ status: 200, contentType: 'application/json', body: /\/alerts/.test(u) ? JSON.stringify(data) : JSON.stringify({ recommendations: recs }) }); });
+    await p.addInitScript(ls => { if (!sessionStorage.x) { sessionStorage.x = 1; localStorage.clear(); Object.entries(ls).forEach(([k, v]) => localStorage.setItem(k, v)); } }, LS);
+    await signedIn(p, 'u', 'a@b.c', { plan: 'business' }); await p.goto(APP_URL); await p.waitForTimeout(1500);
+    await go(p, 'Field team');
+    pass(/Run migrations\/008_crm_repair\.sql/.test(await p.evaluate(() => document.querySelector('main').innerText)), 'says which migration to run');
+    await go(p, 'Tracking');
+    const tt = await p.evaluate(() => document.querySelector('main').innerText);
+    pass(/The API answered 403\. No account for this user yet\. Reload the app\./.test(tt), 'an HTTP refusal shows the API reason, not just the status');
     await ctx.close(); }
 
   console.log('== phone, both themes: no sideways scroll');
