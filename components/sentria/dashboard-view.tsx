@@ -1,6 +1,6 @@
 "use client"
 
-import { SeverityTag, StatusTag } from "./status-tag"
+import { SeverityTag, StatusTag, ValueTag } from "./status-tag"
 import { SheetTabs } from "./sheet-tabs"
 import type { ViewKey } from "./types"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -85,6 +85,7 @@ import { runUpload } from "@/lib/upload"
 import { setUploadPanel } from "@/lib/upload-panel"
 import { holdInPlace } from "@/lib/hold-scroll"
 import { uploadProblemMessage } from "@/lib/upload-problem"
+import type { AlertParams } from "@/lib/value-at-risk"
 import {
   contractorIdsOf,
   fetchAssignments,
@@ -114,6 +115,9 @@ type Alert = {
   business_type?: string | null
   alert_key?: string | null
   risk_score?: number | null
+  /** What built the message, as the backend stored it (F-MONEY reads
+   *  the value at risk from it). */
+  params?: AlertParams
 }
 
 type Recommendation = {
@@ -3414,7 +3418,10 @@ export function DashboardView({
                               "border-b border-border"
                           )}
                         >
-                          <SeverityTag severity={alert.severity} tx={tx} size="sm" />
+                          <div className="flex items-center gap-1.5">
+                            <SeverityTag severity={alert.severity} tx={tx} size="sm" />
+                            <ValueTag params={alert.params} tx={tx} size="sm" />
+                          </div>
                         </td>
 
                         <td
@@ -3500,6 +3507,7 @@ export function DashboardView({
 
                 <div className="flex shrink-0 items-center gap-2">
                   <SeverityTag severity={expandedAlert.severity} tx={tx} size="sm" />
+                  <ValueTag params={expandedAlert.params} tx={tx} size="sm" />
 
                   <button
                     type="button"

@@ -433,12 +433,19 @@ export function formatMoney(
   currency: Currency,
   tx: Tx
 ): string {
+  return formatAmount(value, currency.symbol, tx)
+}
+
+/** formatMoney for a symbol that came from the backend (an alert's own
+ *  currency). No symbol known: the figure alone, never a guessed one. */
+export function formatAmount(value: number, symbol: string, tx: Tx): string {
   const rounded = Math.round(value)
 
   /* The grouping convention follows the reader, not the money: an English
      reader expects "1,240", a French one "1 240", and both are looking at
      the same figure in the same currency. */
-  return `${rounded.toLocaleString(tx("fr-FR", "en-GB"))} ${currency.symbol}`
+  const figure = rounded.toLocaleString(tx("fr-FR", "en-GB"))
+  return symbol ? `${figure} ${symbol}` : figure
 }
 
 /* ------------------------------------------------------------------ */

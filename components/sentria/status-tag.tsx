@@ -6,10 +6,13 @@ import {
   CircleX,
   Clock3,
   Sparkles,
+  Wallet,
   type LucideIcon,
 } from "@/lib/icons"
 
 import type { Tx } from "@/lib/i18n"
+import { formatAmount } from "@/lib/locale"
+import { valueAtRisk, type AlertParams } from "@/lib/value-at-risk"
 import { cn } from "@/lib/utils"
 
 /** The app's status tags: a pastel pill with a circled icon (tokens in
@@ -124,5 +127,33 @@ export function SeverityTag({
     <StatusTag tone="neutral" size={size} className={className}>
       {value || "—"}
     </StatusTag>
+  )
+}
+
+/** The money an alert puts at risk (F-MONEY), shown beside its severity.
+ *  Nothing when the alert carries no amount. */
+export function ValueTag({
+  params,
+  tx,
+  size = "sm",
+  className,
+}: {
+  params: AlertParams
+  tx: Tx
+  size?: keyof typeof SIZES
+  className?: string
+}) {
+  const risk = valueAtRisk(params)
+  if (!risk) return null
+
+  const amount = formatAmount(risk.value, risk.currency, tx)
+
+  return (
+    <span title={tx(`Valeur en jeu : ${amount}`, `Value at risk: ${amount}`)} className="inline-flex">
+      <StatusTag tone="neutral" size={size} icon={Wallet} className={cn("tabular-nums", className)}>
+        <span className="sr-only">{tx("Valeur en jeu : ", "Value at risk: ")}</span>
+        {amount}
+      </StatusTag>
+    </span>
   )
 }
