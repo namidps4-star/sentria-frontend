@@ -21,8 +21,33 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   const go = async (p, name) => { await p.locator('main button', { hasText: new RegExp(name, 'i') }).first().click(); await p.waitForTimeout(1000); await p.evaluate(() => document.querySelector('main').scrollTo(0, 0)); };
 
   for (const theme of ['light', 'dark']) {
-    console.log(`== blockages (${theme})`);
+    console.log(`== overview tiles + department tabs (${theme})`);
     const p = await open(1440, theme);
+    const bento = p.getByTestId('priority-bento');
+    const tiles = bento.locator(':scope > button');
+    pass(await tiles.count() === 5, 'five priority tiles');
+    const [lead, t2] = [await tiles.nth(0).boundingBox(), await tiles.nth(1).boundingBox()];
+    pass(lead.width > t2.width * 1.8 && lead.height > t2.height * 1.8, 'the first priority leads as a 2×2 tile');
+    const th = await tiles.evaluateAll(els => els.slice(1).map(e => e.getBoundingClientRect().height));
+    pass(Math.max(...th) <= 170, 'the other tiles are compact: ' + th.map(Math.round).join(','));
+    const txt = async n => (await tiles.nth(n).innerText()).replace(/\s+/g, ' ');
+    pass(/ 4 critical signals /.test(await txt(0)), 'lead tile shows a live number: 4 critical signals');
+    pass(/ 2 queues flagged/.test(await txt(1)) && / 0 cost signals/.test(await txt(2)) && / 4 early warnings/.test(await txt(3)) && / 8 assets to act on/.test(await txt(4)), 'each tile counts from the alerts: 2 queues, 0 cost, 4 early warnings, 8 assets');
+    const bb = await bento.boundingBox(), right = await tiles.nth(4).boundingBox();
+    pass(Math.abs((right.y + right.height) - (lead.y + lead.height)) <= 3 && right.x + right.width <= bb.x + bb.width + 1, 'the grid closes with no hole');
+    const tabs = p.getByRole('tablist', { name: 'Your departments' });
+    pass(await tabs.count() === 1 && await tabs.getByRole('tab', { name: /Port & containers/ }).getAttribute('aria-selected') === 'true', 'logistics has the department tab bar, port selected');
+    const adds = p.getByRole('group', { name: 'Add a department' }).getByRole('button');
+    pass(await adds.filter({ hasText: 'Warehouse' }).count() === 1, 'and offers the other logistics departments (+ Warehouse & handling)');
+    await p.screenshot({ path: `logi-overview-${theme}.png` });
+    if (theme === 'light') {
+      await adds.filter({ hasText: 'Warehouse' }).click(); await p.waitForTimeout(700);
+      pass(await tabs.getByRole('tab').count() === 2 && await tabs.getByRole('tab', { name: /Warehouse/ }).getAttribute('aria-selected') === 'true', '"+ Warehouse" adds it as a tab and switches to it');
+      pass(JSON.parse(await p.evaluate(() => localStorage.getItem('sentria_ops_types'))).join() === 'entrepot', 'the logistics views now read the warehouse');
+      await tabs.getByRole('tab', { name: /Port/ }).click(); await p.waitForTimeout(600);
+      pass(JSON.parse(await p.evaluate(() => localStorage.getItem('sentria_ops_types'))).join() === 'port', 'and back to the port in one click');
+    }
+    console.log(`== blockages (${theme})`);
     await go(p, 'Avoid blockages');
     const fig = p.getByTestId('flow-figure');
     const title = p.locator('main h2').filter({ hasText: /^Berth$/ }).first();

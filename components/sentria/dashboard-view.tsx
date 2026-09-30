@@ -50,6 +50,7 @@ import { API_BASE as API, apiFetch } from "@/lib/api"
 import { toApiSector, withOurSector } from "@/lib/sector"
 import {
   PriorityCards,
+  type PriorityStat,
   PriorityHeading,
   PriorityPills,
   priorityCount,
@@ -1520,7 +1521,11 @@ export function DashboardView({
     )
   }
 
-  function applyActivityToDashboard(sector: string, activityId: string) {
+  function applyActivityToDashboard(
+    sector: string,
+    activityId: string,
+    held: string[] = []
+  ) {
     if (sector === "logistics") {
       const normalized = normalizeOpsType(activityId)
 
@@ -1529,6 +1534,16 @@ export function DashboardView({
 
         setOpsTypes(stored)
         setOpsType(normalized)
+      } else if (normalized === "multi") {
+        // "Several activities": every logistics department held, together.
+        const all = held
+          .map((id) => normalizeOpsType(id))
+          .filter((t): t is SingleOpsType => Boolean(t) && t !== "multi")
+        if (all.length > 1) {
+          const stored = writeOpsTypes(all)
+          setOpsTypes(stored)
+          setOpsType("multi")
+        }
       }
     } else {
       localStorage.setItem("sentria_business_type", activityId)
@@ -2155,6 +2170,90 @@ export function DashboardView({
       )
     : null
 
+  // One view per department when the company runs several in a sector
+  // (Business: clinic + pharmacy + lab; a port that also runs a
+  // warehouse). Computed before the sector layouts below return early,
+  // so every one of them carries the bar.
+  const tabSector = filterSector !== "all" ? filterSector : activeSectors[0]
+  const departmentTabs = tabSector
+    ? (departments[tabSector] ?? []).filter((id) =>
+        activitiesFor(tabSector).some((a) => a.id === id)
+      )
+    : []
+
+  /* Logistics keeps its department as an ops type ("port"), not as the
+     onboarding id ("port-conteneurs"): match through normalizeOpsType. */
+  const isLogisticsTabs = tabSector === "logistics"
+  const activeDepartment = isLogisticsTabs
+    ? opsTypes.length > 1
+      ? departmentTabs.find((id) => normalizeOpsType(id) === "multi") ?? null
+      : departmentTabs.find(
+          (id) => normalizeOpsType(id) === (opsTypes[0] ?? normalizeOpsType(opsType))
+        ) ?? null
+    : activityIn(tabSector)
+  const inDepartment = (a: Alert, id: string) =>
+    isLogisticsTabs
+      ? normalizeOpsType(id) === "multi" ||
+        normalizeOpsType(activityOf(a)) === normalizeOpsType(id)
+      : activityOf(a) === id
+
+  /* The departments that run with the ones held (a hospital's own lab
+     and pharmacy), offered as "+" tabs after them. Locked when the plan
+     doesn't allow running them together. */
+  const departmentSuggestions =
+    tabSector && departmentTabs.length > 0
+      ? [...combinableWith(tabSector, departmentTabs)]
+          .filter((id) => !departmentTabs.includes(id) && activitiesFor(tabSector).some((a) => a.id === id))
+          .map((id) => ({
+            id,
+            label: activityLabel(tabSector, id, tx) ?? id,
+            locked: !checkPlan(plan, { [tabSector]: [...departmentTabs, id] }).ok,
+          }))
+      : []
+
+  const addDepartment = (id: string) => {
+    if (!tabSector) return
+    const next = { ...departments, [tabSector]: [...(departments[tabSector] ?? departmentTabs), id] }
+    if (!checkPlan(plan, next).ok) return
+    // Saved like the onboarding saves it; the account sync picks it up.
+    localStorage.setItem(DEPARTMENTS_KEY, JSON.stringify(next))
+    setDepartments(next)
+    applyActivityToDashboard(tabSector, id, next[tabSector])
+    setFilterSector(tabSector)
+    localStorage.setItem("sentria_sector", tabSector)
+  }
+
+  const pickDepartment = (id: string) => {
+    if (!tabSector) return
+    applyActivityToDashboard(tabSector, id, departmentTabs)
+    setFilterSector(tabSector)
+    localStorage.setItem("sentria_sector", tabSector)
+  }
+
+  /* The departments as sheet tabs pinned to the bottom of the page,
+     on the overview and inside every sector's own layout. */
+  const sheetTabs =
+    tabSector && (departmentTabs.length > 1 || departmentSuggestions.length > 0) ? (
+      <SheetTabs
+        suggestions={departmentSuggestions}
+        onAdd={addDepartment}
+        onSeePlans={onNavigate ? () => onNavigate("pricing") : undefined}
+        label={tx("Vos départements", "Your departments")}
+        tx={tx}
+        activeId={activeDepartment}
+        onSelect={pickDepartment}
+        tabs={departmentTabs.map((id) => {
+          const own = alerts.filter((a) => a.sector === tabSector && inDepartment(a, id))
+          return {
+            id,
+            label: activityLabel(tabSector, id, tx) ?? id,
+            count: own.length,
+            critical: own.filter((a) => a.severity === "CRITICAL").length,
+          }
+        })}
+      />
+    ) : null
+
   if (filterSector === "industry") {
     // Scoped to the selected activity, like logisticsViewAlerts: another
     // industry activity's alerts must not fill this one's KPI cards.
@@ -2271,6 +2370,7 @@ export function DashboardView({
             ))}
           </div>
           )}
+          {sheetTabs}
         </div>
       )
     }
@@ -2355,6 +2455,7 @@ export function DashboardView({
         ) : (
           <IndustryMaintenanceView alerts={industryAlerts} />
         )}
+        {sheetTabs}
       </div>
     )
   }
@@ -2371,6 +2472,30 @@ export function DashboardView({
           : []
 
     if (logisticsPriority === null) {
+      /* One live number per priority tile, each saying what it counts.
+         Counted from this activity's alerts only. */
+      const keyHas = (a: Alert, words: string[]) =>
+        words.some((w) => (a.alert_key ?? "").toLowerCase().includes(w))
+      const critical = logisticsViewAlerts.filter((a) => a.severity === "CRITICAL").length
+      const waits = logisticsViewAlerts.filter((a) => keyHas(a, ["wait", "queue", "service", "dwell"])).length
+      const costs = logisticsViewAlerts.filter((a) => keyHas(a, ["fuel", "cost", "overrun", "detention", "demurrage"])).length
+      const early = logisticsViewAlerts.filter((a) => a.severity === "WARNING").length
+      const assets = new Set(logisticsViewAlerts.map((a) => a.equipment).filter(Boolean)).size
+      const capacity = logisticsViewAlerts.filter((a) => keyHas(a, ["capacity", "resource", "staff", "space"])).length
+      // [one, many] in each language.
+      const say = (n: number, fr: [string, string], en: [string, string]) =>
+        tx(n > 1 ? fr[1] : fr[0], n === 1 ? en[0] : en[1])
+      const logisticsStats: Record<string, PriorityStat> = {
+        blockages: critical > 0
+          ? { value: String(critical), label: say(critical, ["signal critique", "signaux critiques"], ["critical signal", "critical signals"]), tone: "risk" }
+          : { value: "0", label: tx("rien de bloqué", "nothing blocked"), tone: "good" },
+        wait: { value: String(waits), label: say(waits, ["file signalée", "files signalées"], ["queue flagged", "queues flagged"]), tone: waits > 0 ? "watch" : "good" },
+        cost: { value: String(costs), label: say(costs, ["signal de coût", "signaux de coût"], ["cost signal", "cost signals"]), tone: costs > 0 ? "watch" : "good" },
+        anticipate: { value: String(early), label: say(early, ["alerte préventive", "alertes préventives"], ["early warning", "early warnings"]), tone: early > 0 ? "watch" : "good" },
+        recommend: { value: String(assets), label: say(assets, ["équipement à traiter", "équipements à traiter"], ["asset to act on", "assets to act on"]), tone: assets > 0 ? "risk" : "good" },
+        resources: { value: String(capacity), label: say(capacity, ["ressource sous tension", "ressources sous tension"], ["resource under strain", "resources under strain"]), tone: capacity > 0 ? "watch" : "good" },
+      }
+
       return (
         <div className="space-y-6">
           {importPortal}
@@ -2384,34 +2509,31 @@ export function DashboardView({
             </button>
           </div>
 
-          <div className="rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:p-8">
-            <div className="max-w-2xl">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
-                <Shield className="h-3.5 w-3.5" />
+          {/* A header line, not a banner: the tiles below are the page. */}
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 {tx("Logistique", "Logistics")}
-              </span>
-
-              <h2 className="mt-4 font-heading text-2xl font-bold leading-tight md:text-3xl">
-                {tx(
-                  "Vue d'ensemble de votre logistique.",
-                  "An overview of your logistics."
-                )}
-              </h2>
-
-              <p className="mt-2 text-sm leading-6 text-sidebar-foreground/70">
-                {tx(
-                  "Retrouvez ici les priorités que vous avez sélectionnées pendant la configuration de SentrIA. Choisissez une priorité pour accéder directement à son espace de pilotage.",
-                  "These are the priorities you picked while setting SentrIA up. Choose one to go straight to its workspace."
-                )}
               </p>
+              <h2 className="mt-1 font-heading text-2xl font-bold leading-tight tracking-tight sm:text-3xl">
+                {tx("Vue d'ensemble de votre logistique", "An overview of your logistics")}
+              </h2>
+            </div>
 
-              {normalizedOpsType &&
-                OPS_TYPE_LABEL[normalizedOpsType] && (
-                  <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-sidebar-border bg-white/10 px-3 py-1 text-[11px] font-medium text-sidebar-foreground/80">
-                    <Shield className="h-3 w-3" />
-                    {px(OPS_TYPE_LABEL[normalizedOpsType])}
-                  </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {normalizedOpsType && OPS_TYPE_LABEL[normalizedOpsType] && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-card px-3 py-1.5 text-xs font-semibold shadow-sm">
+                  <Shield className="h-3.5 w-3.5 text-muted-foreground" />
+                  {px(OPS_TYPE_LABEL[normalizedOpsType])}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--ink)] px-3 py-1.5 text-xs font-semibold text-white">
+                <span className={cn("h-1.5 w-1.5 rounded-full", critical > 0 ? "bg-[var(--tag-danger-bg)]" : "bg-brand")} aria-hidden="true" />
+                {tx(
+                  `${logisticsViewAlerts.length} signaux · ${critical} critique${critical > 1 ? "s" : ""}`,
+                  `${logisticsViewAlerts.length} signals · ${critical} critical`
                 )}
+              </span>
             </div>
           </div>
 
@@ -2424,6 +2546,7 @@ export function DashboardView({
             <PriorityCards
               sector="logistics"
               ids={selectedLogisticsPriorities}
+              stats={logisticsStats}
               onOpen={(id) =>
                 openLogisticsPriority(id as LogisticsPriority)
               }
@@ -2464,6 +2587,7 @@ export function DashboardView({
               </div>
             ))}
           </div>
+          {sheetTabs}
         </div>
       )
     }
@@ -2599,52 +2723,9 @@ export function DashboardView({
             selectedOpsTypesForMulti={opsTypesForChain}
           />
         )}
+        {sheetTabs}
       </div>
     )
-  }
-
-  // One view per department when the company runs several in a sector
-  // (Business: clinic + pharmacy + lab, ...). Logistics has its own
-  // multi-activity views.
-  const tabSector = filterSector !== "all" ? filterSector : activeSectors[0]
-  const departmentTabs =
-    tabSector && tabSector !== "logistics"
-      ? (departments[tabSector] ?? []).filter((id) =>
-          activitiesFor(tabSector).some((a) => a.id === id)
-        )
-      : []
-
-  /* The departments that run with the ones held (a hospital's own lab
-     and pharmacy), offered as "+" tabs after them. Locked when the plan
-     doesn't allow running them together. */
-  const departmentSuggestions =
-    tabSector && tabSector !== "logistics" && departmentTabs.length > 0
-      ? [...combinableWith(tabSector, departmentTabs)]
-          .filter((id) => !departmentTabs.includes(id) && activitiesFor(tabSector).some((a) => a.id === id))
-          .map((id) => ({
-            id,
-            label: activityLabel(tabSector, id, tx) ?? id,
-            locked: !checkPlan(plan, { [tabSector]: [...departmentTabs, id] }).ok,
-          }))
-      : []
-
-  const addDepartment = (id: string) => {
-    if (!tabSector) return
-    const next = { ...departments, [tabSector]: [...(departments[tabSector] ?? departmentTabs), id] }
-    if (!checkPlan(plan, next).ok) return
-    // Saved like the onboarding saves it; the account sync picks it up.
-    localStorage.setItem(DEPARTMENTS_KEY, JSON.stringify(next))
-    setDepartments(next)
-    applyActivityToDashboard(tabSector, id)
-    setFilterSector(tabSector)
-    localStorage.setItem("sentria_sector", tabSector)
-  }
-
-  const pickDepartment = (id: string) => {
-    if (!tabSector) return
-    applyActivityToDashboard(tabSector, id)
-    setFilterSector(tabSector)
-    localStorage.setItem("sentria_sector", tabSector)
   }
 
   return (
@@ -3886,28 +3967,7 @@ export function DashboardView({
         </div>
       )}
 
-      {/* The departments as sheet tabs pinned to the bottom of the page.
-          (The import is the upload icon in the top bar.) */}
-      {tabSector && (departmentTabs.length > 1 || departmentSuggestions.length > 0) && (
-        <SheetTabs
-          suggestions={departmentSuggestions}
-          onAdd={addDepartment}
-          onSeePlans={onNavigate ? () => onNavigate("pricing") : undefined}
-          label={tx("Vos départements", "Your departments")}
-          tx={tx}
-          activeId={activityIn(tabSector)}
-          onSelect={pickDepartment}
-          tabs={departmentTabs.map((id) => {
-            const own = alerts.filter((a) => a.sector === tabSector && activityOf(a) === id)
-            return {
-              id,
-              label: activityLabel(tabSector, id, tx) ?? id,
-              count: own.length,
-              critical: own.filter((a) => a.severity === "CRITICAL").length,
-            }
-          })}
-        />
-      )}
+      {sheetTabs}
     </div>
   )
 }
