@@ -2,6 +2,7 @@
 
 import { SeverityTag, StatusTag } from "./status-tag"
 import { SheetTabs } from "./sheet-tabs"
+import type { ViewKey } from "./types"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import {
@@ -69,6 +70,9 @@ import {
 import { useCompanyIdentity } from "@/lib/company"
 import { accountCurrencyParam } from "@/lib/locale"
 import {
+  DEPARTMENTS_KEY,
+  checkPlan,
+  combinableWith,
   departmentsForPlan,
   readAccountPlan,
   readDepartments,
@@ -977,8 +981,11 @@ function visibleBlock(): HTMLElement | null {
 
 export function DashboardView({
   search = "",
+  onNavigate,
 }: {
   search?: string
+  /** Opens another view (the plans, from the department tabs). */
+  onNavigate?: (view: ViewKey) => void
 }) {
   const tx = useTx()
 
@@ -2607,6 +2614,32 @@ export function DashboardView({
         )
       : []
 
+  /* The departments that run with the ones held (a hospital's own lab
+     and pharmacy), offered as "+" tabs after them. Locked when the plan
+     doesn't allow running them together. */
+  const departmentSuggestions =
+    tabSector && tabSector !== "logistics" && departmentTabs.length > 0
+      ? [...combinableWith(tabSector, departmentTabs)]
+          .filter((id) => !departmentTabs.includes(id) && activitiesFor(tabSector).some((a) => a.id === id))
+          .map((id) => ({
+            id,
+            label: activityLabel(tabSector, id, tx) ?? id,
+            locked: !checkPlan(plan, { [tabSector]: [...departmentTabs, id] }).ok,
+          }))
+      : []
+
+  const addDepartment = (id: string) => {
+    if (!tabSector) return
+    const next = { ...departments, [tabSector]: [...(departments[tabSector] ?? departmentTabs), id] }
+    if (!checkPlan(plan, next).ok) return
+    // Saved like the onboarding saves it; the account sync picks it up.
+    localStorage.setItem(DEPARTMENTS_KEY, JSON.stringify(next))
+    setDepartments(next)
+    applyActivityToDashboard(tabSector, id)
+    setFilterSector(tabSector)
+    localStorage.setItem("sentria_sector", tabSector)
+  }
+
   const pickDepartment = (id: string) => {
     if (!tabSector) return
     applyActivityToDashboard(tabSector, id)
@@ -3855,8 +3888,11 @@ export function DashboardView({
 
       {/* The departments as sheet tabs pinned to the bottom of the page.
           (The import is the upload icon in the top bar.) */}
-      {tabSector && departmentTabs.length > 1 && (
+      {tabSector && (departmentTabs.length > 1 || departmentSuggestions.length > 0) && (
         <SheetTabs
+          suggestions={departmentSuggestions}
+          onAdd={addDepartment}
+          onSeePlans={onNavigate ? () => onNavigate("pricing") : undefined}
           label={tx("Vos départements", "Your departments")}
           tx={tx}
           activeId={activityIn(tabSector)}

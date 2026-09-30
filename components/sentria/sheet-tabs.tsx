@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
-import { Check, ChevronLeft, ChevronRight, Menu } from "@/lib/icons"
+import { Check, ChevronLeft, ChevronRight, Menu, Plus, X } from "@/lib/icons"
 import type { Tx } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
@@ -14,6 +14,14 @@ export type SheetTab = {
   critical?: number
 }
 
+/** A department the company could add next to the ones it runs (a
+ *  hospital's own lab, say). Locked when the plan doesn't allow it. */
+export type SheetTabSuggestion = {
+  id: string
+  label: string
+  locked?: boolean
+}
+
 /** The departments as spreadsheet-style tabs pinned to the bottom of the
  *  page, like the sheet tabs in Google Sheets. The strip scrolls when the
  *  tabs don't fit, and it always says so: arrows light up on the side that
@@ -24,17 +32,26 @@ export function SheetTabs({
   onSelect,
   label,
   tx,
+  suggestions = [],
+  onAdd,
+  onSeePlans,
 }: {
   tabs: SheetTab[]
   activeId: string | null
   onSelect: (id: string) => void
   label: string
   tx: Tx
+  /** Linked departments not run yet, shown as "+ Laboratory" after the tabs. */
+  suggestions?: SheetTabSuggestion[]
+  onAdd?: (id: string) => void
+  onSeePlans?: () => void
 }) {
   const strip = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const [more, setMore] = useState({ left: false, right: false })
   const [menuOpen, setMenuOpen] = useState(false)
+  // The locked department whose "Business plan" note is open.
+  const [offer, setOffer] = useState<SheetTabSuggestion | null>(null)
 
   const measure = useCallback(() => {
     const el = strip.current
@@ -123,7 +140,7 @@ export function SheetTabs({
         >
           <Menu className="h-4 w-4" aria-hidden="true" />
           <span className="tabular-nums">{tabs.length}</span>
-          <span className="hidden sm:inline">{tx("départements", "departments")}</span>
+          <span className="hidden sm:inline">{tabs.length > 1 ? tx("départements", "departments") : tx("département", "department")}</span>
         </button>
 
         {menuOpen && (
@@ -180,10 +197,7 @@ export function SheetTabs({
       <div className="relative min-w-0 flex-1">
         <div
           ref={strip}
-          role="tablist"
-          aria-label={label}
           onScroll={measure}
-          onKeyDown={onKeyDown}
           className="relative flex items-start gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           style={{
             // The edge that hides tabs fades out.
@@ -192,6 +206,7 @@ export function SheetTabs({
               : undefined,
           }}
         >
+          <div role="tablist" aria-label={label} onKeyDown={onKeyDown} className="flex shrink-0 items-start gap-1">
           {tabs.map((t) => {
             const active = t.id === activeId
             return (
@@ -219,8 +234,75 @@ export function SheetTabs({
               </button>
             )
           })}
+          </div>
+
+          {/* Departments that run with these, not added yet. */}
+          {suggestions.length > 0 && (
+            <div role="group" aria-label={tx("Ajouter un département", "Add a department")} className="flex shrink-0 items-center gap-1 pl-1 pt-1.5">
+              {suggestions.map((sug) => (
+                <button
+                  key={sug.id}
+                  type="button"
+                  data-add={sug.id}
+                  onClick={() => (sug.locked ? setOffer(sug) : onAdd?.(sug.id))}
+                  aria-label={
+                    sug.locked
+                      ? tx(`Ajouter ${sug.label} (offre Business)`, `Add ${sug.label} (Business plan)`)
+                      : tx(`Ajouter ${sug.label}`, `Add ${sug.label}`)
+                  }
+                  className="flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-dashed border-foreground/25 px-3.5 text-sm text-muted-foreground transition-colors hover:border-foreground/50 hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                  {sug.label}
+                  {sug.locked && (
+                    <span className="rounded-full bg-[var(--tag-info-bg)] px-1.5 text-[10px] font-semibold text-[var(--tag-info-fg)]">
+                      Business
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
+
+      {offer && (
+        <div
+          role="dialog"
+          aria-label={tx(`Ajouter ${offer.label}`, `Add ${offer.label}`)}
+          className="absolute bottom-full right-2 mb-2 w-72 rounded-2xl bg-card p-4 shadow-xl lg:right-4"
+        >
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-sm font-semibold">{tx(`Ajouter ${offer.label}`, `Add ${offer.label}`)}</p>
+            <button
+              type="button"
+              onClick={() => setOffer(null)}
+              aria-label={tx("Fermer", "Close")}
+              className="-mr-1 -mt-1 rounded-full p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              <X className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          </div>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            {tx(
+              "Suivre plusieurs départements liés ensemble (une clinique avec son laboratoire et sa pharmacie) fait partie de l'offre Business.",
+              "Running several linked departments together (a clinic with its own lab and pharmacy) is part of the Business plan."
+            )}
+          </p>
+          {onSeePlans && (
+            <button
+              type="button"
+              onClick={() => {
+                setOffer(null)
+                onSeePlans()
+              }}
+              className="mt-3 rounded-full bg-brand px-4 py-1.5 text-xs font-semibold text-[#141414] hover:opacity-90"
+            >
+              {tx("Voir les offres", "See the plans")}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }

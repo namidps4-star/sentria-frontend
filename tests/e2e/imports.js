@@ -103,7 +103,8 @@ const panelText = p => p.evaluate(() => document.querySelector('[role=dialog][ar
     pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
     await p.close(); }
   { const p = await open({ ls: ONB, onUpload: ok(1, 1) });
-    pass(await p.getByRole('tablist', { name: 'Your departments' }).count() === 0, 'one department: no tabs');
+    const one = p.getByRole('tablist', { name: 'Your departments' });
+    pass(await one.getByRole('tab').count() === 1 && await p.getByRole('group', { name: 'Add a department' }).getByRole('button').count() >= 1, 'one department: its tab, plus the linked departments to add');
     await p.close(); }
 
   await browser.close();

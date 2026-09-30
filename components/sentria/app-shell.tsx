@@ -286,7 +286,7 @@ export function AppShell({
           </div>
 
           <main className="flex-1 overflow-y-auto p-4 lg:p-8">
-            {view === "dashboard" && <DashboardView search={search} />}
+            {view === "dashboard" && <DashboardView search={search} onNavigate={setView} />}
             {view === "tracking" && <TrackingView />}
             {view === "calendar" && <CalendarView />}
             {view === "sites" && <SitesView />}
