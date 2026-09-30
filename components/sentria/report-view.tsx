@@ -14,7 +14,7 @@ import {
   ShieldAlert,
   Truck,
   AlertTriangle,
-} from "lucide-react"
+} from "@/lib/icons"
 import { useEffect, useMemo, useState } from "react"
 import { API_BASE, apiFetch } from "@/lib/api"
 import { readCompanyName, readTimezoneId } from "@/lib/company"

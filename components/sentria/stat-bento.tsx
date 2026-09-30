@@ -1,6 +1,6 @@
 "use client"
 
-import type { LucideIcon } from "lucide-react"
+import type { LucideIcon } from "@/lib/icons"
 
 import { useTx } from "@/lib/i18n"
 import { cn } from "@/lib/utils"

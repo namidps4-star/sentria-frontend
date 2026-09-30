@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Loader2 } from "lucide-react"
+import { Loader2 } from "@/lib/icons"
 
 import { inAccountScope, readSectors } from "@/lib/activities"
 import { API_BASE, apiFetch } from "@/lib/api"

@@ -15,7 +15,7 @@ import {
   Wrench,
   X,
   Zap,
-} from "lucide-react"
+} from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import { useCompanyIdentity } from "@/lib/company"
 import { inAccountScope, readSectors } from "@/lib/activities"

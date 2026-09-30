@@ -1,10 +1,11 @@
 "use client"
 
-import { ArrowUpRight } from "lucide-react"
+import { ArrowUpRight, Sparkles } from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import {
   prioritiesFor,
   priorityDescription,
+  priorityEdge,
   priorityGoal,
   priorityLabel,
   priorityMeta,
@@ -57,39 +58,69 @@ export function PriorityCards({
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {ids.map((id) => {
+      {ids.map((id, index) => {
         const Icon = priorityMeta(sector, id)?.icon
+        const edge = priorityEdge(sector, id, tx)
+        // The first one leads, in lime; the others are white.
+        const lead = index === 0
 
         return (
           <button
             key={id}
             type="button"
             onClick={() => onOpen(id)}
-            className="group rounded-3xl border border-border bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-sm"
+            className={cn(
+              "group flex flex-col rounded-[28px] p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              lead ? "bg-brand text-[#141414]" : "bg-card"
+            )}
           >
             <div className="flex items-start justify-between gap-4">
-              <div>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-accent-foreground">
-                  {Icon && <Icon className="h-3 w-3" aria-hidden="true" />}
-                  {tx("Priorité", "Priority")}
-                </span>
-
-                <h4 className="mt-3 font-heading text-lg font-bold">
-                  {priorityGoal(sector, id, tx)}
-                </h4>
-              </div>
-
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted transition-colors group-hover:bg-accent group-hover:text-accent-foreground">
-                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--ink)] text-brand">
+                {Icon && <Icon className="h-5 w-5" aria-hidden="true" />}
+              </span>
+              <span
+                className={cn(
+                  "font-mono text-[11px] font-semibold tracking-widest",
+                  lead ? "text-[#141414]/55" : "text-muted-foreground/70"
+                )}
+                aria-hidden="true"
+              >
+                {String(index + 1).padStart(2, "0")}
               </span>
             </div>
 
-            <p className="mt-3 text-sm leading-5 text-muted-foreground">
+            <h4 className="mt-4 font-heading text-lg font-bold leading-snug">
+              {priorityGoal(sector, id, tx)}
+            </h4>
+
+            <p className={cn("mt-1 text-sm leading-5", lead ? "text-[#141414]/70" : "text-muted-foreground")}>
               {priorityDescription(sector, id, tx)}
             </p>
 
-            <div className="mt-5 text-xs font-semibold text-foreground">
-              {tx("Ouvrir la priorité →", "Open this priority →")}
+            {edge && (
+              <p className={cn("mt-3 flex items-start gap-1.5 text-xs font-medium leading-snug", lead ? "text-[#141414]" : "text-foreground/80")}>
+                <Sparkles className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
+                <span>{edge}</span>
+              </p>
+            )}
+
+            <div className="min-h-5 flex-1" aria-hidden="true" />
+            <div
+              className={cn(
+                "flex items-center justify-between rounded-full py-1.5 pl-4 pr-1.5 text-xs font-semibold",
+                lead ? "bg-[#141414]/10" : "bg-muted"
+              )}
+            >
+              {tx("Ouvrir", "Open")}
+              <span
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
+                  lead ? "bg-[#141414] text-brand" : "bg-card shadow-sm group-hover:bg-brand group-hover:text-[#141414]"
+                )}
+                aria-hidden="true"
+              >
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </span>
             </div>
           </button>
         )
@@ -126,17 +157,13 @@ export function PriorityPills({
   if (ids.length === 0) return null
 
   return (
-    <div
-      className={cn(
-        "rounded-2xl border border-border bg-card px-4 py-3",
-        className
-      )}
-    >
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="mr-1 text-xs font-semibold text-muted-foreground">
-          {heading}
-        </span>
+    <div className={cn("flex flex-col gap-2", className)}>
+      <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        {heading}
+      </p>
 
+      {/* A dock of tiles: icon in a circle, then the name. */}
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none]">
         {ids.map((id) => {
           const Icon = priorityMeta(sector, id)?.icon
           const text = priorityLabel(sector, id, tx)
@@ -145,9 +172,11 @@ export function PriorityPills({
             return (
               <span
                 key={id}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-semibold text-muted-foreground"
+                className="flex shrink-0 items-center gap-2.5 rounded-2xl bg-card py-1.5 pl-1.5 pr-4 text-sm font-semibold text-muted-foreground shadow-sm"
               >
-                {Icon && <Icon className="h-3 w-3" aria-hidden="true" />}
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                  {Icon && <Icon className="h-4 w-4" aria-hidden="true" />}
+                </span>
                 {text}
               </span>
             )
@@ -162,13 +191,18 @@ export function PriorityPills({
               onClick={() => onOpen(id)}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
-                active
-                  ? "border-foreground bg-foreground text-background"
-                  : "border-border bg-background hover:bg-accent hover:text-accent-foreground"
+                "group flex shrink-0 items-center gap-2.5 rounded-2xl py-1.5 pl-1.5 pr-4 text-sm font-semibold shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                active ? "bg-[var(--ink)] text-white" : "bg-card hover:-translate-y-0.5 hover:shadow-md"
               )}
             >
-              {Icon && <Icon className="h-3 w-3" aria-hidden="true" />}
+              <span
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
+                  active ? "bg-brand text-[#141414]" : "bg-muted group-hover:bg-brand group-hover:text-[#141414]"
+                )}
+              >
+                {Icon && <Icon className="h-4 w-4" aria-hidden="true" />}
+              </span>
               {text}
             </button>
           )

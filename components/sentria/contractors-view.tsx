@@ -19,7 +19,7 @@ import {
   Zap,
   Briefcase,
   UsersRound,
-} from "lucide-react"
+} from "@/lib/icons"
 
 import { useCompanyIdentity } from "@/lib/company"
 import {

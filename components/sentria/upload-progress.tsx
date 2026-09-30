@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { AlertTriangle, Check, FileUp, Loader2, SearchCheck } from "lucide-react"
+import { AlertTriangle, Check, FileUp, Loader2, SearchCheck } from "@/lib/icons"
 
 import { useTx } from "@/lib/i18n"
 import type { UploadState } from "@/lib/upload"

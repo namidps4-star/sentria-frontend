@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { CheckCircle2, Eye, Radar, TriangleAlert } from "lucide-react"
+import { CheckCircle2, Eye, Radar, TriangleAlert } from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import { Sparkline } from "./charts"
 import { FlowCard, FlowTrack } from "./flow-track"

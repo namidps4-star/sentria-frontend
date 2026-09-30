@@ -12,7 +12,7 @@ import {
   Sprout,
   Zap,
   type LucideIcon,
-} from "lucide-react"
+} from "@/lib/icons"
 
 import type { Tx } from "@/lib/i18n"
 import { cn } from "@/lib/utils"

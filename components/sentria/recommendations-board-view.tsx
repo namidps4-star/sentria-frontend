@@ -25,8 +25,8 @@ import {
   Wrench,
   X,
   Zap,
-} from "lucide-react"
-import type { LucideIcon } from "lucide-react"
+} from "@/lib/icons"
+import type { LucideIcon } from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import { useCompanyIdentity } from "@/lib/company"
 import {

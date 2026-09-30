@@ -11,7 +11,7 @@ import {
   Truck,
   Zap,
   type LucideIcon,
-} from "lucide-react"
+} from "@/lib/icons"
 
 import { activityLabel, readSectors } from "@/lib/activities"
 import { useTx } from "@/lib/i18n"

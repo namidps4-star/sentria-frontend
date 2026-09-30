@@ -1,7 +1,7 @@
 "use client"
 
-import type { LucideIcon } from "lucide-react"
-import { Upload } from "lucide-react"
+import type { LucideIcon } from "@/lib/icons"
+import { Upload } from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import {
   opsLabelFor,

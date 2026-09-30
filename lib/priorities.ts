@@ -23,7 +23,7 @@ import {
   Truck,
   Warehouse,
   Zap,
-} from "lucide-react"
+} from "@/lib/icons"
 
 import { localized, type Localized, type Tx } from "@/lib/i18n"
 

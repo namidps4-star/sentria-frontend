@@ -18,7 +18,7 @@ import {
   Warehouse,
   Wheat,
   Zap,
-} from "lucide-react"
+} from "@/lib/icons"
 import type { OpsType } from "@/lib/logistics-signals"
 import type { Sector } from "@/lib/priorities"
 import { readAccountPlan, sectorsForPlan } from "@/lib/plans"

@@ -8,7 +8,7 @@ import {
   RotateCcw,
   TrendingDown,
   TrendingUp,
-} from "lucide-react"
+} from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import { FlowCard, FlowTrack } from "./flow-track"
 import {

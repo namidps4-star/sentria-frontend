@@ -1,5 +1,6 @@
 "use client"
 
+import { UsernameCard } from "./username-card"
 import {
   Activity as ActivityIcon,
   AlertTriangle,
@@ -13,7 +14,7 @@ import {
   Pencil,
   Sparkles,
   User,
-} from "lucide-react"
+} from "@/lib/icons"
 import { useEffect, useMemo, useState } from "react"
 
 import {
@@ -76,7 +77,10 @@ function timeOf(alert: LogisticsAlert): number {
 
 export function ProfileView({
   onNavigate,
+  username = null,
 }: {
+  /** The account's @username (migrations/006); null when it has none. */
+  username?: string | null
   /** Lets the two buttons on this page actually go somewhere. They were
    *  both inert, which is its own small fiction. */
   onNavigate?: (view: ViewKey) => void
@@ -304,6 +308,8 @@ export function ProfileView({
           </div>
         </div>
       </div>
+
+      <UsernameCard username={username} />
 
       {/* COUNTERS */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">

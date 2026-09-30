@@ -7,7 +7,7 @@ import {
   MessageSquare,
   Plus,
   Sparkles,
-} from "lucide-react"
+} from "@/lib/icons"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 

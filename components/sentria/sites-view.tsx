@@ -25,7 +25,7 @@ import {
   Wheat,
   XCircle,
   Zap,
-} from "lucide-react"
+} from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
 

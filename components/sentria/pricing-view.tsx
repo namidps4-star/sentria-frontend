@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { BrainCircuit, Check, Minus } from "lucide-react"
+import { BrainCircuit, Check, Minus } from "@/lib/icons"
 
 import { useTx, type Localized, resolve } from "@/lib/i18n"
 import { currencyByCode, useLocale } from "@/lib/locale"

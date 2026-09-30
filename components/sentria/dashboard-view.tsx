@@ -2,6 +2,7 @@
 
 import { SeverityTag, StatusTag } from "./status-tag"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import {
   Cog,
   Radar,
@@ -22,7 +23,7 @@ import {
   X,
   Gauge,
   Check,
-} from "lucide-react"
+} from "@/lib/icons"
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
@@ -958,6 +959,21 @@ function recurrenceOf(equipment: string, alerts: Alert[]): number {
   return alerts.filter((a) => a.equipment === equipment).length
 }
 
+/** The dashboard block at the top of the visible area, to hold still
+ *  while an import's results change the page (B-13). */
+function visibleBlock(): HTMLElement | null {
+  const main = document.querySelector("main")
+  if (!main) return null
+  const box = main.getBoundingClientRect()
+  let el = document.elementFromPoint(box.left + box.width / 2, box.top + 96) as HTMLElement | null
+  if (!el || !main.contains(el)) return document.getElementById("alerts-table")
+  // Climb to a direct child of the page's column.
+  while (el.parentElement && el.parentElement !== main && !el.parentElement.classList.contains("space-y-6")) {
+    el = el.parentElement
+  }
+  return el
+}
+
 export function DashboardView({
   search = "",
 }: {
@@ -993,6 +1009,11 @@ export function DashboardView({
   const [uploading, setUploading] = useState(false)
   // The import panel: opened from the upload icon at the top.
   const [importOpen, setImportOpen] = useState(false)
+  // Where the upload icon goes: a slot the top bar keeps for the page.
+  const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null)
+  useEffect(() => {
+    setActionsSlot(document.getElementById("topbar-actions"))
+  }, [])
   const importRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -1517,11 +1538,10 @@ export function DashboardView({
 
     if (!file) return
 
-    // Keep the import button where the user clicked it while the
-    // results come in (B-13). The alerts table was the anchor before, but
-    // the result message opens above the table, so holding the table
-    // still pushed the button up.
-    const release = holdInPlace(e.target.closest("label"))
+    // Keep what the user is looking at in place while the results come
+    // in (B-13). The import button now sits in the top bar, outside the
+    // page, so the anchor is the page block at the top of the view.
+    const release = holdInPlace(visibleBlock())
 
     setUploading(true)
     setUploadMsg("")
@@ -1902,532 +1922,11 @@ export function DashboardView({
 
   const chartData = dailySeries(filteredAlerts, 7)
 
-  if (filterSector === "industry") {
-    // Scoped to the selected activity, like logisticsViewAlerts: another
-    // industry activity's alerts must not fill this one's KPI cards.
-    const industryAlerts = alerts
-      .filter((a) => a.sector === "industry")
-      .filter(matchesActivity)
-
-    if (industryPriority === null) {
-      return (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={returnToDashboard}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {tx("← Retour au tableau de bord", "← Back to dashboard")}
-            </button>
-          </div>
-
-          <div className="rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:p-8">
-            <div className="max-w-2xl">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
-                <Shield className="h-3.5 w-3.5" />
-                {tx("Industrie", "Industry")}
-              </span>
-
-              <h2 className="mt-4 font-heading text-2xl font-bold leading-tight md:text-3xl">
-                {tx(
-                  "Vue d'ensemble de votre production.",
-                  "An overview of your production."
-                )}
-              </h2>
-
-              <p className="mt-2 text-sm leading-6 text-sidebar-foreground/70">
-                {tx(
-                  "Retrouvez ici les priorités que vous avez sélectionnées pendant la configuration de SentrIA. Choisissez une priorité pour accéder directement à son espace de pilotage.",
-                  "These are the priorities you picked while setting SentrIA up. Choose one to go straight to its workspace."
-                )}
-              </p>
-            </div>
-          </div>
-
-          <div>
-            <PriorityHeading
-              count={selectedIndustryPriorities.length}
-              total={priorityCount("industry", businessType)}
-            />
-
-            <PriorityCards
-              sector="industry"
-              ids={selectedIndustryPriorities}
-              onOpen={(id) =>
-                openIndustryPriority(id as IndustryPriority)
-              }
-              emptyLabel={tx(
-                "Aucune priorité industrielle n'a été sélectionnée.",
-                "No industry priority has been selected."
-              )}
-            />
-          </div>
-
-          {industryAlerts.length === 0 ? (
-            <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
-                <Upload
-                  className="h-5 w-5 text-muted-foreground"
-                  aria-hidden="true"
-                />
-              </div>
-
-              <h3 className="mt-4 font-heading text-lg font-bold">
-                {tx("Aucune donnée industrielle", "No industry data")}
-                {subtypeName ? ` · ${subtypeName}` : ""}
-              </h3>
-
-              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-                {tx(
-                  "Les priorités ci-dessus sont bien enregistrées, mais aucun fichier n'a encore été importé pour cette activité. Les indicateurs restent vides jusque-là.",
-                  "The priorities above are saved, but no file has been imported for this activity yet. The figures stay empty until one is."
-                )}
-              </p>
-            </div>
-          ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {kpis.map((k) => (
-              <div
-                key={k.label}
-                className="rounded-3xl border border-border bg-card p-5"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    {k.label}
-                  </span>
-
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
-                      k.up
-                        ? "bg-accent/25 text-accent-foreground"
-                        : "bg-destructive/10 text-destructive"
-                    )}
-                  >
-                    {k.up ? (
-                      <TrendingUp className="h-3 w-3" />
-                    ) : (
-                      <TrendingDown className="h-3 w-3" />
-                    )}
-
-                    {k.delta}
-                  </span>
-                </div>
-
-                <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
-                  {k.value}
-                </p>
-
-                <Sparkline
-                  data={dailySeries(filteredAlerts, 7, k.match)}
-                  className={cn(
-                    "mt-2 h-9 w-full",
-                    k.up ? "text-accent" : "text-destructive"
-                  )}
-                />
-              </div>
-            ))}
-          </div>
-          )}
-        </div>
-      )
-    }
-
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => {
-              setIndustryPriority(null)
-            }}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
-          >
-            {tx("← Retour à l'industrie", "← Back to industry")}
-          </button>
-        </div>
-
-        <PriorityPills
-          sector="industry"
-          ids={selectedIndustryPriorities}
-          activeId={industryPriority}
-          onOpen={(id) => openIndustryPriority(id as IndustryPriority)}
-        />
-
-        {industryPriority === "machines" ? (
-          <IndustryMachinesView alerts={industryAlerts} />
-        ) : industryPriority === "motors" ? (
-          <IndustryMotorsView alerts={industryAlerts} />
-        ) : industryPriority === "temperature" ? (
-          <IndustryTemperatureView alerts={industryAlerts} />
-        ) : industryPriority === "pressure" ? (
-          <IndustryPressureView alerts={industryAlerts} />
-        ) : industryPriority === "production" ? (
-          <IndustryProductionView alerts={industryAlerts} />
-        ) : industryPriority === "hygiene-lead-time" ? (
-          <IndustryKeyAlertsView
-            alerts={industryAlerts}
-            keys={["industry.hygiene.shutdown_risk"]}
-            icon={ShieldCheck}
-            title={localized("Anticiper un arrêt sanitaire", "See a hygiene shutdown coming")}
-            differentiator={localized(
-              "Une prévision, pas un constat : SentrIA signale quand la température reste près de la limite sur plusieurs relevés, avant que le contrôle sanitaire n'échoue.",
-              "A forecast, not a finding: SentrIA flags when temperature stays near the limit over several readings, before the hygiene check fails."
-            )}
-            emptyHint={localized(
-              "Prévisions à partir des derniers relevés de chaque ligne.",
-              "Forecasts from each line's latest readings."
-            )}
-          />
-        ) : industryPriority === "maintenance-production-link" ? (
-          <IndustryKeyAlertsView
-            alerts={industryAlerts}
-            keys={["industry.maintenance.production_link"]}
-            icon={Cog}
-            title={localized("Entretien et production", "Maintenance and output")}
-            differentiator={localized(
-              "Quand un entretien en retard et une baisse de production tombent sur la même ligne, SentrIA les relie en une seule cause à traiter.",
-              "When overdue maintenance and lost output hit the same line, SentrIA links them into one cause to fix."
-            )}
-            emptyHint={localized(
-              "Lignes où l'entretien en retard pèse sur la production.",
-              "Lines where overdue maintenance weighs on output."
-            )}
-          />
-        ) : industryPriority === "failure-signature" ? (
-          <IndustryKeyAlertsView
-            alerts={industryAlerts}
-            keys={["industry.failure.signature_match"]}
-            icon={Radar}
-            title={localized("Pannes récurrentes", "Recurring faults")}
-            differentiator={localized(
-              "Une règle de fréquence, pas de l'apprentissage automatique : une machine qui a déjà alerté trois fois récemment et alerte encore est signalée en priorité.",
-              "A frequency rule, not machine learning: a machine that has alerted three times recently and alerts again is flagged first."
-            )}
-            emptyHint={localized(
-              "Machines qui alertent de façon répétée.",
-              "Machines that alert again and again."
-            )}
-          />
-        ) : (
-          <IndustryMaintenanceView alerts={industryAlerts} />
-        )}
-      </div>
-    )
-  }
-
-  if (filterSector === "logistics") {
-    const normalizedOpsType =
-      opsTypes.length > 0 ? opsTypeFor(opsTypes) : normalizeOpsType(opsType)
-
-    const opsTypesForChain =
-      opsTypes.length > 0
-        ? opsTypes
-        : normalizeOpsType(opsType) === "multi"
-          ? readOpsTypes()
-          : []
-
-    if (logisticsPriority === null) {
-      return (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={returnToDashboard}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {tx("← Retour au tableau de bord", "← Back to dashboard")}
-            </button>
-          </div>
-
-          <div className="rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:p-8">
-            <div className="max-w-2xl">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
-                <Shield className="h-3.5 w-3.5" />
-                {tx("Logistique", "Logistics")}
-              </span>
-
-              <h2 className="mt-4 font-heading text-2xl font-bold leading-tight md:text-3xl">
-                {tx(
-                  "Vue d'ensemble de votre logistique.",
-                  "An overview of your logistics."
-                )}
-              </h2>
-
-              <p className="mt-2 text-sm leading-6 text-sidebar-foreground/70">
-                {tx(
-                  "Retrouvez ici les priorités que vous avez sélectionnées pendant la configuration de SentrIA. Choisissez une priorité pour accéder directement à son espace de pilotage.",
-                  "These are the priorities you picked while setting SentrIA up. Choose one to go straight to its workspace."
-                )}
-              </p>
-
-              {normalizedOpsType &&
-                OPS_TYPE_LABEL[normalizedOpsType] && (
-                  <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-sidebar-border bg-white/10 px-3 py-1 text-[11px] font-medium text-sidebar-foreground/80">
-                    <Shield className="h-3 w-3" />
-                    {px(OPS_TYPE_LABEL[normalizedOpsType])}
-                  </div>
-                )}
-            </div>
-          </div>
-
-          <div>
-            <PriorityHeading
-              count={selectedLogisticsPriorities.length}
-              total={priorityCount("logistics")}
-            />
-
-            <PriorityCards
-              sector="logistics"
-              ids={selectedLogisticsPriorities}
-              onOpen={(id) =>
-                openLogisticsPriority(id as LogisticsPriority)
-              }
-              emptyLabel={tx(
-                "Aucune priorité logistique n'a été sélectionnée.",
-                "No logistics priority has been selected."
-              )}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {kpis.map((k) => (
-              <div
-                key={k.label}
-                className="rounded-3xl border border-border bg-card p-5"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    {k.label}
-                  </span>
-
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
-                      k.up
-                        ? "bg-accent/25 text-accent-foreground"
-                        : "bg-destructive/10 text-destructive"
-                    )}
-                  >
-                    {k.up ? (
-                      <TrendingUp className="h-3 w-3" />
-                    ) : (
-                      <TrendingDown className="h-3 w-3" />
-                    )}
-
-                    {k.delta}
-                  </span>
-                </div>
-
-                <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
-                  {k.value}
-                </p>
-
-                <Sparkline
-                  data={dailySeries(filteredAlerts, 7, k.match)}
-                  className={cn(
-                    "mt-2 h-9 w-full",
-                    k.up ? "text-accent" : "text-destructive"
-                  )}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )
-    }
-
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => {
-              setLogisticsPriority(null)
-            }}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
-          >
-            {tx("← Retour à la logistique", "← Back to logistics")}
-          </button>
-        </div>
-
-        <PriorityPills
-          sector="logistics"
-          ids={selectedLogisticsPriorities}
-          activeId={logisticsPriority}
-          onOpen={(id) => openLogisticsPriority(id as LogisticsPriority)}
-        />
-
-        {normalizedOpsType &&
-          OPS_TYPE_LABEL[normalizedOpsType] && (
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-[11px] font-medium text-muted-foreground">
-              <Shield className="h-3 w-3" />
-              {px(OPS_TYPE_LABEL[normalizedOpsType])}
-            </div>
-          )}
-
-        {logisticsPriority === "recommend" ? (
-          <RecommendationsBoard
-            recommendations={deriveRecommendations(
-              logisticsViewAlerts,
-              normalizedOpsType,
-              tx,
-              opsTypesForChain
-            )}
-            opsType={normalizedOpsType}
-          />
-        ) : logisticsPriority === "wait" ? (
-          <LogisticsWaitingView
-            alerts={logisticsViewAlerts}
-            opsType={normalizedOpsType}
-            selectedOpsTypesForMulti={opsTypesForChain}
-          />
-        ) : logisticsPriority === "cost" ? (
-          <LogisticsCostView
-            alerts={logisticsViewAlerts}
-            opsType={normalizedOpsType}
-            selectedOpsTypesForMulti={opsTypesForChain}
-          />
-        ) : logisticsPriority === "anticipate" ? (
-          <LogisticsAnticipateView
-            alerts={logisticsViewAlerts}
-            opsType={normalizedOpsType}
-            selectedOpsTypesForMulti={opsTypesForChain}
-          />
-        ) : logisticsPriority === "resources" ? (
-          <div className="rounded-3xl border border-border bg-card p-6">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent-foreground">
-                <Activity className="h-5 w-5" />
-              </div>
-
-              <div>
-                <h2 className="font-heading text-xl font-bold">
-                  {tx("Ressources", "Resources")}
-                </h2>
-
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {tx(
-                    "Suivez la disponibilité et l'utilisation de vos ressources logistiques depuis cet espace.",
-                    "Track the availability and use of your logistics resources from here."
-                  )}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="rounded-2xl border border-border bg-muted/30 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {tx("Équipements", "Equipment")}
-                </p>
-
-                <p className="mt-2 font-heading text-2xl font-bold">
-                  {new Set(
-                    alerts
-                      .filter(
-                        (a) => a.sector === "logistics"
-                      )
-                      .map((a) => a.equipment)
-                  ).size}
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-muted/30 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {tx("Alertes actives", "Active alerts")}
-                </p>
-
-                <p className="mt-2 font-heading text-2xl font-bold">
-                  {
-                    alerts.filter(
-                      (a) => a.sector === "logistics"
-                    ).length
-                  }
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-muted/30 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {tx("Opération", "Operation")}
-                </p>
-
-                <p className="mt-2 font-heading text-lg font-bold">
-                  {normalizedOpsType &&
-                  OPS_TYPE_LABEL[normalizedOpsType]
-                    ? px(OPS_TYPE_LABEL[normalizedOpsType])
-                    : tx("Logistique", "Logistics")}
-                </p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <LogisticsBlockagesView
-            alerts={logisticsViewAlerts}
-            opsType={normalizedOpsType}
-            selectedOpsTypesForMulti={opsTypesForChain}
-          />
-        )}
-      </div>
-    )
-  }
-
-  // One view per department when the company runs several in a sector
-  // (Business: clinic + pharmacy + lab, ...). Logistics has its own
-  // multi-activity views.
-  const tabSector = filterSector !== "all" ? filterSector : activeSectors[0]
-  const departmentTabs =
-    tabSector && tabSector !== "logistics"
-      ? (departments[tabSector] ?? []).filter((id) =>
-          activitiesFor(tabSector).some((a) => a.id === id)
-        )
-      : []
-
-  return (
-    <div className="space-y-6">
-      {/* Toolbar, pinned while the page scrolls: the departments as
-          browser-style tabs, and the import behind one icon. */}
-      <div className="sticky -top-4 z-20 -mx-4 -mt-4 lg:-top-8 flex items-end gap-3 border-b border-border bg-canvas/90 px-4 pt-3 backdrop-blur-md lg:-mx-8 lg:-mt-8 lg:px-8 lg:pt-4">
-        {departmentTabs.length > 1 ? (
-          <div
-            role="tablist"
-            aria-label={tx("Vos départements", "Your departments")}
-            className="-mb-px flex min-w-0 flex-1 items-end gap-1 overflow-x-auto [scrollbar-width:none]"
-          >
-            {departmentTabs.map((id) => {
-              const active = activityIn(tabSector) === id
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => {
-                    applyActivityToDashboard(tabSector, id)
-                    setFilterSector(tabSector)
-                    localStorage.setItem("sentria_sector", tabSector)
-                  }}
-                  className={cn(
-                    "relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-t-2xl border px-4 py-2.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-                    active
-                      ? "border-border border-b-card bg-card font-semibold text-foreground"
-                      : "border-transparent text-muted-foreground hover:bg-card/60 hover:text-foreground"
-                  )}
-                >
-                  <span
-                    className={cn("h-1.5 w-1.5 rounded-full", active ? "bg-brand" : "bg-muted-foreground/40")}
-                    aria-hidden="true"
-                  />
-                  {activityLabel(tabSector, id, tx) ?? id}
-                </button>
-              )
-            })}
-          </div>
-        ) : (
-          <div className="flex-1" />
-        )}
-
-        <div ref={importRef} className="relative mb-2 shrink-0">
+  // The import: an upload icon in the top bar, next to the bell. Every
+  // layout below renders it, so it never disappears with the view.
+  const importPortal = actionsSlot
+    ? createPortal(
+        <div ref={importRef} className="relative">
           <button
             type="button"
             onClick={() => setImportOpen((open) => !open)}
@@ -2634,8 +2133,514 @@ export function DashboardView({
             </div>
           )}
         </div>
+        </div>,
+        actionsSlot
+      )
+    : null
+
+  if (filterSector === "industry") {
+    // Scoped to the selected activity, like logisticsViewAlerts: another
+    // industry activity's alerts must not fill this one's KPI cards.
+    const industryAlerts = alerts
+      .filter((a) => a.sector === "industry")
+      .filter(matchesActivity)
+
+    if (industryPriority === null) {
+      return (
+        <div className="space-y-6">
+          {importPortal}
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={returnToDashboard}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {tx("← Retour au tableau de bord", "← Back to dashboard")}
+            </button>
+          </div>
+
+          <div className="rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:p-8">
+            <div className="max-w-2xl">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+                <Shield className="h-3.5 w-3.5" />
+                {tx("Industrie", "Industry")}
+              </span>
+
+              <h2 className="mt-4 font-heading text-2xl font-bold leading-tight md:text-3xl">
+                {tx(
+                  "Vue d'ensemble de votre production.",
+                  "An overview of your production."
+                )}
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-sidebar-foreground/70">
+                {tx(
+                  "Retrouvez ici les priorités que vous avez sélectionnées pendant la configuration de SentrIA. Choisissez une priorité pour accéder directement à son espace de pilotage.",
+                  "These are the priorities you picked while setting SentrIA up. Choose one to go straight to its workspace."
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <PriorityHeading
+              count={selectedIndustryPriorities.length}
+              total={priorityCount("industry", businessType)}
+            />
+
+            <PriorityCards
+              sector="industry"
+              ids={selectedIndustryPriorities}
+              onOpen={(id) =>
+                openIndustryPriority(id as IndustryPriority)
+              }
+              emptyLabel={tx(
+                "Aucune priorité industrielle n'a été sélectionnée.",
+                "No industry priority has been selected."
+              )}
+            />
+          </div>
+
+          {industryAlerts.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
+                <Upload
+                  className="h-5 w-5 text-muted-foreground"
+                  aria-hidden="true"
+                />
+              </div>
+
+              <h3 className="mt-4 font-heading text-lg font-bold">
+                {tx("Aucune donnée industrielle", "No industry data")}
+                {subtypeName ? ` · ${subtypeName}` : ""}
+              </h3>
+
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+                {tx(
+                  "Les priorités ci-dessus sont bien enregistrées, mais aucun fichier n'a encore été importé pour cette activité. Les indicateurs restent vides jusque-là.",
+                  "The priorities above are saved, but no file has been imported for this activity yet. The figures stay empty until one is."
+                )}
+              </p>
+            </div>
+          ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {kpis.map((k) => (
+              <div
+                key={k.label}
+                className="rounded-3xl border border-border bg-card p-5"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {k.label}
+                  </span>
+
+                  <StatusTag tone={k.up ? "brand" : "danger"} size="xs" icon={k.up ? TrendingUp : TrendingDown}>
+                    {k.delta}
+                  </StatusTag>
+                </div>
+
+                <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
+                  {k.value}
+                </p>
+
+                <Sparkline
+                  data={dailySeries(filteredAlerts, 7, k.match)}
+                  className={cn(
+                    "mt-2 h-9 w-full",
+                    k.up ? "text-accent" : "text-destructive"
+                  )}
+                />
+              </div>
+            ))}
+          </div>
+          )}
         </div>
+      )
+    }
+
+    return (
+      <div className="space-y-4">
+        {importPortal}
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => {
+              setIndustryPriority(null)
+            }}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {tx("← Retour à l'industrie", "← Back to industry")}
+          </button>
+        </div>
+
+        <PriorityPills
+          sector="industry"
+          ids={selectedIndustryPriorities}
+          activeId={industryPriority}
+          onOpen={(id) => openIndustryPriority(id as IndustryPriority)}
+        />
+
+        {industryPriority === "machines" ? (
+          <IndustryMachinesView alerts={industryAlerts} />
+        ) : industryPriority === "motors" ? (
+          <IndustryMotorsView alerts={industryAlerts} />
+        ) : industryPriority === "temperature" ? (
+          <IndustryTemperatureView alerts={industryAlerts} />
+        ) : industryPriority === "pressure" ? (
+          <IndustryPressureView alerts={industryAlerts} />
+        ) : industryPriority === "production" ? (
+          <IndustryProductionView alerts={industryAlerts} />
+        ) : industryPriority === "hygiene-lead-time" ? (
+          <IndustryKeyAlertsView
+            alerts={industryAlerts}
+            keys={["industry.hygiene.shutdown_risk"]}
+            icon={ShieldCheck}
+            title={localized("Anticiper un arrêt sanitaire", "See a hygiene shutdown coming")}
+            differentiator={localized(
+              "Une prévision, pas un constat : SentrIA signale quand la température reste près de la limite sur plusieurs relevés, avant que le contrôle sanitaire n'échoue.",
+              "A forecast, not a finding: SentrIA flags when temperature stays near the limit over several readings, before the hygiene check fails."
+            )}
+            emptyHint={localized(
+              "Prévisions à partir des derniers relevés de chaque ligne.",
+              "Forecasts from each line's latest readings."
+            )}
+          />
+        ) : industryPriority === "maintenance-production-link" ? (
+          <IndustryKeyAlertsView
+            alerts={industryAlerts}
+            keys={["industry.maintenance.production_link"]}
+            icon={Cog}
+            title={localized("Entretien et production", "Maintenance and output")}
+            differentiator={localized(
+              "Quand un entretien en retard et une baisse de production tombent sur la même ligne, SentrIA les relie en une seule cause à traiter.",
+              "When overdue maintenance and lost output hit the same line, SentrIA links them into one cause to fix."
+            )}
+            emptyHint={localized(
+              "Lignes où l'entretien en retard pèse sur la production.",
+              "Lines where overdue maintenance weighs on output."
+            )}
+          />
+        ) : industryPriority === "failure-signature" ? (
+          <IndustryKeyAlertsView
+            alerts={industryAlerts}
+            keys={["industry.failure.signature_match"]}
+            icon={Radar}
+            title={localized("Pannes récurrentes", "Recurring faults")}
+            differentiator={localized(
+              "Une règle de fréquence, pas de l'apprentissage automatique : une machine qui a déjà alerté trois fois récemment et alerte encore est signalée en priorité.",
+              "A frequency rule, not machine learning: a machine that has alerted three times recently and alerts again is flagged first."
+            )}
+            emptyHint={localized(
+              "Machines qui alertent de façon répétée.",
+              "Machines that alert again and again."
+            )}
+          />
+        ) : (
+          <IndustryMaintenanceView alerts={industryAlerts} />
+        )}
       </div>
+    )
+  }
+
+  if (filterSector === "logistics") {
+    const normalizedOpsType =
+      opsTypes.length > 0 ? opsTypeFor(opsTypes) : normalizeOpsType(opsType)
+
+    const opsTypesForChain =
+      opsTypes.length > 0
+        ? opsTypes
+        : normalizeOpsType(opsType) === "multi"
+          ? readOpsTypes()
+          : []
+
+    if (logisticsPriority === null) {
+      return (
+        <div className="space-y-6">
+          {importPortal}
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={returnToDashboard}
+              className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {tx("← Retour au tableau de bord", "← Back to dashboard")}
+            </button>
+          </div>
+
+          <div className="rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:p-8">
+            <div className="max-w-2xl">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+                <Shield className="h-3.5 w-3.5" />
+                {tx("Logistique", "Logistics")}
+              </span>
+
+              <h2 className="mt-4 font-heading text-2xl font-bold leading-tight md:text-3xl">
+                {tx(
+                  "Vue d'ensemble de votre logistique.",
+                  "An overview of your logistics."
+                )}
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-sidebar-foreground/70">
+                {tx(
+                  "Retrouvez ici les priorités que vous avez sélectionnées pendant la configuration de SentrIA. Choisissez une priorité pour accéder directement à son espace de pilotage.",
+                  "These are the priorities you picked while setting SentrIA up. Choose one to go straight to its workspace."
+                )}
+              </p>
+
+              {normalizedOpsType &&
+                OPS_TYPE_LABEL[normalizedOpsType] && (
+                  <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-sidebar-border bg-white/10 px-3 py-1 text-[11px] font-medium text-sidebar-foreground/80">
+                    <Shield className="h-3 w-3" />
+                    {px(OPS_TYPE_LABEL[normalizedOpsType])}
+                  </div>
+                )}
+            </div>
+          </div>
+
+          <div>
+            <PriorityHeading
+              count={selectedLogisticsPriorities.length}
+              total={priorityCount("logistics")}
+            />
+
+            <PriorityCards
+              sector="logistics"
+              ids={selectedLogisticsPriorities}
+              onOpen={(id) =>
+                openLogisticsPriority(id as LogisticsPriority)
+              }
+              emptyLabel={tx(
+                "Aucune priorité logistique n'a été sélectionnée.",
+                "No logistics priority has been selected."
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {kpis.map((k) => (
+              <div
+                key={k.label}
+                className="rounded-3xl border border-border bg-card p-5"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {k.label}
+                  </span>
+
+                  <StatusTag tone={k.up ? "brand" : "danger"} size="xs" icon={k.up ? TrendingUp : TrendingDown}>
+                    {k.delta}
+                  </StatusTag>
+                </div>
+
+                <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
+                  {k.value}
+                </p>
+
+                <Sparkline
+                  data={dailySeries(filteredAlerts, 7, k.match)}
+                  className={cn(
+                    "mt-2 h-9 w-full",
+                    k.up ? "text-accent" : "text-destructive"
+                  )}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div className="space-y-4">
+        {importPortal}
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => {
+              setLogisticsPriority(null)
+            }}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {tx("← Retour à la logistique", "← Back to logistics")}
+          </button>
+        </div>
+
+        <PriorityPills
+          sector="logistics"
+          ids={selectedLogisticsPriorities}
+          activeId={logisticsPriority}
+          onOpen={(id) => openLogisticsPriority(id as LogisticsPriority)}
+        />
+
+        {normalizedOpsType &&
+          OPS_TYPE_LABEL[normalizedOpsType] && (
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1 text-[11px] font-medium text-muted-foreground">
+              <Shield className="h-3 w-3" />
+              {px(OPS_TYPE_LABEL[normalizedOpsType])}
+            </div>
+          )}
+
+        {logisticsPriority === "recommend" ? (
+          <RecommendationsBoard
+            recommendations={deriveRecommendations(
+              logisticsViewAlerts,
+              normalizedOpsType,
+              tx,
+              opsTypesForChain
+            )}
+            opsType={normalizedOpsType}
+          />
+        ) : logisticsPriority === "wait" ? (
+          <LogisticsWaitingView
+            alerts={logisticsViewAlerts}
+            opsType={normalizedOpsType}
+            selectedOpsTypesForMulti={opsTypesForChain}
+          />
+        ) : logisticsPriority === "cost" ? (
+          <LogisticsCostView
+            alerts={logisticsViewAlerts}
+            opsType={normalizedOpsType}
+            selectedOpsTypesForMulti={opsTypesForChain}
+          />
+        ) : logisticsPriority === "anticipate" ? (
+          <LogisticsAnticipateView
+            alerts={logisticsViewAlerts}
+            opsType={normalizedOpsType}
+            selectedOpsTypesForMulti={opsTypesForChain}
+          />
+        ) : logisticsPriority === "resources" ? (
+          <div className="rounded-3xl border border-border bg-card p-6">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent-foreground">
+                <Activity className="h-5 w-5" />
+              </div>
+
+              <div>
+                <h2 className="font-heading text-xl font-bold">
+                  {tx("Ressources", "Resources")}
+                </h2>
+
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {tx(
+                    "Suivez la disponibilité et l'utilisation de vos ressources logistiques depuis cet espace.",
+                    "Track the availability and use of your logistics resources from here."
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {tx("Équipements", "Equipment")}
+                </p>
+
+                <p className="mt-2 font-heading text-2xl font-bold">
+                  {new Set(
+                    alerts
+                      .filter(
+                        (a) => a.sector === "logistics"
+                      )
+                      .map((a) => a.equipment)
+                  ).size}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {tx("Alertes actives", "Active alerts")}
+                </p>
+
+                <p className="mt-2 font-heading text-2xl font-bold">
+                  {
+                    alerts.filter(
+                      (a) => a.sector === "logistics"
+                    ).length
+                  }
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {tx("Opération", "Operation")}
+                </p>
+
+                <p className="mt-2 font-heading text-lg font-bold">
+                  {normalizedOpsType &&
+                  OPS_TYPE_LABEL[normalizedOpsType]
+                    ? px(OPS_TYPE_LABEL[normalizedOpsType])
+                    : tx("Logistique", "Logistics")}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <LogisticsBlockagesView
+            alerts={logisticsViewAlerts}
+            opsType={normalizedOpsType}
+            selectedOpsTypesForMulti={opsTypesForChain}
+          />
+        )}
+      </div>
+    )
+  }
+
+  // One view per department when the company runs several in a sector
+  // (Business: clinic + pharmacy + lab, ...). Logistics has its own
+  // multi-activity views.
+  const tabSector = filterSector !== "all" ? filterSector : activeSectors[0]
+  const departmentTabs =
+    tabSector && tabSector !== "logistics"
+      ? (departments[tabSector] ?? []).filter((id) =>
+          activitiesFor(tabSector).some((a) => a.id === id)
+        )
+      : []
+
+  return (
+    <div className="space-y-6">
+      {importPortal}
+
+      {/* The departments as browser-style tabs, pinned while the page
+          scrolls. (The import is the upload icon in the top bar.) */}
+      {departmentTabs.length > 1 && (
+      <div className="sticky -top-4 z-20 -mx-4 -mt-4 flex items-end gap-3 border-b border-border bg-canvas/90 px-4 pt-3 backdrop-blur-md lg:-top-8 lg:-mx-8 lg:-mt-8 lg:px-8 lg:pt-4">
+          <div
+            role="tablist"
+            aria-label={tx("Vos départements", "Your departments")}
+            className="-mb-px flex min-w-0 flex-1 items-end gap-1 overflow-x-auto [scrollbar-width:none]"
+          >
+            {departmentTabs.map((id) => {
+              const active = activityIn(tabSector) === id
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => {
+                    applyActivityToDashboard(tabSector, id)
+                    setFilterSector(tabSector)
+                    localStorage.setItem("sentria_sector", tabSector)
+                  }}
+                  className={cn(
+                    "relative flex shrink-0 items-center gap-2 whitespace-nowrap rounded-t-2xl border px-4 py-2.5 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                    active
+                      ? "border-border border-b-card bg-card font-semibold text-foreground"
+                      : "border-transparent text-muted-foreground hover:bg-card/60 hover:text-foreground"
+                  )}
+                >
+                  <span
+                    className={cn("h-1.5 w-1.5 rounded-full", active ? "bg-brand" : "bg-muted-foreground/40")}
+                    aria-hidden="true"
+                  />
+                  {activityLabel(tabSector, id, tx) ?? id}
+                </button>
+              )
+            })}
+          </div>
+      </div>
+      )}
 
       <div className="flex flex-col gap-4 rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-xl">
@@ -2890,22 +2895,9 @@ export function DashboardView({
                 {k.label}
               </span>
 
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
-                  k.up
-                    ? "bg-accent/25 text-accent-foreground"
-                    : "bg-destructive/10 text-destructive"
-                )}
-              >
-                {k.up ? (
-                  <TrendingUp className="h-3 w-3" />
-                ) : (
-                  <TrendingDown className="h-3 w-3" />
-                )}
-
-                {k.delta}
-              </span>
+              <StatusTag tone={k.up ? "brand" : "danger"} size="xs" icon={k.up ? TrendingUp : TrendingDown}>
+                    {k.delta}
+                  </StatusTag>
             </div>
 
             <p className="mt-3 font-heading text-3xl font-bold tracking-tight">

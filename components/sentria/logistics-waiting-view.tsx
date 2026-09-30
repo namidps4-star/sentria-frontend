@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { Clock3, Hourglass, Timer, TrendingUp } from "lucide-react"
+import { Clock3, Hourglass, Timer, TrendingUp } from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import { Sparkline } from "./charts"
 import { FlowCard, FlowTrack } from "./flow-track"

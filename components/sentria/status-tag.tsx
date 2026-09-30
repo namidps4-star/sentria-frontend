@@ -7,12 +7,12 @@ import {
   Clock3,
   Sparkles,
   type LucideIcon,
-} from "lucide-react"
+} from "@/lib/icons"
 
 import type { Tx } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
-/** The app's status tags: a flat, pure-hued pill with a circled icon.
+/** The app's status tags: a bright pastel pill with a circled icon.
  *
  *  warning  pending, needs attention   (amber)
  *  info     in progress, submitted     (blue)
@@ -75,8 +75,10 @@ export function StatusTag({
   return (
     <span
       className={cn(
-        // Flat and pure: one tint, a hairline of the same hue, strong text.
+        // Soft and bright: pastel fill, deeper edge, a light top highlight
+        // and a small drop shadow, like a pressed-in pill.
         "inline-flex shrink-0 items-center whitespace-nowrap rounded-full border font-semibold leading-none",
+        "shadow-[inset_0_1px_0_rgb(255_255_255/0.7),0_1px_2px_rgb(0_0_0/0.08),0_2px_6px_-2px_rgb(0_0_0/0.12)]",
         TONES[tone].tag,
         SIZES[size].tag,
         className

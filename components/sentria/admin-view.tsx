@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Loader2, RefreshCw, Search, ShieldCheck } from "lucide-react"
+import { Loader2, RefreshCw, Search, ShieldCheck } from "@/lib/icons"
 
 import { activityLabel } from "@/lib/activities"
 import { API_BASE, apiFetch } from "@/lib/api"

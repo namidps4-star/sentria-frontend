@@ -9,7 +9,7 @@ import {
   ListChecks,
   Loader2,
   ShieldCheck,
-} from "lucide-react"
+} from "@/lib/icons"
 import type { AuthError } from "@supabase/supabase-js"
 
 import { useLocale, writeLanguage } from "@/lib/locale"

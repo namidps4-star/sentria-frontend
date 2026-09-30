@@ -294,7 +294,7 @@ export function AppShell({
               <AskView name={name} email={email} openCritical={bellAlerts} onNavigate={setView} />
             )}
             {view === "pricing" && <PricingView />}
-            {view === "profile" && <ProfileView onNavigate={setView} />}
+            {view === "profile" && <ProfileView onNavigate={setView} username={username} />}
             {view === "settings" && <SettingsView />}
             {view === "report" && <ReportView />}
             {view === "contractors" && (

@@ -1,13 +1,14 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Loader2 } from "lucide-react"
+import { Loader2 } from "@/lib/icons"
 import type { Session } from "@supabase/supabase-js"
 
 import { clearLocalAccount, loadAccount, syncAccount } from "@/lib/account"
 import { useTx } from "@/lib/i18n"
 import { supabase } from "@/lib/supabase"
 
+import { USERNAME_UPDATED_EVENT } from "./username-card"
 import { AppShell } from "./app-shell"
 import { AuthScreen } from "./auth-screen"
 
@@ -77,6 +78,17 @@ export function AuthGate() {
     current.current = null
     clearLocalAccount()
     setState({ kind: "signed-out" })
+  }, [])
+
+  // A username chosen on the Profile page shows in the sidebar at once.
+  useEffect(() => {
+    const onUsername = (event: Event) => {
+      const value = (event as CustomEvent<string>).detail
+      if (typeof value !== "string" || !value) return
+      setState((current) => (current.kind === "ready" ? { ...current, username: value } : current))
+    }
+    window.addEventListener(USERNAME_UPDATED_EVENT, onUsername)
+    return () => window.removeEventListener(USERNAME_UPDATED_EVENT, onUsername)
   }, [])
 
   useEffect(() => {

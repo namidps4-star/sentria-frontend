@@ -7,7 +7,7 @@ import {
   PackageX,
   ShieldCheck,
   TrendingUp,
-} from "lucide-react"
+} from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import { computeConfidence, confidenceWord } from "@/lib/confidence"
 import { FlowCard, FlowTrack, STAGE_ICONS } from "./flow-track"

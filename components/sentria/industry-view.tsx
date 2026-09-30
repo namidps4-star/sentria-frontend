@@ -12,7 +12,7 @@ import {
   TrendingDown,
   AlertTriangle,
   Wrench,
-} from "lucide-react"
+} from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import { localized, useTx, type Localized, type Tx } from "@/lib/i18n"
 

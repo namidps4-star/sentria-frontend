@@ -18,7 +18,7 @@ import {
   UsersRound,
   LogOut,
   ShieldCheck,
-} from "lucide-react"
+} from "@/lib/icons"
 
 interface SidebarProps {
   active: ViewKey

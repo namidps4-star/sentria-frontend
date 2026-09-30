@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Search, Bell, Menu, ChevronDown, X, User, ArrowRight } from "lucide-react"
+import { Search, Bell, Menu, ChevronDown, X, User, ArrowRight } from "@/lib/icons"
 
 import { formatInCompanyZone, initialsOf, useCompanyIdentity } from "@/lib/company"
 import { useT, useTx } from "@/lib/i18n"
@@ -95,7 +95,7 @@ export function Topbar({
   const { name: companyName } = useCompanyIdentity()
 
   return (
-    <header className="sticky top-0 z-20 flex items-center gap-4 border-b border-border bg-canvas/80 px-4 py-3.5 backdrop-blur-md lg:px-8">
+    <header className="sticky top-0 z-30 flex items-center gap-4 border-b border-border bg-canvas/80 px-4 py-3.5 backdrop-blur-md lg:px-8">
       <button
         onClick={onMenu}
         type="button"
@@ -138,6 +138,10 @@ export function Topbar({
           </button>
         )}
       </div>
+
+      {/* A slot the page fills with its own action (the dashboard's
+          upload icon). Empty on other pages. */}
+      <div id="topbar-actions" className="flex items-center empty:hidden" />
 
       <div ref={bellRef} className="relative">
       <button

@@ -314,34 +314,16 @@
   to { transform: scaleX(1); }
 }
 
-/* Status tags: flat, pure hues. Light values on :root, dark ones for
-   .dark and for "system" on a dark OS (dark: utilities only follow the
-   .dark class, tokens follow both). */
+/* Status tags: bright pastel fills (mint, butter, periwinkle, pink),
+   a slightly deeper edge and dark text, as in the reference. Bright in
+   both themes so they stand out on dark surfaces too. */
 :root {
-  --tag-warning-bg: #fff4e0; --tag-warning-bd: #f5c46a; --tag-warning-fg: #a85a06;
-  --tag-danger-bg: #feeceb; --tag-danger-bd: #f5a39c; --tag-danger-fg: #c4271d;
-  --tag-success-bg: #e8f7ed; --tag-success-bd: #8fd8aa; --tag-success-fg: #157a3a;
-  --tag-info-bg: #eaf2ff; --tag-info-bd: #9ebffa; --tag-info-fg: #1c5bd0;
-  --tag-neutral-bg: #f2f2f0; --tag-neutral-bd: #d5d5d0; --tag-neutral-fg: #4f4f4a;
-  --tag-brand-bg: #f1fad0; --tag-brand-bd: #bfe25a; --tag-brand-fg: #476300;
-}
-.dark {
-  --tag-warning-bg: rgb(247 176 50 / 0.14); --tag-warning-bd: rgb(247 176 50 / 0.38); --tag-warning-fg: #f6b955;
-  --tag-danger-bg: rgb(240 82 72 / 0.15); --tag-danger-bd: rgb(240 82 72 / 0.4); --tag-danger-fg: #ff8b80;
-  --tag-success-bg: rgb(52 199 110 / 0.14); --tag-success-bd: rgb(52 199 110 / 0.36); --tag-success-fg: #62d690;
-  --tag-info-bg: rgb(80 145 255 / 0.15); --tag-info-bd: rgb(80 145 255 / 0.4); --tag-info-fg: #8db8ff;
-  --tag-neutral-bg: rgb(255 255 255 / 0.07); --tag-neutral-bd: rgb(255 255 255 / 0.16); --tag-neutral-fg: #d6d6d2;
-  --tag-brand-bg: rgb(190 242 58 / 0.13); --tag-brand-bd: rgb(190 242 58 / 0.36); --tag-brand-fg: #c9f35c;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    --tag-warning-bg: rgb(247 176 50 / 0.14); --tag-warning-bd: rgb(247 176 50 / 0.38); --tag-warning-fg: #f6b955;
-    --tag-danger-bg: rgb(240 82 72 / 0.15); --tag-danger-bd: rgb(240 82 72 / 0.4); --tag-danger-fg: #ff8b80;
-    --tag-success-bg: rgb(52 199 110 / 0.14); --tag-success-bd: rgb(52 199 110 / 0.36); --tag-success-fg: #62d690;
-    --tag-info-bg: rgb(80 145 255 / 0.15); --tag-info-bd: rgb(80 145 255 / 0.4); --tag-info-fg: #8db8ff;
-    --tag-neutral-bg: rgb(255 255 255 / 0.07); --tag-neutral-bd: rgb(255 255 255 / 0.16); --tag-neutral-fg: #d6d6d2;
-    --tag-brand-bg: rgb(190 242 58 / 0.13); --tag-brand-bd: rgb(190 242 58 / 0.36); --tag-brand-fg: #c9f35c;
-  }
+  --tag-warning-bg: #fde8a6; --tag-warning-bd: #f3cf62; --tag-warning-fg: #6e4a00;
+  --tag-danger-bg: #ffdbe9; --tag-danger-bd: #f7a6c6; --tag-danger-fg: #b0124f;
+  --tag-success-bg: #c9f2dc; --tag-success-bd: #92dcb6; --tag-success-fg: #0f6139;
+  --tag-info-bg: #e2e5ff; --tag-info-bd: #b7bdfa; --tag-info-fg: #2b36a8;
+  --tag-neutral-bg: #eceef2; --tag-neutral-bd: #cdd1d9; --tag-neutral-fg: #3c4350;
+  --tag-brand-bg: #e3f7a3; --tag-brand-bd: #c3e656; --tag-brand-fg: #3d5700;
 }
 
 /* Sign-in backdrop: warm cream with a soft olive glow (no bright lime). */
@@ -358,3 +340,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not(.light) { --ink: #2d2e2a; }
 }
+
+/* Icons given a custom stroke width (lib/icons.tsx): CSS beats the
+   stroke-width drawn into each path. */
+.icon-sw * { stroke-width: var(--icon-sw); }

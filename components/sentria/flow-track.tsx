@@ -1,6 +1,6 @@
 "use client"
 
-import type { LucideIcon } from "lucide-react"
+import type { LucideIcon } from "@/lib/icons"
 import {
   Anchor,
   Boxes,
@@ -17,7 +17,7 @@ import {
   Truck,
   UsersRound,
   Warehouse,
-} from "lucide-react"
+} from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import { resolve, useTx } from "@/lib/i18n"
 import {

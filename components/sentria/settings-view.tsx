@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Globe, Bell, Moon, Check, Building2, Mail } from "lucide-react"
+import { Globe, Bell, Moon, Check, Building2, Mail } from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import { readTheme, resolvedTheme, writeTheme } from "@/lib/theme"
 import {

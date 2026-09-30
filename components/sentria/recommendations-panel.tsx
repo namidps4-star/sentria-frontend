@@ -20,7 +20,7 @@ import {
   HeartPulse,
   Truck,
   Wallet,
-} from "lucide-react"
+} from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import { computeConfidence, confidenceWord } from "@/lib/confidence"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
