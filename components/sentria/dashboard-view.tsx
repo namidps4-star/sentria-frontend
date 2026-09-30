@@ -2366,11 +2366,11 @@ export function DashboardView({
               </p>
             </div>
           ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[22px] bg-border shadow-sm xl:grid-cols-4">
             {kpis.map((k) => (
               <div
                 key={k.label}
-                className="rounded-3xl border border-border bg-card p-5"
+                className="bg-card px-4 py-3"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm text-muted-foreground">
@@ -2382,14 +2382,14 @@ export function DashboardView({
                   </StatusTag>
                 </div>
 
-                <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
+                <p className="mt-1 font-heading text-2xl font-bold tabular-nums tracking-tight">
                   {k.value}
                 </p>
 
                 <Sparkline
                   data={dailySeries(filteredAlerts, 7, k.match)}
                   className={cn(
-                    "mt-2 h-9 w-full",
+                    "mt-1 h-7 w-full",
                     k.up ? "text-accent" : "text-destructive"
                   )}
                 />
@@ -2584,11 +2584,11 @@ export function DashboardView({
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[22px] bg-border shadow-sm xl:grid-cols-4">
             {kpis.map((k) => (
               <div
                 key={k.label}
-                className="rounded-3xl border border-border bg-card p-5"
+                className="bg-card px-4 py-3"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm text-muted-foreground">
@@ -2600,14 +2600,14 @@ export function DashboardView({
                   </StatusTag>
                 </div>
 
-                <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
+                <p className="mt-1 font-heading text-2xl font-bold tabular-nums tracking-tight">
                   {k.value}
                 </p>
 
                 <Sparkline
                   data={dailySeries(filteredAlerts, 7, k.match)}
                   className={cn(
-                    "mt-2 h-9 w-full",
+                    "mt-1 h-7 w-full",
                     k.up ? "text-accent" : "text-destructive"
                   )}
                 />
