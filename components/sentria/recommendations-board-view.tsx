@@ -13,11 +13,13 @@ import {
   Clock3,
   Cpu,
   Fuel,
+  EyeOff,
   Inbox,
   Menu,
   MoreHorizontal,
   Package,
   Radar,
+  RotateCcw,
   Search,
   Sparkles,
   SquareKanban,
@@ -38,6 +40,7 @@ import {
   type Assignment,
   type Contractor,
 } from "@/lib/crm"
+import { sendAlertFeedback } from "@/lib/feedback"
 import { formatMoney, useLocale, type Currency } from "@/lib/locale"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
 import { sectorLabel } from "@/lib/priorities"
@@ -305,7 +308,7 @@ function taskMapFrom(rows: Assignment[]): Record<string, TaskMeta> {
   const map: Record<string, TaskMeta> = {}
 
   for (const row of rows) {
-    if (!row?.task_key) continue
+    if (!row?.task_key || row.status === "dismissed") continue
 
     map[row.task_key] = {
       status: asStatus(row.status),
@@ -316,6 +319,18 @@ function taskMapFrom(rows: Assignment[]): Record<string, TaskMeta> {
   }
 
   return map
+}
+
+/** The cards the user dismissed (F-SUPPRESS). They are not in the task
+ *  map: a dismissed card leaves the board until it is restored. */
+function dismissedFrom(rows: Assignment[]): Set<string> {
+  const ids = new Set<string>()
+
+  for (const row of rows) {
+    if (row?.task_key && row.status === "dismissed") ids.add(row.task_key)
+  }
+
+  return ids
 }
 
 function formatDeadline(deadline: string | null, tx: Tx) {
@@ -660,6 +675,7 @@ function DetailDialog({
   contractorsLoaded,
   currency,
   onPatch,
+  onDismiss,
   onClose,
 }: {
   card: Card
@@ -667,6 +683,7 @@ function DetailDialog({
   contractorsLoaded: boolean
   currency: Currency
   onPatch: (patch: Partial<TaskMeta>) => void
+  onDismiss: () => void
   onClose: () => void
 }) {
   const tx = useTx()
@@ -1016,6 +1033,17 @@ function DetailDialog({
             <Check className="h-4 w-4" />
             {tx("Terminé", "Done")}
           </button>
+
+          {/* Not useful: set it aside. Dismissed again and again, SentrIA
+              lowers this alert and says so (F-SUPPRESS). */}
+          <button
+            type="button"
+            onClick={onDismiss}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-border px-4 py-2 text-xs font-semibold text-foreground/80 transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <EyeOff className="h-3.5 w-3.5" />
+            {tx("Écarter : pas utile", "Dismiss: not useful")}
+          </button>
         </div>
       </div>
     </div>
@@ -1045,6 +1073,8 @@ export function RecommendationsBoard({
   const { currency } = useLocale()
 
   const [taskMap, setTaskMap] = useState<Record<string, TaskMeta>>({})
+  const [dismissed, setDismissed] = useState<Set<string>>(() => new Set())
+  const [showDismissed, setShowDismissed] = useState(false)
   const [contractors, setContractors] = useState<Contractor[]>([])
   const [loaded, setLoaded] = useState(false)
 
@@ -1081,6 +1111,7 @@ export function RecommendationsBoard({
       setLoadError(null)
 
       const map = taskMapFrom(stored.data)
+      setDismissed(dismissedFrom(stored.data))
 
       /* One-shot rescue of the assignments that were stranded in this
          browser before there was a server to hold them. Only when the
@@ -1179,17 +1210,24 @@ export function RecommendationsBoard({
   const [activeRole, setActiveRole] = useState<string | null>(null)
 
   const cards: Card[] = useMemo(() => {
-    return recommendations.map((rec) => {
-      const id = getRecommendationId(rec)
-      const stored = taskMap[id]
+    return recommendations
+      .filter((rec) => !dismissed.has(getRecommendationId(rec)))
+      .map((rec) => {
+        const id = getRecommendationId(rec)
+        const stored = taskMap[id]
 
-      return {
-        id,
-        rec,
-        task: stored ?? defaultTask(rec),
-      }
-    })
-  }, [recommendations, taskMap])
+        return {
+          id,
+          rec,
+          task: stored ?? defaultTask(rec),
+        }
+      })
+  }, [recommendations, taskMap, dismissed])
+
+  const dismissedRecs = useMemo(
+    () => recommendations.filter((rec) => dismissed.has(getRecommendationId(rec))),
+    [recommendations, dismissed]
+  )
 
   const criticalCount = cards.filter(
     (card) => card.rec.severity === "CRITICAL"
@@ -1334,6 +1372,16 @@ export function RecommendationsBoard({
       if (result.ok) {
         setSaveError(null)
 
+        /* Acting on an alert is what tells SentrIA it is worth raising
+           (F-SUPPRESS): it restarts the dismissal count. */
+        if (
+          "status" in patch &&
+          patch.status !== before?.status &&
+          (patch.status === "in_progress" || patch.status === "done")
+        ) {
+          sendAlertFeedback(card.rec.alert_key, card.rec.equipment, "acted")
+        }
+
         /* The open-task counts next to each contractor are derived from
            these rows, so they move whenever one does. */
         if ("contractor_ids" in patch || "status" in patch) {
@@ -1353,6 +1401,63 @@ export function RecommendationsBoard({
 
         return rolledBack
       })
+    })
+  }
+
+  /** Set a card aside as not useful (F-SUPPRESS). Optimistic, rolled back
+   *  and said out loud if the server refuses, like every other change. */
+  function dismissCard(id: string) {
+    const rec = recommendations.find((entry) => getRecommendationId(entry) === id)
+
+    if (!rec) return
+
+    if (!companyName) {
+      setSaveError(
+        tx(
+          "Aucun nom d'entreprise renseigné : la modification ne peut pas être enregistrée. Renseignez-le dans les Paramètres.",
+          "No company name is set, so the change cannot be saved. Set it in Settings."
+        )
+      )
+      return
+    }
+
+    const task = taskMap[id] ?? defaultTask(rec)
+
+    setDismissed((current) => new Set(current).add(id))
+    setEditingId(null)
+
+    saveAssignment(companyName, { task_key: id, ...task, status: "dismissed" }).then((result) => {
+      if (result.ok) {
+        setSaveError(null)
+        sendAlertFeedback(rec.alert_key, rec.equipment, "dismissed")
+        return
+      }
+
+      setSaveError(px(result.detail))
+      setDismissed((current) => {
+        const next = new Set(current)
+        next.delete(id)
+        return next
+      })
+    })
+  }
+
+  function restoreCard(id: string) {
+    const rec = recommendations.find((entry) => getRecommendationId(entry) === id)
+
+    if (!rec || !companyName) return
+
+    setDismissed((current) => {
+      const next = new Set(current)
+      next.delete(id)
+      return next
+    })
+
+    saveAssignment(companyName, { task_key: id, ...defaultTask(rec), ...(taskMap[id] ?? {}), status: "todo" }).then((result) => {
+      if (result.ok) return
+
+      setSaveError(px(result.detail))
+      setDismissed((current) => new Set(current).add(id))
     })
   }
 
@@ -2103,6 +2208,50 @@ export function RecommendationsBoard({
       )}
       </div>
 
+      {/* Cards set aside as not useful (F-SUPPRESS), one click from coming
+          back. Shown only when there are some. */}
+      {dismissedRecs.length > 0 && (
+        <div className="rounded-2xl border border-border bg-card px-4 py-3">
+          <button
+            type="button"
+            onClick={() => setShowDismissed((open) => !open)}
+            aria-expanded={showDismissed}
+            className="flex w-full items-center gap-2 text-left text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <EyeOff className="h-3.5 w-3.5" />
+            {tx(
+              `Écartées : ${dismissedRecs.length}`,
+              `Dismissed: ${dismissedRecs.length}`
+            )}
+          </button>
+
+          {showDismissed && (
+            <ul className="mt-3 divide-y divide-border">
+              {dismissedRecs.map((rec) => {
+                const id = getRecommendationId(rec)
+
+                return (
+                  <li key={id} className="flex items-center gap-3 py-2">
+                    <p className="min-w-0 flex-1 truncate text-sm">
+                      <span className="font-semibold">{rec.equipment}</span>
+                      <span className="text-muted-foreground"> · {rec.message}</span>
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => restoreCard(id)}
+                      className="flex shrink-0 items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-semibold transition-colors hover:bg-muted/70"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      {tx("Rétablir", "Restore")}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+      )}
+
       {editingCard && (
         <DetailDialog
           card={editingCard}
@@ -2110,6 +2259,7 @@ export function RecommendationsBoard({
           contractorsLoaded={loaded}
           currency={currency}
           onPatch={(patch) => updateTask(editingCard.id, patch)}
+          onDismiss={() => dismissCard(editingCard.id)}
           onClose={() => setEditingId(null)}
         />
       )}

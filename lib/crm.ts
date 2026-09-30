@@ -41,7 +41,9 @@ export const AVAILABILITY_LABEL: Record<Availability, Localized> = {
   off: localized("Indisponible", "Unavailable"),
 }
 
-export type AssignmentStatus = "todo" | "in_progress" | "done"
+/** "dismissed" (F-SUPPRESS): a card the user set aside as not useful. The
+ *  board hides it and offers to restore it. */
+export type AssignmentStatus = "todo" | "in_progress" | "done" | "dismissed"
 
 export type AssignmentPriority = "low" | "medium" | "high" | "critical"
 

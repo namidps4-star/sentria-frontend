@@ -22,6 +22,7 @@ import {
   Wallet,
 } from "@/lib/icons"
 import { cn } from "@/lib/utils"
+import { sendAlertFeedback } from "@/lib/feedback"
 import { computeConfidence, confidenceWord } from "@/lib/confidence"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
 
@@ -293,7 +294,18 @@ export function RecommendationsPanel({
     }
   )
 
-  function recordAction(key: string, status: ActionStatus) {
+  function recordAction(
+    key: string,
+    status: ActionStatus,
+    rec?: Recommendation
+  ) {
+    // F-SUPPRESS: the server keeps the log per company, so an alert
+    // dismissed again and again can be lowered. The local log below
+    // still drives this panel.
+    if (rec) {
+      sendAlertFeedback(rec.alert_key, rec.equipment, status === "done" ? "acted" : "dismissed")
+    }
+
     setActionsLog((current) => {
       const next = {
         ...current,
@@ -520,7 +532,7 @@ export function RecommendationsPanel({
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => recordAction(topKey, "done")}
+                  onClick={() => recordAction(topKey, "done", top)}
                   className={"inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-foreground px-3 py-2 text-xs font-semibold text-background transition-opacity hover:opacity-90" + PANEL_FOCUS}
                 >
                   <Check className="h-3.5 w-3.5" />
@@ -529,7 +541,7 @@ export function RecommendationsPanel({
 
                 <button
                   type="button"
-                  onClick={() => recordAction(topKey, "dismissed")}
+                  onClick={() => recordAction(topKey, "dismissed", top)}
                   className={"inline-flex items-center justify-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted" + PANEL_FOCUS}
                 >
                   <X className="h-3.5 w-3.5" />
@@ -655,7 +667,7 @@ export function RecommendationsPanel({
                       <>
                         <button
                           type="button"
-                          onClick={() => recordAction(key, "done")}
+                          onClick={() => recordAction(key, "done", rec)}
                           className={"inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-foreground px-2 py-1.5 text-[10px] font-semibold text-background transition-opacity hover:opacity-90" + PANEL_FOCUS}
                         >
                           <Check className="h-3 w-3" />
@@ -664,7 +676,7 @@ export function RecommendationsPanel({
 
                         <button
                           type="button"
-                          onClick={() => recordAction(key, "dismissed")}
+                          onClick={() => recordAction(key, "dismissed", rec)}
                           className={"inline-flex items-center justify-center rounded-lg border border-border px-2 py-1.5 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-muted" + PANEL_FOCUS}
                           aria-label={tx("Ignorer", "Dismiss")}
                         >

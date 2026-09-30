@@ -23,7 +23,7 @@ export type ValueAtRisk = {
   estimate: boolean
 }
 
-function asRecord(params: AlertParams): Record<string, unknown> | null {
+export function asRecord(params: AlertParams): Record<string, unknown> | null {
   if (Array.isArray(params)) {
     const out: Record<string, unknown> = {}
     for (const pair of params) {

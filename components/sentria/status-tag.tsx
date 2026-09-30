@@ -6,12 +6,14 @@ import {
   CircleX,
   Clock3,
   Sparkles,
+  TrendingDown,
   Wallet,
   type LucideIcon,
 } from "@/lib/icons"
 
 import type { Tx } from "@/lib/i18n"
 import { formatAmount } from "@/lib/locale"
+import { demotion, demotionSentence } from "@/lib/demotion"
 import { valueAtRisk, type AlertParams } from "@/lib/value-at-risk"
 import { cn } from "@/lib/utils"
 
@@ -157,6 +159,34 @@ export function ValueTag({
         <span className="sr-only">{label}</span>
         {risk.estimate ? "≈ " : ""}
         {amount}
+      </StatusTag>
+    </span>
+  )
+}
+
+/** Shown when SentrIA lowered an alert because it keeps being dismissed
+ *  (F-SUPPRESS). Nothing when it did not. */
+export function DemotedTag({
+  params,
+  tx,
+  size = "sm",
+  className,
+}: {
+  params: AlertParams
+  tx: Tx
+  size?: keyof typeof SIZES
+  className?: string
+}) {
+  const info = demotion(params)
+  if (!info) return null
+
+  const sentence = demotionSentence(info, tx)
+
+  return (
+    <span title={sentence} className="inline-flex">
+      <StatusTag tone="neutral" size={size} icon={TrendingDown} className={className}>
+        <span className="sr-only">{sentence} </span>
+        <span aria-hidden="true">{tx("Abaissée", "Lowered")}</span>
       </StatusTag>
     </span>
   )

@@ -1,6 +1,7 @@
 "use client"
 
-import { SeverityTag, StatusTag, ValueTag } from "./status-tag"
+import { DemotedTag, SeverityTag, StatusTag, ValueTag } from "./status-tag"
+import { demotion, demotionSentence } from "@/lib/demotion"
 import { SheetTabs } from "./sheet-tabs"
 import type { ViewKey } from "./types"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -81,6 +82,7 @@ import {
   sectorsForPlan,
   type PlanId,
 } from "@/lib/plans"
+import { sendAlertFeedback } from "@/lib/feedback"
 import { runUpload } from "@/lib/upload"
 import { setUploadPanel } from "@/lib/upload-panel"
 import { holdInPlace } from "@/lib/hold-scroll"
@@ -1221,7 +1223,7 @@ export function DashboardView({
 
   const [actionError, setActionError] = useState<string | null>(null)
 
-  function markHandled(taskKey: string) {
+  function markHandled(taskKey: string, rec?: Recommendation) {
     if (!companyName) {
       setActionError(
         tx(
@@ -1248,6 +1250,9 @@ export function DashboardView({
     saveAssignment(companyName, next).then((result) => {
       if (result.ok) {
         setTaskMap((current) => ({ ...current, [taskKey]: result.data }))
+
+        // F-SUPPRESS: acting on an alert restarts its dismissal count.
+        if (rec) sendAlertFeedback(rec.alert_key, rec.equipment, "acted")
         return
       }
 
@@ -3421,6 +3426,7 @@ export function DashboardView({
                           <div className="flex items-center gap-1.5">
                             <SeverityTag severity={alert.severity} tx={tx} size="sm" />
                             <ValueTag params={alert.params} tx={tx} size="sm" />
+                            <DemotedTag params={alert.params} tx={tx} size="sm" />
                           </div>
                         </td>
 
@@ -3508,6 +3514,7 @@ export function DashboardView({
                 <div className="flex shrink-0 items-center gap-2">
                   <SeverityTag severity={expandedAlert.severity} tx={tx} size="sm" />
                   <ValueTag params={expandedAlert.params} tx={tx} size="sm" />
+                  <DemotedTag params={expandedAlert.params} tx={tx} size="sm" />
 
                   <button
                     type="button"
@@ -3519,6 +3526,16 @@ export function DashboardView({
                   </button>
                 </div>
               </div>
+
+              {(() => {
+                const lowered = demotion(expandedAlert.params)
+
+                return lowered ? (
+                  <p className="mt-4 rounded-2xl bg-white/[0.06] px-4 py-3 text-xs leading-5 text-sidebar-foreground/80 ring-1 ring-white/10">
+                    {demotionSentence(lowered, tx)}
+                  </p>
+                ) : null
+              })()}
 
               <div className="mt-4 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-sidebar-foreground/40">
@@ -3687,7 +3704,7 @@ export function DashboardView({
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation()
-                          markHandled(actionKey)
+                          markHandled(actionKey, expandedRecommendation)
                         }}
                         className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground transition-opacity hover:opacity-90"
                       >
@@ -3989,7 +4006,7 @@ export function DashboardView({
                 type="button"
                 onClick={() => {
                   const actionKey = taskKeyFor(selectedRecommendation)
-                  markHandled(actionKey)
+                  markHandled(actionKey, selectedRecommendation)
                   setSelectedRecommendation(null)
                 }}
                 className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-xs font-bold text-accent-foreground transition-transform hover:scale-[1.02]"

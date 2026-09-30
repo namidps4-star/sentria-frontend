@@ -204,6 +204,9 @@ function buildEvents(
     const assignment =
       assignmentByTaskKey.get(taskKeyFor(rec)) ??
       assignmentByTaskKey.get(rec.id)
+    // F-SUPPRESS: a card the user dismissed is not on the calendar.
+    if (assignment?.status === "dismissed") continue
+
     const alertDate = parseDate(rec.date)
     const deadlineDate = parseDate(assignment?.deadline ?? null)
 
