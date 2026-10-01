@@ -135,7 +135,7 @@ export function SectorShowcase({ tx, className }: { tx: Tx; className?: string }
       aria-roledescription={tx("carrousel", "carousel")}
       aria-label={tx("Exemples d'alertes par secteur", "Example alerts by sector")}
       className={cn(
-        "relative flex flex-col overflow-hidden rounded-[28px] bg-[var(--panel-deep)] p-5 text-white shadow-xl ring-1 ring-white/10",
+        "relative flex flex-col overflow-hidden rounded-[28px] bg-brand-deep p-5 text-white shadow-xl ring-1 ring-white/10",
         className
       )}
       onMouseEnter={() => setHovered(true)}

@@ -61,24 +61,23 @@ const GREEN = 'rgb(15, 46, 31)'; // --brand-deep
     await ctx.close();
   }
 
-  console.log('== the sidebar stays black (it was green once and was reverted: it vanished into the dark page)');
-  for (const [label, theme, scheme] of [
-    ['light', 'light', 'light'],
-    ['explicit dark', 'dark', 'dark'],
-    ['system, OS dark', 'system', 'dark'],
-    ['system, OS light', 'system', 'light'],
+  console.log('== deep green in dark mode: the sidebar');
+  for (const [label, theme, scheme, green] of [
+    ['light', 'light', 'light', false],
+    ['explicit dark', 'dark', 'dark', true],
+    ['system, OS dark', 'system', 'dark', true],
+    ['system, OS light', 'system', 'light', false],
   ]) {
     const { p, ctx } = await open(theme, scheme);
-    const r = await p.evaluate(() => { const root = getComputedStyle(document.documentElement); const a = document.querySelector('aside'); const b = a.getBoundingClientRect(); return { bg: getComputedStyle(a).backgroundColor, deep: root.getPropertyValue('--brand-deep').trim(), shell: root.getPropertyValue('--sidebar-shell').trim(), w: Math.round(b.width), h: Math.round(b.height) }; });
-    pass(r.bg !== GREEN, `${label}: the sidebar is not the deep green (got ${r.bg})`);
-    pass(r.shell === '', `${label}: no --sidebar-shell token is left`);
-    pass(r.w > 200 && r.h > 400, `${label}: the sidebar is there (${r.w}x${r.h})`);
-    pass(r.deep === '#0f2e1f', `${label}: --brand-deep is still the palette colour`);
+    const r = await p.evaluate(() => { const root = getComputedStyle(document.documentElement); return { bg: getComputedStyle(document.querySelector('aside')).backgroundColor, sidebar: root.getPropertyValue('--sidebar').trim(), deep: root.getPropertyValue('--brand-deep').trim() }; });
+    pass((r.bg === GREEN) === green, `${label}: the sidebar is ${green ? 'the deep green' : 'not green (black)'} (got ${r.bg})`);
+    pass(r.deep === '#0f2e1f', `${label}: --brand-deep is the palette colour`);
+    pass(r.sidebar !== '#0f2e1f' && parseFloat(r.sidebar.replace(/^\w+\(/, '')) < 10, `${label}: --sidebar (the dark cards inside pages) is still near-black, not green (${r.sidebar})`);
     if (theme === 'dark') await p.screenshot({ path: 'brand-sidebar-dark.png' });
     await ctx.close();
   }
 
-  console.log('== deep green in dark mode: the sign-in screen\'s sector panel');
+  console.log('== the sign-in screen\'s sector panel is the deep green in every theme');
   const openLogin = async (theme, scheme) => {
     const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'en-US', colorScheme: scheme });
     const p = await ctx.newPage(); p._errors = []; p.on('pageerror', e => p._errors.push(e.message));
@@ -88,17 +87,17 @@ const GREEN = 'rgb(15, 46, 31)'; // --brand-deep
     return { p, ctx };
   };
   for (const [label, theme, scheme, want] of [
-    ['light', 'light', 'light', 'rgb(20, 20, 20)'],
+    ['light', 'light', 'light', GREEN],
     ['explicit dark', 'dark', 'dark', GREEN],
     ['system, OS dark', 'system', 'dark', GREEN],
-    ['system, OS light', 'system', 'light', 'rgb(20, 20, 20)'],
+    ['system, OS light', 'system', 'light', GREEN],
   ]) {
     const { p, ctx } = await openLogin(theme, scheme);
-    const bg = await p.evaluate(() => getComputedStyle(document.querySelector('[class*="panel-deep"]')).backgroundColor);
+    const bg = await p.evaluate(() => getComputedStyle(document.querySelector('[class*="bg-brand-deep"]')).backgroundColor);
     pass(bg === want, `${label}: the sector panel is ${want} (got ${bg})`);
-    pass(await p.locator('[class*="panel-deep"]').isVisible(), `${label}: the panel is shown`);
+    pass(await p.locator('[class*="bg-brand-deep"]').isVisible(), `${label}: the panel is shown`);
     pass(p._errors.length === 0, `${label}: no page errors ${p._errors.join('|')}`);
-    if (theme === 'dark') await p.screenshot({ path: 'brand-login-dark.png' });
+    await p.screenshot({ path: `brand-login-${theme}-${scheme}.png` });
     await ctx.close();
   }
 
