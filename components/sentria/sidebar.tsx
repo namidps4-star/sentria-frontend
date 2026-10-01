@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import type { ViewKey } from "./types"
 import { useT, type MessageKey } from "@/lib/i18n"
 import { PLAN_NAMES, PLAN_UPDATED_EVENT, readAccountPlan, type PlanId } from "@/lib/plans"
+import { usePresence } from "@/lib/use-presence"
+import { cn } from "@/lib/utils"
 import {
   LayoutDashboard,
   SquareKanban,
@@ -159,6 +161,7 @@ export function Sidebar({
      Only "confirm" calls onSignOut; cancel, Escape and a click outside the
      card leave the session untouched and give the focus back. */
   const [confirmingSignOut, setConfirmingSignOut] = useState(false)
+  const signOutDialog = usePresence(confirmingSignOut, "--modal-close-dur")
   const signOutButton = useRef<HTMLButtonElement>(null)
   const cancelSignOut = useCallback(() => {
     setConfirmingSignOut(false)
@@ -454,9 +457,9 @@ export function Sidebar({
 
       {/* Beside the <aside>, not inside it: its transform would make a
           fixed child position against the sidebar instead of the screen. */}
-      {confirmingSignOut && (
+      {signOutDialog.present && (
         <div
-          className="fixed inset-0 z-[60] flex animate-in fade-in items-center justify-center bg-black/50 p-4 duration-150"
+          className={cn("fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 t-modal-backdrop", signOutDialog.className)}
           onClick={(event) => {
             if (event.target === event.currentTarget) cancelSignOut()
           }}
@@ -465,7 +468,7 @@ export function Sidebar({
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="sign-out-title"
-            className="w-full max-w-sm animate-in fade-in zoom-in-95 rounded-3xl border border-border bg-card p-6 shadow-2xl duration-150"
+            className={cn("w-full max-w-sm rounded-3xl border border-border bg-card p-6 shadow-2xl t-modal", signOutDialog.className)}
           >
             <h3 id="sign-out-title" className="font-heading text-lg font-bold text-foreground">
               {t("sidebar.signOutConfirm")}

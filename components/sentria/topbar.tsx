@@ -6,6 +6,8 @@ import { Search, Bell, Menu, ChevronDown, X, User, ArrowRight } from "@/lib/icon
 import { formatInCompanyZone, initialsOf, useCompanyIdentity } from "@/lib/company"
 import { useT, useTx } from "@/lib/i18n"
 import { sectorLabel } from "@/lib/priorities"
+import { usePresence } from "@/lib/use-presence"
+import { cn } from "@/lib/utils"
 
 import { WorkspaceContext } from "./workspace-context"
 
@@ -52,6 +54,7 @@ export function Topbar({
   const tx = useTx()
 
   const [bellOpen, setBellOpen] = useState(false)
+  const bell = usePresence(bellOpen, "--dropdown-close-dur")
   const bellRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -172,11 +175,12 @@ export function Topbar({
         )}
       </button>
 
-      {bellOpen && (
+      {bell.present && (
         <div
           role="dialog"
           aria-label={tx("Alertes critiques", "Critical alerts")}
-          className="absolute right-0 top-full z-40 mt-2 w-80 max-w-[calc(100vw-2rem)] animate-in fade-in slide-in-from-top-1 rounded-2xl border border-border bg-card p-2 shadow-xl duration-150"
+          data-origin="top-right"
+          className={cn("absolute right-0 top-full z-40 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-card p-2 shadow-xl t-dropdown", bell.className)}
         >
           <p className="px-2 pb-1.5 pt-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {tx("Alertes critiques à traiter", "Critical alerts to handle")}

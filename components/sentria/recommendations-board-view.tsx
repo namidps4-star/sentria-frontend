@@ -30,6 +30,7 @@ import {
 } from "@/lib/icons"
 import type { LucideIcon } from "@/lib/icons"
 import { useArrivals } from "@/lib/use-arrivals"
+import { useEnter } from "@/lib/use-presence"
 import { cn } from "@/lib/utils"
 import { useCompanyIdentity } from "@/lib/company"
 import {
@@ -600,6 +601,7 @@ function AssignPopover({
 }) {
   const tx = useTx()
   const ref = useRef<HTMLDivElement>(null)
+  const enter = useEnter()
 
   useEffect(() => {
     function onPointer(event: MouseEvent) {
@@ -624,7 +626,8 @@ function AssignPopover({
       ref={ref}
       role="dialog"
       aria-label={tx("Assigner la tâche", "Assign the task")}
-      className="absolute left-0 top-full z-30 mt-1.5 w-64 animate-in fade-in slide-in-from-top-1 rounded-xl border border-border bg-card p-1.5 shadow-xl duration-150"
+      data-origin="top-left"
+      className={cn("absolute left-0 top-full z-30 mt-1.5 w-64 rounded-xl border border-border bg-card p-1.5 shadow-xl t-dropdown", enter)}
     >
       {contractors.length === 0 ? (
         <p className="px-2 py-2 text-xs leading-5 text-muted-foreground">
@@ -692,6 +695,7 @@ function DetailDialog({
 
   const closeRef = useRef<HTMLButtonElement>(null)
   const returnFocusRef = useRef<Element | null>(null)
+  const enter = useEnter()
 
   const { rec, task } = card
   const tone = toneOf(rec)
@@ -733,7 +737,7 @@ function DetailDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      className={cn("fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4 t-modal-backdrop", enter)}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose()
       }}
@@ -742,7 +746,7 @@ function DetailDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="priority-detail-title"
-        className="max-h-[92vh] w-full max-w-lg animate-in fade-in zoom-in-95 overflow-y-auto rounded-t-3xl border border-border bg-card shadow-2xl duration-200 sm:rounded-3xl"
+        className={cn("max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-border bg-card shadow-2xl sm:rounded-3xl t-modal", enter)}
       >
         {/* Header ------------------------------------------------------- */}
         <div className="flex items-start justify-between gap-4 border-b border-border p-5 sm:p-6">
@@ -2084,7 +2088,7 @@ export function RecommendationsBoard({
                         "group relative cursor-grab rounded-2xl border border-border bg-card px-3 py-2.5 shadow-sm",
                         "transition-[box-shadow,border-color,transform] duration-200 ease-out",
                         "hover:border-foreground/15 hover:shadow-md active:cursor-grabbing",
-                        arrivals.has(id) && "animate-in fade-in zoom-in-95 duration-200",
+                        arrivals.has(id) && "t-rise-in",
                         isDragging &&
                           "scale-[1.02] opacity-95 shadow-xl ring-2 ring-brand"
                       )}

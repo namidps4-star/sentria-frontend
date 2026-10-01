@@ -1,25 +1,35 @@
 "use client"
 
 import { useTx } from "@/lib/i18n"
-import { setUploadPanel, useUploadPanel } from "@/lib/upload-panel"
+import { setUploadPanel, useUploadPanel, type UploadPanel } from "@/lib/upload-panel"
+import { useEnter } from "@/lib/use-presence"
+import { cn } from "@/lib/utils"
 
 import { UploadProgress } from "./upload-progress"
 
 /** The import panel over the app (see lib/upload-panel.ts). */
 export function UploadPanelHost() {
-  const tx = useTx()
   const { open, title, state, busy } = useUploadPanel()
 
   if (!open || state.phase === "idle") return null
 
+  return <UploadPanelDialog title={title} state={state} busy={busy} />
+}
+
+/** Mounted each time the panel opens, so the modal entrance plays each time
+ *  (transitions.dev modal, app/transitions.css). */
+function UploadPanelDialog({ title, state, busy }: Pick<UploadPanel, "title" | "state" | "busy">) {
+  const tx = useTx()
+  const enter = useEnter()
+
   return (
     <div
-      className="fixed inset-0 z-[90] flex animate-in fade-in items-end justify-center bg-black/40 p-4 duration-150 sm:items-center"
+      className={cn("fixed inset-0 z-[90] flex items-end justify-center bg-black/40 p-4 sm:items-center t-modal-backdrop", enter)}
       role="dialog"
       aria-modal="true"
       aria-label={tx("Import de données", "Data import")}
     >
-      <div className="w-full max-w-md animate-in fade-in zoom-in-95 rounded-3xl border border-border bg-card p-6 text-card-foreground shadow-2xl duration-200">
+      <div className={cn("w-full max-w-md rounded-3xl border border-border bg-card p-6 text-card-foreground shadow-2xl t-modal", enter)}>
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {tx("Import", "Import")}
           {title ? ` · ${title}` : ""}

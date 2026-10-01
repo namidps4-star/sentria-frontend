@@ -2,7 +2,8 @@
 
 import { DemotedTag, SeverityTag, StatusTag, ValueTag } from "./status-tag"
 import { demotion, demotionSentence } from "@/lib/demotion"
-import { CountUp } from "./count-up"
+import { PopNumber } from "./pop-number"
+import { RevealText } from "./reveal-text"
 import { SheetTabs } from "./sheet-tabs"
 import type { ViewKey } from "./types"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -30,6 +31,7 @@ import {
 } from "@/lib/icons"
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
+import { usePresence } from "@/lib/use-presence"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
 import { computeConfidence, confidenceWord, convergenceFor, signalsTogether } from "@/lib/confidence"
 import { LogisticsBlockagesView } from "./logistics-blockages-view"
@@ -1033,6 +1035,7 @@ export function DashboardView({
   const [uploading, setUploading] = useState(false)
   // The import panel: opened from the upload icon at the top.
   const [importOpen, setImportOpen] = useState(false)
+  const importPanel = usePresence(importOpen, "--dropdown-close-dur")
   // Where the upload icon goes: a slot the top bar keeps for the page.
   const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null)
   useEffect(() => {
@@ -1991,8 +1994,9 @@ export function DashboardView({
           id="import-panel"
           role="dialog"
           aria-label={tx("Importer des données", "Import data")}
-          hidden={!importOpen}
-          className="absolute right-0 top-full z-30 mt-2 max-h-[80vh] w-[min(480px,calc(100vw-2.5rem))] animate-in fade-in slide-in-from-top-1 overflow-y-auto rounded-[28px] bg-card p-6 shadow-2xl duration-150"
+          hidden={!importPanel.present}
+          data-origin="top-right"
+          className={cn("absolute right-0 top-full z-30 mt-2 max-h-[80vh] w-[min(480px,calc(100vw-2.5rem))] overflow-y-auto rounded-[28px] bg-card p-6 shadow-2xl t-dropdown", importPanel.className)}
         >
           <div className="flex items-start justify-between gap-3">
             <h3 className="font-heading text-lg font-bold">
@@ -2400,7 +2404,7 @@ export function DashboardView({
                 </div>
 
                 <p className="mt-1 font-heading text-2xl font-bold tabular-nums tracking-tight">
-                  <CountUp value={k.value} />
+                  <PopNumber value={k.value} />
                 </p>
 
                 <Sparkline
@@ -2618,7 +2622,7 @@ export function DashboardView({
                 </div>
 
                 <p className="mt-1 font-heading text-2xl font-bold tabular-nums tracking-tight">
-                  <CountUp value={k.value} />
+                  <PopNumber value={k.value} />
                 </p>
 
                 <Sparkline
@@ -2792,19 +2796,21 @@ export function DashboardView({
             )}
           </div>
 
-          <h2 className="mt-3 text-balance font-heading text-2xl font-bold leading-tight md:text-3xl">
+          <RevealText>
+          <h2 className="t-stagger-line t-stagger-line--1 mt-3 text-balance font-heading text-2xl font-bold leading-tight md:text-3xl">
             {tx(
               "Qu'est-ce qui a besoin de votre attention maintenant ?",
               "What needs your attention right now?"
             )}
           </h2>
 
-          <p className="mt-2 text-pretty text-sm text-sidebar-foreground/70">
+          <p className="t-stagger-line t-stagger-line--2 mt-2 text-pretty text-sm text-sidebar-foreground/70">
             {tx(
               "SentrIA ne se contente pas d'alerter : chaque priorité montre sa preuve, sa confiance et son impact, puis garde en mémoire ce que vous en avez fait.",
               "SentrIA does more than alert: every priority shows its evidence, its confidence and its impact, then remembers what you did about it."
             )}
           </p>
+          </RevealText>
 
           {subtypeName && (
             <p className="mt-3 text-xs leading-5 text-sidebar-foreground/60">
@@ -3035,7 +3041,7 @@ export function DashboardView({
             </div>
 
             <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
-              <CountUp value={k.value} />
+              <PopNumber value={k.value} />
             </p>
 
             <Sparkline
@@ -3787,7 +3793,7 @@ export function DashboardView({
             role="dialog"
             aria-modal="true"
             aria-labelledby="recommendation-dialog-title"
-            className="max-h-[90vh] w-full max-w-2xl animate-in fade-in zoom-in-95 overflow-y-auto rounded-3xl bg-card shadow-2xl ring-1 ring-border duration-200"
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-card shadow-2xl ring-1 ring-border"
           >
             <div className="flex items-start justify-between gap-4 border-b border-border p-6">
               <div className="min-w-0">

@@ -3,6 +3,7 @@ import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
 import { Space_Grotesk, Geist_Mono } from 'next/font/google'
 import './globals.css'
+import './transitions.css'
 import { THEME_INIT_SCRIPT } from "@/lib/theme"
 
 const geistSans = Space_Grotesk({

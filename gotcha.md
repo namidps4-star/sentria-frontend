@@ -72,6 +72,11 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 ## Running the browser tests
 **Reality:** Build from a clean copy (`pnpm install --frozen-lockfile` + `next build` with `NEXT_PUBLIC_SUPABASE_URL=https://sentria-test.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=test-anon`), `next start -p 3201`, then `node tests/e2e/<suite>.js`. `tests/e2e/auth-mock.js` fakes Supabase. `ss` isn't installed and `pkill -f "next start"` kills your own shell: free the port with `fuser -k 3201/tcp`, and always do it before a rebuild or you test a stale server. On a phone-width viewport open the menu before clicking sidebar items. `run-all.js` takes 10+ minutes.
 
+## Motion comes from transitions.dev, in `app/transitions.css`
+**Problem:** Menus, dialogs, KPI numbers and the attention banner animate, but there is no animation library and the `transitions-*` skill folder is not in the repo.
+**Reality:** `app/transitions.css` holds four snippets of transitions.dev's free transitions (menu dropdown, modal, number pop-in, texts reveal), pasted verbatim with their reduced-motion blocks; its licence lets the app ship them but forbids redistributing the library. The `.is-open` / `.is-closing` / `.is-shown` classes are driven by `lib/use-presence.ts`, so a menu or dialog stays in the DOM for its close duration (150 ms) after it closes. The production CSS minifier rewrites `150ms` as `.15s`: read a CSS time with its unit (`toMs`), never a bare `parseFloat`, or the exit animation never plays. Timings are tuned to 250 ms through the variables the skill exposes (the Notion card's budget).
+**Rule:** New motion = another snippet in that file plus the hook; never commit the skill's folder or its CLI. A test that checks an element is gone after closing waits at least 250 ms (`tests/e2e/motion.js` shows how to measure it).
+
 ## Third-party skills
 **Reality:** `.claude/skills/transitions-*` and `skills-lock.json` are installed, uncommitted, and licensed "no redistribution".
 **Rule:** Don't commit them without the owner's say-so.

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
 import { Check, ChevronLeft, ChevronRight, Menu, Plus, X } from "@/lib/icons"
 import type { Tx } from "@/lib/i18n"
+import { usePresence } from "@/lib/use-presence"
 import { cn } from "@/lib/utils"
 
 export type SheetTab = {
@@ -52,6 +53,13 @@ export function SheetTabs({
   const [menuOpen, setMenuOpen] = useState(false)
   // The locked department whose "Business plan" note is open.
   const [offer, setOffer] = useState<SheetTabSuggestion | null>(null)
+  // The popover keeps its content while it closes, when `offer` is already null.
+  const [shownOffer, setShownOffer] = useState<SheetTabSuggestion | null>(null)
+  useEffect(() => {
+    if (offer) setShownOffer(offer)
+  }, [offer])
+  const menu = usePresence(menuOpen, "--dropdown-close-dur")
+  const offerPanel = usePresence(offer !== null, "--dropdown-close-dur")
 
   const measure = useCallback(() => {
     const el = strip.current
@@ -143,11 +151,12 @@ export function SheetTabs({
           <span className="hidden sm:inline">{tabs.length > 1 ? tx("départements", "departments") : tx("département", "department")}</span>
         </button>
 
-        {menuOpen && (
+        {menu.present && (
           <div
             role="menu"
             aria-label={label}
-            className="absolute bottom-full left-0 mb-2 w-64 animate-in fade-in slide-in-from-bottom-1 overflow-hidden rounded-2xl border border-border bg-card p-1.5 shadow-xl duration-150"
+            data-origin="bottom-left"
+            className={cn("absolute bottom-full left-0 mb-2 w-64 overflow-hidden rounded-2xl border border-border bg-card p-1.5 shadow-xl t-dropdown", menu.className)}
           >
             <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               {label}
@@ -266,14 +275,15 @@ export function SheetTabs({
         </div>
       </div>
 
-      {offer && (
+      {offerPanel.present && shownOffer && (
         <div
           role="dialog"
-          aria-label={tx(`Ajouter ${offer.label}`, `Add ${offer.label}`)}
-          className="absolute bottom-full right-2 mb-2 w-72 animate-in fade-in slide-in-from-bottom-1 rounded-2xl bg-card p-4 shadow-xl duration-150 lg:right-4"
+          aria-label={tx(`Ajouter ${shownOffer.label}`, `Add ${shownOffer.label}`)}
+          data-origin="bottom-right"
+          className={cn("absolute bottom-full right-2 mb-2 w-72 rounded-2xl bg-card p-4 shadow-xl lg:right-4 t-dropdown", offerPanel.className)}
         >
           <div className="flex items-start justify-between gap-2">
-            <p className="text-sm font-semibold">{tx(`Ajouter ${offer.label}`, `Add ${offer.label}`)}</p>
+            <p className="text-sm font-semibold">{tx(`Ajouter ${shownOffer.label}`, `Add ${shownOffer.label}`)}</p>
             <button
               type="button"
               onClick={() => setOffer(null)}

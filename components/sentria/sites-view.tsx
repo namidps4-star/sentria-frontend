@@ -28,6 +28,7 @@ import {
   Zap,
   type LucideIcon,
 } from "@/lib/icons"
+import { usePresence } from "@/lib/use-presence"
 import { cn } from "@/lib/utils"
 import { PLAN_NAMES, PLAN_UPDATED_EVENT, maxSitesFor, readAccountPlan, type PlanId } from "@/lib/plans"
 import { StatusTag, type TagTone } from "./status-tag"
@@ -221,6 +222,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
   // cap, "Add a site" explains the upgrade instead of opening the form.
   const [plan, setPlan] = useState<PlanId>("decouverte")
   const [showUpgrade, setShowUpgrade] = useState(false)
+  const upgrade = usePresence(showUpgrade, "--modal-close-dur")
 
   useEffect(() => {
     const load = () => setPlan(readAccountPlan().effective)
@@ -1025,13 +1027,13 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
       </div>
 
       {/* UPGRADE: the plan's site limit is reached (F-SITEGATE) */}
-      {showUpgrade && (
-        <div className="fixed inset-0 z-50 flex animate-in fade-in items-center justify-center bg-black/50 p-4 duration-150">
+      {upgrade.present && (
+        <div className={cn("fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 t-modal-backdrop", upgrade.className)}>
           <div
             role="dialog"
             aria-modal="true"
             aria-label={tx("Limite de sites atteinte", "Site limit reached")}
-            className="w-full max-w-md animate-in fade-in zoom-in-95 rounded-3xl border border-border bg-card p-6 shadow-2xl duration-150"
+            className={cn("w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-2xl t-modal", upgrade.className)}
           >
             <div className="flex items-start justify-between gap-3">
               <h3 className="font-heading text-xl font-bold">
