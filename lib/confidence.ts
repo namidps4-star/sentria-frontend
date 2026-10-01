@@ -66,6 +66,45 @@ export interface ConfidenceInput {
   trackRecord?: { done: number; dismissed: number }
 }
 
+/** Alerts of one asset saved within this many seconds of each other come
+ *  from the same analysis. Mirrors pipeline/confidence.py (G-CONF). */
+export const SIGNAL_WINDOW_SECONDS = 60
+
+type SignalAlert = {
+  equipment: string
+  sector?: string | null
+  alert_key?: string | null
+  date?: string | null
+}
+
+/** How many different checks fired together on `target`'s asset in the
+ *  same analysis: the distinct alert_keys of that equipment within the
+ *  window of the target's own time. At least 1. Mirrors signals_together. */
+export function signalsTogether(alerts: SignalAlert[], target: SignalAlert): number {
+  const keys = new Set<string>()
+  if (target.alert_key) keys.add(target.alert_key)
+
+  const when = target.date ? Date.parse(target.date) : NaN
+  if (!Number.isNaN(when)) {
+    for (const other of alerts) {
+      if (other.equipment !== target.equipment) continue
+      if ((other.sector ?? null) !== (target.sector ?? null)) continue
+      const at = other.date ? Date.parse(other.date) : NaN
+      if (Number.isNaN(at)) continue
+      if (Math.abs(at - when) / 1000 <= SIGNAL_WINDOW_SECONDS && other.alert_key) keys.add(other.alert_key)
+    }
+  }
+
+  return Math.max(1, keys.size)
+}
+
+/** 0-1 from how many different checks agree: 1 alone 0.30, 2 0.55, 3 0.80,
+ *  4+ 1.0. Mirrors convergence_for in pipeline/confidence.py. */
+export function convergenceFor(signalCount: number | null | undefined): number {
+  if (signalCount == null) return 0.5
+  return Math.min(1, 0.3 + 0.25 * (Math.max(1, Math.floor(signalCount)) - 1))
+}
+
 function normalizeRisk(riskScore?: number | null): number {
   if (typeof riskScore !== "number") return 60
   return riskScore > 1 ? Math.max(0, Math.min(100, riskScore)) : riskScore * 100

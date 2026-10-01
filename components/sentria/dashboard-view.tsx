@@ -30,7 +30,7 @@ import {
 import { AreaChart, BarChart, Sparkline } from "./charts"
 import { cn } from "@/lib/utils"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
-import { computeConfidence, confidenceWord } from "@/lib/confidence"
+import { computeConfidence, confidenceWord, convergenceFor, signalsTogether } from "@/lib/confidence"
 import { LogisticsBlockagesView } from "./logistics-blockages-view"
 import { LogisticsWaitingView } from "./logistics-waiting-view"
 import { LogisticsCostView } from "./logistics-cost-view"
@@ -902,7 +902,8 @@ function getRecommendationContext(
 function estimateConfidence(
   rec: Recommendation,
   recurrence: number,
-  trackRecord?: { done: number; dismissed: number }
+  trackRecord?: { done: number; dismissed: number },
+  alerts?: Alert[]
 ): number {
   if (typeof rec.confidence === "number") {
     return Math.round(Math.max(0, Math.min(100, rec.confidence)))
@@ -913,6 +914,9 @@ function estimateConfidence(
     severity: rec.severity,
     recurrence,
     trackRecord,
+    // G-CONF: how many different checks fired together on this asset (the
+    // backend's own number is used whenever rec.confidence is present).
+    signalConvergence: alerts ? convergenceFor(signalsTogether(alerts, rec)) : undefined,
   })
 }
 
@@ -922,6 +926,7 @@ function trackRecordForCategory(
   taskMap: Record<string, Assignment>
 ): { done: number; dismissed: number } {
   let done = 0
+  let dismissed = 0
 
   for (const rec of recs) {
     if (rec.action_category !== category) continue
@@ -930,9 +935,11 @@ function trackRecordForCategory(
     const row = taskMap[key]
 
     if (row?.status === "done") done += 1
+    // G-CONF: dismissed cards are real data now (status "dismissed").
+    if (row?.status === "dismissed") dismissed += 1
   }
 
-  return { done, dismissed: 0 }
+  return { done, dismissed }
 }
 
 function reasoningFor(
@@ -3620,7 +3627,8 @@ export function DashboardView({
                           expandedRecommendation.action_category,
                           recommendations,
                           taskMap
-                        )
+                        ),
+                        alerts
                       )}
                       %
                     </p>
@@ -3838,7 +3846,8 @@ export function DashboardView({
                           selectedRecommendation.action_category,
                           recommendations,
                           taskMap
-                        )
+                        ),
+                        alerts
                       )
                       return tx(
                         `Confiance ${confidenceWord(pct, tx)} · ${pct}%`,
