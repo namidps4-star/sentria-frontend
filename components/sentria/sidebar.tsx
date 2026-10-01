@@ -1,7 +1,10 @@
 "use client"
 
+import { useEffect, useState } from "react"
+
 import type { ViewKey } from "./types"
 import { useT, type MessageKey } from "@/lib/i18n"
+import { PLAN_NAMES, PLAN_UPDATED_EVENT, readAccountPlan, type PlanId } from "@/lib/plans"
 import {
   LayoutDashboard,
   SquareKanban,
@@ -136,6 +139,21 @@ export function Sidebar({
   isAdmin = false,
 }: SidebarProps) {
   const t = useT()
+
+  /* The plan in force for this account (F-TIERTAG). Read after mount
+     (it lives in localStorage) and again whenever it changes: here, via
+     PLAN_UPDATED_EVENT, or in another tab, via "storage". */
+  const [tier, setTier] = useState<PlanId | null>(null)
+  useEffect(() => {
+    const sync = () => setTier(readAccountPlan().effective)
+    sync()
+    window.addEventListener(PLAN_UPDATED_EVENT, sync)
+    window.addEventListener("storage", sync)
+    return () => {
+      window.removeEventListener(PLAN_UPDATED_EVENT, sync)
+      window.removeEventListener("storage", sync)
+    }
+  }, [])
 
   const visibleSections: typeof sections = isAdmin
     ? sections.map((section) =>
@@ -359,8 +377,18 @@ export function Sidebar({
             <div className="shrink-0 border-t border-white/10 px-3 py-3">
               {!collapsed && (name || username || email) && (
                 <div className="mb-1 px-3" title={email} data-testid="signed-in-user">
-                  <div className="truncate text-xs font-semibold text-sidebar-foreground/80">
-                    {name || (username ? `@${username}` : email)}
+                  <div className="flex items-center gap-1.5">
+                    <span className="min-w-0 truncate text-xs font-semibold text-sidebar-foreground/80">
+                      {name || (username ? `@${username}` : email)}
+                    </span>
+                    {tier && (
+                      <span
+                        data-testid="plan-tag"
+                        className="shrink-0 rounded-full bg-accent/10 px-1.5 py-px text-[10px] font-semibold leading-4 text-accent"
+                      >
+                        {PLAN_NAMES[tier]}
+                      </span>
+                    )}
                   </div>
                   {name && (username || email) && (
                     <div className="truncate text-[11px] text-sidebar-foreground/45">
