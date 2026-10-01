@@ -76,7 +76,9 @@ const api = p => p.route(/onrender\.com\//, r => r.fulfill({ status: 200, conten
     await p.addInitScript(() => { if (!sessionStorage.x) { sessionStorage.x = 1; localStorage.clear(); Object.entries({ sentria_language: 'en', sentria_onboarded: 'true', sentria_sector: 'health', sentria_sectors: '["health"]', sentria_business_type: 'pharmacie' }).forEach(([k, v]) => localStorage.setItem(k, v)); } });
     await signedIn(p, 'u-ama', 'ama@pharma.bj', { plan: 'decouverte', meta, ...opts });
     await p.goto(APP); await p.waitForTimeout(1800);
-    const who = await p.locator('[data-testid=signed-in-user]').innerText().catch(() => '');
+    // The plan tag (F-TIERTAG, tiertag.js) shares the block: leave its line out.
+    const tag = (await p.locator('[data-testid=plan-tag]').innerText().catch(() => '')).trim();
+    const who = (await p.locator('[data-testid=signed-in-user]').innerText().catch(() => '')).split('\n').filter(l => l.trim() !== tag).join('\n');
     return { p, who };
   };
   { const { p, who } = await shown({ username: 'ama_pharma' }, { full_name: 'Ama Mensah' });
