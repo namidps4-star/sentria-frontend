@@ -347,6 +347,19 @@
     --tag-hi: rgb(255 255 255 / 0.06);
   }
 }
+/* A surface that stays bright in dark mode (the pricing page's lime and
+   green cards) keeps the light tags too. Set on the surface, it re-declares
+   the light values for everything inside, whatever the theme (explicit or
+   "system"): no `dark:` override needed. Keep in step with :root above. */
+.tags-light {
+  --tag-danger-bg: #ffd6da; --tag-danger-bd: #ffb3bc; --tag-danger-fg: #b3202e;
+  --tag-warning-bg: #ffe6a8; --tag-warning-bd: #f5cf6a; --tag-warning-fg: #7a4a00;
+  --tag-success-bg: #c9f2dc; --tag-success-bd: #92dcb6; --tag-success-fg: #0f6139;
+  --tag-info-bg: #dfe3ff; --tag-info-bd: #b7bdfa; --tag-info-fg: #2b36a8;
+  --tag-neutral-bg: #eceef2; --tag-neutral-bd: #cdd1d9; --tag-neutral-fg: #3c4350;
+  --tag-brand-bg: #e3f7a3; --tag-brand-bd: #c3e656; --tag-brand-fg: #3d5700;
+  --tag-hi: rgb(255 255 255 / 0.6);
+}
 
 /* Sign-in backdrop: warm cream with a soft olive glow (no bright lime). */
 :root { --auth-bg: #f3efe4; --auth-glow: rgb(110 124 52 / 0.2); }

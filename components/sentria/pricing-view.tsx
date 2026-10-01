@@ -47,7 +47,7 @@ const LOOK: Record<PlanId, {
     card: "bg-card text-card-foreground border border-border",
     muted: "text-muted-foreground",
     rule: "border-border",
-    check: "text-[#1f5c2e] dark:text-lime-300",
+    check: "text-[var(--tag-success-fg)]",
     off: "text-muted-foreground/45",
     button: "bg-[#d9f36e] text-[#10261a] hover:bg-[#cdea55]",
   },
@@ -55,12 +55,12 @@ const LOOK: Record<PlanId, {
     card: "bg-card text-card-foreground border border-border",
     muted: "text-muted-foreground",
     rule: "border-border",
-    check: "text-[#1f5c2e] dark:text-lime-300",
+    check: "text-[var(--tag-success-fg)]",
     off: "text-muted-foreground/45",
     button: "bg-[#d9f36e] text-[#10261a] hover:bg-[#cdea55]",
   },
   business: {
-    card: "bg-[#d4f542] text-[#10261a] shadow-[0_24px_60px_-20px_rgba(120,160,20,0.55)]",
+    card: "tags-light bg-[#d4f542] text-[#10261a] shadow-[0_24px_60px_-20px_rgba(120,160,20,0.55)]",
     muted: "text-[#10261a]/70",
     rule: "border-[#10261a]/15",
     check: "text-[#10261a]",
@@ -70,7 +70,7 @@ const LOOK: Record<PlanId, {
     badgeClass: "border-[#10261a]/60 text-[#10261a]",
   },
   entreprise: {
-    card: "bg-[#0f2e1f] text-white shadow-[0_24px_60px_-20px_rgba(15,46,31,0.7)]",
+    card: "tags-light bg-[#0f2e1f] text-white shadow-[0_24px_60px_-20px_rgba(15,46,31,0.7)]",
     muted: "text-[#d4f542]/85",
     rule: "border-white/15",
     check: "text-[#d4f542]",
@@ -222,13 +222,7 @@ export function PricingView() {
                     </span>
                   )}
                   {current && (
-                    <StatusTag
-                      tone="success"
-                      size="xs"
-                      // On the lime and green cards the tag keeps its light
-                      // colours in dark mode too: the card stays bright.
-                      className={plan === "business" || plan === "entreprise" ? "dark:border-green-500/60 dark:bg-green-100 dark:text-green-700" : undefined}
-                    >
+                    <StatusTag tone="success" size="xs">
                       {trialLeft > 0 && plan === "business" ? tx("Votre essai", "Your trial") : tx("Votre offre", "Your plan")}
                     </StatusTag>
                   )}
@@ -333,7 +327,7 @@ export function PricingView() {
             <ul className="mt-5 flex flex-col gap-3 text-sm">
               {ADD_ONS.map((addOn) => (
                 <li key={addOn.en} className="flex gap-2.5">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#1f5c2e] dark:text-lime-300" strokeWidth={2.5} aria-hidden="true" />
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--tag-success-fg)]" strokeWidth={2.5} aria-hidden="true" />
                   {resolve(addOn, tx)}
                 </li>
               ))}

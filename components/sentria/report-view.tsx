@@ -264,7 +264,7 @@ function DeltaBadge({
       className={cn(
         "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
         isGood
-          ? "bg-emerald-500/10 text-emerald-600"
+          ? "bg-emerald-500/10 text-[var(--tag-success-fg)]"
           : "bg-destructive/10 text-destructive"
       )}
     >
@@ -606,7 +606,7 @@ function AlertsTable({ alerts }: { alerts: AlertRow[] }) {
                         "text-xs font-medium",
                         alert.status === "open"
                           ? "text-warning"
-                          : "text-emerald-600"
+                          : "text-[var(--tag-success-fg)]"
                       )}
                     >
                       {alert.status === "open"
