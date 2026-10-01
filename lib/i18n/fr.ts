@@ -51,6 +51,7 @@ export const fr = {
   "sidebar.collapse": "Réduire la barre latérale",
   "sidebar.expand": "Déployer la barre latérale",
   "sidebar.signOut": "Se déconnecter",
+  "sidebar.signOutConfirm": "Fermer votre session ?",
 
   /* ---------------------------------------------------------------- */
   /*  Navigation                                                       */

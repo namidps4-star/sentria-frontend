@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 import type { ViewKey } from "./types"
 import { useT, type MessageKey } from "@/lib/i18n"
@@ -154,6 +154,24 @@ export function Sidebar({
       window.removeEventListener("storage", sync)
     }
   }, [])
+
+  /* Sign-out asks first (F-SIGNOUT): a misclick must not end the session.
+     Only "confirm" calls onSignOut; cancel, Escape and a click outside the
+     card leave the session untouched and give the focus back. */
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false)
+  const signOutButton = useRef<HTMLButtonElement>(null)
+  const cancelSignOut = useCallback(() => {
+    setConfirmingSignOut(false)
+    signOutButton.current?.focus()
+  }, [])
+  useEffect(() => {
+    if (!confirmingSignOut) return
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") cancelSignOut()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [confirmingSignOut, cancelSignOut])
 
   const visibleSections: typeof sections = isAdmin
     ? sections.map((section) =>
@@ -399,8 +417,9 @@ export function Sidebar({
               )}
 
               <button
+                ref={signOutButton}
                 type="button"
-                onClick={onSignOut}
+                onClick={() => setConfirmingSignOut(true)}
                 aria-label={collapsed ? t("sidebar.signOut") : undefined}
                 title={collapsed ? t("sidebar.signOut") : undefined}
                 className={[
@@ -432,6 +451,48 @@ export function Sidebar({
           )}
         </div>
       </aside>
+
+      {/* Beside the <aside>, not inside it: its transform would make a
+          fixed child position against the sidebar instead of the screen. */}
+      {confirmingSignOut && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) cancelSignOut()
+          }}
+        >
+          <div
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="sign-out-title"
+            className="w-full max-w-sm rounded-3xl border border-border bg-card p-6 shadow-2xl"
+          >
+            <h3 id="sign-out-title" className="font-heading text-lg font-bold text-foreground">
+              {t("sidebar.signOutConfirm")}
+            </h3>
+            <div className="mt-5 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                autoFocus
+                onClick={cancelSignOut}
+                className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {t("action.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmingSignOut(false)
+                  onSignOut?.()
+                }}
+                className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-[#141414] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {t("sidebar.signOut")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

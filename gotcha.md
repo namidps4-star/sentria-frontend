@@ -54,6 +54,11 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Reality:** A `pointer-events-none` / hover-only button can't be clicked by Playwright or on a phone.
 **Rule:** Keep the board's ⋯ detail button always visible.
 
+## A dialog owned by the sidebar must sit beside the `<aside>`, not in it
+**Problem:** A `fixed inset-0` overlay rendered inside `sidebar.tsx`'s `<aside>` looks right in the code.
+**Reality:** The `<aside>` has a transform (`translate-x-0`, `lg:translate-x-0`), which makes it the containing block of its `fixed` children: the overlay would cover the sidebar only, not the screen.
+**Rule:** Render sidebar dialogs as siblings of the `<aside>` (in the component's fragment), with `z-[60]` to clear its `z-50`. The sign-out confirm does this.
+
 ## Running the browser tests
 **Reality:** Build from a clean copy (`pnpm install --frozen-lockfile` + `next build` with `NEXT_PUBLIC_SUPABASE_URL=https://sentria-test.supabase.co NEXT_PUBLIC_SUPABASE_ANON_KEY=test-anon`), `next start -p 3201`, then `node tests/e2e/<suite>.js`. `tests/e2e/auth-mock.js` fakes Supabase. `ss` isn't installed and `pkill -f "next start"` kills your own shell: free the port with `fuser -k 3201/tcp`, and always do it before a rebuild or you test a stale server. On a phone-width viewport open the menu before clicking sidebar items. `run-all.js` takes 10+ minutes.
 

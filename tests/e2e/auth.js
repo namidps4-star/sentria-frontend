@@ -73,7 +73,8 @@ const signIn = async (p, email, pw) => { await p.fill('#auth-email', email); awa
 
     console.log('== 6 sign out');
     await p.evaluate(() => localStorage.setItem('sentria_monitoring', '["late-change"]'));
-    await p.getByRole('button', { name: /^Sign out$/ }).click(); await p.waitForTimeout(1500);
+    await p.getByRole('button', { name: /^Sign out$/ }).click();
+    await p.getByRole('alertdialog').getByRole('button', { name: /^Sign out$/ }).click(); await p.waitForTimeout(1500); // F-SIGNOUT: confirm first
     const after = await ls(p);
     pass(await p.locator('#auth-email').count() === 1, 'back to sign-in');
     pass(!Object.keys(after).some(k => k.startsWith('sentria_') && !['sentria_language', 'sentria_theme'].includes(k)), 'account values wiped: ' + Object.keys(after).filter(k => k.startsWith('sentria_')).join(','));
@@ -152,7 +153,8 @@ const signIn = async (p, email, pw) => { await p.fill('#auth-email', email); awa
     await signIn(p, 'ama@pharma.bj', 'goodpass1'); await p.waitForTimeout(2000);
     const p2 = await ctx.newPage(); await api(p2); await mockSupabase(p2, newDb()); await p2.goto(APP); await p2.waitForTimeout(2000);
     pass(await p2.locator('aside nav').count() === 1, 'second tab signed in');
-    await p2.getByRole('button', { name: /^Sign out$/ }).click(); await p2.waitForTimeout(1500);
+    await p2.getByRole('button', { name: /^Sign out$/ }).click();
+    await p2.getByRole('alertdialog').getByRole('button', { name: /^Sign out$/ }).click(); await p2.waitForTimeout(1500); // F-SIGNOUT: confirm first
     await p.waitForTimeout(1500);
     pass(await p.locator('#auth-email').count() === 1, 'first tab back to sign-in');
     await ctx.close(); }
