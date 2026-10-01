@@ -24,3 +24,8 @@ __pycache__/
 
 # Handover notes, local only, never committed
 HANDOVER.md
+
+# Third-party skills (transitions.dev): installed locally, licence forbids redistribution
+.claude/skills/transitions-dev/
+.claude/skills/transitions-polish/
+skills-lock.json
