@@ -15,9 +15,9 @@ const data = Array.from({ length: 14 }, (_, k) => ({ id: k, equipment: `Med ${k}
   await icon.click(); await p.waitForTimeout(150);
   pass(await p.locator('#import-panel').isVisible() && await icon.getAttribute('aria-expanded') === 'true', 'click: import panel opens');
   await p.screenshot({ path: 'D-import-open.png' });
-  await p.keyboard.press('Escape'); await p.waitForTimeout(100);
+  await p.keyboard.press('Escape'); await p.waitForTimeout(300); // the panel plays a 150 ms exit (transitions.dev dropdown) before it is hidden
   pass(await p.locator('#import-panel').isHidden(), 'Escape closes it');
-  await icon.click(); await p.mouse.click(700, 600); await p.waitForTimeout(100);
+  await icon.click(); await p.mouse.click(700, 600); await p.waitForTimeout(300);
   pass(await p.locator('#import-panel').isHidden(), 'click outside closes it');
   const tabs = p.getByRole('tablist', { name: 'Your departments' });
   const bottom0 = await tabs.evaluate(e => Math.round(e.getBoundingClientRect().bottom));
