@@ -10,6 +10,7 @@ import { PLAN_NAMES, PLAN_ORDER, trialDaysLeft, type PlanId } from "@/lib/plans"
 import { sectorLabel } from "@/lib/priorities"
 import { cn } from "@/lib/utils"
 
+import { AdminThresholds } from "./admin-thresholds"
 import { StatusTag } from "./status-tag"
 
 type AdminAccount = {
@@ -312,6 +313,8 @@ export function AdminView() {
           </div>
         )}
       </div>
+
+      <AdminThresholds />
 
       <p className="text-xs text-muted-foreground">
         {tx(
