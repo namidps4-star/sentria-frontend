@@ -61,18 +61,19 @@ const GREEN = 'rgb(15, 46, 31)'; // --brand-deep
     await ctx.close();
   }
 
-  console.log('== deep green in dark mode: the sidebar');
-  for (const [label, theme, scheme, green] of [
-    ['light', 'light', 'light', false],
-    ['explicit dark', 'dark', 'dark', true],
-    ['system, OS dark', 'system', 'dark', true],
-    ['system, OS light', 'system', 'light', false],
+  console.log('== the sidebar stays black (it was green once and was reverted: it vanished into the dark page)');
+  for (const [label, theme, scheme] of [
+    ['light', 'light', 'light'],
+    ['explicit dark', 'dark', 'dark'],
+    ['system, OS dark', 'system', 'dark'],
+    ['system, OS light', 'system', 'light'],
   ]) {
     const { p, ctx } = await open(theme, scheme);
-    const r = await p.evaluate(() => { const root = getComputedStyle(document.documentElement); return { bg: getComputedStyle(document.querySelector('aside')).backgroundColor, sidebar: root.getPropertyValue('--sidebar').trim(), deep: root.getPropertyValue('--brand-deep').trim() }; });
-    pass((r.bg === GREEN) === green, `${label}: the sidebar is ${green ? 'the deep green' : 'not green (black)'} (got ${r.bg})`);
-    pass(r.deep === '#0f2e1f', `${label}: --brand-deep is the palette colour`);
-    pass(r.sidebar !== '#0f2e1f' && parseFloat(r.sidebar.replace(/^\w+\(/, '')) < 10, `${label}: --sidebar (the dark cards inside pages) is still near-black, not green (${r.sidebar})`);
+    const r = await p.evaluate(() => { const root = getComputedStyle(document.documentElement); const a = document.querySelector('aside'); const b = a.getBoundingClientRect(); return { bg: getComputedStyle(a).backgroundColor, deep: root.getPropertyValue('--brand-deep').trim(), shell: root.getPropertyValue('--sidebar-shell').trim(), w: Math.round(b.width), h: Math.round(b.height) }; });
+    pass(r.bg !== GREEN, `${label}: the sidebar is not the deep green (got ${r.bg})`);
+    pass(r.shell === '', `${label}: no --sidebar-shell token is left`);
+    pass(r.w > 200 && r.h > 400, `${label}: the sidebar is there (${r.w}x${r.h})`);
+    pass(r.deep === '#0f2e1f', `${label}: --brand-deep is still the palette colour`);
     if (theme === 'dark') await p.screenshot({ path: 'brand-sidebar-dark.png' });
     await ctx.close();
   }

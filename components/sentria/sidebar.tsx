@@ -123,7 +123,7 @@ const sections: {
 ]
 
 const SIDEBAR_FOCUS =
-  " focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar-shell"
+  " focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar"
 
 export function Sidebar({
   active,
@@ -205,7 +205,7 @@ export function Sidebar({
           "lg:left-3 lg:top-3 lg:bottom-3",
           collapsed ? "w-[68px]" : "w-[250px]",
           "rounded-[28px]",
-          "bg-sidebar-shell",
+          "bg-sidebar",
           "border border-sidebar-border",
           "shadow-lg",
           "transition-all duration-300",
@@ -300,7 +300,7 @@ export function Sidebar({
                         aria-current={isActive ? "page" : undefined}
                         className={[
                           "group relative flex h-11 w-full items-center rounded-xl transition-all duration-200 [@media(max-height:820px)]:h-9",
-                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar-shell",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar",
                           collapsed
                             ? "justify-center px-0"
                             : "gap-3 px-3 text-left",
@@ -339,7 +339,7 @@ export function Sidebar({
                               "ml-3 -translate-y-1/2 translate-x-1",
                               "whitespace-nowrap rounded-lg",
                               "border border-sidebar-border",
-                              "bg-sidebar-shell px-3 py-2",
+                              "bg-sidebar px-3 py-2",
                               "text-xs font-medium text-sidebar-foreground",
                               "shadow-lg",
                               "opacity-0",

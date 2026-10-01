@@ -31,7 +31,6 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
-  --color-sidebar-shell: var(--sidebar-shell);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -107,7 +106,7 @@
   --brand-foreground: oklch(0.22 0.04 124);
   /* Deep green: the palette's second brand colour, the same in every
      theme. Used on the pricing page's most complete plan and, in dark
-     mode, for the sidebar and the sign-in sector panel. */
+     mode, for the sign-in sector panel. */
   --brand-deep: #0f2e1f;
 
   --ring: oklch(0.88 0.205 124);
@@ -118,9 +117,6 @@
   --chart-5: oklch(0.82 0.12 124);
   --radius: 1rem;
   --sidebar: oklch(0.19 0.004 110);
-  /* The sidebar's own surface. --sidebar also paints dark cards inside
-     the pages, which stay black; only the sidebar turns green in dark. */
-  --sidebar-shell: oklch(0.19 0.004 110);
   --sidebar-foreground: oklch(0.98 0 0);
   --sidebar-primary: oklch(0.98 0 0);
   --sidebar-primary-foreground: oklch(0.19 0.004 110);
@@ -177,7 +173,6 @@
   --chart-4: oklch(0.52 0 0);
   --chart-5: oklch(0.7 0.11 124);
   --sidebar: oklch(0.19 0.004 110);
-  --sidebar-shell: var(--brand-deep);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.85 0.195 124);
   --sidebar-primary-foreground: oklch(0.2 0.04 124);
@@ -233,7 +228,6 @@
     --chart-4: oklch(0.52 0 0);
     --chart-5: oklch(0.7 0.11 124);
     --sidebar: oklch(0.19 0.004 110);
-    --sidebar-shell: var(--brand-deep);
     --sidebar-foreground: oklch(0.985 0 0);
     --sidebar-primary: oklch(0.85 0.195 124);
     --sidebar-primary-foreground: oklch(0.2 0.04 124);
@@ -296,7 +290,7 @@
 
   /* The sidebar keeps its own ring token because it stays dark in both
    * themes, so the default --ring would sit too close to its surface. */
-  :where([data-slot="sidebar"], .bg-sidebar, .bg-sidebar-shell) :where(a[href], button):focus-visible {
+  :where([data-slot="sidebar"], .bg-sidebar) :where(a[href], button):focus-visible {
     outline-color: var(--sidebar-ring);
     outline-offset: 2px;
   }

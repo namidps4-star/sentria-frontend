@@ -54,10 +54,10 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Reality:** A `pointer-events-none` / hover-only button can't be clicked by Playwright or on a phone.
 **Rule:** Keep the board's ⋯ detail button always visible.
 
-## `--sidebar` is not just the sidebar
-**Problem:** The sidebar's colour looks like `--sidebar` alone.
-**Reality:** `bg-sidebar` also paints dark hero cards in `dashboard-view.tsx` and `logistics-ui.tsx`. The sidebar's own surface is `--sidebar-shell` (black in light mode, `--brand-deep` green in dark, explicit or system). `--brand-deep` (#0f2e1f) is a palette colour, the same in every theme; the sign-in sector panel uses `--panel-deep` (black in light, deep green in dark).
-**Rule:** To recolour the sidebar, change `--sidebar-shell`, never `--sidebar`. Use `bg-brand-deep` / the tokens, never the hex.
+## `--sidebar` is not just the sidebar, and the sidebar stays black
+**Problem:** The sidebar's colour looks like `--sidebar` alone, and a dark-green sidebar in dark mode looks like a palette upgrade.
+**Reality:** `bg-sidebar` also paints dark hero cards in `dashboard-view.tsx` and `logistics-ui.tsx`. A deep-green sidebar (`--brand-deep`) was tried in dark mode and reverted at the founder's request: it was not visible against the dark page. `--brand-deep` (#0f2e1f) stays a palette colour (pricing's Entreprise card); the sign-in sector panel uses `--panel-deep` (black in light, deep green in dark).
+**Rule:** Leave the sidebar black. To recolour only the sidebar, give it its own token; never change `--sidebar`. Use the tokens, never the hex.
 
 ## A dialog owned by the sidebar must sit beside the `<aside>`, not in it
 **Problem:** A `fixed inset-0` overlay rendered inside `sidebar.tsx`'s `<aside>` looks right in the code.
