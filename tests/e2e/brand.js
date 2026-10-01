@@ -13,7 +13,7 @@ const pass = (ok, l) => { fails += !ok; console.log(`   ${ok ? 'PASS' : 'FAIL'} 
 
 console.log('== no `dark:` classes in the views (source)');
 const SRC = path.join(__dirname, '..', '..', 'components', 'sentria');
-for (const f of ['sites-view', 'ask-view', 'settings-view', 'pricing-view', 'profile-view', 'report-view', 'sidebar', 'admin-view', 'admin-thresholds', 'sector-showcase', 'auth-screen']) {
+for (const f of ['sites-view', 'ask-view', 'settings-view', 'pricing-view', 'profile-view', 'report-view', 'sidebar', 'admin-view', 'admin-thresholds', 'sector-showcase', 'auth-screen', 'dashboard-view']) {
   const code = fs.readFileSync(path.join(SRC, f + '.tsx'), 'utf8');
   const hits = code.match(/\bdark:[a-z[!-][^\s"'`]*/g) || [];
   pass(hits.length === 0, `${f}.tsx: no dark: utility ${hits.slice(0, 3).join(' ')}`);

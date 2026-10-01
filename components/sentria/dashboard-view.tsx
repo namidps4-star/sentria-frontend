@@ -3985,7 +3985,7 @@ export function DashboardView({
 
                 return (
                   <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--tag-success-fg)]">
                       {tx("Résultat", "Outcome")}
                     </p>
 
