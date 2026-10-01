@@ -64,3 +64,8 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 ## Two branches, Vercel deploys `main`
 **Reality:** Work goes to `new_feat`, which is not merged into `main`.
 **Rule:** Never push to `main`; no PR unless asked.
+
+## Secrets are scanned at commit time
+**Problem:** The frontend only holds public Supabase values, so a leaked key looks unlikely.
+**Reality:** The backend repo once leaked a real `.env`. `scripts/check_secrets.py` (same file as the backend's) blocks `.env`/key files and secret-shaped values in a pre-commit hook and in GitHub Actions. Only `NEXT_PUBLIC_*` values belong in client code.
+**Rule:** Enable the hook per clone (`git config core.hooksPath .githooks`). Mark deliberately fake lines `secret-scan: allow`; never weaken the patterns.

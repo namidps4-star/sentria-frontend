@@ -11,6 +11,7 @@ Next.js 16 (App Router, Turbopack), React 19, Tailwind v4, Supabase Auth (`@supa
 - Light, dark and 390 px must all look right.
 - Theme tokens, never `dark:`.
 - The owner's email address never goes into code.
+- Secrets never go in the repo: `scripts/check_secrets.py` runs as a pre-commit hook (turn it on once per clone: `git config core.hooksPath .githooks`) and in GitHub Actions. A deliberately fake line can carry `secret-scan: allow`.
 
 ## Testing
 - `npx tsc --noEmit -p .` and `npx eslint <files>` (the `set-state-in-effect` warnings are expected).
