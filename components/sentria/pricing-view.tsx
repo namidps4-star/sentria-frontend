@@ -70,7 +70,7 @@ const LOOK: Record<PlanId, {
     badgeClass: "border-[#10261a]/60 text-[#10261a]",
   },
   entreprise: {
-    card: "tags-light bg-[#0f2e1f] text-white shadow-[0_24px_60px_-20px_rgba(15,46,31,0.7)]",
+    card: "tags-light bg-brand-deep text-white shadow-[0_24px_60px_-20px_rgba(15,46,31,0.7)]",
     muted: "text-[#d4f542]/85",
     rule: "border-white/15",
     check: "text-[#d4f542]",
@@ -179,7 +179,7 @@ export function PricingView() {
                   aria-pressed={annual === yearly}
                   className={cn(
                     "rounded-full px-4 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    annual === yearly ? "bg-[#0f2e1f] text-white" : "text-muted-foreground hover:text-foreground"
+                    annual === yearly ? "bg-brand-deep text-white" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   {yearly ? tx("Annuel", "Annual") : tx("Mensuel", "Monthly")}
@@ -287,7 +287,7 @@ export function PricingView() {
 
         {/* SentrIA Intelligence + add-ons */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
-          <section className="rounded-[28px] bg-[#0f2e1f] p-7 text-white">
+          <section className="rounded-[28px] bg-brand-deep p-7 text-white">
             <h3 className="flex flex-wrap items-center gap-2 font-heading text-xl font-bold">
               <BrainCircuit className="h-5 w-5 text-[#d4f542]" aria-hidden="true" />
               SentrIA Intelligence
