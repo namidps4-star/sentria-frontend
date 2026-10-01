@@ -18,7 +18,6 @@ import {
   TrendingUp,
   TrendingDown,
   ArrowUpRight,
-  MoreHorizontal,
   Zap,
   Upload,
   Loader2,
@@ -29,7 +28,19 @@ import {
   Gauge,
   Check,
 } from "@/lib/icons"
-import { AreaChart, BarChart, Sparkline } from "./charts"
+import { DonutChart, LineChart, Sparkline } from "./charts"
+import { ChartMenu } from "./chart-menu"
+import {
+  OTHER_KEY,
+  availableSeries,
+  bucketAlerts,
+  foldSlices,
+  seriesColor,
+  sliceColor,
+  valueMetric,
+  type ChartMetric,
+  type ChartRange,
+} from "@/lib/chart-series"
 import { cn } from "@/lib/utils"
 import { usePresence } from "@/lib/use-presence"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
@@ -74,7 +85,7 @@ import {
   type SingleOpsType,
 } from "@/lib/activities"
 import { useCompanyIdentity } from "@/lib/company"
-import { accountCurrencyParam } from "@/lib/locale"
+import { accountCurrencyParam, formatAmount } from "@/lib/locale"
 import {
   DEPARTMENTS_KEY,
   checkPlan,
@@ -349,7 +360,7 @@ const KEY_FAMILY_LABELS: Record<string, Localized> = {
 function alertBreakdown(
   alerts: Alert[],
   tx: Tx
-): { labels: string[]; values: number[] } {
+): { labels: string[]; values: number[]; kind: "family" | "severity" } {
   const counts = new Map<string, number>()
 
   for (const a of alerts) {
@@ -365,25 +376,27 @@ function alertBreakdown(
     const warning = alerts.filter((a) => a.severity === "WARNING").length
 
     if (critical === 0 && warning === 0) {
-      return { labels: [], values: [] }
+      return { labels: [], values: [], kind: "severity" }
     }
 
     return {
       labels: [tx("Critiques", "Critical"), tx("Warnings", "Warnings")],
       values: [critical, warning],
+      kind: "severity",
     }
   }
 
-  const top = [...counts.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6)
+  // Every family: the donut folds the smallest into "Other" itself, so
+  // nothing is dropped without saying so.
+  const all = [...counts.entries()].sort((a, b) => b[1] - a[1])
 
   return {
-    labels: top.map(([family]) => {
+    labels: all.map(([family]) => {
       const label = KEY_FAMILY_LABELS[family]
       return label ? tx(label.fr, label.en) : family.replace(/_/g, " ")
     }),
-    values: top.map(([, count]) => count),
+    values: all.map(([, count]) => count),
+    kind: "family",
   }
 }
 
@@ -1027,6 +1040,13 @@ export function DashboardView({
   const [uploadSector, setUploadSector] = useState("industry")
 
   const [filterSector, setFilterSector] = useState("all")
+
+  // The trend chart's own choices (its "…" menu). The sectors picked belong
+  // to the pill they were picked on: another pill shows its own default
+  // overlay, and coming back to this one gives the pick back.
+  const [chartPick, setChartPick] = useState<{ pill: string; keys: string[] } | null>(null)
+  const [chartMetric, setChartMetric] = useState<ChartMetric>("count")
+  const [chartRange, setChartRange] = useState<ChartRange>(7)
 
   const [uploadActivity, setUploadActivity] = useState<string | null>(null)
 
@@ -1722,12 +1742,9 @@ export function DashboardView({
     )
   }
 
-  const filteredAlerts = alerts
-    .filter(
-      (a) =>
-        filterSector === "all" ||
-        a.sector === filterSector
-    )
+  // Every sector's alerts that pass the activity and search filters: what
+  // the trend chart draws from, so it can overlay sectors.
+  const scopedAlerts = alerts
     .filter(matchesActivity)
     .filter((a) => {
       if (!search.trim()) return true
@@ -1741,6 +1758,10 @@ export function DashboardView({
         a.severity.toLowerCase().includes(q)
       )
     })
+
+  const filteredAlerts = scopedAlerts.filter(
+    (a) => filterSector === "all" || a.sector === filterSector
+  )
 
   const logisticsViewAlerts = alerts
     .filter((a) => a.sector === "logistics")
@@ -1964,7 +1985,43 @@ export function DashboardView({
   const hasNoDataForSector =
     filteredAlerts.length === 0 && !alertsError
 
-  const chartData = dailySeries(filteredAlerts, 7)
+  // The trend chart: one line per sector, same colour everywhere.
+  const chartAvailable = availableSeries(scopedAlerts)
+  const pillKey = filterSector === "all" ? null : filterSector
+  const chartDefault = pillKey ? [pillKey] : chartAvailable
+  const chartKeys = (
+    chartPick && chartPick.pill === filterSector ? chartPick.keys : chartDefault
+  ).filter((key) => chartAvailable.includes(key) || key === pillKey)
+  const chartValue = valueMetric(scopedAlerts)
+  const chartMetricNow: ChartMetric =
+    chartMetric === "value" && chartValue.available ? "value" : "count"
+  const chartSeriesName = (key: string) =>
+    key === OTHER_KEY
+      ? tx("Autres", "Other")
+      : sectorName(key) ?? key
+  const chartBucketed = bucketAlerts(scopedAlerts, {
+    keys: chartKeys,
+    days: chartRange,
+    metric: chartMetricNow,
+  })
+  const chartIsDefault =
+    chartMetric === "count" &&
+    chartRange === 7 &&
+    (chartPick === null || chartPick.pill !== filterSector)
+
+  const slices = foldSlices(
+    breakdown.labels.map((label, i) => ({ label, value: breakdown.values[i] })),
+    tx("Autres", "Other")
+  ).map((slice) => ({
+    ...slice,
+    // Critical / warning are the status colours, and only those two ever use them.
+    color:
+      breakdown.kind === "severity"
+        ? slice.label === tx("Critiques", "Critical")
+          ? "var(--tag-danger-fg)"
+          : "var(--tag-warning-fg)"
+        : sliceColor(slice.key),
+  }))
 
   // The import: an upload icon in the top bar, next to the bell. Every
   // layout below renders it, so it never disappears with the view.
@@ -3056,7 +3113,7 @@ export function DashboardView({
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="rounded-3xl border border-border bg-card p-6 lg:col-span-2">
+        <div className="flex flex-col rounded-3xl border border-border bg-card p-6 lg:col-span-2">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-heading text-lg font-bold">
@@ -3064,47 +3121,71 @@ export function DashboardView({
               </h3>
 
               <p className="text-sm text-muted-foreground">
-                {tx("7 derniers jours", "Last 7 days")}
+                {tx(`${chartRange} derniers jours`, `Last ${chartRange} days`)}
+                {chartMetricNow === "value" && chartValue.available
+                  ? ` · ${tx("valeur à risque", "value at risk")}${chartValue.symbol ? ` (${chartValue.symbol})` : ""}`
+                  : ""}
               </p>
             </div>
 
-            <button
-              type="button"
-              className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
-              aria-label={tx("Options", "Options")}
-            >
-              <MoreHorizontal className="h-5 w-5" />
-            </button>
+            <ChartMenu
+              available={chartAvailable}
+              labelOf={chartSeriesName}
+              selected={chartKeys}
+              onSelect={(keys) => setChartPick({ pill: filterSector, keys })}
+              metric={chartMetricNow}
+              onMetric={setChartMetric}
+              valueState={chartValue}
+              range={chartRange}
+              onRange={setChartRange}
+              onReset={() => {
+                setChartPick(null)
+                setChartMetric("count")
+                setChartRange(7)
+              }}
+              isDefault={chartIsDefault}
+            />
           </div>
 
-          <AreaChart
-            data={chartData}
-            className="mt-6 h-52 w-full"
+          <LineChart
+            className="mt-6 flex-1"
+            days={chartBucketed.days}
+            locale={dateLocale}
+            series={chartBucketed.series.map((s) => ({
+              key: s.key,
+              label: chartSeriesName(s.key),
+              color: seriesColor(s.key),
+              values: s.values,
+              approx: s.approx,
+            }))}
+            formatValue={(value, approx) =>
+              chartMetricNow === "value" && chartValue.available
+                ? `${approx ? "≈ " : ""}${formatAmount(value, chartValue.symbol, tx)}`
+                : String(value)
+            }
+            summary={`${chartTitle}: ${tx(
+              `${chartRange} derniers jours`,
+              `last ${chartRange} days`
+            )}`}
+            emptyLabel={tx("Aucune alerte sur cette période.", "No alerts in this period.")}
           />
         </div>
 
         <div className="rounded-3xl border border-border bg-card p-6">
           <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-accent-foreground" />
+            <Activity className="h-5 w-5" />
 
             <h3 className="font-heading text-lg font-bold">
               {tx("Répartition", "Breakdown")}
             </h3>
           </div>
 
-          {breakdown.labels.length > 0 ? (
-            <>
-              <p className="text-sm text-muted-foreground">
-                {breakdown.labels.join(" · ")}
-              </p>
-
-              <BarChart
-                data={breakdown.values}
-                labels={breakdown.labels}
-                className="mt-6"
-                height={180}
-              />
-            </>
+          {slices.length > 0 ? (
+            <DonutChart
+              className="mt-5"
+              slices={slices}
+              centerLabel={tx("alertes", "alerts")}
+            />
           ) : (
             <p className="mt-6 text-sm text-muted-foreground">
               {tx(

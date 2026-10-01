@@ -77,6 +77,16 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Reality:** `app/transitions.css` holds four snippets of transitions.dev's free transitions (menu dropdown, modal, number pop-in, texts reveal), pasted verbatim with their reduced-motion blocks; its licence lets the app ship them but forbids redistributing the library. The `.is-open` / `.is-closing` / `.is-shown` classes are driven by `lib/use-presence.ts`, so a menu or dialog stays in the DOM for its close duration (150 ms) after it closes. The production CSS minifier rewrites `150ms` as `.15s`: read a CSS time with its unit (`toMs`), never a bare `parseFloat`, or the exit animation never plays. Timings are tuned to 250 ms through the variables the skill exposes (the Notion card's budget).
 **Rule:** New motion = another snippet in that file plus the hook; never commit the skill's folder or its CLI. A test that checks an element is gone after closing waits at least 250 ms (`tests/e2e/motion.js` shows how to measure it).
 
+## Chart colours are fixed per sector, and our own script validates them
+**Problem:** The Notion card says to run `validate_palette.js`, and a new chart colour looks like a free choice.
+**Reality:** That script is in neither repo. `scripts/validate-palette.mjs` is ours: it reads the three `/* palette:… */` blocks of `app/globals.css` and checks, per theme, contrast on the card, distance between colours, distance under colour blindness, and the red/amber band kept for status. A sector's colour is its place in `SERIES_ORDER` (`lib/chart-series.ts`), i.e. `--series-N`, the same on every chart and in the "…" menu. The donut is a different thing: a rank ramp (`--slice-N`, biggest first), never sector colours; only Critical / Warning slices take the status tokens.
+**Rule:** A new sector goes at the end of `SERIES_ORDER` with its token in all three blocks; never reorder. After touching a colour run `node scripts/validate-palette.mjs` (`tests/e2e/palette.js` does it in the suite). Don't loosen its thresholds to make a colour pass.
+
+## Alert params carry readings, not limits
+**Problem:** A gauge "toward the limit", or a stock bar with a min_stock line, looks like it only needs the alerts the dashboard already has.
+**Reality:** An alert's `params` hold what built its message: fuel `level`, temperature and pressure `value`, stock `stock`. The limit is not in them: pressure and temperature limits come from each uploaded row, fuel's 20 % is hard-coded in `pipeline/alerts.py`, and `min_stock` is only on `health.stock.critical_low`, not on the `health.stock.low` warning. The dashboard's trend and breakdown charts plot alerts and nothing else.
+**Rule:** Don't draw a gauge or a limit line from limits guessed in the frontend. The backend adds the limit to the alert's params first (existing alerts get it on the next upload).
+
 ## Third-party skills
 **Reality:** `.claude/skills/transitions-*` and `skills-lock.json` are installed, uncommitted, and licensed "no redistribution".
 **Rule:** Don't commit them without the owner's say-so.
