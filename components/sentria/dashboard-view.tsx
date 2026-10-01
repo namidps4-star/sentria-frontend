@@ -28,15 +28,17 @@ import {
   Gauge,
   Check,
 } from "@/lib/icons"
-import { DonutChart, LineChart, Sparkline } from "./charts"
+import { DonutChart, GaugeChart, LineChart, Sparkline, StockBars } from "./charts"
 import { ChartMenu } from "./chart-menu"
 import {
   OTHER_KEY,
   availableSeries,
   bucketAlerts,
   foldSlices,
+  gaugeReadings,
   seriesColor,
   sliceColor,
+  stockRows,
   valueMetric,
   type ChartMetric,
   type ChartRange,
@@ -2009,6 +2011,18 @@ export function DashboardView({
     chartRange === 7 &&
     (chartPick === null || chartPick.pill !== filterSector)
 
+  // The two charts that need a limit: a reading against the limit it crossed,
+  // and stock against its minimum. Both read what the backend put in each
+  // alert's params, so alerts saved before it did show neither.
+  const gauges = gaugeReadings(filteredAlerts)
+  const stocks = stockRows(filteredAlerts)
+  const shortDate = (date: string) =>
+    new Date(date).toLocaleDateString(dateLocale, { day: "numeric", month: "short" })
+  const familyName = (family: string) => {
+    const label = KEY_FAMILY_LABELS[family]
+    return label ? px(label) : family.replace(/_/g, " ")
+  }
+
   const slices = foldSlices(
     breakdown.labels.map((label, i) => ({ label, value: breakdown.values[i] })),
     tx("Autres", "Other")
@@ -3196,6 +3210,84 @@ export function DashboardView({
           )}
         </div>
       </div>
+
+      {(stocks.total > 0 || gauges.total > 0) && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {stocks.total > 0 && (
+            <div
+              className={cn(
+                "rounded-3xl border border-border bg-card p-6",
+                gauges.total > 0 ? "lg:col-span-2" : "lg:col-span-3"
+              )}
+              data-card="stock"
+            >
+              <h3 className="font-heading text-lg font-bold">
+                {tx("Stock face au minimum", "Stock against its minimum")}
+              </h3>
+
+              <p className="mb-4 text-sm text-muted-foreground">
+                {tx("Dernier stock ayant déclenché une alerte", "Last stock that raised an alert")}
+                {stocks.total > stocks.shown.length
+                  ? ` · ${tx(
+                      `les ${stocks.shown.length} plus bas sur ${stocks.total}`,
+                      `the ${stocks.shown.length} lowest of ${stocks.total}`
+                    )}`
+                  : ""}
+              </p>
+
+              <StockBars
+                locale={dateLocale}
+                rows={stocks.shown.map((row) => ({
+                  name: row.equipment,
+                  stock: row.stock,
+                  min: row.min,
+                  date: shortDate(row.date),
+                }))}
+              />
+            </div>
+          )}
+
+          {gauges.total > 0 && (
+            <div
+              className={cn(
+                "rounded-3xl border border-border bg-card p-6",
+                stocks.total > 0 ? "lg:col-span-1" : "lg:col-span-3"
+              )}
+              data-card="gauges"
+            >
+              <h3 className="font-heading text-lg font-bold">
+                {tx("Mesures face à leur limite", "Readings against their limit")}
+              </h3>
+
+              <p className="mb-4 text-sm text-muted-foreground">
+                {tx("Dernière mesure ayant déclenché une alerte", "Last reading that raised an alert")}
+                {gauges.total > gauges.shown.length
+                  ? ` · ${tx(
+                      `les ${gauges.shown.length} plus sévères sur ${gauges.total}`,
+                      `the ${gauges.shown.length} most severe of ${gauges.total}`
+                    )}`
+                  : ""}
+              </p>
+
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-x-3 gap-y-5">
+                {gauges.shown.map((g) => (
+                  <GaugeChart
+                    key={`${g.equipment}|${g.family}`}
+                    reading={g.reading}
+                    limit={g.limit}
+                    side={g.side}
+                    unit={g.unit}
+                    tone={g.severity === "CRITICAL" ? "danger" : "warning"}
+                    name={g.equipment}
+                    detail={`${familyName(g.family)} · ${shortDate(g.date)}`}
+                    locale={dateLocale}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
         </>
       )}
 

@@ -82,10 +82,10 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Reality:** That script is in neither repo. `scripts/validate-palette.mjs` is ours: it reads the three `/* palette:… */` blocks of `app/globals.css` and checks, per theme, contrast on the card, distance between colours, distance under colour blindness, and the red/amber band kept for status. A sector's colour is its place in `SERIES_ORDER` (`lib/chart-series.ts`), i.e. `--series-N`, the same on every chart and in the "…" menu. The donut is a different thing: a rank ramp (`--slice-N`, biggest first), never sector colours; only Critical / Warning slices take the status tokens.
 **Rule:** A new sector goes at the end of `SERIES_ORDER` with its token in all three blocks; never reorder. After touching a colour run `node scripts/validate-palette.mjs` (`tests/e2e/palette.js` does it in the suite). Don't loosen its thresholds to make a colour pass.
 
-## Alert params carry readings, not limits
-**Problem:** A gauge "toward the limit", or a stock bar with a min_stock line, looks like it only needs the alerts the dashboard already has.
-**Reality:** An alert's `params` hold what built its message: fuel `level`, temperature and pressure `value`, stock `stock`. The limit is not in them: pressure and temperature limits come from each uploaded row, fuel's 20 % is hard-coded in `pipeline/alerts.py`, and `min_stock` is only on `health.stock.critical_low`, not on the `health.stock.low` warning. The dashboard's trend and breakdown charts plot alerts and nothing else.
-**Rule:** Don't draw a gauge or a limit line from limits guessed in the frontend. The backend adds the limit to the alert's params first (existing alerts get it on the next upload).
+## The gauges and the stock chart read limits from an alert's params
+**Problem:** A gauge "toward the limit" or a stock bar against its minimum looks like it can use limits the frontend knows.
+**Reality:** It can't: pressure and temperature limits come from each uploaded row, fuel and oil from literals in the backend's `pipeline/alerts.py`. The backend puts them in the alert's params (`limit`, `limit_side` "max" / "min", `limit_unit`; `min_stock` next to `stock`), and `lib/chart-series.ts` (`gaugeReadings`, `stockRows`) reads them. Alerts saved before that have none, so on an account that has not uploaded since, both cards stay hidden and nothing is guessed. Each shows the last reading that raised an alert, not a live value.
+**Rule:** Never draw a limit the alert did not carry. A new gauge is a backend `limit_kwargs(...)` on its alert; this side needs no change.
 
 ## Third-party skills
 **Reality:** `.claude/skills/transitions-*` and `skills-lock.json` are installed, uncommitted, and licensed "no redistribution".

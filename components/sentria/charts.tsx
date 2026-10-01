@@ -6,7 +6,7 @@
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent } from "react"
 import { useTx } from "@/lib/i18n"
-import { niceScale, type Slice } from "@/lib/chart-series"
+import { gaugeScale, niceScale, smoothPath, type LimitSide, type Slice } from "@/lib/chart-series"
 import { cn } from "@/lib/utils"
 
 /** The size of an element, kept up to date. The charts draw in real pixels
@@ -403,22 +403,171 @@ export function DonutChart({
 }
 
 /* ------------------------------------------------------------------ */
+/*  Gauge: a reading against the limit it crossed                      */
+/* ------------------------------------------------------------------ */
+
+const GAUGE = { cx: 60, cy: 60, r: 46, stroke: 11 }
+
+function gaugePoint(fraction: number, radius = GAUGE.r) {
+  const angle = Math.PI * (1 - fraction)
+  return [GAUGE.cx + radius * Math.cos(angle), GAUGE.cy - radius * Math.sin(angle)] as const
+}
+
+export function GaugeChart({
+  reading,
+  limit,
+  side,
+  unit,
+  tone,
+  name,
+  detail,
+  locale,
+  className,
+}: {
+  reading: number
+  limit: number
+  side: LimitSide
+  unit: string
+  /** Critical or warning: the status colours, which only status uses. */
+  tone: "danger" | "warning"
+  /** The equipment. */
+  name: string
+  /** What is measured, and when. */
+  detail: string
+  locale: string
+  className?: string
+}) {
+  const tx = useTx()
+  const { max, fill, mark } = gaugeScale({ reading, limit, side, unit })
+  const color = tone === "danger" ? "var(--tag-danger-fg)" : "var(--tag-warning-fg)"
+
+  const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 })
+  const withUnit = (v: number) => (unit === "%" ? `${number.format(v)}%` : unit ? `${number.format(v)} ${unit}` : number.format(v))
+  const past = side === "max" ? reading > limit : reading < limit
+  const spoken = `${withUnit(reading)}, ${tx("limite", "limit")} ${withUnit(limit)}${
+    past ? `, ${side === "max" ? tx("au-dessus", "above") : tx("en dessous", "below")}` : ""
+  }`
+
+  const [x0, y0] = gaugePoint(0)
+  const [x1, y1] = gaugePoint(fill)
+  const [t0x, t0y] = gaugePoint(mark, GAUGE.r - GAUGE.stroke / 2 - 3)
+  const [t1x, t1y] = gaugePoint(mark, GAUGE.r + GAUGE.stroke / 2 + 3)
+
+  return (
+    <div className={cn("flex min-w-0 flex-col items-center text-center", className)} data-gauge="">
+      <div
+        role="meter"
+        aria-label={`${name}: ${detail}`}
+        aria-valuemin={0}
+        aria-valuemax={max}
+        aria-valuenow={reading}
+        aria-valuetext={spoken}
+        className="relative w-full max-w-[176px]"
+      >
+        <svg viewBox="0 0 120 70" className="block w-full" aria-hidden="true">
+          <path d={`M ${x0} ${y0} A ${GAUGE.r} ${GAUGE.r} 0 0 1 ${gaugePoint(1)[0]} ${gaugePoint(1)[1]}`} fill="none" stroke="var(--border)" strokeWidth={GAUGE.stroke} strokeLinecap="round" data-gauge-track="" />
+          {fill > 0.004 && (
+            <path d={`M ${x0} ${y0} A ${GAUGE.r} ${GAUGE.r} 0 0 1 ${x1} ${y1}`} fill="none" stroke={color} strokeWidth={GAUGE.stroke} strokeLinecap="round" data-gauge-fill="" />
+          )}
+          <line x1={t0x} y1={t0y} x2={t1x} y2={t1y} stroke="var(--foreground)" strokeWidth={2.5} strokeLinecap="round" data-gauge-limit="" />
+        </svg>
+        <p className="pointer-events-none absolute inset-x-0 bottom-0 font-heading text-lg font-bold leading-none tabular-nums">
+          {withUnit(reading)}
+        </p>
+      </div>
+
+      <p className="mt-1.5 w-full truncate text-sm font-semibold" title={name}>
+        {name}
+      </p>
+      <p className="w-full truncate text-xs text-muted-foreground">{detail}</p>
+      <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
+        {tx("limite", "limit")} <span className="font-semibold text-foreground">{withUnit(limit)}</span>
+      </p>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/*  Stock bars: each item against its own minimum                      */
+/* ------------------------------------------------------------------ */
+
+export type StockBar = {
+  name: string
+  stock: number
+  min: number
+  /** When the reading was taken, already formatted. */
+  date: string
+}
+
+/** Every bar is scaled to its own minimum, so one line (the minimum) sits at
+ *  the same place on all of them: a bar that stops short of it is below. The
+ *  track runs to twice the minimum. */
+export function StockBars({ rows, locale, className }: { rows: StockBar[]; locale: string; className?: string }) {
+  const tx = useTx()
+  const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 })
+
+  return (
+    <div className={className} data-chart="stock">
+      <p className="mb-2 flex items-center gap-2 text-xs text-muted-foreground">
+        <span className="h-3.5 w-0.5 shrink-0 rounded-full bg-foreground" aria-hidden="true" />
+        {tx("Minimum de chaque article", "Each item's minimum")}
+      </p>
+
+      <ul aria-label={tx("Stock face au minimum", "Stock against its minimum")} className="space-y-2.5">
+        {rows.map((row) => {
+          const below = row.stock < row.min
+          const width = Math.min(1, row.stock / (row.min * 2)) * 100
+          return (
+            <li key={row.name} data-stock-row="" data-below={below} className="rounded-lg">
+              <div className="flex items-baseline justify-between gap-3 text-sm">
+                <span className="min-w-0 flex-1 truncate font-medium" title={row.name}>
+                  {row.name}
+                </span>
+                <span className="shrink-0 tabular-nums">
+                  <span className="font-semibold">{number.format(row.stock)}</span>
+                  <span className="text-muted-foreground">
+                    {" / "}
+                    {number.format(row.min)}
+                  </span>
+                  <span className="sr-only">
+                    {" "}
+                    {below ? tx("sous le minimum", "below the minimum") : tx("au-dessus du minimum", "above the minimum")}
+                  </span>
+                </span>
+              </div>
+              <div className="relative mt-1 h-2.5 rounded-full bg-muted" aria-hidden="true">
+                <div
+                  className="h-full rounded-full"
+                  style={{ width: `${width}%`, background: below ? "var(--tag-danger-fg)" : "var(--tag-warning-fg)" }}
+                  data-stock-bar=""
+                />
+                <span className="absolute -bottom-1 -top-1 left-1/2 w-0.5 -translate-x-1/2 rounded-full bg-foreground" data-stock-min="" />
+              </div>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">{row.date}</p>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
 /*  Sparkline: the small trend inside a KPI tile                       */
 /* ------------------------------------------------------------------ */
 
 export function Sparkline({ data, className }: { data: number[]; className?: string }) {
   const w = 120
   const h = 36
+  const pad = 2 // room for the stroke at the top and bottom
   const max = Math.max(...data)
   const min = Math.min(...data)
   const stepX = w / (data.length - 1)
-  const y = (v: number) => h - ((v - min) / (max - min || 1)) * h
-  const line = data
-    .map((v, i) => `${i === 0 ? "M" : "L"} ${i * stepX} ${y(v)}`)
-    .join(" ")
+  const y = (v: number) => h - pad - ((v - min) / (max - min || 1)) * (h - pad * 2)
+  const line = smoothPath(data.map((v, i) => [i * stepX, y(v)] as const))
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className={className} preserveAspectRatio="none">
-      <path d={line} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" />
+    <svg viewBox={`0 0 ${w} ${h}`} className={className} preserveAspectRatio="none" data-sparkline="">
+      <path d={line} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
