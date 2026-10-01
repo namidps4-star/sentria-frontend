@@ -147,7 +147,7 @@ export function SheetTabs({
           <div
             role="menu"
             aria-label={label}
-            className="absolute bottom-full left-0 mb-2 w-64 overflow-hidden rounded-2xl border border-border bg-card p-1.5 shadow-xl"
+            className="absolute bottom-full left-0 mb-2 w-64 animate-in fade-in slide-in-from-bottom-1 overflow-hidden rounded-2xl border border-border bg-card p-1.5 shadow-xl duration-150"
           >
             <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
               {label}
@@ -270,7 +270,7 @@ export function SheetTabs({
         <div
           role="dialog"
           aria-label={tx(`Ajouter ${offer.label}`, `Add ${offer.label}`)}
-          className="absolute bottom-full right-2 mb-2 w-72 rounded-2xl bg-card p-4 shadow-xl lg:right-4"
+          className="absolute bottom-full right-2 mb-2 w-72 animate-in fade-in slide-in-from-bottom-1 rounded-2xl bg-card p-4 shadow-xl duration-150 lg:right-4"
         >
           <div className="flex items-start justify-between gap-2">
             <p className="text-sm font-semibold">{tx(`Ajouter ${offer.label}`, `Add ${offer.label}`)}</p>

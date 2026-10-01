@@ -456,7 +456,7 @@ export function Sidebar({
           fixed child position against the sidebar instead of the screen. */}
       {confirmingSignOut && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4"
+          className="fixed inset-0 z-[60] flex animate-in fade-in items-center justify-center bg-black/50 p-4 duration-150"
           onClick={(event) => {
             if (event.target === event.currentTarget) cancelSignOut()
           }}
@@ -465,7 +465,7 @@ export function Sidebar({
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="sign-out-title"
-            className="w-full max-w-sm rounded-3xl border border-border bg-card p-6 shadow-2xl"
+            className="w-full max-w-sm animate-in fade-in zoom-in-95 rounded-3xl border border-border bg-card p-6 shadow-2xl duration-150"
           >
             <h3 id="sign-out-title" className="font-heading text-lg font-bold text-foreground">
               {t("sidebar.signOutConfirm")}

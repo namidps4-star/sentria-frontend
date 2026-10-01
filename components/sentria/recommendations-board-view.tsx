@@ -29,6 +29,7 @@ import {
   X,
 } from "@/lib/icons"
 import type { LucideIcon } from "@/lib/icons"
+import { useArrivals } from "@/lib/use-arrivals"
 import { cn } from "@/lib/utils"
 import { useCompanyIdentity } from "@/lib/company"
 import {
@@ -623,7 +624,7 @@ function AssignPopover({
       ref={ref}
       role="dialog"
       aria-label={tx("Assigner la tâche", "Assign the task")}
-      className="absolute left-0 top-full z-30 mt-1.5 w-64 rounded-xl border border-border bg-card p-1.5 shadow-xl"
+      className="absolute left-0 top-full z-30 mt-1.5 w-64 animate-in fade-in slide-in-from-top-1 rounded-xl border border-border bg-card p-1.5 shadow-xl duration-150"
     >
       {contractors.length === 0 ? (
         <p className="px-2 py-2 text-xs leading-5 text-muted-foreground">
@@ -741,7 +742,7 @@ function DetailDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="priority-detail-title"
-        className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-border bg-card shadow-2xl sm:rounded-3xl"
+        className="max-h-[92vh] w-full max-w-lg animate-in fade-in zoom-in-95 overflow-y-auto rounded-t-3xl border border-border bg-card shadow-2xl duration-200 sm:rounded-3xl"
       >
         {/* Header ------------------------------------------------------- */}
         <div className="flex items-start justify-between gap-4 border-b border-border p-5 sm:p-6">
@@ -1223,6 +1224,9 @@ export function RecommendationsBoard({
         }
       })
   }, [recommendations, taskMap, dismissed])
+
+  /* Cards that arrive after the board is on screen pop in. */
+  const arrivals = useArrivals(cards.map((card) => card.id))
 
   const dismissedRecs = useMemo(
     () => recommendations.filter((rec) => dismissed.has(getRecommendationId(rec))),
@@ -2080,6 +2084,7 @@ export function RecommendationsBoard({
                         "group relative cursor-grab rounded-2xl border border-border bg-card px-3 py-2.5 shadow-sm",
                         "transition-[box-shadow,border-color,transform] duration-200 ease-out",
                         "hover:border-foreground/15 hover:shadow-md active:cursor-grabbing",
+                        arrivals.has(id) && "animate-in fade-in zoom-in-95 duration-200",
                         isDragging &&
                           "scale-[1.02] opacity-95 shadow-xl ring-2 ring-brand"
                       )}

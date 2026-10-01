@@ -14,12 +14,12 @@ export function UploadPanelHost() {
 
   return (
     <div
-      className="fixed inset-0 z-[90] flex items-end justify-center bg-black/40 p-4 sm:items-center"
+      className="fixed inset-0 z-[90] flex animate-in fade-in items-end justify-center bg-black/40 p-4 duration-150 sm:items-center"
       role="dialog"
       aria-modal="true"
       aria-label={tx("Import de données", "Data import")}
     >
-      <div className="w-full max-w-md rounded-3xl border border-border bg-card p-6 text-card-foreground shadow-2xl">
+      <div className="w-full max-w-md animate-in fade-in zoom-in-95 rounded-3xl border border-border bg-card p-6 text-card-foreground shadow-2xl duration-200">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {tx("Import", "Import")}
           {title ? ` · ${title}` : ""}

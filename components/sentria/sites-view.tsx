@@ -1026,12 +1026,12 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
 
       {/* UPGRADE: the plan's site limit is reached (F-SITEGATE) */}
       {showUpgrade && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+        <div className="fixed inset-0 z-50 flex animate-in fade-in items-center justify-center bg-black/50 p-4 duration-150">
           <div
             role="dialog"
             aria-modal="true"
             aria-label={tx("Limite de sites atteinte", "Site limit reached")}
-            className="w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-2xl"
+            className="w-full max-w-md animate-in fade-in zoom-in-95 rounded-3xl border border-border bg-card p-6 shadow-2xl duration-150"
           >
             <div className="flex items-start justify-between gap-3">
               <h3 className="font-heading text-xl font-bold">

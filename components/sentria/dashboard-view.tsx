@@ -2,6 +2,7 @@
 
 import { DemotedTag, SeverityTag, StatusTag, ValueTag } from "./status-tag"
 import { demotion, demotionSentence } from "@/lib/demotion"
+import { CountUp } from "./count-up"
 import { SheetTabs } from "./sheet-tabs"
 import type { ViewKey } from "./types"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -1991,7 +1992,7 @@ export function DashboardView({
           role="dialog"
           aria-label={tx("Importer des données", "Import data")}
           hidden={!importOpen}
-          className="absolute right-0 top-full z-30 mt-2 max-h-[80vh] w-[min(480px,calc(100vw-2.5rem))] overflow-y-auto rounded-[28px] bg-card p-6 shadow-2xl"
+          className="absolute right-0 top-full z-30 mt-2 max-h-[80vh] w-[min(480px,calc(100vw-2.5rem))] animate-in fade-in slide-in-from-top-1 overflow-y-auto rounded-[28px] bg-card p-6 shadow-2xl duration-150"
         >
           <div className="flex items-start justify-between gap-3">
             <h3 className="font-heading text-lg font-bold">
@@ -2399,7 +2400,7 @@ export function DashboardView({
                 </div>
 
                 <p className="mt-1 font-heading text-2xl font-bold tabular-nums tracking-tight">
-                  {k.value}
+                  <CountUp value={k.value} />
                 </p>
 
                 <Sparkline
@@ -2617,7 +2618,7 @@ export function DashboardView({
                 </div>
 
                 <p className="mt-1 font-heading text-2xl font-bold tabular-nums tracking-tight">
-                  {k.value}
+                  <CountUp value={k.value} />
                 </p>
 
                 <Sparkline
@@ -3034,7 +3035,7 @@ export function DashboardView({
             </div>
 
             <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
-              {k.value}
+              <CountUp value={k.value} />
             </p>
 
             <Sparkline
@@ -3786,7 +3787,7 @@ export function DashboardView({
             role="dialog"
             aria-modal="true"
             aria-labelledby="recommendation-dialog-title"
-            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-card shadow-2xl ring-1 ring-border"
+            className="max-h-[90vh] w-full max-w-2xl animate-in fade-in zoom-in-95 overflow-y-auto rounded-3xl bg-card shadow-2xl ring-1 ring-border duration-200"
           >
             <div className="flex items-start justify-between gap-4 border-b border-border p-6">
               <div className="min-w-0">
