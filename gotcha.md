@@ -87,6 +87,11 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Reality:** It can't: pressure and temperature limits come from each uploaded row, fuel and oil from literals in the backend's `pipeline/alerts.py`. The backend puts them in the alert's params (`limit`, `limit_side` "max" / "min", `limit_unit`; `min_stock` next to `stock`), and `lib/chart-series.ts` (`gaugeReadings`, `stockRows`) reads them. Alerts saved before that have none, so on an account that has not uploaded since, both cards stay hidden and nothing is guessed. Each shows the last reading that raised an alert, not a live value.
 **Rule:** Never draw a limit the alert did not carry. A new gauge is a backend `limit_kwargs(...)` on its alert; this side needs no change.
 
+## A phone number is libphonenumber's call, on both sides
+**Problem:** A phone input looks like a text field with a regex, and adding the library that does it right looks like a plain `pnpm add`.
+**Reality:** `lib/phone.ts` (libphonenumber-js, `min` metadata) checks and writes E.164 and `components/sentria/phone-field.tsx` formats as you type; the backend's `pipeline/phone.py` checks again with the Python libphonenumber and has the last word (error code `phone_invalid`, a bilingual message). The field keeps digits only, so letters never stay in it; a number with no country code is read against the account's country (`sentria_country`) or refused. The pnpm in this sandbox (10.28) rewrites unrelated lines when it adds a package (it drops every `libc:` line from `pnpm-lock.yaml`); the lockfile change here was kept to the new package's own lines, which a frozen install accepts.
+**Rule:** Never write a phone regex. A number the app texts goes through `checkPhone`. After a dependency change, diff `pnpm-lock.yaml` and keep only the new package's lines, then prove it with a clean `pnpm install --frozen-lockfile`.
+
 ## Third-party skills
 **Reality:** `.claude/skills/transitions-*` and `skills-lock.json` are installed, uncommitted, and licensed "no redistribution".
 **Rule:** Don't commit them without the owner's say-so.

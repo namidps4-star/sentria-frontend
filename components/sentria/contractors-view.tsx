@@ -32,6 +32,8 @@ import {
 import { cn } from "@/lib/utils"
 import { useTx, type Localized, resolve } from "@/lib/i18n"
 import type { ViewKey } from "./types"
+import { PhoneField } from "./phone-field"
+import { checkPhone, defaultPhoneCountry } from "@/lib/phone"
 
 /* --------------------------------------------------------------------------
  * The people who can be sent out, and whether they are free.
@@ -99,6 +101,7 @@ export function ContractorsView({
   const [busy, setBusy] = useState(false)
 
   const [adding, setAdding] = useState(false)
+  const [tried, setTried] = useState(false)
   const [form, setForm] = useState({
     name: "",
     role: "",
@@ -161,12 +164,21 @@ export function ContractorsView({
   async function submit() {
     if (!form.name.trim() || busy) return
 
+    // A number the app cannot text is refused here, in the reader's language,
+    // before it reaches the server (which checks again).
+    const phone = checkPhone(form.phone, defaultPhoneCountry())
+
+    if (phone.kind === "invalid") {
+      setTried(true)
+      return
+    }
+
     setBusy(true)
 
     const result = await createContractor(companyName, {
       name: form.name,
       role: form.role || undefined,
-      phone: form.phone || undefined,
+      phone: phone.kind === "valid" ? phone.e164 : undefined,
       email: form.email || undefined,
     })
 
@@ -178,6 +190,7 @@ export function ContractorsView({
     }
 
     setError(null)
+    setTried(false)
     setForm({ name: "", role: "", phone: "", email: "" })
     setAdding(false)
     await reload()
@@ -412,21 +425,11 @@ export function ContractorsView({
                 />
               </label>
 
-              <label className="block">
-                <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                  {tx("Téléphone", "Phone")}
-                </span>
-
-                <input
-                  value={form.phone}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, phone: e.target.value }))
-                  }
-                  placeholder="+229 90 00 00 00"
-                  autoComplete="tel"
-                  className="mt-1.5 w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm outline-none focus:border-ring"
-                />
-              </label>
+              <PhoneField
+                value={form.phone}
+                onChange={(phone) => setForm((f) => ({ ...f, phone }))}
+                submitted={tried}
+              />
 
               <label className="block">
                 <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -470,6 +473,7 @@ export function ContractorsView({
                 type="button"
                 onClick={() => {
                   setAdding(false)
+                  setTried(false)
                   setForm({ name: "", role: "", phone: "", email: "" })
                 }}
                 className="rounded-xl border border-border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -638,6 +642,18 @@ export function ContractorsView({
                               <span className="flex items-center gap-1.5">
                                 <Phone className="h-3 w-3" aria-hidden="true" />
                                 {person.phone}
+                                {person.sms_ready === false && (
+                                  <span
+                                    data-sms-flag=""
+                                    className="inline-flex items-center gap-1 rounded-full bg-[var(--tag-warning-bg)] px-2 py-0.5 text-[10px] font-semibold text-[var(--tag-warning-fg)]"
+                                  >
+                                    <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+                                    {tx(
+                                      "SMS impossible : corrigez ce numéro",
+                                      "Can't SMS this number: fix it"
+                                    )}
+                                  </span>
+                                )}
                               </span>
                             )}
 

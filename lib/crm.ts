@@ -59,6 +59,10 @@ export type Contractor = {
   /** Counted from the assignments table, not stored on the contractor,
    *  so it cannot drift away from what the board shows. */
   open_assignments: number
+  /** Can this person be texted? false when the stored number is not a real
+   *  E.164 one (it was saved before F-PHONE); null when there is no number.
+   *  Absent from an API that has not been redeployed yet: read as "unknown". */
+  sms_ready?: boolean | null
 }
 
 /** The task a recommendation or alert is tracked under. One key for the
