@@ -45,6 +45,8 @@ import {
 } from "@/lib/chart-series"
 import { cn } from "@/lib/utils"
 import { usePresence } from "@/lib/use-presence"
+import { assessFreshness, isZeroFigure, useFreshness } from "@/lib/freshness"
+import { FreshnessNote } from "./freshness-note"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
 import { computeConfidence, confidenceWord, convergenceFor, signalsTogether } from "@/lib/confidence"
 import { LogisticsBlockagesView } from "./logistics-blockages-view"
@@ -1047,6 +1049,7 @@ export function DashboardView({
   // to the pill they were picked on: another pill shows its own default
   // overlay, and coming back to this one gives the pick back.
   const [chartPick, setChartPick] = useState<{ pill: string; keys: string[] } | null>(null)
+  const freshness = useFreshness()
   const [chartMetric, setChartMetric] = useState<ChartMetric>("count")
   const [chartRange, setChartRange] = useState<ChartRange>(7)
 
@@ -1697,6 +1700,7 @@ export function DashboardView({
       // Awaited so the recommendations panel above has its final height
       // before the scroll correction below.
       await refreshRecommendations()
+      await freshness.refresh()
 
       setFilterSector(uploadSector)
       localStorage.setItem("sentria_sector", uploadSector)
@@ -2284,6 +2288,35 @@ export function DashboardView({
           (id) => normalizeOpsType(id) === (opsTypes[0] ?? normalizeOpsType(opsType))
         ) ?? null
     : activityIn(tabSector)
+  // L4 trust layer: is the data behind this view recent? The sectors it
+  // covers, limited to its department when it is on one (how the upload named
+  // the department depends on the sector, so every spelling is offered). An
+  // answer of "unknown" shows nothing.
+  const freshnessScopes = Array.from(
+    new Set(
+      [
+        filterSector !== "all" ? activeDepartment : null,
+        filterSector !== "all" && isLogisticsTabs && activeDepartment
+          ? normalizeOpsType(activeDepartment)
+          : null,
+        filterSector === "logistics" ? opsType : null,
+      ].filter((id): id is string => Boolean(id))
+    )
+  )
+  const freshnessView = assessFreshness(
+    freshness.data,
+    filterSector === "all" ? activeSectors : [filterSector],
+    freshnessScopes
+  )
+  const dataIsStale = freshnessView.kind === "stale"
+  const freshnessNote = (
+    <FreshnessNote
+      assessment={freshnessView}
+      sectorName={(key) => sectorName(key) ?? key}
+      locale={dateLocale}
+    />
+  )
+
   const inDepartment = (a: Alert, id: string) =>
     isLogisticsTabs
       ? normalizeOpsType(id) === "multi" ||
@@ -2497,6 +2530,7 @@ export function DashboardView({
     return (
       <div className="space-y-4">
         {importPortal}
+        {freshnessNote}
         <div className="flex items-center justify-between">
           <button
             type="button"
@@ -2714,6 +2748,7 @@ export function DashboardView({
     return (
       <div className="space-y-4">
         {importPortal}
+        {freshnessNote}
         <div className="flex items-center justify-between">
           <button
             type="button"
@@ -2850,6 +2885,7 @@ export function DashboardView({
   return (
     <div className="space-y-6">
       {importPortal}
+      {freshnessNote}
 
       <div className="flex flex-col gap-4 rounded-3xl bg-sidebar-shell p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-xl">
@@ -3111,17 +3147,35 @@ export function DashboardView({
                   </StatusTag>
             </div>
 
-            <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
-              <PopNumber value={k.value} />
-            </p>
+            {dataIsStale && isZeroFigure(k.value) ? (
+              <>
+                <p
+                  data-not-measured=""
+                  className="mt-3 font-heading text-3xl font-bold tracking-tight text-muted-foreground"
+                >
+                  <span aria-hidden="true">—</span>
+                  <span className="sr-only">{tx("Non mesuré", "Not measured")}</span>
+                </p>
 
-            <Sparkline
-              data={dailySeries(filteredAlerts, 7, k.match)}
-              className={cn(
-                "mt-2 h-9 w-full",
-                k.up ? "text-accent" : "text-destructive"
-              )}
-            />
+                <p className="mt-2 flex h-9 items-end text-xs text-muted-foreground">
+                  {tx("Non mesuré : pas de données récentes", "Not measured: no recent data")}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
+                  <PopNumber value={k.value} />
+                </p>
+
+                <Sparkline
+                  data={dailySeries(filteredAlerts, 7, k.match)}
+                  className={cn(
+                    "mt-2 h-9 w-full",
+                    k.up ? "text-accent" : "text-destructive"
+                  )}
+                />
+              </>
+            )}
           </div>
         ))}
       </div>
