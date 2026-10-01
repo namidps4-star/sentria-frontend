@@ -74,6 +74,7 @@ import {
   type OpsType,
 } from "@/lib/logistics-signals"
 import { STAGE_ICONS } from "./flow-track"
+import { StepSlide } from "./step-slide"
 
 type StepKey = "country" | "company" | "sector" | "subType" | "equipment" | "sources"
 
@@ -790,6 +791,8 @@ export function OnboardingView({
   }, [])
 
   const [step, setStep] = useState(1)
+  // Which way the last move went, so the next step enters from that side.
+  const [direction, setDirection] = useState<"forward" | "back">("forward")
   const [sector, setSector] = useState<Sector | null>(null)
   const [subType, setSubType] = useState<string | null>(null)
   const [subTypes2, setSubTypes2] = useState<string[]>([])
@@ -1124,17 +1127,20 @@ export function OnboardingView({
 
   function nextStep() {
     if (step < totalSteps) {
+      setDirection("forward")
       setStep((current) => current + 1)
     }
   }
 
   function previousStep() {
     if (step <= 1) return
+    setDirection("back")
     setStep((current) => Math.max(1, current - 1))
   }
 
   function goToStep(targetStep: number) {
     if (targetStep < 1 || targetStep > step) return
+    setDirection(targetStep < step ? "back" : "forward")
     setStep(targetStep)
   }
 
@@ -1366,12 +1372,10 @@ export function OnboardingView({
 
         {/* THE QUESTION */}
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-7 md:px-8 md:py-10">
-          <div className="mx-auto flex w-full max-w-5xl flex-col gap-7">
+          <div className="mx-auto w-full max-w-5xl">
+           <StepSlide key={step} direction={direction} className="flex flex-col gap-7">
             {step !== countryStepNumber && (
-            <div
-              key={step}
-              className="flex gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out motion-reduce:animate-none"
-            >
+            <div className="flex gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand/20 text-foreground md:h-14 md:w-14">
                 <CurrentStepIcon
                   className="h-6 w-6 md:h-7 md:w-7"
@@ -1408,7 +1412,7 @@ export function OnboardingView({
               const zone = TIMEZONES.find((z) => z.id === timezoneId)
 
               return (
-                <div className="grid gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 ease-out motion-reduce:animate-none lg:grid-cols-[240px_minmax(0,1fr)_280px]">
+                <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)_280px]">
                   {/* ------------------------------------------ LEFT */}
                   <div className="flex flex-col gap-4">
                     <div className="rounded-[28px] bg-brand p-5 text-[#141414]">
@@ -2450,6 +2454,7 @@ export function OnboardingView({
                 />
               </div>
             )}
+           </StepSlide>
           </div>
         </div>
 

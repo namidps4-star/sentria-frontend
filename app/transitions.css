@@ -194,6 +194,18 @@
   .t-stagger-line { transition: none !important; }
 }
 
+/* ───── Page side-by-side (08): variables ───── */
+:root {
+  --page-slide-dur: 250ms;
+  --page-fade-dur: 250ms;
+  --page-slide-distance: 8px;
+  --page-blur: 3px;
+  --page-stagger: 0ms;
+  --page-exit-enabled: 1;
+  --page-slide-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --page-fade-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 /* ───── Ours (not from the skill) ─────────────────────────────────── */
 
 /* The toast's variables (22): the card-arrival animation below reuses its
@@ -261,4 +273,42 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .t-rise-in { animation: none !important; }
+}
+
+/* A step of the onboarding wizard (F-VIZPREMIUM: "slide / fade between steps,
+   about 150-200 ms"). The skill's page side-by-side keeps both pages in the
+   DOM and slides one out as the other in. The wizard mounts one step at a
+   time and each has its own height, so this is that transition's enter half
+   only, from the same variables: the new step comes in from the side it is
+   on (the right going forward, the left going back) with the same blur and
+   easing. Tuned to 200 ms through the skill's own variables. */
+:root {
+  --page-slide-dur: 200ms;
+  --page-fade-dur: 200ms;
+}
+.t-step {
+  --t-step-from-x: var(--page-slide-distance);
+  opacity: 0;
+  transform: translateX(var(--t-step-from-x));
+  filter: blur(var(--page-blur));
+  transition:
+    opacity   var(--page-fade-dur)  var(--page-fade-ease),
+    transform var(--page-slide-dur) var(--page-slide-ease),
+    filter    var(--page-slide-dur) var(--page-slide-ease);
+  transition-delay: var(--page-stagger);
+  will-change: opacity, transform, filter;
+}
+.t-step[data-direction="back"] {
+  --t-step-from-x: calc(var(--page-slide-distance) * -1);
+}
+/* "none", not translateX(0) / blur(0): a transform or a filter, even an
+   empty one, makes the step the containing block of any fixed-position
+   child. */
+.t-step.is-shown {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-step { transition: none !important; opacity: 1; transform: none; filter: none; }
 }
