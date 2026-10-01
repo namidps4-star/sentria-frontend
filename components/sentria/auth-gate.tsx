@@ -5,6 +5,7 @@ import { Loader2 } from "@/lib/icons"
 import type { Session } from "@supabase/supabase-js"
 
 import { clearLocalAccount, loadAccount, syncAccount } from "@/lib/account"
+import { refreshEntitlements } from "@/lib/entitlements"
 import { useTx } from "@/lib/i18n"
 import { supabase } from "@/lib/supabase"
 
@@ -58,6 +59,9 @@ export function AuthGate() {
       current.current = null
       return
     }
+
+    // What each plan includes comes from the API; the app never waits for it.
+    void refreshEntitlements()
 
     await stopSync.current?.()
     stopSync.current = syncAccount(supabase, user.id)

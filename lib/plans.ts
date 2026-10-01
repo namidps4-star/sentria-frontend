@@ -3,9 +3,11 @@ import { localized, type Localized } from "@/lib/i18n"
 
 /** The subscription plans and what each one allows.
  *
- *  The same rules live in the API (pipeline/plans.py in the backend):
- *  this file decides what the app offers, the API decides what it
- *  accepts. Keep the two in step. */
+ *  The numbers come from the API (GET /plans, defined once in
+ *  pipeline/entitlements.py in the backend) and are applied here by
+ *  applyEntitlements(), so what the app shows is what the API enforces.
+ *  The values below are only the defaults used until that answer
+ *  arrives (or when the API is unreachable): they mirror the backend. */
 
 export type PlanId = "decouverte" | "pro" | "business" | "entreprise"
 
@@ -99,18 +101,19 @@ export type PlanCheck =
 export function checkPlan(plan: PlanId, departments: Record<string, string[]>): PlanCheck {
   const sectors = Object.keys(departments).filter((s) => departments[s]?.length)
 
-  if (sectors.length > 1 && !atLeast(plan, "entreprise")) {
-    return { ok: false, code: "plan_sectors", needs: "entreprise" }
+  if (sectors.length > 1 && !holdsSeveralSectors(plan)) {
+    return { ok: false, code: "plan_sectors", needs: cheapestPlan((e) => e.sectors === null) }
   }
 
   for (const sector of sectors) {
     const list = Array.from(new Set(departments[sector]))
     if (list.length <= 1) continue
-    if (!atLeast(plan, "entreprise") && !isAllowedCombo(sector, list)) {
-      return { ok: false, code: "plan_combo", needs: "entreprise" }
+    const kind = ENTITLEMENTS[plan].departments
+    if (kind !== "any" && !isAllowedCombo(sector, list)) {
+      return { ok: false, code: "plan_combo", needs: cheapestPlan((e) => e.departments === "any") }
     }
-    if (!atLeast(plan, "business")) {
-      return { ok: false, code: "plan_departments", needs: "business" }
+    if (kind === "one") {
+      return { ok: false, code: "plan_departments", needs: cheapestPlan((e) => e.departments !== "one") }
     }
   }
 
@@ -153,6 +156,38 @@ export function monthlyPrice(plan: PlanId, currencyCode: string): { amount: numb
 /*  What each plan includes (only what the product does today)         */
 /* ------------------------------------------------------------------ */
 
+/** What a plan includes, as numbers and flags: the shape of one entry of
+ *  GET /plans. null is "no limit". */
+export type Entitlement = {
+  sectors: number | null
+  departments: "one" | "linked" | "any"
+  sites: number | null
+  users: number | null
+  ask_per_month: number | null
+  history_days: number | null
+  sms: boolean
+  tracking: boolean
+  ml: boolean
+}
+
+/** The defaults, identical to pipeline/entitlements.py until /plans says
+ *  otherwise. Edited in place by applyEntitlements(). */
+export const ENTITLEMENTS: Record<PlanId, Entitlement> = {
+  decouverte: { sectors: 1, departments: "one", sites: 1, users: 1, ask_per_month: 20, history_days: 30, sms: false, tracking: false, ml: false },
+  pro: { sectors: 1, departments: "one", sites: 1, users: 3, ask_per_month: null, history_days: 365, sms: true, tracking: true, ml: false },
+  business: { sectors: 1, departments: "linked", sites: 3, users: 10, ask_per_month: null, history_days: 730, sms: true, tracking: true, ml: true },
+  entreprise: { sectors: null, departments: "any", sites: null, users: null, ask_per_month: null, history_days: null, sms: true, tracking: true, ml: true },
+}
+
+function holdsSeveralSectors(plan: PlanId): boolean {
+  return ENTITLEMENTS[plan].sectors === null
+}
+
+/** The lowest plan whose entitlements satisfy `test`. */
+function cheapestPlan(test: (e: Entitlement) => boolean): PlanId {
+  return PLAN_ORDER.find((plan) => test(ENTITLEMENTS[plan])) ?? "entreprise"
+}
+
 export type PlanLimits = {
   sectors: Localized
   departments: Localized
@@ -167,57 +202,121 @@ export type PlanLimits = {
   ml: boolean
 }
 
+/** The text of one plan's row in the pricing table, written from its
+ *  numbers so a number can never disagree with its label. */
+export function limitsFrom(e: Entitlement): PlanLimits {
+  const sites = (n: number) => localized(`${n} site${n > 1 ? "s" : ""}`, `${n} site${n > 1 ? "s" : ""}`)
+  const users = (n: number) => localized(`${n} utilisateur${n > 1 ? "s" : ""}`, `${n} user${n > 1 ? "s" : ""}`)
+
+  const sitesUsers =
+    e.sites === null && e.users === null
+      ? localized("Sites et utilisateurs illimités", "Unlimited sites and users")
+      : localized(
+          `${e.sites === null ? "Sites illimités" : sites(e.sites).fr} · ${e.users === null ? "utilisateurs illimités" : users(e.users).fr}`,
+          `${e.sites === null ? "Unlimited sites" : sites(e.sites).en} · ${e.users === null ? "unlimited users" : users(e.users).en}`
+        )
+
+  const months = e.history_days === null ? 0 : Math.round((e.history_days / 365) * 12)
+
+  return {
+    sectors:
+      e.sectors === null
+        ? localized("Plusieurs secteurs", "Several sectors")
+        : localized(`${e.sectors} secteur${e.sectors > 1 ? "s" : ""}`, `${e.sectors} sector${e.sectors > 1 ? "s" : ""}`),
+    departments:
+      e.departments === "any"
+        ? localized("Tous les départements", "All departments")
+        : e.departments === "linked"
+          ? localized("Plusieurs départements liés", "Several linked departments")
+          : localized("1 département", "1 department"),
+    sitesUsers,
+    maxSites: e.sites ?? Infinity,
+    alerts: e.sms ? localized("Alertes app + SMS", "App + SMS alerts") : localized("Alertes dans l'app", "In-app alerts"),
+    ask:
+      e.ask_per_month === null
+        ? localized("Ask SentrIA illimité", "Unlimited Ask SentrIA")
+        : localized(
+            `Ask SentrIA · ${e.ask_per_month} questions/mois`,
+            `Ask SentrIA · ${e.ask_per_month} questions/month`
+          ),
+    history:
+      e.history_days === null
+        ? localized("Historique illimité", "Unlimited history")
+        : e.history_days < 365
+          ? localized(`Historique ${e.history_days} jours`, `${e.history_days}-day history`)
+          : localized(`Historique ${months} mois`, `${months}-month history`),
+    tracking: e.tracking,
+    ml: e.ml,
+  }
+}
+
 export const PLAN_LIMITS: Record<PlanId, PlanLimits> = {
-  decouverte: {
-    sectors: localized("1 secteur", "1 sector"),
-    departments: localized("1 département", "1 department"),
-    sitesUsers: localized("1 site · 1 utilisateur", "1 site · 1 user"),
-    maxSites: 1,
-    alerts: localized("Alertes dans l'app", "In-app alerts"),
-    ask: localized("Ask SentrIA · 20 questions/mois", "Ask SentrIA · 20 questions/month"),
-    history: localized("Historique 30 jours", "30-day history"),
-    tracking: false,
-    ml: false,
-  },
-  pro: {
-    sectors: localized("1 secteur", "1 sector"),
-    departments: localized("1 département", "1 department"),
-    sitesUsers: localized("1 site · 3 utilisateurs", "1 site · 3 users"),
-    maxSites: 1,
-    alerts: localized("Alertes app + SMS", "App + SMS alerts"),
-    ask: localized("Ask SentrIA illimité", "Unlimited Ask SentrIA"),
-    history: localized("Historique 12 mois", "12-month history"),
-    tracking: true,
-    ml: false,
-  },
-  business: {
-    sectors: localized("1 secteur", "1 sector"),
-    departments: localized("Plusieurs départements liés", "Several linked departments"),
-    sitesUsers: localized("3 sites · 10 utilisateurs", "3 sites · 10 users"),
-    maxSites: 3,
-    alerts: localized("Alertes app + SMS", "App + SMS alerts"),
-    ask: localized("Ask SentrIA illimité", "Unlimited Ask SentrIA"),
-    history: localized("Historique 24 mois", "24-month history"),
-    tracking: true,
-    ml: true,
-  },
-  entreprise: {
-    sectors: localized("Plusieurs secteurs", "Several sectors"),
-    departments: localized("Tous les départements", "All departments"),
-    sitesUsers: localized("Sites et utilisateurs illimités", "Unlimited sites and users"),
-    maxSites: Infinity,
-    alerts: localized("Alertes app + SMS", "App + SMS alerts"),
-    ask: localized("Ask SentrIA illimité", "Unlimited Ask SentrIA"),
-    history: localized("Historique illimité", "Unlimited history"),
-    tracking: true,
-    ml: true,
-  },
+  decouverte: limitsFrom(ENTITLEMENTS.decouverte),
+  pro: limitsFrom(ENTITLEMENTS.pro),
+  business: limitsFrom(ENTITLEMENTS.business),
+  entreprise: limitsFrom(ENTITLEMENTS.entreprise),
 }
 
 /** The most sites a plan allows: 1, 1, 3, then no cap. The one place the
  *  Sites page and the pricing table both read. */
 export function maxSitesFor(plan: PlanId): number {
   return PLAN_LIMITS[plan].maxSites
+}
+
+const isCount = (v: unknown): v is number | null => v === null || (typeof v === "number" && Number.isFinite(v) && v >= 0)
+
+function asEntitlement(value: unknown): Entitlement | null {
+  if (!value || typeof value !== "object") return null
+  const v = value as Record<string, unknown>
+  if (
+    !isCount(v.sectors) || !isCount(v.sites) || !isCount(v.users) || !isCount(v.ask_per_month) || !isCount(v.history_days) ||
+    (v.departments !== "one" && v.departments !== "linked" && v.departments !== "any") ||
+    typeof v.sms !== "boolean" || typeof v.tracking !== "boolean" || typeof v.ml !== "boolean"
+  ) {
+    return null
+  }
+  return v as unknown as Entitlement
+}
+
+/** The backend spells the retail sector "retail", the app "commerce". */
+const SECTOR_FROM_API: Record<string, string> = { retail: "commerce" }
+
+/** Takes what GET /plans returned and makes the app follow it: the numbers,
+ *  the pricing text and the department groups, in place. Anything that
+ *  doesn't look right is ignored whole, so a bad answer can't break the
+ *  app. Returns whether it was applied. */
+export function applyEntitlements(payload: unknown): boolean {
+  const body = payload as { entitlements?: Record<string, unknown>; department_groups?: unknown } | null
+  const incoming = body?.entitlements
+  if (!incoming || typeof incoming !== "object") return false
+
+  const next = {} as Record<PlanId, Entitlement>
+  for (const plan of PLAN_ORDER) {
+    const e = asEntitlement(incoming[plan])
+    if (!e) return false
+    next[plan] = e
+  }
+
+  for (const plan of PLAN_ORDER) {
+    Object.assign(ENTITLEMENTS[plan], next[plan])
+    Object.assign(PLAN_LIMITS[plan], limitsFrom(next[plan]))
+  }
+
+  const groups = body?.department_groups
+  if (groups && typeof groups === "object" && !Array.isArray(groups)) {
+    const rebuilt: Partial<Record<Sector, string[][]>> = {}
+    for (const [key, list] of Object.entries(groups as Record<string, unknown>)) {
+      if (!Array.isArray(list)) continue
+      rebuilt[(SECTOR_FROM_API[key] ?? key) as Sector] = list
+        .filter((g): g is unknown[] => Array.isArray(g))
+        .map((g) => g.filter((id): id is string => typeof id === "string"))
+    }
+    for (const key of Object.keys(DEPARTMENT_GROUPS)) delete DEPARTMENT_GROUPS[key as Sector]
+    Object.assign(DEPARTMENT_GROUPS, rebuilt)
+  }
+
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(PLAN_UPDATED_EVENT))
+  return true
 }
 
 /* ------------------------------------------------------------------ */
@@ -294,7 +393,7 @@ export function readDepartments(): Record<string, string[]> {
 /** The sectors the plan lets the account use: the first one only,
  *  unless the plan is Entreprise. */
 export function sectorsForPlan(sectors: string[], plan: PlanId): string[] {
-  return atLeast(plan, "entreprise") ? sectors : sectors.slice(0, 1)
+  return holdsSeveralSectors(plan) ? sectors : sectors.slice(0, 1)
 }
 
 /** The departments of `sector` the account may upload for: those it
@@ -305,7 +404,7 @@ export function departmentsForPlan(
   held: string[],
   plan: PlanId
 ): string[] {
-  if (atLeast(plan, "entreprise")) return all
+  if (ENTITLEMENTS[plan].departments === "any") return all
   if (held.length === 0) return all
   return all.filter((id) => checkPlan(plan, { [sector]: [...held, id] }).ok)
 }

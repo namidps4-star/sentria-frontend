@@ -69,3 +69,7 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Problem:** The frontend only holds public Supabase values, so a leaked key looks unlikely.
 **Reality:** The backend repo once leaked a real `.env`. `scripts/check_secrets.py` (same file as the backend's) blocks `.env`/key files and secret-shaped values in a pre-commit hook and in GitHub Actions. Only `NEXT_PUBLIC_*` values belong in client code.
 **Rule:** Enable the hook per clone (`git config core.hooksPath .githooks`). Mark deliberately fake lines `secret-scan: allow`; never weaken the patterns.
+
+## Plan numbers come from the API
+**Reality:** `lib/plans.ts` holds only default values; `applyEntitlements()` overwrites `ENTITLEMENTS`, `PLAN_LIMITS` (labels are generated from the numbers) and `DEPARTMENT_GROUPS` in place from `GET /plans` after sign-in (`lib/entitlements.ts`), then fires `PLAN_UPDATED_EVENT`. Views that read them at render must re-render on that event. The backend calls the retail sector `retail`, the app `commerce`.
+**Rule:** Never write a plan number into a component or a string. Change it in the backend's `pipeline/entitlements.py`, and the bundled default here only to keep it in step.
