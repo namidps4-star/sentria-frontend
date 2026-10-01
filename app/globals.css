@@ -32,6 +32,8 @@
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
   --color-sidebar-shell: var(--sidebar-shell);
+  --color-deep-card: var(--deep-card);
+  --color-deep-bar: var(--deep-bar);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
   --color-chart-3: var(--chart-3);
@@ -385,6 +387,24 @@
 .dark { --ink: #2d2e2a; }
 @media (prefers-color-scheme: dark) {
   :root:not(.light) { --ink: #2d2e2a; }
+}
+
+/* Surfaces that take the deep green in dark mode (explicit and "system")
+   and keep their normal colour in light mode: the priority tiles and pills
+   (deep-card) and the pinned department tab bar (deep-bar). */
+:root {
+  --deep-card: var(--card);
+  --deep-bar: color-mix(in oklab, var(--canvas) 95%, transparent);
+}
+.dark {
+  --deep-card: var(--brand-deep);
+  --deep-bar: var(--brand-deep);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --deep-card: var(--brand-deep);
+    --deep-bar: var(--brand-deep);
+  }
 }
 
 /* Icons given a custom stroke width (lib/icons.tsx): CSS beats the

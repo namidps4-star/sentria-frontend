@@ -2775,7 +2775,7 @@ export function DashboardView({
     <div className="space-y-6">
       {importPortal}
 
-      <div className="flex flex-col gap-4 rounded-3xl bg-sidebar p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
+      <div className="flex flex-col gap-4 rounded-3xl bg-sidebar-shell p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-xl">
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">

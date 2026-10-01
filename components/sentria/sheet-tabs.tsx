@@ -123,7 +123,7 @@ export function SheetTabs({
   const hidden = more.left || more.right
 
   return (
-    <div className="sticky -bottom-4 z-20 -mx-4 -mb-4 flex items-stretch gap-1 border-t border-border bg-canvas/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:-bottom-8 lg:-mx-8 lg:-mb-8 lg:px-4">
+    <div className="sticky -bottom-4 z-20 -mx-4 -mb-4 flex items-stretch gap-1 border-t border-border bg-deep-bar px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur-md lg:-bottom-8 lg:-mx-8 lg:-mb-8 lg:px-4">
       {/* Every tab, even the ones scrolled out of sight. */}
       <div ref={menuRef} className="relative flex items-start pt-1.5">
         <button

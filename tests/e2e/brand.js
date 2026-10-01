@@ -101,6 +101,46 @@ const GREEN = 'rgb(15, 46, 31)'; // --brand-deep
     await ctx.close();
   }
 
+  console.log('== deep green in dark mode: the banner, "Your priorities" tiles and the bottom tab bar');
+  const NOW = new Date().toISOString();
+  const HEALTH = { ls: { sentria_sector: 'health', sentria_sectors: '["health"]', sentria_company_name: 'Pharmacie A', sentria_business_type: 'pharmacie', sentria_departments: '{"health":["pharmacie","clinique-hopital"]}' },
+    alerts: Array.from({ length: 6 }, (_, k) => ({ id: k, equipment: `Med ${k}`, sector: 'health', business_type: 'pharmacie', severity: k % 2 ? 'WARNING' : 'CRITICAL', date: NOW, alert_key: 'health.stock.low', message: `MSG ${k}` })) };
+  const INDUSTRY = { ls: { sentria_sector: 'industry', sentria_sectors: '["industry"]', sentria_company_name: 'Usine Nord', sentria_business_type: 'usine-production', sentria_departments: '{"industry":["usine-production"]}', sentria_equipment: '["machines","motors","production","maintenance-production-link"]' },
+    alerts: [{ id: 1, equipment: 'Presse P1', sector: 'industry', business_type: 'usine-production', severity: 'CRITICAL', date: NOW, alert_key: 'industry.torque.high', message: 'x' }, { id: 2, equipment: 'Moteur M2', sector: 'industry', business_type: 'usine-production', severity: 'WARNING', date: NOW, alert_key: 'industry.motor.overheat', message: 'y' }] };
+  const openDash = async (fx, theme, scheme) => {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: 'en-US', colorScheme: scheme });
+    const p = await ctx.newPage(); p._errors = []; p.on('pageerror', e => p._errors.push(e.message));
+    await p.route(/onrender\.com\//, r => r.fulfill({ status: 200, contentType: 'application/json', body: /\/alerts/.test(r.request().url()) ? JSON.stringify(fx.alerts) : '{"recommendations":[],"assignments":[],"contractors":[]}' }));
+    await p.addInitScript(ls => { if (!sessionStorage.x) { sessionStorage.x = 1; localStorage.clear(); for (const [k, v] of Object.entries(ls)) localStorage.setItem(k, v); } },
+      { sentria_onboarded: 'true', sentria_language: 'en', sentria_theme: theme, ...fx.ls });
+    await signedIn(p, 'u-1', 'a@b.c', { plan: 'business' });
+    await p.goto(APP_URL); await p.waitForTimeout(2200);
+    return { p, ctx };
+  };
+  const bgOf = (p, finder) => p.evaluate(finder);
+  for (const [label, theme, scheme, green] of [
+    ['light', 'light', 'light', false],
+    ['explicit dark', 'dark', 'dark', true],
+    ['system, OS dark', 'system', 'dark', true],
+    ['system, OS light', 'system', 'light', false],
+  ]) {
+    { const { p, ctx } = await openDash(HEALTH, theme, scheme);
+      const banner = await bgOf(p, () => { const h = [...document.querySelectorAll('h2')].find(x => /What needs your attention right now\?/.test(x.textContent)); return getComputedStyle(h.closest('[class*="bg-sidebar-shell"]')).backgroundColor; });
+      const bar = await bgOf(p, () => getComputedStyle(document.querySelector('[role="tablist"]').closest('[class*="bg-deep-bar"]')).backgroundColor);
+      pass((banner === GREEN) === green, `${label}: the "What needs your attention" banner is ${green ? 'the deep green' : 'not green (black)'} (got ${banner})`);
+      pass((bar === GREEN) === green, `${label}: the bottom tab bar is ${green ? 'the deep green' : 'not green'} (got ${bar})`);
+      pass(p._errors.length === 0, `${label}: no page errors ${p._errors.join('|')}`);
+      if (theme === 'dark') await p.screenshot({ path: 'brand-health-dark.png' });
+      await ctx.close(); }
+    { const { p, ctx } = await openDash(INDUSTRY, theme, scheme);
+      const tile = await bgOf(p, () => { const t = [...document.querySelectorAll('button')].find(b => /^\s*Motors/.test(b.innerText) && b.className.includes('bg-deep-card')); return getComputedStyle(t).backgroundColor; });
+      pass((tile === GREEN) === green, `${label}: a "Your priorities" tile is ${green ? 'the deep green' : 'not green'} (got ${tile})`);
+      const hero = await bgOf(p, () => { const t = [...document.querySelectorAll('button')].find(b => /Production machines/.test(b.innerText)); return getComputedStyle(t).backgroundColor !== getComputedStyle(document.body).backgroundColor; });
+      pass(hero, `${label}: the lime first-priority tile is still there`);
+      if (theme === 'dark') await p.screenshot({ path: 'brand-industry-dark.png' });
+      await ctx.close(); }
+  }
+
   await browser.close();
   console.log(fails ? `\n${fails} FAILED` : '\nALL OK'); process.exit(fails ? 1 : 0);
 })();

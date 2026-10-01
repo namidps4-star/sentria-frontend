@@ -58,6 +58,7 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Problem:** The sidebar's colour looks like `--sidebar` alone.
 **Reality:** `bg-sidebar` also paints dark hero cards in `dashboard-view.tsx` and `logistics-ui.tsx`. The sidebar's own surface is `--sidebar-shell` (black in light mode, `--brand-deep` green in dark, explicit or system). `--brand-deep` (#0f2e1f) is a palette colour, the same in every theme: pricing's Entreprise card, the billing toggle and AI panel, and the sign-in screen's sector panel all use `bg-brand-deep`. The green sidebar was reverted once after a report that it was invisible, then restored at the founder's request. The cause of the report was never identified (it was not reproduced, and the green measured more distinct from the page than the old black).
 **Rule:** To recolour the sidebar, change `--sidebar-shell`, never `--sidebar`. Use `bg-brand-deep` / the tokens, never the hex.
+**Deep-green surfaces in dark mode (light mode keeps its normal colours):** `bg-sidebar-shell` (the sidebar, and the "What needs your attention" banners in `dashboard-view.tsx` and `logistics-ui.tsx`), `bg-deep-card` (the "Your priorities" tiles and pills in `priority-nav.tsx`), `bg-deep-bar` (the pinned department tab bar in `sheet-tabs.tsx`). The other `bg-sidebar` dark cards stay black.
 
 ## A dialog owned by the sidebar must sit beside the `<aside>`, not in it
 **Problem:** A `fixed inset-0` overlay rendered inside `sidebar.tsx`'s `<aside>` looks right in the code.

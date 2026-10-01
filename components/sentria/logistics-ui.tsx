@@ -64,7 +64,7 @@ export function ViewHeader({
   const activity = opsLabelFor(opsType, tx, selectedOpsTypes)
 
   return (
-    <section className="rounded-[28px] bg-sidebar px-5 py-4 text-sidebar-foreground sm:px-6 sm:py-5">
+    <section className="rounded-[28px] bg-sidebar-shell px-5 py-4 text-sidebar-foreground sm:px-6 sm:py-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0 max-w-2xl">
           <div className="flex flex-wrap items-center gap-2">

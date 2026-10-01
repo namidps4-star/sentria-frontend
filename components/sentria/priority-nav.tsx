@@ -184,7 +184,7 @@ export function PriorityCards({
             onClick={() => onOpen(id)}
             title={priorityDescription(sector, id, tx)}
             className={cn(
-              "group relative flex min-h-[9.5rem] flex-col rounded-[24px] bg-card p-4 text-left shadow-sm ring-1 ring-transparent transition-all",
+              "group relative flex min-h-[9.5rem] flex-col rounded-[24px] bg-deep-card p-4 text-left shadow-sm ring-1 ring-transparent transition-all",
               "hover:-translate-y-0.5 hover:shadow-md hover:ring-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]",
               closingSpan(index - 1, ids.length - 1, bento)
             )}
@@ -274,7 +274,7 @@ export function PriorityPills({
             return (
               <span
                 key={id}
-                className="flex shrink-0 items-center gap-2.5 rounded-2xl bg-card py-1.5 pl-1.5 pr-4 text-sm font-semibold text-muted-foreground shadow-sm"
+                className="flex shrink-0 items-center gap-2.5 rounded-2xl bg-deep-card py-1.5 pl-1.5 pr-4 text-sm font-semibold text-muted-foreground shadow-sm"
               >
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
                   {Icon && <Icon className="h-4 w-4" aria-hidden="true" />}
@@ -294,7 +294,7 @@ export function PriorityPills({
               aria-current={active ? "page" : undefined}
               className={cn(
                 "group flex shrink-0 items-center gap-2.5 rounded-2xl py-1.5 pl-1.5 pr-4 text-sm font-semibold shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                active ? "bg-[var(--ink)] text-white" : "bg-card hover:-translate-y-0.5 hover:shadow-md"
+                active ? "bg-[var(--ink)] text-white" : "bg-deep-card hover:-translate-y-0.5 hover:shadow-md"
               )}
             >
               <span
