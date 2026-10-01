@@ -90,6 +90,10 @@ export function LineChart({
   const x = (i: number) => padLeft + (count > 1 ? (i / (count - 1)) * plotW : plotW / 2)
   const y = (v: number) => PAD.top + (1 - v / max) * plotH
 
+  // A smooth line through every day's value (monotone: it never dips below
+  // zero or swings past a peak it does not have).
+  const curve = (values: number[]) => smoothPath(values.map((v, i) => [x(i), y(v)] as const))
+
   const dayShort = (d: Date) => d.toLocaleDateString(locale, { day: "numeric", month: "short" })
   const dayLong = (d: Date) => d.toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short" })
 
@@ -186,7 +190,7 @@ export function LineChart({
 
             {single && !empty && (
               <path
-                d={`${series[0].values.map((v, i) => `${i === 0 ? "M" : "L"} ${x(i)} ${y(v)}`).join(" ")} L ${x(count - 1)} ${y(0)} L ${x(0)} ${y(0)} Z`}
+                d={`${curve(series[0].values)} L ${x(count - 1)} ${y(0)} L ${x(0)} ${y(0)} Z`}
                 fill={`url(#${gradientId})`}
               />
             )}
@@ -195,7 +199,7 @@ export function LineChart({
               series.map((s) => (
                 <path
                   key={s.key}
-                  d={s.values.map((v, i) => `${i === 0 ? "M" : "L"} ${x(i)} ${y(v)}`).join(" ")}
+                  d={curve(s.values)}
                   fill="none"
                   stroke={s.color}
                   strokeWidth={hot === s.key ? 3.5 : 2.5}

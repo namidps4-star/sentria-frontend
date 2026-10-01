@@ -120,8 +120,10 @@ async function open(browser, { alerts, theme = 'light', width = 1440, scheme = '
 const lines = p => p.locator('[data-chart="line"] path[data-series]');
 const seriesKeys = p => lines(p).evaluateAll(els => els.map(e => e.getAttribute('data-series')));
 const legendOf = p => p.locator('[data-chart="line"] ~ ul[data-legend] li');
+// The anchors of a series' path ("M x y C c1 c2 x y C …"): every sixth number after the start.
+const anchorsOf = d => { const n = d.match(/-?\d+(\.\d+)?/g).map(Number); const out = [[n[0], n[1]]]; for (let i = 2; i + 5 < n.length + 1; i += 6) out.push([n[i + 4], n[i + 5]]); return out; };
 async function plotXs(p) { // the x of the first and last point, in page coordinates
-  return p.evaluate(() => { const box = document.querySelector('[data-chart="line"]').getBoundingClientRect(); const d = document.querySelector('[data-chart="line"] path[data-series]').getAttribute('d'); const xs = [...d.matchAll(/[ML] ([\d.]+) ([\d.]+)/g)].map(m => +m[1]); return { left: box.left, top: box.top, first: xs[0], last: xs[xs.length - 1], n: xs.length, h: box.height }; });
+  return p.evaluate(() => { const box = document.querySelector('[data-chart="line"]').getBoundingClientRect(); const d = document.querySelector('[data-chart="line"] path[data-series]').getAttribute('d'); const n = d.match(/-?\d+(\.\d+)?/g).map(Number); const xs = [n[0]]; for (let i = 2; i + 5 < n.length + 1; i += 6) xs.push(n[i + 4]); return { left: box.left, top: box.top, first: xs[0], last: xs[xs.length - 1], n: xs.length, h: box.height }; });
 }
 async function hoverDay(p, i, n) { const g = await plotXs(p); await p.mouse.move(g.left + g.first + ((g.last - g.first) * i) / (n - 1), g.top + g.h / 2); await p.waitForTimeout(120); }
 const tipRows = p => p.locator('[data-tooltip] li').evaluateAll(els => els.map(e => e.innerText.replace(/\s+/g, ' ').trim()));
@@ -149,6 +151,28 @@ const menu = p => p.getByRole('dialog', { name: 'Chart options' });
     pass(ticks.length >= 2 && new Set(ticks).size === 1, `one value axis: every tick label shares one x (${ticks.length} labels)`);
     pass(await p.locator('[data-chart="line"] svg text').evaluateAll(els => els.every(e => !/%$/.test(e.textContent))), 'no second axis in another unit');
     pass(errs.length === 0, 'no page errors');
+    await ctx.close();
+  }
+
+  console.log('== the trend lines are smooth curves');
+  {
+    const { ctx, p } = await open(b, { alerts: all });
+    const ds = await p.locator('[data-chart="line"] path[data-series]').evaluateAll(els => els.map(e => e.getAttribute('d')));
+    pass(ds.length === 8 && ds.every(d => /^M [\d.]+ [\d.]+ C /.test(d) && !/ L /.test(d)), `all ${ds.length} lines are curves (cubic segments), not straight ones`);
+    pass(ds.every(d => anchorsOf(d).length === 7), '…through seven points, one per day');
+    const plot = await p.evaluate(() => { const svg = document.querySelector('[data-chart="line"] svg'); const ys = [...svg.querySelectorAll('line')].map(l => +l.getAttribute('y1')); return { top: Math.min(...ys), bottom: Math.max(...ys) }; });
+    const allY = ds.flatMap(d => d.match(/-?\d+(\.\d+)?/g).map(Number).filter((_, i) => i % 2 === 1));
+    pass(Math.min(...allY) >= plot.top - 0.5 && Math.max(...allY) <= plot.bottom + 0.5, `…and no curve leaves the plot, so none dips below zero or past the top (y ${Math.min(...allY).toFixed(1)}–${Math.max(...allY).toFixed(1)} inside ${plot.top.toFixed(1)}–${plot.bottom.toFixed(1)})`);
+    await hoverDay(p, 3, 7);
+    const dot = await p.locator('[data-crosshair] circle').first().evaluate(el => [+el.getAttribute('cx'), +el.getAttribute('cy')]);
+    const first = anchorsOf(ds[0]).find(a => Math.abs(a[0] - dot[0]) < 0.6);
+    pass(first && Math.abs(first[1] - dot[1]) < 0.6, 'the hover marker sits on the curve (it passes through each day\'s value)');
+    await p.getByRole('button', { name: 'Chart options' }).click(); await p.waitForTimeout(250);
+    for (const s of SECTORS.filter(s => s !== 'health')) await p.getByRole('dialog', { name: 'Chart options' }).locator(`input[data-sector="${s}"]`).uncheck();
+    await p.waitForTimeout(200);
+    const one = await p.locator('[data-chart="line"] svg path').evaluateAll(els => els.map(e => e.getAttribute('d')));
+    const area = one.find(d => /Z$/.test(d || ''));
+    pass(!!area && /^M [\d.]+ [\d.]+ C /.test(area) && / L [\d.]+ [\d.]+ L [\d.]+ [\d.]+ Z$/.test(area), 'a single sector\'s soft area follows the same curve, closed along the bottom');
     await ctx.close();
   }
 
