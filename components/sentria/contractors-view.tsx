@@ -362,7 +362,7 @@ export function ContractorsView({
                 )
         }
         statsTitle={tx("L'équipe", "The team")}
-        statsBadge={tx("En direct", "Live")}
+        sectorTag
         rows={[
           { label: tx("Avec du travail", "Carrying work"), value: loaded ? String(carryingWork) : "—", icon: Briefcase },
           { label: tx("Libres, rien en cours", "Free, nothing open"), value: loaded ? String(reallyFree) : "—" },

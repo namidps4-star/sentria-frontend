@@ -28,6 +28,7 @@ import {
 } from "@/lib/crm"
 import { sectorLabel } from "@/lib/priorities"
 import { localized, useTx, type Localized } from "@/lib/i18n"
+import { SectorTag } from "./sector-tag"
 
 type EventKind = "incident" | "threshold" | "deadline" | "resolved"
 type ViewMode = "week" | "month"
@@ -639,7 +640,7 @@ export function CalendarView() {
         <div className="rounded-[28px] bg-[var(--ink)] p-5 text-white lg:col-start-2 xl:col-start-auto">
           <div className="flex items-center justify-between">
             <p className="font-heading text-xl font-semibold tracking-tight">{tx("Cette semaine", "This week")}</p>
-            <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold">{tx("En direct", "Live")}</span>
+            <SectorTag />
           </div>
           <dl className="mt-4 space-y-2.5 text-xs">
             <div className="flex items-center justify-between gap-3">

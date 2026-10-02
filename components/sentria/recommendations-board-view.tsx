@@ -1613,7 +1613,7 @@ export function RecommendationsBoard({
           `${cards.length} priorit${cards.length === 1 ? "y" : "ies"}, ${criticalCount} critical. ${unassignedCount > 0 ? `${unassignedCount} still ${unassignedCount === 1 ? "has" : "have"} no one on ${unassignedCount === 1 ? "it" : "them"}.` : "Every one has an owner."} Each card shows its evidence, confidence and impact.`
         )}
         statsTitle={tx("Le tableau", "The board")}
-        statsBadge={tx("En direct", "Live")}
+        sectorTag
         rows={[
           { label: tx("Critiques", "Critical"), value: String(criticalCount), icon: TriangleAlert, tone: criticalCount > 0 ? "danger" : undefined },
           { label: tx("Non assignées", "Unassigned"), value: String(unassignedCount) },

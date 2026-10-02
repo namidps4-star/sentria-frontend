@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 import type { LucideIcon } from "@/lib/icons"
 
 import { cn } from "@/lib/utils"
+import { SectorTag } from "./sector-tag"
 
 export type AskHeaderRow = {
   label: string
@@ -28,7 +29,7 @@ export function AskHeader({
   message,
   children,
   statsTitle,
-  statsBadge,
+  sectorTag,
   rows,
   big,
   className,
@@ -47,7 +48,8 @@ export function AskHeader({
   /** Controls under the message: search, filters. */
   children?: ReactNode
   statsTitle: string
-  statsBadge?: string
+  /** Show the account's sector tag beside the title. */
+  sectorTag?: boolean
   rows: AskHeaderRow[]
   big: { label: string; value: string }
   className?: string
@@ -132,9 +134,7 @@ export function AskHeader({
       <div className="rounded-[28px] bg-[var(--ink)] p-5 text-white lg:col-start-2 xl:col-start-auto">
         <div className="flex items-center justify-between gap-2">
           <p className="font-heading text-xl font-semibold tracking-tight">{statsTitle}</p>
-          {statsBadge && (
-            <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold">{statsBadge}</span>
-          )}
+          {sectorTag && <SectorTag />}
         </div>
         <dl className="mt-4 space-y-2.5 text-xs">
           {rows.map((row) => {

@@ -47,6 +47,7 @@ import { withOurSector } from "@/lib/sector"
 import { cn } from "@/lib/utils"
 import { PLAN_NAMES, readAccountPlan, readDepartments, trialDaysLeft, type AccountPlan } from "@/lib/plans"
 import type { ViewKey } from "./types"
+import { SectorTag } from "./sector-tag"
 
 /* -------------------------------------------------------------------------- */
 /* Why this file no longer holds any constants                                */
@@ -548,7 +549,7 @@ export function ProfileView({
         <div className="rounded-[28px] bg-[var(--ink)] p-5 text-white">
           <div className="flex items-center justify-between">
             <p className="font-heading text-xl font-semibold tracking-tight">{tx("Votre activité", "Your activity")}</p>
-            <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold">{tx("En direct", "Live")}</span>
+            <SectorTag />
           </div>
           <dl className="mt-4 space-y-2.5 text-xs">
             {[assetsStat, signalsStat, criticalStat, weekStat].map((stat) => (

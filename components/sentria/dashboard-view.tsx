@@ -18,7 +18,6 @@ import {
   TrendingUp,
   TrendingDown,
   ArrowUpRight,
-  Zap,
   Upload,
   Loader2,
   Shield,
@@ -113,6 +112,7 @@ import {
   taskKeyFor,
   type Assignment,
 } from "@/lib/crm"
+import { SectorTag } from "./sector-tag"
 
 const SECTORS: { key: string; label: Localized }[] = [
   { key: "all", label: localized("Tous", "All") },
@@ -2890,15 +2890,13 @@ export function DashboardView({
       <div className="flex flex-col gap-4 rounded-3xl bg-sidebar-shell p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
         <div className="max-w-xl">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
-              <Zap className="h-3.5 w-3.5" />
-              {tx("Temps réel", "Live")}
-            </span>
+            <SectorTag size="md" />
 
-            {departmentLabel && (
+            {/* The sector is the lime tag; this pill adds the department only. */}
+            {subtypeName && (
               <span className="inline-flex items-center gap-1.5 rounded-full border border-sidebar-foreground/25 bg-sidebar-foreground/10 px-3 py-1 text-xs font-semibold text-sidebar-foreground">
                 <Shield className="h-3.5 w-3.5" aria-hidden="true" />
-                {departmentLabel}
+                {subtypeName}
               </span>
             )}
           </div>

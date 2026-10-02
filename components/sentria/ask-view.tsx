@@ -25,6 +25,7 @@ import { StatusTag } from "./status-tag"
 import type { Notification } from "./topbar"
 import type { ViewKey } from "./types"
 
+import { SectorTag } from "./sector-tag"
 type Msg = { role: "user" | "ai"; text: string; failed?: boolean }
 
 type Thread = { id: string; title: string; messages: Msg[]; updatedAt: number }
@@ -543,9 +544,7 @@ export function AskView({
             <h2 className="font-heading text-xl font-semibold leading-tight tracking-tight">
               {tx("Ce que SentrIA lit", "What SentrIA reads")}
             </h2>
-            <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white/80">
-              {tx("En direct", "Live")}
-            </span>
+            <SectorTag />
           </div>
           <dl className="mt-4 space-y-2.5 text-xs">
             <div className="flex justify-between gap-3">
