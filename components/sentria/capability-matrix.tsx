@@ -17,8 +17,6 @@ export function CapabilityMatrix() {
   // Nothing until the API has answered: no list of our own to contradict it.
   if (CAPABILITIES.length === 0 || TIERS.length === 0) return null
 
-  const hasSeasonal = CAPABILITIES.some((c) => c.key === "seasonal_advice")
-
   return (
     <section data-capabilities="" className="rounded-[28px] border border-border bg-card p-7">
       <h3 className="font-heading text-xl font-bold">
@@ -103,15 +101,6 @@ export function CapabilityMatrix() {
           )
         })}
       </table>
-
-      {hasSeasonal && (
-        <p className="mt-5 text-xs text-muted-foreground">
-          {tx(
-            "Les conseils saisonniers partent du calendrier de votre région, puis de votre propre historique après 3 mois de données. Ce sont des conseils de stock, jamais des conseils médicaux.",
-            "Seasonal advice starts from your region's calendar, then from your own history after 3 months of data. It is stock advice, never medical advice."
-          )}
-        </p>
-      )}
     </section>
   )
 }

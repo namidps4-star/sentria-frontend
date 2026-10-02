@@ -103,7 +103,11 @@ const rowsOf = p => p.locator('[data-capability]').evaluateAll(els => els.map(e 
     pass(await section(p).locator('td[data-included="true"] svg').first().evaluate(el => getComputedStyle(el).color) === await p.evaluate(() => { const e = document.createElement('i'); e.style.color = 'var(--tag-success-fg)'; document.body.appendChild(e); const c = getComputedStyle(e).color; e.remove(); return c; }), 'the check marks are the success token');
     pass(await section(p).locator('td .sr-only').first().innerText() === 'Included' && (await section(p).locator('td[data-included="false"] .sr-only').first().innerText()) === 'Not included', 'a screen reader hears Included / Not included, not just a mark');
     pass(await section(p).locator('table caption').count() === 1 && await section(p).locator('tbody tr th[scope=row]').count() === rows.length && await section(p).locator('thead th[scope=col]').count() === 5, 'a real table: caption, column headers, a row header per capability');
-    pass(/seasonal advice starts from your region/i.test(await section(p).innerText()), 'the seasonal-advice disclaimer is kept (stock advice, never medical advice)');
+    pass(/seasonal advice starts from your region/i.test(await p.evaluate(() => document.body.innerText)), 'the seasonal-advice disclaimer is on the page (stock advice, never medical advice)');
+    const banner = p.locator('section[class*="bg-brand-deep"]').filter({ has: p.locator('h3', { hasText: /^SentrIA Intelligence/ }) });
+    pass(await banner.count() === 1 && await banner.evaluate(el => getComputedStyle(el).backgroundColor) === 'rgb(15, 46, 31)', 'the green SentrIA Intelligence banner is there, in the --brand-deep colour');
+    pass(await banner.locator('li').count() === 4 && await banner.locator('li').filter({ hasText: /Soon/ }).count() === 3, 'the banner lists four features, three of them marked Soon');
+    pass((await banner.boundingBox()).y < (await section(p).boundingBox()).y, 'the banner sits above the capability list');
 
     console.log('== the plan cards agree with it');
     const cards = await p.evaluate(() => [...document.querySelectorAll('section[aria-labelledby^="plan-"]')].map(c => ({ plan: c.getAttribute('aria-labelledby').replace('plan-', ''), rows: [...c.querySelectorAll('ul li')].map(li => ({ text: li.innerText.replace(/\s+/g, ' ').replace(/^Not included: /, '').trim(), has: !!li.querySelector('svg') && !/Not included/.test(li.innerText) })) })));
@@ -143,6 +147,7 @@ const rowsOf = p => p.locator('[data-capability]').evaluateAll(els => els.map(e 
     const { ctx, p, errs } = await open(b, opts);
     pass(await section(p).count() === 0, `${label}: no capability section`);
     pass(await p.locator('section[aria-labelledby^="plan-"]').count() === 4 && /Add-ons|Options/.test(await p.evaluate(() => document.body.innerText)), `${label}: the four plan cards and the add-ons are still there`);
+    pass(await p.locator('section[class*="bg-brand-deep"]').filter({ has: p.locator('h3', { hasText: /^SentrIA Intelligence/ }) }).count() === 1, `${label}: the SentrIA Intelligence banner is still there (it does not wait for the API)`);
     pass(errs.length === 0, `${label}: no page errors`);
     await ctx.close();
   }
