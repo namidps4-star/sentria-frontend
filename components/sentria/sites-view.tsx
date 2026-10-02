@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   Activity,
   AlertTriangle,
@@ -29,6 +29,7 @@ import {
   type LucideIcon,
 } from "@/lib/icons"
 import { usePresence } from "@/lib/use-presence"
+import { useShake } from "@/lib/use-shake"
 import { cn } from "@/lib/utils"
 import { PLAN_NAMES, PLAN_UPDATED_EVENT, maxSitesFor, readAccountPlan, type PlanId } from "@/lib/plans"
 import { StatusTag, type TagTone } from "./status-tag"
@@ -218,6 +219,11 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
   const [showAddSite, setShowAddSite] =
     useState(false)
 
+  // F-FORMSHAKE: a site needs a name. An empty one is refused out loud.
+  const [nameInvalid, setNameInvalid] = useState(false)
+  const [nameShakeRef, shakeName] = useShake()
+  const nameInput = useRef<HTMLInputElement>(null)
+
   // F-SITEGATE: sites are capped by plan (lib/plans.ts maxSitesFor). At the
   // cap, "Add a site" explains the upgrade instead of opening the form.
   const [plan, setPlan] = useState<PlanId>("decouverte")
@@ -260,7 +266,14 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
   }
 
   function createSite() {
-    if (!newSiteName.trim() || atSiteCap) return
+    if (atSiteCap) return
+
+    if (!newSiteName.trim()) {
+      setNameInvalid(true)
+      shakeName()
+      nameInput.current?.focus()
+      return
+    }
 
     const site: Site = {
       id: `site-${Date.now()}`,
@@ -297,6 +310,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
     setSites((current) => [...current, site])
     setActiveSiteId(site.id)
     setShowAddSite(false)
+    setNameInvalid(false)
 
     setNewSiteName("")
     setNewSiteLocation("")
@@ -1110,9 +1124,10 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
               </div>
 
               <button
-                onClick={() =>
+                onClick={() => {
                   setShowAddSite(false)
-                }
+                  setNameInvalid(false)
+                }}
                 className="rounded-full p-2 text-muted-foreground hover:bg-muted"
                 aria-label={tx("Fermer", "Close")}
               >
@@ -1126,14 +1141,29 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                   {tx("Nom du site", "Site name")}
                 </label>
 
-                <input
-                  value={newSiteName}
-                  onChange={(e) =>
-                    setNewSiteName(e.target.value)
-                  }
-                  placeholder={tx("Ex. Usine Lyon", "e.g. Lyon plant")}
-                  className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-foreground"
-                />
+                <div ref={nameShakeRef}>
+                  <input
+                    ref={nameInput}
+                    value={newSiteName}
+                    onChange={(e) => {
+                      setNewSiteName(e.target.value)
+                      if (e.target.value.trim()) setNameInvalid(false)
+                    }}
+                    placeholder={tx("Ex. Usine Lyon", "e.g. Lyon plant")}
+                    aria-invalid={nameInvalid}
+                    aria-describedby={nameInvalid ? "site-name-error" : undefined}
+                    className={cn(
+                      "mt-2 w-full rounded-2xl border bg-background px-4 py-3 text-sm outline-none transition-colors",
+                      nameInvalid ? "border-destructive" : "border-border focus:border-foreground"
+                    )}
+                  />
+                </div>
+
+                {nameInvalid && (
+                  <p id="site-name-error" role="alert" className="mt-1.5 text-xs font-medium text-destructive">
+                    {tx("Donnez un nom au site.", "Give the site a name.")}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -1210,9 +1240,10 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
 
             <div className="mt-6 flex justify-end gap-2">
               <button
-                onClick={() =>
+                onClick={() => {
                   setShowAddSite(false)
-                }
+                  setNameInvalid(false)
+                }}
                 className="rounded-full border border-border px-5 py-2.5 text-sm font-semibold"
               >
                 {tx("Annuler", "Cancel")}
@@ -1220,8 +1251,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
 
               <button
                 onClick={createSite}
-                disabled={!newSiteName.trim()}
-                className="rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-background disabled:cursor-not-allowed disabled:opacity-40"
+                className="rounded-full bg-foreground px-5 py-2.5 text-sm font-semibold text-background"
               >
                 {tx("Créer le site", "Create the site")}
               </button>

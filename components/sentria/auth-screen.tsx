@@ -17,6 +17,7 @@ import { useLocale, writeLanguage } from "@/lib/locale"
 import { useTx, type Tx } from "@/lib/i18n"
 import { missingSupabaseEnv, supabase } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
+import { useShake } from "@/lib/use-shake"
 
 import { SectorShowcase } from "./sector-showcase"
 
@@ -161,6 +162,13 @@ export function AuthScreen({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState("")
   const [notice, setNotice] = useState("")
+
+  // F-FORMSHAKE: a refused sign-in shakes the form. The errors say nothing
+  // about which field was wrong (that is on purpose), so the whole form moves.
+  const [formRef, shakeForm] = useShake<HTMLFormElement>()
+  useEffect(() => {
+    if (error) shakeForm()
+  }, [error, shakeForm])
 
   function switchTo(next: Mode) {
     setMode(next)
@@ -457,7 +465,7 @@ export function AuthScreen({
               )}
             </p>
           ) : (
-            <form onSubmit={submit} className="mt-6 flex w-full flex-col gap-4" noValidate>
+            <form ref={formRef} onSubmit={submit} className="mt-6 flex w-full flex-col gap-4" noValidate>
               {mode === "sign-up" && (
                 <>
                   <Field id="auth-name" label={tx("Nom", "Name")}>

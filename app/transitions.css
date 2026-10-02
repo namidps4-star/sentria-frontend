@@ -312,3 +312,25 @@
 @media (prefers-reduced-motion: reduce) {
   .t-step { transition: none !important; opacity: 1; transform: none; filter: none; }
 }
+
+/* A field that refused its input shakes once, sideways (F-FORMSHAKE). This one
+   is ours, not the library's: a short ease-out wobble inside the 250 ms budget.
+   No fill mode, so nothing is left on the element afterwards (a leftover
+   transform would trap fixed children). lib/use-shake.ts replays it. */
+:root {
+  --shake-dur: 240ms;
+  --shake-distance: 6px;
+}
+@keyframes t-shake {
+  0%, 100% { transform: translateX(0); }
+  18%      { transform: translateX(calc(var(--shake-distance) * -1)); }
+  38%      { transform: translateX(var(--shake-distance)); }
+  58%      { transform: translateX(calc(var(--shake-distance) * -0.6)); }
+  78%      { transform: translateX(calc(var(--shake-distance) * 0.3)); }
+}
+.t-shake {
+  animation: t-shake var(--shake-dur) cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-shake { animation: none !important; }
+}

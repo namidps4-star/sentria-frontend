@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Globe, Bell, Moon, Check, Building2, Mail } from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import { readTheme, resolvedTheme, writeTheme } from "@/lib/theme"
@@ -22,6 +22,7 @@ import {
   writeLanguage,
 } from "@/lib/locale"
 import { useTx } from "@/lib/i18n"
+import { useShake } from "@/lib/use-shake"
 
 /* This screen carries its own catalogue, in six languages, and it is the
    only place in the app where Spanish, Portuguese, Arabic and Kiswahili
@@ -314,12 +315,27 @@ export function SettingsView() {
     setDark(!dark)
   }
 
+  // F-FORMSHAKE: the company name is required (onboarding will not go on
+  // without it), so an empty one is refused out loud, not saved.
+  const [nameInvalid, setNameInvalid] = useState(false)
+  const [nameShakeRef, shakeName] = useShake()
+  const nameInput = useRef<HTMLInputElement>(null)
+
   const revertSettings = () => {
     setCompanyName(readCompanyName())
     setTimezoneId(readTimezoneId())
+    setNameInvalid(false)
   }
 
   const saveSettings = () => {
+    if (!companyName.trim()) {
+      setNameInvalid(true)
+      shakeName()
+      nameInput.current?.focus()
+      return
+    }
+
+    setNameInvalid(false)
     writeCompanyName(companyName)
     writeTimezoneId(timezoneId)
 
@@ -460,13 +476,26 @@ export function SettingsView() {
         <div className="mt-4 space-y-3.5">
           <label className="block">
             <span className="text-xs font-semibold text-white/70">{t.orgName}</span>
-            <input
-              value={companyName}
-              onChange={(event) => setCompanyName(event.target.value)}
-              placeholder={t.orgPlaceholder}
-              autoComplete="organization"
-              className={FIELD}
-            />
+            <div ref={nameShakeRef}>
+              <input
+                ref={nameInput}
+                value={companyName}
+                onChange={(event) => {
+                  setCompanyName(event.target.value)
+                  if (event.target.value.trim()) setNameInvalid(false)
+                }}
+                placeholder={t.orgPlaceholder}
+                autoComplete="organization"
+                aria-invalid={nameInvalid}
+                aria-describedby={nameInvalid ? "company-name-error" : undefined}
+                className={cn(FIELD, nameInvalid && "border-[#ffb8bf] focus:border-[#ffb8bf]")}
+              />
+            </div>
+            {nameInvalid && (
+              <span id="company-name-error" role="alert" className="mt-1.5 block text-xs font-medium text-[#ffb8bf]">
+                {tx("Entrez le nom de votre entreprise.", "Enter your company name.")}
+              </span>
+            )}
           </label>
 
           {/* Country, and therefore currency. Choosing a country also
