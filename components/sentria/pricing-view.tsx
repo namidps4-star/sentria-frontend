@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { BrainCircuit, Check, Minus } from "@/lib/icons"
+import { Check, Minus } from "@/lib/icons"
 
 import { useTx, type Localized, resolve } from "@/lib/i18n"
 import { currencyByCode, useLocale } from "@/lib/locale"
@@ -22,6 +22,7 @@ import {
 } from "@/lib/plans"
 import { cn } from "@/lib/utils"
 
+import { CapabilityMatrix } from "./capability-matrix"
 import { StatusTag } from "./status-tag"
 
 const TAGLINES: Record<PlanId, Localized> = {
@@ -100,14 +101,6 @@ const ROWS: Row[] = [
     label: () => ({ fr: "SentrIA Intelligence (IA)", en: "SentrIA Intelligence (AI)" }),
     has: (p) => PLAN_LIMITS[p].ml,
   },
-]
-
-/** Only "supplier lead times" exists today; the rest is marked Soon. */
-const ML_FEATURES: { label: Localized; soon?: boolean }[] = [
-  { label: { fr: "Délais fournisseurs appris sur votre historique", en: "Supplier lead times learned from your history" } },
-  { label: { fr: "Conseils de stock saisonniers (paludisme en saison des pluies, grippe à l'harmattan…)", en: "Seasonal stock advice (malaria in the rainy season, flu in the harmattan…)" }, soon: true },
-  { label: { fr: "Prévision de la demande : quand chaque article sera épuisé", en: "Demand forecast: when each item will run out" }, soon: true },
-  { label: { fr: "Détection d'anomalies sur stocks et machines", en: "Anomaly detection on stock and machines" }, soon: true },
 ]
 
 const ADD_ONS: Localized[] = [
@@ -285,36 +278,9 @@ export function PricingView() {
           )}
         </p>
 
-        {/* SentrIA Intelligence + add-ons */}
+        {/* What each plan can do (from the API's capability list) + add-ons */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
-          <section className="rounded-[28px] bg-brand-deep p-7 text-white">
-            <h3 className="flex flex-wrap items-center gap-2 font-heading text-xl font-bold">
-              <BrainCircuit className="h-5 w-5 text-[#d4f542]" aria-hidden="true" />
-              SentrIA Intelligence
-              <span className="text-sm font-medium text-white/60">· Business {tx("et", "and")} Entreprise</span>
-            </h3>
-            <ul className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
-              {ML_FEATURES.map((feature) => (
-                <li key={feature.label.en} className="flex items-start gap-2.5">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#d4f542]" strokeWidth={2.5} aria-hidden="true" />
-                  <span>
-                    {resolve(feature.label, tx)}
-                    {feature.soon && (
-                      <StatusTag tone="neutral" size="xs" className="ml-2 align-middle">
-                        {tx("Bientôt", "Soon")}
-                      </StatusTag>
-                    )}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-5 text-xs text-white/55">
-              {tx(
-                "Les conseils saisonniers partent du calendrier de votre région, puis de votre propre historique après 3 mois de données. Ce sont des conseils de stock, jamais des conseils médicaux.",
-                "Seasonal advice starts from your region's calendar, then from your own history after 3 months of data. It is stock advice, never medical advice."
-              )}
-            </p>
-          </section>
+          <CapabilityMatrix />
 
           <section className="rounded-[28px] border border-border bg-card p-7">
             <h3 className="flex flex-wrap items-center gap-2 font-heading text-xl font-bold">

@@ -113,3 +113,8 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 ## Plan numbers come from the API
 **Reality:** `lib/plans.ts` holds only default values; `applyEntitlements()` overwrites `ENTITLEMENTS`, `PLAN_LIMITS` (labels are generated from the numbers) and `DEPARTMENT_GROUPS` in place from `GET /plans` after sign-in (`lib/entitlements.ts`), then fires `PLAN_UPDATED_EVENT`. Views that read them at render must re-render on that event. The backend calls the retail sector `retail`, the app `commerce`.
 **Rule:** Never write a plan number into a component or a string. Change it in the backend's `pipeline/entitlements.py`, and the bundled default here only to keep it in step.
+
+## The pricing page's capability list is the API's, with no copy here
+**Problem:** The pricing page lists what each plan can do, and a list in a component looks like the place to edit it.
+**Reality:** `GET /plans` sends `tiers` and `capabilities` (backend `CAPABILITIES`: tier, lowest plan, live or soon, French and English label). `applyEntitlements()` stores them in `TIERS` / `CAPABILITIES` (lib/plans.ts), all or nothing, and `components/sentria/capability-matrix.tsx` draws them. There is deliberately no bundled copy: until the API has answered, or when it sends nothing usable, the section is simply not drawn. The plan cards' tracking, SMS and Intelligence rows come from flags the backend derives from the same list. Only some capabilities are enforced (see the backend's gotcha); the page lists what each plan includes, it does not itself block anything.
+**Rule:** Change a capability's plan, label or live flag in the backend only. A suite that opens the pricing page must serve `/plans` (tests/e2e/plans-fixture.js is the backend's answer, kept by hand).

@@ -6,8 +6,10 @@ const APP = APP_URL;
 let fails = 0;
 const pass = (ok, l) => { fails += !ok; console.log(`   ${ok ? 'PASS' : 'FAIL'} ${l}`); };
 const soon = new Date(Date.now() + 4.5 * 86400000).toISOString();
+const { PLANS_ANSWER } = require('./plans-fixture');
 const api = async (p, onUpload) => {
   await p.route(/onrender\.com\//, r => { const u = r.request().url();
+    if (/\/plans(\?|$)/.test(u)) return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(PLANS_ANSWER) });
     if (u.includes('/upload')) return onUpload ? onUpload(r) : r.fulfill({ status: 200, contentType: 'application/json', body: '{"success":true,"message":"ok"}' });
     r.fulfill({ status: 200, contentType: 'application/json', body: u.includes('/alerts') ? '[]' : '{"recommendations":[],"assignments":[],"contractors":[]}' }); });
 };

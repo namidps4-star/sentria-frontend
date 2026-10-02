@@ -188,6 +188,69 @@ function cheapestPlan(test: (e: Entitlement) => boolean): PlanId {
   return PLAN_ORDER.find((plan) => test(ENTITLEMENTS[plan])) ?? "entreprise"
 }
 
+/* ------------------------------------------------------------------ */
+/*  What a plan can do (C-PRICE)                                       */
+/* ------------------------------------------------------------------ */
+
+/** A kind of value: detect, anticipate and estimate, coordinate. */
+export type CapabilityTier = { key: string; label: Localized; summary: Localized }
+
+/** One thing a plan can do, and the lowest plan that includes it. */
+export type Capability = {
+  key: string
+  tier: string
+  plan: PlanId
+  /** False while it is on the roadmap: the page says "soon". */
+  live: boolean
+  label: Localized
+}
+
+/** From GET /plans (pipeline/entitlements.py CAPABILITIES), applied in place
+ *  by applyEntitlements(). Empty until that answer arrives: there is no
+ *  bundled copy, so the page draws nothing rather than a list that could
+ *  disagree with what the API says. */
+export const TIERS: CapabilityTier[] = []
+export const CAPABILITIES: Capability[] = []
+
+/** Does this plan include the capability? Every plan above its lowest one does. */
+export function includesCapability(plan: PlanId, capability: Capability): boolean {
+  return atLeast(plan, capability.plan)
+}
+
+const asText = (v: unknown): v is string => typeof v === "string" && v.trim() !== ""
+const asLabel = (v: unknown): Localized | null => {
+  const l = v as { fr?: unknown; en?: unknown } | null
+  return l && asText(l.fr) && asText(l.en) ? localized(l.fr, l.en) : null
+}
+
+/** Reads the tiers and capabilities of a /plans answer. All or nothing: one
+ *  malformed entry and none are applied, so the page never shows half a list. */
+function asCapabilities(body: { tiers?: unknown; capabilities?: unknown } | null): { tiers: CapabilityTier[]; capabilities: Capability[] } | null {
+  if (!Array.isArray(body?.tiers) || !Array.isArray(body?.capabilities)) return null
+
+  const tiers: CapabilityTier[] = []
+  for (const raw of body.tiers as Record<string, unknown>[]) {
+    const label = asLabel(raw?.label)
+    const summary = asLabel(raw?.summary)
+    if (!raw || !asText(raw.key) || !label || !summary) return null
+    tiers.push({ key: raw.key, label, summary })
+  }
+
+  const capabilities: Capability[] = []
+  for (const raw of body.capabilities as Record<string, unknown>[]) {
+    const label = asLabel(raw?.label)
+    if (
+      !raw || !asText(raw.key) || !isPlanId(raw.plan) || typeof raw.live !== "boolean" || !label ||
+      !asText(raw.tier) || !tiers.some((t) => t.key === raw.tier)
+    ) {
+      return null
+    }
+    capabilities.push({ key: raw.key, tier: raw.tier, plan: raw.plan, live: raw.live, label })
+  }
+
+  return tiers.length > 0 && capabilities.length > 0 ? { tiers, capabilities } : null
+}
+
 export type PlanLimits = {
   sectors: Localized
   departments: Localized
@@ -300,6 +363,12 @@ export function applyEntitlements(payload: unknown): boolean {
   for (const plan of PLAN_ORDER) {
     Object.assign(ENTITLEMENTS[plan], next[plan])
     Object.assign(PLAN_LIMITS[plan], limitsFrom(next[plan]))
+  }
+
+  const caps = asCapabilities(payload as { tiers?: unknown; capabilities?: unknown } | null)
+  if (caps) {
+    TIERS.splice(0, TIERS.length, ...caps.tiers)
+    CAPABILITIES.splice(0, CAPABILITIES.length, ...caps.capabilities)
   }
 
   const groups = body?.department_groups
