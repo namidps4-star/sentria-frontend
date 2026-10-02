@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { readSectors } from "@/lib/activities"
 import { useTx } from "@/lib/i18n"
@@ -28,9 +28,18 @@ export function SectorTag({ size = "sm", className }: { size?: keyof typeof SIZE
     return () => events.forEach((name) => window.removeEventListener(name, refresh))
   }, [])
 
-  if (sectors.length === 0) return null
-
   const text = sectors.map((id) => sectorLabel(id, tx)).join(" + ")
+
+  // A change of sector rises in (t-rise-in, 250 ms budget). Showing the tag
+  // for the first time on a page does not: only a swap after it was there.
+  const shown = useRef("")
+  const [swapped, setSwapped] = useState(0)
+  useEffect(() => {
+    if (shown.current && text && shown.current !== text) setSwapped((n) => n + 1)
+    shown.current = text
+  }, [text])
+
+  if (sectors.length === 0) return null
 
   return (
     <span
@@ -42,7 +51,9 @@ export function SectorTag({ size = "sm", className }: { size?: keyof typeof SIZE
         className
       )}
     >
-      <span className="truncate">{text}</span>
+      <span key={swapped} className={cn("truncate", swapped > 0 && "t-rise-in")}>
+        {text}
+      </span>
     </span>
   )
 }

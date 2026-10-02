@@ -69,7 +69,11 @@ const oldBadges = p => p.evaluate(() => [...document.querySelectorAll('span.roun
 
   console.log('== it follows a change of sector, no reload');
   { const { p, ctx } = await open({ page: 'Profile' });
+    pass(await tag(p).first().locator('> span').evaluate(el => !el.classList.contains('t-rise-in')), 'showing the tag for the first time does not animate it');
     await p.evaluate(() => { localStorage.setItem('sentria_sectors', '["industry"]'); localStorage.setItem('sentria_sector', 'industry'); window.dispatchEvent(new Event('sentria_sectors_updated')); });
+    await p.waitForTimeout(60);
+    const swap = await tag(p).first().locator('> span').evaluate(el => ({ cls: el.classList.contains('t-rise-in'), anim: getComputedStyle(el).animationName, dur: getComputedStyle(el).animationDuration }));
+    pass(swap.cls && swap.anim === 't-rise-in' && parseFloat(swap.dur) * (/ms$/.test(swap.dur) ? 1 : 1000) <= 250, `a new sector rises in (${swap.anim}, ${swap.dur}), inside the 250 ms budget`);
     await p.waitForTimeout(400);
     pass((await tag(p).first().innerText()).trim() === 'Industry', 'health -> industry');
     await ctx.close(); }
