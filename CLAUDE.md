@@ -28,3 +28,7 @@ Next.js 16 (App Router, Turbopack), React 19, Tailwind v4, Supabase Auth (`@supa
 
 ## Reporting
 Terse: Done / Tested / Pushed / Your turn / Open questions / Next. Say plainly what was and wasn't verified.
+
+## Writing
+- Prose you write (replies, commit messages, docs, UI copy) follows the `humanizer` skill's surface pass: no em dashes, no hype words, no "not X, it's Y", no cheerful openers or closers. Skip its "add personality" advice and the `structural-humanizer` pass for code, test output and the report above. Public-facing copy also goes through `copy_scan.py`.
+- The skills are third-party and stay out of the repo, like the transitions skill. If `~/.claude/skills/humanizer` is missing (fresh container): `git clone https://github.com/NulightJens/humanizer-stack ~/humanizer-stack && git -C ~/humanizer-stack checkout 13f5c023189d428ffba726c75886ca1fd0dcba65 && ~/humanizer-stack/install.sh --copy`. The pin is the commit that was read before installing; read the diff before moving it.
