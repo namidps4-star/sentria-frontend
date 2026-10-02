@@ -8,6 +8,11 @@ let fails = 0;
 const pass = (ok, l) => { fails += !ok; console.log(`   ${ok ? 'PASS' : 'FAIL'} ${l}`); };
 const tag = p => p.locator('[data-testid="plan-tag"]').locator('visible=true');
 const tagText = async p => (await tag(p).count()) ? (await tag(p).first().innerText()).trim() : null;
+// The tag is the app's status pill (Critical, Warning...): one tone and one icon per plan, on the
+// theme's own tag tokens (pastel in light, deep tint in dark, like every other tag).
+const PASTEL = { decouverte: 'rgb(236, 238, 242)', pro: 'rgb(223, 227, 255)', business: 'rgb(227, 247, 163)', entreprise: 'rgb(201, 242, 220)' };
+const lumOf = c => { const [r, g, b] = c.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number).map(v => v / 255).map(v => v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4); return 0.2126 * r + 0.7152 * g + 0.0722 * b; }; // same as screens.js
+const look = p => tag(p).first().locator('> span').first().evaluate(el => { const c = getComputedStyle(el); return { icon: !!el.querySelector('svg'), border: c.borderTopWidth, radius: parseFloat(c.borderTopLeftRadius), shadow: c.boxShadow, weight: c.fontWeight, bg: c.backgroundColor }; });
 
 (async () => {
   const browser = await chromium.launch(LAUNCH);
@@ -27,6 +32,9 @@ const tagText = async p => (await tag(p).count()) ? (await tag(p).first().innerT
   for (const [plan, label] of [['decouverte', 'Découverte'], ['pro', 'Pro'], ['business', 'Business'], ['entreprise', 'Entreprise']]) {
     const { p, ctx } = await open({ plan, name: 'Ama Koffi' });
     pass(await tagText(p) === label, `${plan}: tag reads "${label}" (got ${JSON.stringify(await tagText(p))})`);
+    { const l = await look(p);
+      pass(l.icon && l.border === '1px' && l.radius >= 9999 / 2 && l.shadow !== 'none' && l.weight === '600', `${plan}: a status pill like Critical (icon ${l.icon}, border ${l.border}, shadow ${l.shadow !== 'none'}, weight ${l.weight})`);
+      pass(l.bg === PASTEL[plan], `${plan}: its own pastel tone (${l.bg})`); }
     if (plan === 'decouverte') {
       const inBlock = await p.locator('[data-testid="signed-in-user"] [data-testid="plan-tag"]').count();
       pass(inBlock === 1, 'the tag sits inside the signed-in block');
@@ -82,7 +90,7 @@ const tagText = async p => (await tag(p).count()) ? (await tag(p).first().innerT
 
   console.log('== dark and phone');
   { const { p, ctx } = await open({ plan: 'business', name: 'Ama Koffi', theme: 'dark' });
-    pass(await tagText(p) === 'Business', 'dark: tag shown'); await p.screenshot({ path: 'tiertag-dark.png' }); await ctx.close(); }
+    pass(await tagText(p) === 'Business', 'dark: tag shown'); { const l = await look(p); const fg = await tag(p).first().locator('> span').first().evaluate(el => getComputedStyle(el).color); pass(l.bg !== PASTEL.business && lumOf(l.bg) < 0.12 && lumOf(fg) > 0.4, `dark: a deep tint with bright text, like every other tag (${l.bg} / ${fg})`); } await p.screenshot({ path: 'tiertag-dark.png' }); await ctx.close(); }
   { const { p, ctx } = await open({ plan: 'business', name: 'Ama Koffi', vw: 390 });
     pass(await tagText(p) === 'Business', '390 px: tag shown');
     pass(await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'no sideways page scroll');

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import type { ViewKey } from "./types"
+import { StatusTag, type TagTone } from "./status-tag"
 import { useT, type MessageKey } from "@/lib/i18n"
 import { PLAN_NAMES, PLAN_UPDATED_EVENT, readAccountPlan, type PlanId } from "@/lib/plans"
 import { usePresence } from "@/lib/use-presence"
@@ -23,7 +24,20 @@ import {
   UsersRound,
   LogOut,
   ShieldCheck,
+  Sprout,
+  Zap,
+  Building2,
+  type LucideIcon,
 } from "@/lib/icons"
+
+/** The plan tag under the user's name: the same pastel pill as the app's
+ *  status tags (Critical, Warning), one tone and one icon per plan. */
+const TIER_TAG: Record<PlanId, { tone: TagTone; icon: LucideIcon }> = {
+  decouverte: { tone: "neutral", icon: Sprout },
+  pro: { tone: "info", icon: Zap },
+  business: { tone: "brand", icon: Sparkles },
+  entreprise: { tone: "success", icon: Building2 },
+}
 
 interface SidebarProps {
   active: ViewKey
@@ -403,11 +417,10 @@ export function Sidebar({
                       {name || (username ? `@${username}` : email)}
                     </span>
                     {tier && (
-                      <span
-                        data-testid="plan-tag"
-                        className="shrink-0 rounded-full bg-accent/10 px-1.5 py-px text-[10px] font-semibold leading-4 text-accent"
-                      >
-                        {PLAN_NAMES[tier]}
+                      <span data-testid="plan-tag" className="inline-flex shrink-0">
+                        <StatusTag tone={TIER_TAG[tier].tone} icon={TIER_TAG[tier].icon} size="xs">
+                          {PLAN_NAMES[tier]}
+                        </StatusTag>
                       </span>
                     )}
                   </div>

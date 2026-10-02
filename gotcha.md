@@ -23,7 +23,7 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 
 ## Use theme tokens, not `dark:` classes
 **Reality:** `dark:` doesn't follow the "system" theme (`@custom-variant dark` is `.dark *`; under "system" there is no `.dark` class, only the `prefers-color-scheme` token overrides). The pricing check marks were dark green on a dark card for that reason. Colours live in `app/globals.css` (`--canvas`, `--ink`, `--tag-*`).
-**Rule:** Use tokens. Keep the pastel tag tokens; changing them has been rejected twice. A surface that stays bright in dark mode (pricing's lime and green cards) takes `.tags-light`, which pins the light tag colours inside it. `tests/e2e/brand.js` fails on a `dark:` class in the main views.
+**Rule:** Use tokens. Keep the pastel tag tokens; changing them has been rejected twice. A surface that stays bright in dark mode (pricing's lime and green cards) takes `.tags-light`, which pins the light tag colours inside it. A dark surface does not: the sidebar's plan tag (`StatusTag`, one tone and icon per plan) uses the theme's tokens, and `tests/e2e/screens.js` fails any bright pastel tag in dark mode. `tests/e2e/brand.js` fails on a `dark:` class in the main views.
 
 ## Icons are generated
 **Reality:** `lib/icons.tsx` and `lib/icon-data.ts` are generated.
