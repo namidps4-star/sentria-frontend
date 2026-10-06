@@ -1,9 +1,10 @@
 // F-VIZPREMIUM, motion part: a short, subtle layer so the dashboard feels
 // alive, built from transitions.dev (app/transitions.css holds its snippets).
 //   menus and popovers  -> menu dropdown      dialogs -> modal
-//   KPI numbers         -> number pop-in      the attention banner -> texts reveal
-// Nothing runs longer than 250 ms, nothing blocks a click, and "reduce motion"
-// turns it all off.
+//   KPI numbers         -> count up (ours)    the attention banner -> texts reveal
+// Menus, dialogs and anything the user triggers stay within 250 ms; the page's
+// own arrival (tests/e2e/dashmotion.js) is allowed a second. Nothing blocks a
+// click, and "reduce motion" turns it all off.
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
@@ -138,16 +139,17 @@ const ALERTS = Array.from({ length: 14 }, (_, k) => ({ id: k, equipment: `Med ${
   const open = async ({ reduced = false, theme = 'light', vw = 1440, sample = false } = {}) => {
     const ctx = await browser.newContext({ viewport: { width: vw, height: 900 }, locale: 'en-US', reducedMotion: reduced ? 'reduce' : 'no-preference' });
     const p = await ctx.newPage(); p._errors = []; p.on('pageerror', e => p._errors.push(e.message));
-    await p.route(/onrender\.com\//, r => { const url = r.request().url();
-      // French answers with 9 alerts, English with 14: switching language refetches, so the KPI changes on the same tile.
-      const rows = /lang=fr/.test(url) ? ALERTS.slice(0, 9) : ALERTS;
-      return r.fulfill({ status: 200, contentType: 'application/json', body: /\/alerts/.test(url) ? JSON.stringify(rows) : '{"recommendations":[],"assignments":[],"contractors":[]}' }); });
+    // The page asks for its alerts again when the language changes (and once more at start-up, when it learns the stored
+    // language), so a test changes what the next answer holds with p._rows(...) and then switches language.
+    let rows = ALERTS; p._rows = r => { rows = r; };
+    await p.route(/onrender\.com\//, r => r.fulfill({ status: 200, contentType: 'application/json', body: /\/alerts/.test(r.request().url()) ? JSON.stringify(rows) : '{"recommendations":[],"assignments":[],"contractors":[]}' }));
     await p.addInitScript(({ ls, sample }) => {
       if (!sessionStorage.x) { sessionStorage.x = 1; localStorage.clear(); for (const [k, v] of Object.entries(ls)) localStorage.setItem(k, v); }
-      if (sample) { window.__nodes = new Set(); window.__popSeen = false; window.__texts = [];
-        setInterval(() => { const g = [...document.querySelectorAll('.t-digit-group')].find(x => x.parentElement && /Medicines affected|Médicaments concernés/i.test(x.parentElement.parentElement ? x.parentElement.parentElement.innerText : ''));
-          if (g) { window.__nodes.add(g); const t = g.innerText.trim(); if (window.__texts[window.__texts.length - 1] !== t) window.__texts.push(t); }
-          if (document.getAnimations().some(a => a.animationName === 't-digit-pop-in')) window.__popSeen = true; }, 8); }
+      if (sample) { window.__nodes = new Set(); window.__counts = []; window.__texts = []; window.__live = false;
+        setInterval(() => { const g = [...document.querySelectorAll('.t-count')].find(x => /Medicines affected|Médicaments concernés/i.test(x.parentElement.parentElement ? x.parentElement.parentElement.innerText : ''));
+          if (g) { window.__nodes.add(g); const t = g.querySelector('.t-count-final').innerText.trim(); if (window.__texts[window.__texts.length - 1] !== t) window.__texts.push(t);
+            const n = +getComputedStyle(g.querySelector('.t-count-live')).getPropertyValue('--t-n'); if (window.__counts[window.__counts.length - 1] !== n) window.__counts.push(n);
+            if (getComputedStyle(g.querySelector('.t-count-live')).display !== 'none') window.__live = true; } }, 8); }
     }, { ls: { sentria_onboarded: 'true', sentria_language: 'en', sentria_company_name: 'Pharmacie A', sentria_sector: 'health', sentria_sectors: '["health"]', sentria_business_type: 'pharmacie', sentria_departments: '{"health":["pharmacie","clinique-hopital"]}', sentria_theme: theme }, sample });
     await signedIn(p, 'u', 'a@b.c', { plan: 'business' });
     await p.goto(APP_URL); await p.waitForTimeout(sample ? 2500 : 2000);
@@ -161,26 +163,29 @@ const ALERTS = Array.from({ length: 14 }, (_, k) => ({ id: k, equipment: `Med ${
     for (const [k, v] of Object.entries(vars)) pass(v !== '' && ms(v) <= 250, `${k} is ${v}`);
     await ctx.close(); }
 
-  console.log('== KPI numbers pop in (number pop-in)');
+  console.log('== KPI numbers count up to their value, and follow it');
   { const { p, ctx } = await open({ sample: true });
-    const r = await p.evaluate(() => ({ popSeen: window.__popSeen, nodes: window.__nodes.size, texts: window.__texts }));
-    pass(r.texts.at(-1) === '14', `the number reads as plain text, "14" (saw ${JSON.stringify(r.texts)})`);
-    pass(r.popSeen, 'the digit pop-in animation really ran');
-    const d = await p.evaluate(() => { const g = [...document.querySelectorAll('.t-digit-group')].find(x => /Medicines affected|Médicaments concernés/i.test(x.parentElement.parentElement.innerText)); const ds = [...g.querySelectorAll('.t-digit')]; const c = getComputedStyle(ds[0]); return { n: ds.length, stagger: ds.map(x => x.dataset.stagger || ''), dur: c.animationDuration, copied: g.innerText }; });
-    pass(d.n === 2 && d.stagger.join() === '1,2', 'two digits, staggered 1 and 2 behind the others (the last two characters)');
-    pass(ms(d.dur) <= 250, `each digit animates in ${d.dur}`);
-    pass(d.copied === '14', `copy-paste reads "14", not one digit per line (${JSON.stringify(d.copied)})`);
+    const r = await p.evaluate(() => ({ counts: window.__counts, nodes: window.__nodes.size, texts: window.__texts, live: window.__live }));
+    pass(r.texts.length === 1 && r.texts[0] === '14', `the page text is the final value from the first sample to the last: "14" (saw ${JSON.stringify(r.texts)})`);
+    pass(r.live && r.counts[0] === 0 && r.counts.at(-1) === 14, `the counter runs from 0 to 14 (saw ${r.counts.length} steps: ${r.counts.slice(0, 6)}…)`);
+    pass(r.counts.length >= 6 && r.counts.every((n, i) => i === 0 || n >= r.counts[i - 1]), 'in steps, never going backwards');
+    const d = await p.evaluate(() => { const g = [...document.querySelectorAll('.t-count')].find(x => /Medicines affected|Médicaments concernés/i.test(x.parentElement.parentElement.innerText)); const fin = g.querySelector('.t-count-final'); const live = g.querySelector('.t-count-live'); return { copied: g.innerText.trim(), finalColour: getComputedStyle(fin).color, dur: getComputedStyle(live).transitionDuration, prop: getComputedStyle(live).transitionProperty, hidden: live.getAttribute('aria-hidden') }; });
+    pass(d.copied === '14', `copy-paste and tests read "14" (${JSON.stringify(d.copied)})`);
+    pass(/--t-n/.test(d.prop) && ms(d.dur) <= 1000, `the counter is a transition on --t-n, ${d.dur} (the page's arrival may take up to a second)`);
+    pass(d.hidden === 'true' && /rgba\(0, 0, 0, 0\)|transparent/.test(d.finalColour), 'the drawn number is hidden from assistive tech, the real one is only see-through');
     // switching language refetches the alerts: the same tile now holds another number
-    await p.evaluate(() => { localStorage.setItem('sentria_language', 'fr'); window.dispatchEvent(new Event('sentria_locale_updated')); });
-    await p.waitForTimeout(900);
-    const r2 = await p.evaluate(() => ({ nodes: window.__nodes.size, texts: window.__texts }));
-    pass(r2.texts.length >= 2 && r2.texts.at(-1) !== '14', `the value changes on the same tile (${JSON.stringify(r2.texts)})`);
-    pass(r2.nodes >= 2, `a new value is a new element, so the pop-in replays (${r2.nodes} nodes)`);
+    p._rows(ALERTS.slice(0, 9));
+    await p.evaluate(() => { window.__counts.length = 0; localStorage.setItem('sentria_language', 'fr'); window.dispatchEvent(new Event('sentria_locale_updated')); });
+    await p.waitForTimeout(1200);
+    const r2 = await p.evaluate(() => ({ nodes: window.__nodes.size, texts: window.__texts, counts: window.__counts }));
+    pass(r2.texts.at(-1) === '9', `the value changes on the same tile: "9" now (${JSON.stringify(r2.texts)})`);
+    pass(r2.nodes === 1, `the same element follows the new value: no new tile, no replay of the arrival (${r2.nodes} node)`);
+    pass(r2.counts.length >= 3 && r2.counts[0] <= 14 && r2.counts.at(-1) === 9 && r2.counts.every((n, i) => i === 0 || n <= r2.counts[i - 1]), `it counts down from 14 to 9 (${r2.counts})`);
     pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
     await ctx.close(); }
   { const { p, ctx } = await open({ sample: true, reduced: true });
-    const r = await p.evaluate(() => ({ popSeen: window.__popSeen, texts: window.__texts }));
-    pass(r.texts.at(-1) === '14' && r.popSeen === false, 'reduce motion: the number is just shown, no animation');
+    const r = await p.evaluate(() => { const g = [...document.querySelectorAll('.t-count')].find(x => /Medicines affected|Médicaments concernés/i.test(x.parentElement.parentElement.innerText)); return { live: window.__live, texts: window.__texts, colour: getComputedStyle(g.querySelector('.t-count-final')).color }; });
+    pass(r.texts.at(-1) === '14' && r.live === false && !/rgba\(0, 0, 0, 0\)|transparent/.test(r.colour), 'reduce motion: the number is just shown, nothing is drawn over it');
     await ctx.close(); }
 
   console.log('== the attention banner (texts reveal)');

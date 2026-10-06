@@ -4,10 +4,12 @@
    Colours are theme tokens (--series-N, --slice-N in app/globals.css), never
    literals; the data comes from lib/chart-series.ts. */
 
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent } from "react"
+import { useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from "react"
 import { useTx } from "@/lib/i18n"
 import { gaugeScale, niceScale, smoothPath, type LimitSide, type Slice } from "@/lib/chart-series"
+import { waitForEntrance } from "@/lib/motion"
 import { cn } from "@/lib/utils"
+import { CountNumber } from "./count-number"
 
 /** The size of an element, kept up to date. The charts draw in real pixels
  *  rather than stretching a viewBox, so their text and strokes stay crisp. */
@@ -122,6 +124,10 @@ export function LineChart({
     event.preventDefault()
   }
 
+  // The plot grows from the zero line each time it is drawn for another set of
+  // lines or another span of days. New values for the same lines just move.
+  const growKey = `${series.map((s) => s.key).join("|")}:${count}`
+
   const single = series.length === 1
   const ax = active === null ? 0 : x(active)
   const flip = ax > width / 2
@@ -188,41 +194,48 @@ export function LineChart({
               </text>
             ))}
 
-            {single && !empty && (
-              <path
-                d={`${curve(series[0].values)} L ${x(count - 1)} ${y(0)} L ${x(0)} ${y(0)} Z`}
-                fill={`url(#${gradientId})`}
-              />
+            {!empty && (
+              <g key={growKey} ref={waitForEntrance} className="t-grow-y" style={{ transformOrigin: `0px ${y(0)}px` }} data-grow="">
+                {single && (
+                  <path
+                    d={`${curve(series[0].values)} L ${x(count - 1)} ${y(0)} L ${x(0)} ${y(0)} Z`}
+                    fill={`url(#${gradientId})`}
+                  />
+                )}
+
+                {series.map((s) => (
+                  <path
+                    key={s.key}
+                    d={curve(s.values)}
+                    fill="none"
+                    stroke={s.color}
+                    strokeWidth={hot === s.key ? 3.5 : 2.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    vectorEffect="non-scaling-stroke"
+                    opacity={hot && hot !== s.key ? 0.2 : 1}
+                    data-series={s.key}
+                  />
+                ))}
+              </g>
             )}
 
-            {!empty &&
-              series.map((s) => (
-                <path
-                  key={s.key}
-                  d={curve(s.values)}
-                  fill="none"
-                  stroke={s.color}
-                  strokeWidth={hot === s.key ? 3.5 : 2.5}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  opacity={hot && hot !== s.key ? 0.2 : 1}
-                  data-series={s.key}
-                />
-              ))}
-
-            {!empty &&
-              series.map((s) => (
-                <circle
-                  key={s.key}
-                  cx={x(count - 1)}
-                  cy={y(s.values[count - 1])}
-                  r={4}
-                  fill={s.color}
-                  stroke="var(--card)"
-                  strokeWidth={2}
-                  opacity={hot && hot !== s.key ? 0.2 : 1}
-                />
-              ))}
+            {!empty && (
+              <g key={`${growKey}:ends`} ref={waitForEntrance} className="t-pop">
+                {series.map((s) => (
+                  <circle
+                    key={s.key}
+                    cx={x(count - 1)}
+                    cy={y(s.values[count - 1])}
+                    r={4}
+                    fill={s.color}
+                    stroke="var(--card)"
+                    strokeWidth={2}
+                    opacity={hot && hot !== s.key ? 0.2 : 1}
+                  />
+                ))}
+              </g>
+            )}
 
             {active !== null && (
               <g data-crosshair="">
@@ -381,6 +394,11 @@ export function DonutChart({
   const total = slices.reduce((sum, s) => sum + s.value, 0)
   const current = slices.find((s) => s.key === active) ?? null
 
+  const maskId = useId()
+  // The ring sweeps round whenever it is drawn for other parts; new numbers
+  // for the same parts, or the same parts in another language, just move.
+  const sweepKey = slices.map((s) => s.key).join("|")
+
   const gapDeg = deg(GAP_PX / ((R_OUT + R_IN) / 2))
   const arcs = slices.map((slice, i) => {
     const sweep = slice.share * 360
@@ -399,28 +417,52 @@ export function DonutChart({
         aria-label={tx("Répartition des alertes", "Alert breakdown") + ": " + slices.map((s) => `${s.label} ${s.value}`).join(", ")}
       >
         <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} aria-hidden="true" className="block overflow-visible">
-          {arcs.map(({ slice, from, to, sweep }) => (
-            <path
-              key={slice.key}
-              d={sweep >= 359.9 ? RING_PATH : segmentPath(from, to)}
-              fillRule="evenodd"
-              fill={slice.color}
-              opacity={active && active !== slice.key ? 0.4 : 1}
-              data-slice={slice.key}
-              style={{
-                transformOrigin: `${CENTER}px ${CENTER}px`,
-                transform: active === slice.key ? "scale(1.045)" : "none",
-                transition: "transform 120ms ease-out, opacity 120ms ease-out",
-              }}
-              onPointerEnter={() => setActive(slice.key)}
-              onPointerLeave={() => setActive(null)}
-            />
-          ))}
+          <defs>
+            <mask id={maskId}>
+              <circle
+                key={sweepKey}
+                ref={waitForEntrance}
+                cx={CENTER}
+                cy={CENTER}
+                r={(R_OUT + R_IN) / 2}
+                fill="none"
+                stroke="white" /* a mask reads brightness, not a theme colour */
+                strokeWidth={THICK + 24}
+                pathLength={1}
+                transform={`rotate(-90 ${CENTER} ${CENTER})`}
+                className="t-sweep"
+                data-sweep=""
+              />
+            </mask>
+          </defs>
+          <g mask={`url(#${maskId})`}>
+            {arcs.map(({ slice, from, to, sweep }) => (
+              <path
+                key={slice.key}
+                d={sweep >= 359.9 ? RING_PATH : segmentPath(from, to)}
+                fillRule="evenodd"
+                fill={slice.color}
+                opacity={active && active !== slice.key ? 0.4 : 1}
+                data-slice={slice.key}
+                style={{
+                  transformOrigin: `${CENTER}px ${CENTER}px`,
+                  transform: active === slice.key ? "scale(1.045)" : "none",
+                  transition: "transform 120ms ease-out, opacity 120ms ease-out",
+                }}
+                onPointerEnter={() => setActive(slice.key)}
+                onPointerLeave={() => setActive(null)}
+              />
+            ))}
+          </g>
         </svg>
 
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center" data-donut-center="">
           <div className="flex w-24 flex-col items-center text-center">
-            <span className="font-heading text-[2rem] font-bold leading-none tabular-nums">{current ? current.value : total}</span>
+            <span className="relative font-heading text-[2rem] font-bold leading-none tabular-nums">
+              {/* The total stays under a hovered slice's number, so it does not count up again each time the pointer leaves. */}
+              <CountNumber value={total} className={current ? "invisible" : undefined} />
+              {current && <span className="absolute inset-0">{current.value}</span>}
+            </span>
             <span className="mt-1.5 line-clamp-2 text-[11px] leading-tight text-sidebar-foreground/65">
               {current ? `${current.label} · ${percent(current.share)}` : centerLabel}
             </span>
@@ -518,7 +560,7 @@ export function GaugeChart({
         <svg viewBox="0 0 120 70" className="block w-full" aria-hidden="true">
           <path d={`M ${x0} ${y0} A ${GAUGE.r} ${GAUGE.r} 0 0 1 ${gaugePoint(1)[0]} ${gaugePoint(1)[1]}`} fill="none" stroke="var(--border)" strokeWidth={GAUGE.stroke} strokeLinecap="round" data-gauge-track="" />
           {fill > 0.004 && (
-            <path d={`M ${x0} ${y0} A ${GAUGE.r} ${GAUGE.r} 0 0 1 ${x1} ${y1}`} fill="none" stroke={color} strokeWidth={GAUGE.stroke} strokeLinecap="round" data-gauge-fill="" />
+            <path d={`M ${x0} ${y0} A ${GAUGE.r} ${GAUGE.r} 0 0 1 ${x1} ${y1}`} fill="none" stroke={color} strokeWidth={GAUGE.stroke} strokeLinecap="round" pathLength={1} ref={waitForEntrance} className="t-draw" data-gauge-fill="" />
           )}
           <line x1={t0x} y1={t0y} x2={t1x} y2={t1y} stroke="var(--foreground)" strokeWidth={2.5} strokeLinecap="round" data-gauge-limit="" />
         </svg>
@@ -565,7 +607,7 @@ export function StockBars({ rows, locale, className }: { rows: StockBar[]; local
       </p>
 
       <ul aria-label={tx("Stock face au minimum", "Stock against its minimum")} className="space-y-2.5">
-        {rows.map((row) => {
+        {rows.map((row, index) => {
           const below = row.stock < row.min
           const width = Math.min(1, row.stock / (row.min * 2)) * 100
           return (
@@ -588,8 +630,13 @@ export function StockBars({ rows, locale, className }: { rows: StockBar[]; local
               </div>
               <div className="relative mt-1 h-2.5 rounded-full bg-muted" aria-hidden="true">
                 <div
-                  className="h-full rounded-full"
-                  style={{ width: `${width}%`, background: below ? "var(--tag-danger-fg)" : "var(--tag-warning-fg)" }}
+                  ref={waitForEntrance}
+                  className="t-reveal-x h-full rounded-full"
+                  style={{
+                    width: `${width}%`,
+                    background: below ? "var(--tag-danger-fg)" : "var(--tag-warning-fg)",
+                    "--grow-delay": `${Math.min(index, 6) * 70}ms`,
+                  } as CSSProperties}
                   data-stock-bar=""
                 />
                 <span className="absolute -bottom-1 -top-1 left-1/2 w-0.5 -translate-x-1/2 rounded-full bg-foreground" data-stock-min="" />
@@ -618,7 +665,18 @@ export function Sparkline({ data, className }: { data: number[]; className?: str
   const line = smoothPath(data.map((v, i) => [i * stepX, y(v)] as const))
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className={className} preserveAspectRatio="none" data-sparkline="">
-      <path d={line} fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d={line}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        pathLength={1}
+        ref={waitForEntrance}
+        className="t-draw"
+        style={{ "--grow-delay": "150ms" } as CSSProperties}
+      />
     </svg>
   )
 }

@@ -2,7 +2,7 @@
 
 import { DemotedTag, SeverityTag, StatusTag, ValueTag } from "./status-tag"
 import { demotion, demotionSentence } from "@/lib/demotion"
-import { PopNumber } from "./pop-number"
+import { CountNumber } from "./count-number"
 import { RevealText } from "./reveal-text"
 import { SheetTabs } from "./sheet-tabs"
 import type { ViewKey } from "./types"
@@ -54,7 +54,8 @@ import { LogisticsWaitingView } from "./logistics-waiting-view"
 import { LogisticsCostView } from "./logistics-cost-view"
 import { LogisticsAnticipateView } from "./logistics-anticipate-view"
 import { RecommendationsPanel } from "./recommendations-panel"
-import { KpiSkeleton, Skeleton } from "./skeleton"
+import { Skeleton } from "./skeleton"
+import { enterAt } from "@/lib/motion"
 import { announceAlertsUpdated } from "@/lib/alerts-event"
 import { RecommendationsBoard } from "./recommendations-board-view"
 import {
@@ -1989,6 +1990,9 @@ export function DashboardView({
     .kpis(filteredAlerts)
     .map((k, i) => ({
       ...k,
+      // The tile's identity: the French name, so switching language changes
+      // its text but not the tile (its number follows instead of restarting).
+      id: (subtypeLabels?.[i] ?? k.label).fr,
       label: px(subtypeLabels?.[i] ?? k.label),
       delta: px(k.delta),
     }))
@@ -2425,7 +2429,7 @@ export function DashboardView({
       return (
         <div className="space-y-6">
           {importPortal}
-          <div className="flex items-center justify-between">
+          <div className="t-enter flex items-center justify-between" style={enterAt(0)}>
             <button
               type="button"
               onClick={returnToDashboard}
@@ -2436,7 +2440,7 @@ export function DashboardView({
           </div>
 
           {/* A header line, not a banner: the tiles below are the page. */}
-          <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="t-enter flex flex-wrap items-end justify-between gap-3" style={enterAt(0.8)}>
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 {tx("Industrie", "Industry")}
@@ -2466,15 +2470,18 @@ export function DashboardView({
           </div>
 
           <div>
-            <PriorityHeading
-              count={selectedIndustryPriorities.length}
-              total={priorityCount("industry", businessType)}
-            />
+            <div className="t-enter" style={enterAt(1.6)}>
+              <PriorityHeading
+                count={selectedIndustryPriorities.length}
+                total={priorityCount("industry", businessType)}
+              />
+            </div>
 
             <PriorityCards
               sector="industry"
               ids={selectedIndustryPriorities}
               stats={industryStats}
+              enterFrom={2.2}
               onOpen={(id) =>
                 openIndustryPriority(id as IndustryPriority)
               }
@@ -2507,35 +2514,53 @@ export function DashboardView({
               </p>
             </div>
           ) : (
-          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[22px] bg-border shadow-sm xl:grid-cols-4">
-            {!alertsLoaded ? (
-              <KpiSkeleton count={kpis.length || 4} variant="tight" />
-            ) : kpis.map((k) => (
+          /* The strip rises as one (its cells are the card colour on a border
+             colour ground, so a cell fading on its own would flash that
+             ground); the numbers inside count and the lines draw. */
+          <div
+            className="t-enter grid grid-cols-2 gap-px overflow-hidden rounded-[22px] bg-border shadow-sm xl:grid-cols-4"
+            style={enterAt(5)}
+          >
+            {kpis.map((k) => (
               <div
-                key={k.label}
+                key={k.id}
                 className="bg-card px-4 py-3"
+                data-kpi-skeleton={alertsLoaded ? undefined : ""}
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm text-muted-foreground">
                     {k.label}
                   </span>
 
-                  <StatusTag tone={k.up ? "brand" : "danger"} size="xs" icon={k.up ? TrendingUp : TrendingDown}>
-                    {k.delta}
-                  </StatusTag>
+                  {alertsLoaded ? (
+                    <StatusTag tone={k.up ? "brand" : "danger"} size="xs" icon={k.up ? TrendingUp : TrendingDown}>
+                      {k.delta}
+                    </StatusTag>
+                  ) : (
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                  )}
                 </div>
 
-                <p className="mt-1 font-heading text-2xl font-bold tabular-nums tracking-tight">
-                  <PopNumber value={k.value} />
-                </p>
+                {alertsLoaded ? (
+                  <>
+                    <p className="mt-1 font-heading text-2xl font-bold tabular-nums tracking-tight">
+                      <CountNumber value={k.value} />
+                    </p>
 
-                <Sparkline
-                  data={dailySeries(filteredAlerts, 7, k.match)}
-                  className={cn(
-                    "mt-1 h-7 w-full",
-                    k.up ? "text-accent" : "text-destructive"
-                  )}
-                />
+                    <Sparkline
+                      data={dailySeries(filteredAlerts, 7, k.match)}
+                      className={cn(
+                        "mt-1 h-7 w-full",
+                        k.up ? "text-accent" : "text-destructive"
+                      )}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Skeleton className="mt-1 h-8 w-14" />
+                    <Skeleton className="mt-1 h-7 w-full" />
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -2670,7 +2695,7 @@ export function DashboardView({
       return (
         <div className="space-y-6">
           {importPortal}
-          <div className="flex items-center justify-between">
+          <div className="t-enter flex items-center justify-between" style={enterAt(0)}>
             <button
               type="button"
               onClick={returnToDashboard}
@@ -2681,7 +2706,7 @@ export function DashboardView({
           </div>
 
           {/* A header line, not a banner: the tiles below are the page. */}
-          <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="t-enter flex flex-wrap items-end justify-between gap-3" style={enterAt(0.8)}>
             <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 {tx("Logistique", "Logistics")}
@@ -2711,15 +2736,18 @@ export function DashboardView({
           </div>
 
           <div>
-            <PriorityHeading
-              count={selectedLogisticsPriorities.length}
-              total={priorityCount("logistics")}
-            />
+            <div className="t-enter" style={enterAt(1.6)}>
+              <PriorityHeading
+                count={selectedLogisticsPriorities.length}
+                total={priorityCount("logistics")}
+              />
+            </div>
 
             <PriorityCards
               sector="logistics"
               ids={selectedLogisticsPriorities}
               stats={logisticsStats}
+              enterFrom={2.2}
               onOpen={(id) =>
                 openLogisticsPriority(id as LogisticsPriority)
               }
@@ -2730,35 +2758,53 @@ export function DashboardView({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[22px] bg-border shadow-sm xl:grid-cols-4">
-            {!alertsLoaded ? (
-              <KpiSkeleton count={kpis.length || 4} variant="tight" />
-            ) : kpis.map((k) => (
+          {/* The strip rises as one (its cells are the card colour on a border
+              colour ground, so a cell fading on its own would flash that
+              ground); the numbers inside count and the lines draw. */}
+          <div
+            className="t-enter grid grid-cols-2 gap-px overflow-hidden rounded-[22px] bg-border shadow-sm xl:grid-cols-4"
+            style={enterAt(5)}
+          >
+            {kpis.map((k) => (
               <div
-                key={k.label}
+                key={k.id}
                 className="bg-card px-4 py-3"
+                data-kpi-skeleton={alertsLoaded ? undefined : ""}
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm text-muted-foreground">
                     {k.label}
                   </span>
 
-                  <StatusTag tone={k.up ? "brand" : "danger"} size="xs" icon={k.up ? TrendingUp : TrendingDown}>
-                    {k.delta}
-                  </StatusTag>
+                  {alertsLoaded ? (
+                    <StatusTag tone={k.up ? "brand" : "danger"} size="xs" icon={k.up ? TrendingUp : TrendingDown}>
+                      {k.delta}
+                    </StatusTag>
+                  ) : (
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                  )}
                 </div>
 
-                <p className="mt-1 font-heading text-2xl font-bold tabular-nums tracking-tight">
-                  <PopNumber value={k.value} />
-                </p>
+                {alertsLoaded ? (
+                  <>
+                    <p className="mt-1 font-heading text-2xl font-bold tabular-nums tracking-tight">
+                      <CountNumber value={k.value} />
+                    </p>
 
-                <Sparkline
-                  data={dailySeries(filteredAlerts, 7, k.match)}
-                  className={cn(
-                    "mt-1 h-7 w-full",
-                    k.up ? "text-accent" : "text-destructive"
-                  )}
-                />
+                    <Sparkline
+                      data={dailySeries(filteredAlerts, 7, k.match)}
+                      className={cn(
+                        "mt-1 h-7 w-full",
+                        k.up ? "text-accent" : "text-destructive"
+                      )}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Skeleton className="mt-1 h-8 w-14" />
+                    <Skeleton className="mt-1 h-7 w-full" />
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -2909,7 +2955,10 @@ export function DashboardView({
       {importPortal}
       {freshnessNote}
 
-      <div className="flex flex-col gap-4 rounded-3xl bg-sidebar-shell p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8">
+      <div
+        className="t-enter flex flex-col gap-4 rounded-3xl bg-sidebar-shell p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8"
+        style={enterAt(0)}
+      >
         <div className="max-w-xl">
           <div className="flex flex-wrap items-center gap-2">
             <SectorTag size="md" />
@@ -2987,22 +3036,24 @@ export function DashboardView({
         </button>
       </div>
 
-      <RecommendationsPanel
-        recommendations={filteredRecommendations}
-        totalRecommendationsCount={recommendations.length}
-        // Recurrence counts only this view's alerts: the same equipment
-        // name in another sector or activity is another asset (B-08).
-        alerts={alerts.filter(
-          (a) =>
-            (filterSector === "all" || a.sector === filterSector) &&
-            matchesActivity(a)
-        )}
-        // The ops type tailors logistics only. Passed everywhere, it
-        // labelled retail chain cards "Tailored view: Port" (B-20).
-        opsType={filterSector === "logistics" ? opsType : null}
-      />
+      <div className="t-enter" style={enterAt(1)}>
+        <RecommendationsPanel
+          recommendations={filteredRecommendations}
+          totalRecommendationsCount={recommendations.length}
+          // Recurrence counts only this view's alerts: the same equipment
+          // name in another sector or activity is another asset (B-08).
+          alerts={alerts.filter(
+            (a) =>
+              (filterSector === "all" || a.sector === filterSector) &&
+              matchesActivity(a)
+          )}
+          // The ops type tailors logistics only. Passed everywhere, it
+          // labelled retail chain cards "Tailored view: Port" (B-20).
+          opsType={filterSector === "logistics" ? opsType : null}
+        />
+      </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="t-enter flex flex-wrap items-center gap-2" style={enterAt(2)}>
         <button
           type="button"
           onClick={returnToDashboard}
@@ -3151,29 +3202,41 @@ export function DashboardView({
         </div>
       ) : (
         <>
-      <p className="text-[11px] font-bold uppercase tracking-[0.13em] text-muted-foreground">
+      <p
+        className="t-enter text-[11px] font-bold uppercase tracking-[0.13em] text-muted-foreground"
+        style={enterAt(3)}
+      >
         {tx("Contexte général", "General context")}
       </p>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {!alertsLoaded ? (
-          <KpiSkeleton count={kpis.length || 4} variant="card" />
-        ) : kpis.map((k) => (
+        {kpis.map((k, index) => (
           <div
-            key={k.label}
-            className="rounded-3xl border border-border bg-card p-5"
+            key={k.id}
+            className="t-enter rounded-3xl border border-border bg-card p-5"
+            style={enterAt(3.6 + index * 0.4)}
+            data-kpi-skeleton={alertsLoaded ? undefined : ""}
           >
             <div className="flex items-center justify-between gap-2">
               <span className="text-sm text-muted-foreground">
                 {k.label}
               </span>
 
-              <StatusTag tone={k.up ? "brand" : "danger"} size="xs" icon={k.up ? TrendingUp : TrendingDown}>
-                    {k.delta}
-                  </StatusTag>
+              {alertsLoaded ? (
+                <StatusTag tone={k.up ? "brand" : "danger"} size="xs" icon={k.up ? TrendingUp : TrendingDown}>
+                  {k.delta}
+                </StatusTag>
+              ) : (
+                <Skeleton className="h-5 w-12 rounded-full" />
+              )}
             </div>
 
-            {dataIsStale && isZeroFigure(k.value) ? (
+            {!alertsLoaded ? (
+              <>
+                <Skeleton className="mt-3 h-9 w-16" />
+                <Skeleton className="mt-2 h-9 w-full" />
+              </>
+            ) : dataIsStale && isZeroFigure(k.value) ? (
               <>
                 <p
                   data-not-measured=""
@@ -3190,7 +3253,7 @@ export function DashboardView({
             ) : (
               <>
                 <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
-                  <PopNumber value={k.value} />
+                  <CountNumber value={k.value} />
                 </p>
 
                 <Sparkline
@@ -3207,7 +3270,10 @@ export function DashboardView({
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="flex flex-col rounded-3xl border border-border bg-card p-6 lg:col-span-2">
+        <div
+          className="t-enter flex flex-col rounded-3xl border border-border bg-card p-6 lg:col-span-2"
+          style={enterAt(5)}
+        >
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-heading text-lg font-bold">
@@ -3273,7 +3339,8 @@ export function DashboardView({
             cards: its colours are validated on that surface. */}
         <div
           data-breakdown-card=""
-          className="flex flex-col rounded-3xl bg-sidebar p-6 text-sidebar-foreground"
+          className="t-enter flex flex-col rounded-3xl bg-sidebar p-6 text-sidebar-foreground"
+          style={enterAt(5.5)}
         >
           <div className="flex items-center justify-between gap-2">
             <h3 className="font-heading text-lg font-bold">
@@ -3317,7 +3384,7 @@ export function DashboardView({
       </div>
 
       {(stocks.total > 0 || gauges.total > 0) && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="t-enter grid grid-cols-1 gap-4 lg:grid-cols-3" style={enterAt(6.5)}>
           {stocks.total > 0 && (
             <div
               className={cn(
@@ -3398,7 +3465,8 @@ export function DashboardView({
 
       <div
         id="alerts-table"
-        className="rounded-3xl border border-border bg-card"
+        className="t-enter rounded-3xl border border-border bg-card"
+        style={enterAt(7.5)}
       >
         <div className="flex items-center justify-between p-6 pb-4">
           <div className="flex items-center gap-2">

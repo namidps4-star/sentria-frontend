@@ -237,16 +237,27 @@
   display: inline-block;
 }
 
-/* The dim layer behind a modal fades with it, on the modal's own timing. */
+/* The dim layer behind a modal fades with it, on the modal's own timing, and
+   blurs the page behind it as it does (the founder's reference video: the
+   dashboard goes soft behind a dialog). */
 .t-modal-backdrop {
   opacity: 0;
-  transition: opacity var(--modal-open-dur) var(--modal-ease);
+  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(0px);
+  transition:
+    opacity var(--modal-open-dur) var(--modal-ease),
+    -webkit-backdrop-filter var(--modal-open-dur) var(--modal-ease),
+    backdrop-filter var(--modal-open-dur) var(--modal-ease);
 }
 .t-modal-backdrop.is-open {
   opacity: 1;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
 }
 .t-modal-backdrop.is-closing {
   opacity: 0;
+  -webkit-backdrop-filter: blur(0px);
+  backdrop-filter: blur(0px);
   transition-duration: var(--modal-close-dur);
 }
 @media (prefers-reduced-motion: reduce) {
@@ -357,4 +368,132 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .t-bell-ring { animation: none !important; }
+}
+
+/* ───── The dashboard's entrance and data motion (ours) ──────────────────
+   From the founder's reference video (a dashboard that comes alive): the
+   blocks of the page rise in one after another, top to bottom and left to
+   right; the numbers count up to their value; the charts grow from their
+   baseline, the ring sweeps round, the little trend lines draw themselves.
+   The whole entrance is about a second. It is longer than the 250 ms the
+   Notion card allowed, on purpose: that budget stays for menus, dialogs and
+   anything the user triggers; this is the page arriving, and it never
+   blocks a click. Every effect stops under "reduce motion", and none leaves
+   a transform or a filter on its element once it has played (fill mode
+   "backwards" only), so nothing is trapped as a containing block. The motion
+   inside a block (numbers, lines, ring, bars) starts when the block does
+   (waitForEntrance in lib/motion.ts), never before it.
+
+   --i is a block's place in the entrance (lib/motion.ts: enterAt). */
+:root {
+  --enter-dur: 420ms;
+  --enter-step: 60ms;
+  --enter-distance: 14px;
+  --enter-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --count-dur: 800ms;
+  --count-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --grow-dur: 750ms;
+  --grow-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes t-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--enter-distance)) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.t-enter {
+  animation: t-enter var(--enter-dur) var(--enter-ease) backwards;
+  animation-delay: calc(var(--i, 0) * var(--enter-step));
+}
+/* A number counts up to its value (components/sentria/count-number.tsx). The
+   page keeps the real text, which reads, copies and tests as the final value;
+   it is only made see-through while a registered integer, animated by a
+   transition, is drawn over it as a CSS counter. */
+@property --t-n {
+  syntax: "<integer>";
+  inherits: false;
+  initial-value: 0;
+}
+.t-count {
+  position: relative;
+  display: inline-block;
+}
+.t-count-final {
+  color: transparent;
+}
+.t-count-live {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  pointer-events: none;
+  counter-reset: t-n var(--t-n);
+  transition: --t-n var(--count-dur) var(--count-ease);
+}
+.t-count-live::before {
+  content: counter(t-n);
+  /* with an empty alternative text, so nothing reads it out where that is
+     supported; an older engine keeps the line above */
+  content: counter(t-n) / "";
+}
+
+/* A chart grows from its baseline: the plot is scaled up from the zero line
+   (the chart sets transform-origin to it). Strokes keep their width
+   (vector-effect on the paths). */
+@keyframes t-grow-y {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
+.t-grow-y {
+  animation: t-grow-y var(--grow-dur) var(--grow-ease) backwards;
+  animation-delay: var(--grow-delay, 0ms);
+}
+
+/* A line or an arc draws itself. The path is measured as 1 (pathLength), with
+   a gap longer than the path so a round cap never leaves a dot behind. */
+@keyframes t-draw {
+  from { stroke-dashoffset: 1.01; }
+  to   { stroke-dashoffset: 0; }
+}
+.t-draw {
+  stroke-dasharray: 1 1.5;
+  animation: t-draw var(--grow-dur) var(--grow-ease) backwards;
+  animation-delay: var(--grow-delay, 0ms);
+}
+
+/* The ring sweeps round clockwise from the top: a mask whose stroke draws. */
+.t-sweep {
+  stroke-dasharray: 1 1.5;
+  animation: t-draw var(--grow-dur) var(--grow-ease) backwards;
+}
+
+/* A bar fills from its left end without squashing its rounded ends. */
+@keyframes t-reveal-x {
+  from { clip-path: inset(0 100% 0 0 round 999px); }
+  to   { clip-path: inset(0 0 0 0 round 999px); }
+}
+.t-reveal-x {
+  animation: t-reveal-x var(--grow-dur) var(--grow-ease) backwards;
+  animation-delay: var(--grow-delay, 0ms);
+}
+
+/* The dot at the end of a line appears once the line has grown. */
+@keyframes t-pop {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.t-pop {
+  animation: t-pop 240ms ease-out backwards;
+  animation-delay: calc(var(--grow-dur) * 0.7);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-enter, .t-grow-y, .t-draw, .t-sweep, .t-reveal-x, .t-pop { animation: none !important; }
+  .t-count-live { display: none; }
+  .t-count-final { color: inherit; }
 }

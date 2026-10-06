@@ -1,7 +1,9 @@
 "use client"
 
 import { ArrowUpRight, Sparkles } from "@/lib/icons"
+import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
+import { CountNumber } from "./count-number"
 import {
   prioritiesFor,
   priorityDescription,
@@ -77,10 +79,14 @@ export function PriorityCards({
   onOpen,
   emptyLabel,
   stats,
+  enterFrom,
 }: PriorityNavProps & {
   onOpen: (id: string) => void
   emptyLabel: string
   stats?: Record<string, PriorityStat | undefined>
+  /** Where the first tile sits in the page's entrance (lib/motion.ts); each
+   *  tile after it comes in a little later. Left out, the tiles do not animate. */
+  enterFrom?: number
 }) {
   const tx = useTx()
 
@@ -117,7 +123,9 @@ export function PriorityCards({
               key={id}
               type="button"
               onClick={() => onOpen(id)}
+              style={enterFrom === undefined ? undefined : enterAt(enterFrom + index * 0.45)}
               className={cn(
+                enterFrom !== undefined && "t-enter",
                 "group relative col-span-2 flex flex-col overflow-hidden rounded-[28px] bg-brand p-5 text-left text-[#141414] shadow-sm transition-all sm:p-6",
                 "hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]",
                 bento && "lg:row-span-2"
@@ -152,7 +160,7 @@ export function PriorityCards({
                   {stat ? (
                     <>
                       <p className="font-heading text-5xl font-bold leading-none tabular-nums tracking-tight sm:text-6xl">
-                        {stat.value}
+                        <CountNumber value={stat.value} />
                       </p>
                       <p className="mt-1.5 text-xs font-semibold text-[#141414]/70">{stat.label}</p>
                     </>
@@ -183,7 +191,9 @@ export function PriorityCards({
             type="button"
             onClick={() => onOpen(id)}
             title={priorityDescription(sector, id, tx)}
+            style={enterFrom === undefined ? undefined : enterAt(enterFrom + index * 0.45)}
             className={cn(
+              enterFrom !== undefined && "t-enter",
               "group relative flex min-h-[9.5rem] flex-col rounded-[24px] bg-deep-card p-4 text-left shadow-sm ring-1 ring-transparent transition-all",
               "hover:-translate-y-0.5 hover:shadow-md hover:ring-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.99]",
               closingSpan(index - 1, ids.length - 1, bento)
@@ -215,7 +225,7 @@ export function PriorityCards({
                     stat.tone ? STAT_TONE[stat.tone] : "text-foreground"
                   )}
                 >
-                  {stat.value}
+                  <CountNumber value={stat.value} />
                 </span>
                 <span className="min-w-0 truncate text-[11px] text-muted-foreground">{stat.label}</span>
               </div>
