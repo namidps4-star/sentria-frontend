@@ -48,6 +48,20 @@ const ONB = { sentria_onboarded: 'true', sentria_company_name: 'Acme', sentria_s
     pass(p._errors.length === 0, `no page errors ${p._errors.join('|')}`);
     await ctx.close(); }
 
+  console.log('== the clock follows the country (Benin is WAT, one hour ahead of Abidjan and Dakar)');
+  { const { p, ctx } = await open({});
+    const zones = p.getByRole('group', { name: 'Time zone' });
+    const fromCountry = async z => (await zones.locator('button', { hasText: z }).getAttribute('aria-pressed')) === 'true' && /From your country/.test(await zones.locator('button', { hasText: z }).innerText());
+    await p.getByText('Benin', { exact: true }).first().click(); await p.waitForTimeout(200);
+    pass(await fromCountry('WAT'), 'Benin: WAT, tagged "From your country"');
+    pass(/Cotonou/.test(await zones.locator('button', { hasText: 'WAT' }).innerText()), 'and the WAT label names Cotonou');
+    await p.getByText("Côte d'Ivoire", { exact: true }).first().click(); await p.waitForTimeout(200);
+    pass(await fromCountry('GMT'), "Côte d'Ivoire: GMT");
+    await p.getByText('Senegal', { exact: true }).first().click(); await p.waitForTimeout(200);
+    pass(await fromCountry('GMT'), 'Senegal: GMT');
+    pass(!/Cotonou/.test(await zones.locator('button', { hasText: 'GMT' }).innerText()), 'the GMT label no longer names Cotonou');
+    await ctx.close(); }
+
   console.log('== onboarding, French');
   { const { p, ctx } = await open({ lang: 'fr' });
     const t = await dialogText(p);
@@ -73,6 +87,10 @@ const ONB = { sentria_onboarded: 'true', sentria_company_name: 'Acme', sentria_s
     pass(JSON.stringify(names) === JSON.stringify(['Benin', "Côte d'Ivoire", 'Senegal']), `Benin, Côte d'Ivoire, Senegal (${names.join(', ')})`);
     await countrySelect(p).selectOption('SN'); await p.waitForTimeout(150);
     pass(await countrySelect(p).inputValue() === 'SN', 'Senegal can be chosen');
+    const zoneSelect = p.locator('select').filter({ has: p.locator('option', { hasText: /^WAT/ }) });
+    pass(await zoneSelect.inputValue() === 'gmt', 'Senegal sets the clock to GMT');
+    await countrySelect(p).selectOption('BJ'); await p.waitForTimeout(150);
+    pass(await zoneSelect.inputValue() === 'wat', 'Benin sets the clock to WAT');
     await p.screenshot({ path: 'launchcountries-settings-light.png' });
     await ctx.close(); }
 

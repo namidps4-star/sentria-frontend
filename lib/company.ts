@@ -58,13 +58,13 @@ export type TimezoneOption = {
  *  handed to Intl.DateTimeFormat and an abbreviation alone would leave
  *  the setting decorative, which is what it was. */
 /* Zone abbreviations, city names and IANA identifiers. The same
-   characters in every language: "GMT (Cotonou, Dakar, Abidjan)" does not
+   characters in every language: "GMT (Dakar, Abidjan)" does not
    translate, and "Africa/Abidjan" must not.
  *
  * i18n-ignore-start: zone abbreviations, city names and IANA ids */
 export const TIMEZONES: TimezoneOption[] = [
-  { id: "gmt", label: "GMT (Cotonou, Dakar, Abidjan)", zone: "Africa/Abidjan" },
-  { id: "wat", label: "WAT (Lagos, Kinshasa)", zone: "Africa/Lagos" },
+  { id: "gmt", label: "GMT (Dakar, Abidjan)", zone: "Africa/Abidjan" },
+  { id: "wat", label: "WAT (Cotonou, Lagos, Kinshasa)", zone: "Africa/Lagos" },
   { id: "cet", label: "CET (Paris, Lyon)", zone: "Europe/Paris" },
   { id: "eat", label: "EAT (Nairobi)", zone: "Africa/Nairobi" },
   { id: "brt", label: "BRT (São Paulo)", zone: "America/Sao_Paulo" },

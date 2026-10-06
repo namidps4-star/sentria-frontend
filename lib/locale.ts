@@ -273,7 +273,7 @@ const GBP: Currency = { code: "GBP", symbol: "£" }
  *  explicit fallback. Not a world list: an option nobody can serve is
  *  the same defect as a language nobody translated. */
 export const COUNTRIES: Country[] = [
-  { code: "BJ", name: localized("Bénin", "Benin"), currency: XOF, timezoneId: "gmt" },
+  { code: "BJ", name: localized("Bénin", "Benin"), currency: XOF, timezoneId: "wat" },
   { code: "CI", name: localized("Côte d'Ivoire", "Côte d'Ivoire"), currency: XOF, timezoneId: "gmt" },
   { code: "SN", name: localized("Sénégal", "Senegal"), currency: XOF, timezoneId: "gmt" },
   { code: "TG", name: localized("Togo", "Togo"), currency: XOF, timezoneId: "gmt" },
