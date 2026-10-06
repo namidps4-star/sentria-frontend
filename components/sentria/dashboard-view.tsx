@@ -3272,7 +3272,7 @@ export function DashboardView({
         {/* The donut's card is black in every theme, like the other dark
             cards: its colours are validated on that surface. */}
         <div
-          data-card="breakdown"
+          data-breakdown-card=""
           className="flex flex-col rounded-3xl bg-sidebar p-6 text-sidebar-foreground"
         >
           <div className="flex items-center justify-between gap-2">

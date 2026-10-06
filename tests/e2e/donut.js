@@ -37,7 +37,7 @@ async function open(browser, alerts, { theme = 'light', width = 1440, lang = 'en
   if (await pill.count()) { await pill.click(); await p.waitForTimeout(600); }
   return { ctx, p };
 }
-const card = p => p.locator('[data-card="breakdown"]');
+const card = p => p.locator('[data-breakdown-card]');
 const segs = p => p.locator('[data-chart="donut"] svg path[data-slice]');
 // The colour the page really paints for a CSS colour, as [r, g, b] over black.
 const paint = (p, css) => p.evaluate(c => { const k = document.createElement('canvas'); k.width = k.height = 1; const x = k.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, 1, 1); x.fillStyle = c; x.fillRect(0, 0, 1, 1); return [...x.getImageData(0, 0, 1, 1).data].slice(0, 3); }, css);
@@ -124,7 +124,7 @@ const ratio = (a, b) => { const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x
   {
     const { ctx, p } = await open(b, SEVEN, { theme: 'light' });
     const black = [1, 1, 1];
-    const sel = { title: '[data-card="breakdown"] h3', chip: '[data-breakdown-kind]', total: '[data-donut-center] span:first-child', under: '[data-donut-center] span:last-child', label: '[data-legend] li span:nth-child(2)', value: '[data-legend] li span:nth-child(3)', pct: '[data-legend] li span:nth-child(4)' };
+    const sel = { title: '[data-breakdown-card] h3', chip: '[data-breakdown-kind]', total: '[data-donut-center] span:first-child', under: '[data-donut-center] span:last-child', label: '[data-legend] li span:nth-child(2)', value: '[data-legend] li span:nth-child(3)', pct: '[data-legend] li span:nth-child(4)' };
     for (const [name, q] of Object.entries(sel)) {
       const css = await p.locator(q).first().evaluate(e => getComputedStyle(e).color);
       const rgb = await paint(p, css);
@@ -146,7 +146,7 @@ const ratio = (a, b) => { const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x
   }
   for (const [label, o] of [['390', { width: 390 }], ['390 dark', { width: 390, theme: 'dark' }]]) {
     const { ctx, p } = await open(b, SEVEN, o);
-    const m = await p.evaluate(() => { const c = document.querySelector('[data-card="breakdown"]'); const l = c.querySelector('[data-legend]'); return { page: document.documentElement.scrollWidth, win: innerWidth, card: c.getBoundingClientRect().width, legendOver: l.scrollWidth > l.clientWidth + 1, ring: c.querySelector('[data-chart="donut"] svg').getBoundingClientRect().width }; });
+    const m = await p.evaluate(() => { const c = document.querySelector('[data-breakdown-card]'); const l = c.querySelector('[data-legend]'); return { page: document.documentElement.scrollWidth, win: innerWidth, card: c.getBoundingClientRect().width, legendOver: l.scrollWidth > l.clientWidth + 1, ring: c.querySelector('[data-chart="donut"] svg').getBoundingClientRect().width }; });
     pass(m.page <= m.win + 1 && !m.legendOver && m.ring <= m.card, `${label}: no sideways scroll, the legend wraps, the ring fits the card (${Math.round(m.ring)} of ${Math.round(m.card)} px)`);
     await card(p).scrollIntoViewIfNeeded(); await p.waitForTimeout(200);
     await p.screenshot({ path: `donut-${label.replace(' ', '-')}.png`, clip: await card(p).boundingBox() });
