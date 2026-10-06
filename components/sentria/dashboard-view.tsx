@@ -53,6 +53,8 @@ import { LogisticsWaitingView } from "./logistics-waiting-view"
 import { LogisticsCostView } from "./logistics-cost-view"
 import { LogisticsAnticipateView } from "./logistics-anticipate-view"
 import { RecommendationsPanel } from "./recommendations-panel"
+import { KpiSkeleton, Skeleton } from "./skeleton"
+import { announceAlertsUpdated } from "@/lib/alerts-event"
 import { RecommendationsBoard } from "./recommendations-board-view"
 import {
   IndustryMachinesView,
@@ -1087,6 +1089,10 @@ export function DashboardView({
   const [uploadMsg, setUploadMsg] = useState("")
   const [uploadFailed, setUploadFailed] = useState(false)
   const [alertsError, setAlertsError] = useState<string | null>(null)
+  /* False until the first /alerts answer, good or bad. Until then the KPI
+     tiles and the charts are placeholders: an empty array reads as "0
+     alerts", which is not the same as "not loaded yet". */
+  const [alertsLoaded, setAlertsLoaded] = useState(false)
 
   const [activeSectors, setActiveSectors] = useState<string[]>([
     "industry",
@@ -1432,6 +1438,7 @@ export function DashboardView({
       .then((d) => {
         setAlerts(Array.isArray(d) ? d.map(withOurSector) : [])
         setAlertsError(null)
+        setAlertsLoaded(true)
       })
       .catch((err) => {
         console.error("Failed to load alerts:", err)
@@ -1440,6 +1447,9 @@ export function DashboardView({
             ? err.message
             : tx("réseau", "network")
         )
+        // A failed load is an answer: the error banner says so, and a
+        // placeholder must not pulse forever over it.
+        setAlertsLoaded(true)
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [alertsLang])
@@ -1696,6 +1706,7 @@ export function DashboardView({
       const d2 = await r2.json()
 
       setAlerts(Array.isArray(d2) ? d2.map(withOurSector) : [])
+      announceAlertsUpdated()
 
       // Awaited so the recommendations panel above has its final height
       // before the scroll correction below.
@@ -1988,8 +1999,10 @@ export function DashboardView({
       meta.chartTitle
   )
 
+  // Not before the first answer: an empty list that has not loaded yet is
+  // not "no data", and the empty card would flash up over the placeholders.
   const hasNoDataForSector =
-    filteredAlerts.length === 0 && !alertsError
+    alertsLoaded && filteredAlerts.length === 0 && !alertsError
 
   // The trend chart: one line per sector, same colour everywhere.
   const chartAvailable = availableSeries(scopedAlerts)
@@ -2441,10 +2454,12 @@ export function DashboardView({
               )}
               <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--ink)] px-3 py-1.5 text-xs font-semibold text-white">
                 <span className={cn("h-1.5 w-1.5 rounded-full", industryCritical > 0 ? "bg-[var(--tag-danger-bg)]" : "bg-brand")} aria-hidden="true" />
-                {tx(
-                  `${industryAlerts.length} signaux · ${industryCritical} critique${industryCritical > 1 ? "s" : ""}`,
-                  `${industryAlerts.length} signals · ${industryCritical} critical`
-                )}
+                {!alertsLoaded
+                  ? tx("Chargement…", "Loading…")
+                  : tx(
+                      `${industryAlerts.length} signaux · ${industryCritical} critique${industryCritical > 1 ? "s" : ""}`,
+                      `${industryAlerts.length} signals · ${industryCritical} critical`
+                    )}
               </span>
             </div>
           </div>
@@ -2469,7 +2484,7 @@ export function DashboardView({
             />
           </div>
 
-          {industryAlerts.length === 0 ? (
+          {alertsLoaded && industryAlerts.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
                 <Upload
@@ -2492,7 +2507,9 @@ export function DashboardView({
             </div>
           ) : (
           <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[22px] bg-border shadow-sm xl:grid-cols-4">
-            {kpis.map((k) => (
+            {!alertsLoaded ? (
+              <KpiSkeleton count={kpis.length || 4} variant="tight" />
+            ) : kpis.map((k) => (
               <div
                 key={k.label}
                 className="bg-card px-4 py-3"
@@ -2682,10 +2699,12 @@ export function DashboardView({
               )}
               <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--ink)] px-3 py-1.5 text-xs font-semibold text-white">
                 <span className={cn("h-1.5 w-1.5 rounded-full", critical > 0 ? "bg-[var(--tag-danger-bg)]" : "bg-brand")} aria-hidden="true" />
-                {tx(
-                  `${logisticsViewAlerts.length} signaux · ${critical} critique${critical > 1 ? "s" : ""}`,
-                  `${logisticsViewAlerts.length} signals · ${critical} critical`
-                )}
+                {!alertsLoaded
+                  ? tx("Chargement…", "Loading…")
+                  : tx(
+                      `${logisticsViewAlerts.length} signaux · ${critical} critique${critical > 1 ? "s" : ""}`,
+                      `${logisticsViewAlerts.length} signals · ${critical} critical`
+                    )}
               </span>
             </div>
           </div>
@@ -2711,7 +2730,9 @@ export function DashboardView({
           </div>
 
           <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[22px] bg-border shadow-sm xl:grid-cols-4">
-            {kpis.map((k) => (
+            {!alertsLoaded ? (
+              <KpiSkeleton count={kpis.length || 4} variant="tight" />
+            ) : kpis.map((k) => (
               <div
                 key={k.label}
                 className="bg-card px-4 py-3"
@@ -2993,9 +3014,11 @@ export function DashboardView({
         >
           {tx("Tous", "All")}
 
-          <span className="ml-1.5 text-[10px] opacity-60">
-            {alerts.filter(matchesActivity).length}
-          </span>
+          {alertsLoaded && (
+            <span className="ml-1.5 text-[10px] opacity-60">
+              {alerts.filter(matchesActivity).length}
+            </span>
+          )}
         </button>
 
         {SECTORS.filter(
@@ -3034,13 +3057,15 @@ export function DashboardView({
           >
             {px(s.label)}
 
-            <span className="ml-1.5 text-[10px] opacity-60">
-              {
-                alerts
-                  .filter((a) => a.sector === s.key)
-                  .filter(matchesActivity).length
-              }
-            </span>
+            {alertsLoaded && (
+              <span className="ml-1.5 text-[10px] opacity-60">
+                {
+                  alerts
+                    .filter((a) => a.sector === s.key)
+                    .filter(matchesActivity).length
+                }
+              </span>
+            )}
           </button>
         ))}
 
@@ -3130,7 +3155,9 @@ export function DashboardView({
       </p>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {kpis.map((k) => (
+        {!alertsLoaded ? (
+          <KpiSkeleton count={kpis.length || 4} variant="card" />
+        ) : kpis.map((k) => (
           <div
             key={k.label}
             className="rounded-3xl border border-border bg-card p-5"
@@ -3213,6 +3240,9 @@ export function DashboardView({
             />
           </div>
 
+          {!alertsLoaded ? (
+            <Skeleton data-chart-skeleton="" className="mt-6 min-h-[208px] flex-1" />
+          ) : (
           <LineChart
             className="mt-6 flex-1"
             days={chartBucketed.days}
@@ -3235,6 +3265,7 @@ export function DashboardView({
             )}`}
             emptyLabel={tx("Aucune alerte sur cette période.", "No alerts in this period.")}
           />
+          )}
         </div>
 
         <div className="rounded-3xl border border-border bg-card p-6">
@@ -3246,7 +3277,9 @@ export function DashboardView({
             </h3>
           </div>
 
-          {slices.length > 0 ? (
+          {!alertsLoaded ? (
+            <Skeleton className="mx-auto mt-5 h-40 w-40 rounded-full" />
+          ) : slices.length > 0 ? (
             <DonutChart
               className="mt-5"
               slices={slices}

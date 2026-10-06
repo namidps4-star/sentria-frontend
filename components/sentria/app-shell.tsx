@@ -1,8 +1,9 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 
 import { inAccountScope, readSectors } from "@/lib/activities"
+import { ALERTS_UPDATED_EVENT } from "@/lib/alerts-event"
 import { API_BASE, apiFetch } from "@/lib/api"
 import { useCompanyIdentity } from "@/lib/company"
 import { fetchAssignments, taskKeyFor } from "@/lib/crm"
@@ -115,6 +116,24 @@ export function AppShell({
   const [bellAlerts, setBellAlerts] = useState<Notification[]>([])
   const [seenAt, setSeenAt] = useState("")
 
+  /* The bell rings when a critical alert shows up that the bell did not
+     hold before and nobody has seen. `knownBell` is what the last good read
+     held (null until there was one, so the first read only sets the
+     baseline); `bellRing` counts the rings, and the top bar replays the
+     animation each time it changes. An upload re-reads the bell at once
+     (ALERTS_UPDATED_EVENT) instead of at the next page change. */
+  const knownBell = useRef<Set<string> | null>(null)
+  const [bellRing, setBellRing] = useState(0)
+  const [bellRefresh, setBellRefresh] = useState(0)
+
+  useEffect(() => {
+    const refresh = () => setBellRefresh((count) => count + 1)
+
+    window.addEventListener(ALERTS_UPDATED_EVENT, refresh)
+
+    return () => window.removeEventListener(ALERTS_UPDATED_EVENT, refresh)
+  }, [])
+
   useEffect(() => {
     try {
       setSeenAt(localStorage.getItem(NOTIFICATIONS_SEEN_KEY) ?? "")
@@ -176,11 +195,37 @@ export function AppShell({
         }
       }
 
-      setBellAlerts(
-        Array.from(byTask.values()).sort((x, y) =>
-          y.date.localeCompare(x.date)
-        )
+      const fresh = Array.from(byTask.values()).sort((x, y) =>
+        y.date.localeCompare(x.date)
       )
+
+      let seenSince = Number.NaN
+
+      try {
+        seenSince = Date.parse(localStorage.getItem(NOTIFICATIONS_SEEN_KEY) ?? "")
+      } catch {
+        seenSince = Number.NaN
+      }
+
+      const before = knownBell.current
+
+      if (
+        before !== null &&
+        fresh.some((n) => {
+          const at = Date.parse(n.date)
+
+          return (
+            !before.has(n.key) &&
+            (!Number.isFinite(seenSince) || (Number.isFinite(at) && at > seenSince))
+          )
+        })
+      ) {
+        setBellRing((count) => count + 1)
+      }
+
+      knownBell.current = new Set(fresh.map((n) => n.key))
+
+      setBellAlerts(fresh)
     }
 
     load().catch((err) => {
@@ -190,7 +235,7 @@ export function AppShell({
     return () => {
       cancelled = true
     }
-  }, [lang, companyName, view])
+  }, [lang, companyName, view, bellRefresh])
 
   const unreadCount = useMemo(() => {
     const since = Date.parse(seenAt)
@@ -279,6 +324,7 @@ export function AppShell({
               search={search}
               onSearch={handleSearch}
               unreadCount={unreadCount}
+              ring={bellRing}
               notifications={bellAlerts}
               onNotificationsOpen={markNotificationsSeen}
               onOpenTracking={() => setView("tracking")}

@@ -31,6 +31,7 @@ export function Topbar({
   search,
   onSearch,
   unreadCount = 0,
+  ring = 0,
   notifications = [],
   onNotificationsOpen,
   onOpenTracking,
@@ -44,6 +45,9 @@ export function Topbar({
    *  accessible name both come from this, so neither can claim unread
    *  items that do not exist. */
   unreadCount?: number
+  /** How many times the bell has rung: a critical alert nobody has seen
+   *  arrived. Each change replays the ring (the icon remounts on it). */
+  ring?: number
   /** Open critical alerts, newest first. */
   notifications?: Notification[]
   /** Called when the list opens: what it shows is now read. */
@@ -165,7 +169,12 @@ export function Topbar({
               : t("topbar.notifications.many", { count: unreadCount })
         }
       >
-        <Bell className="h-[18px] w-[18px]" aria-hidden="true" />
+        <Bell
+          key={ring}
+          data-bell-ring={ring}
+          className={cn("h-[18px] w-[18px]", ring > 0 && "t-bell-ring")}
+          aria-hidden="true"
+        />
 
         {hasUnread && (
           <span

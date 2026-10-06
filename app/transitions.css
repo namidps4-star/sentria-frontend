@@ -334,3 +334,27 @@
 @media (prefers-reduced-motion: reduce) {
   .t-shake { animation: none !important; }
 }
+
+/* The bell rings once when a critical alert that was not there before shows
+   up (F-VIZPREMIUM: "a short bell-ring/shake keyframe", inside the 250 ms
+   budget). Ours, not the library's. It swings from the top of the bell, three
+   times and fading out, and leaves nothing on the element afterwards (no fill
+   mode). The top bar replays it by remounting the icon. */
+:root {
+  --bell-ring-dur: 240ms;
+  --bell-ring-angle: 16deg;
+}
+@keyframes t-bell-ring {
+  0%, 100% { transform: rotate(0); }
+  20%      { transform: rotate(var(--bell-ring-angle)); }
+  45%      { transform: rotate(calc(var(--bell-ring-angle) * -0.75)); }
+  70%      { transform: rotate(calc(var(--bell-ring-angle) * 0.4)); }
+  88%      { transform: rotate(calc(var(--bell-ring-angle) * -0.15)); }
+}
+.t-bell-ring {
+  transform-origin: 50% 0;
+  animation: t-bell-ring var(--bell-ring-dur) ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-bell-ring { animation: none !important; }
+}
