@@ -331,6 +331,18 @@ export const COUNTRIES: Country[] = [
 
 /* i18n-ignore-end */
 
+/** The countries sign-up offers for now: the first three markets, the ones
+ *  the legal review (LEG-1) covers. COUNTRIES stays whole on purpose: an
+ *  account that already chose another country keeps its currency, time zone
+ *  and phone checks. To open a market, add its code here. */
+export const LAUNCH_COUNTRY_CODES = ["BJ", "CI", "SN"]
+
+/** What a country picker lists: the launch countries, plus the one the
+ *  account already has, so nobody is moved off it by a list that shrank. */
+export function pickableCountries(current?: string | null): Country[] {
+  return COUNTRIES.filter((country) => LAUNCH_COUNTRY_CODES.includes(country.code) || country.code === current)
+}
+
 /** Every currency the app can show, for the onboarding's currency
  *  choice: the countries' own, and the dollar for anywhere else. */
 export const CURRENCIES: Currency[] = Array.from(

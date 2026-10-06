@@ -14,6 +14,7 @@ import {
 import {
   COUNTRIES,
   LANGUAGES,
+  pickableCountries,
   languagePromise,
   readCountryCode,
   readLanguage,
@@ -513,7 +514,7 @@ export function SettingsView() {
               className={FIELD}
             >
               <option value="">{t.countryNone}</option>
-              {COUNTRIES.map((item) => (
+              {pickableCountries(countryCode).map((item) => (
                 <option key={item.code} value={item.code}>
                   {tx(item.name.fr, item.name.en)} · {item.currency.symbol}
                 </option>

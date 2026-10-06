@@ -47,9 +47,9 @@ const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y
     const t = await p.evaluate(() => document.body.innerText);
     pass(/Welcome, Ama/.test(t) && /Hello Ama\. Where do you work\?/.test(t), 'greets by first name, asks as a chat');
     pass(await p.evaluate(() => document.querySelector('[role=dialog] h2').innerText) === 'Your country', 'the heading is the step title');
-    await p.getByText('Kenya', { exact: true }).click(); await p.waitForTimeout(200);
-    pass(await p.getByRole('button', { name: /Kenya/ }).getAttribute('aria-pressed') === 'true' && await p.locator('select[aria-label="Account currency"]').inputValue() === 'KES', 'Kenya: pressed, currency KES');
-    pass(/Your figures in\s*KSh/.test(await p.evaluate(() => document.body.innerText)), 'the black card shows the currency');
+    await p.getByText('Senegal', { exact: true }).click(); await p.waitForTimeout(200);
+    pass(await p.getByRole('button', { name: /Senegal/ }).getAttribute('aria-pressed') === 'true' && await p.locator('select[aria-label="Account currency"]').inputValue() === 'XOF', 'Senegal: pressed, currency XOF');
+    pass(/Your figures in\s*F CFA/.test(await p.evaluate(() => document.body.innerText)), 'the black card shows the currency');
     await p._ctx.close(); }
 
   console.log('== Settings');

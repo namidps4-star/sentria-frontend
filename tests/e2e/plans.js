@@ -79,8 +79,8 @@ const text = p => p.evaluate(() => document.body.innerText);
     let sawNoMulti = false, currencyOk = false;
     for (let i = 0; i < 9; i++) {
       const s = await step();
-      if (s === '2') { await p.getByText('Ghana', { exact: true }).first().click(); await p.waitForTimeout(200);
-        currencyOk = (await p.locator('select[aria-label="Account currency"]').inputValue()) === 'GHS';
+      if (s === '2') { await p.getByText('Benin', { exact: true }).first().click(); await p.waitForTimeout(200);
+        currencyOk = (await p.locator('select[aria-label="Account currency"]').inputValue()) === 'XOF';
         await p.locator('select[aria-label="Account currency"]').selectOption('USD'); }
       if (s === '3') { await p.locator('input').first().fill('Clinique Sud'); }
       if (s === '4') { await p.getByText(/^Health$/).first().click(); await p.waitForTimeout(200);
@@ -99,7 +99,7 @@ const text = p => p.evaluate(() => document.body.innerText);
         break; }
       await next();
     }
-    pass(currencyOk, 'currency defaults to the country (Ghana → GHS), can be changed');
+    pass(currencyOk, 'currency defaults to the country (Benin → XOF), can be changed');
     pass(sawNoMulti, 'no "several sectors" switch on the Business trial, Entreprise note instead');
     await p.close(); }
   { const p = await open({ ls: {}, plan: 'decouverte' });

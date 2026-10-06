@@ -69,7 +69,7 @@ const back = p => () => p.getByRole('button', { name: /^Back$/ }).click();
   {
     const { ctx, p, errs } = await openWizard(b);
     pass(await p.locator('[data-step-slide]').count() === 1, 'the wizard has one step on screen, in a StepSlide');
-    await p.getByText('Nigeria', { exact: true }).first().click(); await p.waitForTimeout(500);
+    await p.getByText('Benin', { exact: true }).first().click(); await p.waitForTimeout(500);
     const s = await clickAndSample(p, next(p));
     const first = s.find(x => x.fresh);
     pass(!!first && first.dir === 'forward', `the new step is a fresh element marked forward (${first && first.dir})`);
@@ -110,7 +110,7 @@ const back = p => () => p.getByRole('button', { name: /^Back$/ }).click();
   console.log('== reduce motion: it just shows');
   {
     const { ctx, p, errs } = await openWizard(b, { reduce: true });
-    await p.getByText('Nigeria', { exact: true }).first().click(); await p.waitForTimeout(300);
+    await p.getByText('Benin', { exact: true }).first().click(); await p.waitForTimeout(300);
     const s = await clickAndSample(p, next(p), 200);
     const first = s.find(x => x.fresh);
     pass(!!first && first.op === 1 && first.x === 0 && first.filter === 'none', `from its first frame: opacity 1, no offset, no blur (${first && first.op}, ${first && first.x}, ${first && first.filter})`);
@@ -123,7 +123,7 @@ const back = p => () => p.getByRole('button', { name: /^Back$/ }).click();
   {
     for (const [name, theme, scheme, width] of [['light', 'light', 'light', 1440], ['dark', 'dark', 'light', 1440], ['light, 390 px', 'light', 'light', 390], ['dark, 390 px', 'dark', 'light', 390]]) {
       const { ctx, p, errs } = await openWizard(b, { theme, scheme, width });
-      await p.getByText('Nigeria', { exact: true }).first().click(); await p.waitForTimeout(300);
+      await p.getByText('Benin', { exact: true }).first().click(); await p.waitForTimeout(300);
       await p.getByRole('button', { name: /^Continue/ }).last().click(); await p.waitForTimeout(700);
       const m = await p.evaluate(() => { const el = document.querySelector('[data-step-slide]'); const r = el.getBoundingClientRect(); const h2 = el.querySelector('h2').getBoundingClientRect(); const foot = document.querySelector('footer').getBoundingClientRect(); return { page: document.documentElement.scrollWidth, win: innerWidth, inside: r.left >= -0.5 && r.right <= innerWidth + 0.5, h2Visible: h2.width > 0 && h2.top >= 0, stepBeforeFooter: r.top < foot.top, gap: getComputedStyle(el).rowGap, display: getComputedStyle(el).display }; });
       pass(m.page <= m.win + 1 && m.inside && m.h2Visible && m.stepBeforeFooter, `${name}: no sideways scroll, the step sits inside the screen above the footer`);

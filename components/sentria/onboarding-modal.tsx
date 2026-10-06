@@ -38,8 +38,8 @@ import {
 } from "@/lib/company"
 import {
   accountCurrencyParam,
-  COUNTRIES,
   CURRENCIES,
+  pickableCountries,
   writeCurrency,
   countryFor,
   readLanguage,
@@ -1490,7 +1490,7 @@ export function OnboardingView({
 
                     <p className="mt-5 px-1 text-xs text-muted-foreground">{tx("Votre pays :", "Your country:")}</p>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {COUNTRIES.map((item) => {
+                      {pickableCountries(countryCode).map((item) => {
                         const active = countryCode === item.code
                         return (
                           <button
