@@ -294,19 +294,74 @@ export function LineChart({
 
 export type DonutSlice = Slice & { color: string }
 
-const SIZE = 156
-const RADIUS = 60
-const STROKE = 22
-const GAP_DEG = 2
+/* The donut sits on a black card in every theme (its colours are validated on
+   it: --slice-N, --slice-critical, --slice-warning). A thick ring cut into
+   rounded segments with a small gap between them, the total in the hole. */
+const SIZE = 212
+const CENTER = SIZE / 2
+const R_OUT = 100
+const R_IN = 54
+const THICK = R_OUT - R_IN
+/** How round a segment's corners are, at most; a thin slice gets less. */
+const CORNER = 13
+/** The gap between two segments, in pixels at the middle of the ring. */
+const GAP_PX = 7
 
-function arcPath(from: number, to: number) {
-  const point = (deg: number) => {
-    const rad = ((deg - 90) * Math.PI) / 180
-    return [SIZE / 2 + RADIUS * Math.cos(rad), SIZE / 2 + RADIUS * Math.sin(rad)]
+const rad = (deg: number) => (deg * Math.PI) / 180
+const deg = (radians: number) => (radians * 180) / Math.PI
+
+function polar(radius: number, degrees: number): readonly [number, number] {
+  const angle = rad(degrees - 90)
+  return [CENTER + radius * Math.cos(angle), CENTER + radius * Math.sin(angle)] as const
+}
+
+/** The whole ring, for a donut with one slice. */
+const RING_PATH =
+  `M ${CENTER - R_OUT} ${CENTER} a ${R_OUT} ${R_OUT} 0 1 0 ${2 * R_OUT} 0 a ${R_OUT} ${R_OUT} 0 1 0 ${-2 * R_OUT} 0 Z ` +
+  `M ${CENTER - R_IN} ${CENTER} a ${R_IN} ${R_IN} 0 1 0 ${2 * R_IN} 0 a ${R_IN} ${R_IN} 0 1 0 ${-2 * R_IN} 0 Z`
+
+/** One segment of the ring from angle `a0` to `a1` (degrees clockwise from
+ *  the top), with rounded corners. Each corner is a circle of radius `rc`
+ *  tangent to the arc and to the straight edge, so it takes `asin(rc / r)`
+ *  off the arc at the radius it sits on (more on the inner arc). A slice too
+ *  thin for the full corner gets smaller ones, then square ones. */
+export function segmentPath(a0: number, a1: number): string {
+  const span = a1 - a0
+  let rc = Math.min(CORNER, THICK / 2 - 0.5)
+  const offsetOut = (c: number) => deg(Math.asin(c / (R_OUT - c)))
+  const offsetIn = (c: number) => deg(Math.asin(c / (R_IN + c)))
+
+  while (rc > 0.5 && 2 * offsetIn(rc) >= span - 0.4) rc *= 0.85
+  if (rc <= 0.5) rc = 0
+
+  const dOut = rc ? offsetOut(rc) : 0
+  const dIn = rc ? offsetIn(rc) : 0
+  const edgeOut = rc ? (R_OUT - rc) * Math.cos(rad(dOut)) : R_OUT
+  const edgeIn = rc ? (R_IN + rc) * Math.cos(rad(dIn)) : R_IN
+
+  const [x1, y1] = polar(R_OUT, a0 + dOut)
+  const [x2, y2] = polar(R_OUT, a1 - dOut)
+  const [x3, y3] = polar(edgeOut, a1)
+  const [x4, y4] = polar(edgeIn, a1)
+  const [x5, y5] = polar(R_IN, a1 - dIn)
+  const [x6, y6] = polar(R_IN, a0 + dIn)
+  const [x7, y7] = polar(edgeIn, a0)
+  const [x8, y8] = polar(edgeOut, a0)
+  const bigOut = a1 - dOut - (a0 + dOut) > 180 ? 1 : 0
+  const bigIn = a1 - dIn - (a0 + dIn) > 180 ? 1 : 0
+
+  if (!rc) {
+    return `M ${x1} ${y1} A ${R_OUT} ${R_OUT} 0 ${bigOut} 1 ${x2} ${y2} L ${x5} ${y5} A ${R_IN} ${R_IN} 0 ${bigIn} 0 ${x6} ${y6} Z`
   }
-  const [x0, y0] = point(from)
-  const [x1, y1] = point(to)
-  return `M ${x0} ${y0} A ${RADIUS} ${RADIUS} 0 ${to - from > 180 ? 1 : 0} 1 ${x1} ${y1}`
+
+  return (
+    `M ${x1} ${y1} A ${R_OUT} ${R_OUT} 0 ${bigOut} 1 ${x2} ${y2} ` +
+    `A ${rc} ${rc} 0 0 1 ${x3} ${y3} L ${x4} ${y4} ` +
+    `A ${rc} ${rc} 0 0 1 ${x5} ${y5} ` +
+    `A ${R_IN} ${R_IN} 0 ${bigIn} 0 ${x6} ${y6} ` +
+    `A ${rc} ${rc} 0 0 1 ${x7} ${y7} L ${x8} ${y8} ` +
+    `A ${rc} ${rc} 0 0 1 ${x1} ${y1} Z`
+  )
 }
 
 const percent = (share: number) => (share < 0.01 ? "<1%" : `${Math.round(share * 100)}%`)
@@ -326,79 +381,71 @@ export function DonutChart({
   const total = slices.reduce((sum, s) => sum + s.value, 0)
   const current = slices.find((s) => s.key === active) ?? null
 
+  const gapDeg = deg(GAP_PX / ((R_OUT + R_IN) / 2))
   const arcs = slices.map((slice, i) => {
     const sweep = slice.share * 360
     const from = slices.slice(0, i).reduce((sum, s) => sum + s.share * 360, 0)
-    const gap = slices.length > 1 ? Math.min(GAP_DEG, sweep / 3) : 0
+    // A sliver keeps most of its width: the gap never takes more than 40%.
+    const gap = slices.length > 1 ? Math.min(gapDeg, sweep * 0.4) : 0
     return { slice, from: from + gap / 2, to: from + sweep - gap / 2, sweep }
   })
 
   return (
-    <div className={cn("flex flex-col items-center gap-4", className)} data-chart="donut">
+    <div className={cn("flex flex-col items-center gap-5 text-sidebar-foreground", className)} data-chart="donut">
       <div
         className="relative shrink-0"
         style={{ width: SIZE, height: SIZE }}
         role="img"
         aria-label={tx("Répartition des alertes", "Alert breakdown") + ": " + slices.map((s) => `${s.label} ${s.value}`).join(", ")}
       >
-        <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} aria-hidden="true" className="block">
-          {arcs.map(({ slice, from, to, sweep }) =>
-            sweep >= 359.9 ? (
-              <circle
-                key={slice.key}
-                cx={SIZE / 2}
-                cy={SIZE / 2}
-                r={RADIUS}
-                fill="none"
-                stroke={slice.color}
-                strokeWidth={active === slice.key ? STROKE + 4 : STROKE}
-                data-slice={slice.key}
-                onPointerEnter={() => setActive(slice.key)}
-                onPointerLeave={() => setActive(null)}
-              />
-            ) : (
-              <path
-                key={slice.key}
-                d={arcPath(from, to)}
-                fill="none"
-                stroke={slice.color}
-                strokeWidth={active === slice.key ? STROKE + 4 : STROKE}
-                opacity={active && active !== slice.key ? 0.4 : 1}
-                data-slice={slice.key}
-                style={{ transition: "stroke-width 120ms ease-out, opacity 120ms ease-out" }}
-                onPointerEnter={() => setActive(slice.key)}
-                onPointerLeave={() => setActive(null)}
-              />
-            )
-          )}
+        <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} aria-hidden="true" className="block overflow-visible">
+          {arcs.map(({ slice, from, to, sweep }) => (
+            <path
+              key={slice.key}
+              d={sweep >= 359.9 ? RING_PATH : segmentPath(from, to)}
+              fillRule="evenodd"
+              fill={slice.color}
+              opacity={active && active !== slice.key ? 0.4 : 1}
+              data-slice={slice.key}
+              style={{
+                transformOrigin: `${CENTER}px ${CENTER}px`,
+                transform: active === slice.key ? "scale(1.045)" : "none",
+                transition: "transform 120ms ease-out, opacity 120ms ease-out",
+              }}
+              onPointerEnter={() => setActive(slice.key)}
+              onPointerLeave={() => setActive(null)}
+            />
+          ))}
         </svg>
 
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-9 text-center" data-donut-center="">
-          <span className="font-heading text-2xl font-bold leading-none tabular-nums">{current ? current.value : total}</span>
-          <span className="mt-1 line-clamp-2 text-[11px] leading-tight text-muted-foreground">
-            {current ? `${current.label} · ${percent(current.share)}` : centerLabel}
-          </span>
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center" data-donut-center="">
+          <div className="flex w-24 flex-col items-center text-center">
+            <span className="font-heading text-[2rem] font-bold leading-none tabular-nums">{current ? current.value : total}</span>
+            <span className="mt-1.5 line-clamp-2 text-[11px] leading-tight text-sidebar-foreground/65">
+              {current ? `${current.label} · ${percent(current.share)}` : centerLabel}
+            </span>
+          </div>
         </div>
       </div>
 
-      <ul data-legend="" aria-label={tx("Légende", "Legend")} className="w-full space-y-1 text-sm">
+      <ul data-legend="" aria-label={tx("Légende", "Legend")} className="flex w-full flex-wrap justify-center gap-x-2 gap-y-1.5 text-sm">
         {slices.map((slice) => (
           <li
             key={slice.key}
             tabIndex={0}
             className={cn(
-              "flex items-center gap-2 rounded-lg px-2 py-1 outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              active === slice.key && "bg-muted"
+              "flex max-w-full items-center gap-2 rounded-full px-2.5 py-1 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+              active === slice.key && "bg-white/10"
             )}
             onPointerEnter={() => setActive(slice.key)}
             onPointerLeave={() => setActive(null)}
             onFocus={() => setActive(slice.key)}
             onBlur={() => setActive(null)}
           >
-            <span className="h-2.5 w-2.5 shrink-0 rounded-[3px]" style={{ background: slice.color }} aria-hidden="true" />
-            <span className="min-w-0 flex-1 truncate">{slice.label}</span>
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: slice.color }} aria-hidden="true" />
+            <span className="min-w-0 truncate">{slice.label}</span>
             <span className="font-semibold tabular-nums">{slice.value}</span>
-            <span className="w-9 text-right text-xs tabular-nums text-muted-foreground">{percent(slice.share)}</span>
+            <span className="text-xs tabular-nums text-sidebar-foreground/60">{percent(slice.share)}</span>
           </li>
         ))}
       </ul>

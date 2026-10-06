@@ -5,16 +5,19 @@
 //   node scripts/validate-palette.mjs        prints a report, exits 1 on a FAIL
 //
 // Sets (marked in globals.css with /* palette: <name> */ in each theme block):
-//   series  the per-sector line colours (categorical: identity, any order)
-//   slice   the donut's slices (a ramp: rank, biggest first)
+//   series        the per-sector line colours (categorical: identity, any order)
+//   slice         the donut's slices and its "other" (categorical pastels, biggest
+//                 slice first; they sit on the donut's black card, --sidebar)
+//   slice-status  the donut's critical and warning slices, on the same card
 //
-// Rules, per theme (the chart sits on --card):
-//   contrast   every colour reaches 3:1 against the card (WCAG 1.4.11, graphics)
+// Rules, per theme (a chart sits on --card, the donut on --sidebar):
+//   contrast   every colour reaches 3:1 against its surface (WCAG 1.4.11, graphics)
 //   distinct   every pair is at least MIN_DE apart (CIEDE2000)
 //   cvd        same, as seen with deuteranopia / protanopia / tritanopia
 //   status     no series colour sits in the red / amber hue band the app keeps
 //              for critical / warning (series only)
-//   ramp       slices step evenly: each neighbour at least MIN_STEP apart
+//   ramp       (a set of kind "ramp", none ships today) steps evenly: each
+//              neighbour at least MIN_STEP apart, lightness moving one way
 // The CVD floor is lower than the plain one: eight categorical colours cannot
 // all stay far apart for a colour-blind reader. Identity is also carried by
 // the legend and the tooltip, never by colour alone.
@@ -163,7 +166,7 @@ export function checkSet(colors, bg, opt) {
 
   for (const c of parsed) {
     const ratio = contrast(c.lin, bgLin)
-    if (ratio < MIN_CONTRAST) fails.push(`contrast ${c.name} ${c.color} is ${ratio.toFixed(2)}:1 on the card (needs ${MIN_CONTRAST}:1)`)
+    if (ratio < MIN_CONTRAST) fails.push(`contrast ${c.name} ${c.color} is ${ratio.toFixed(2)}:1 on its surface (needs ${MIN_CONTRAST}:1)`)
   }
 
   const pairs = []
@@ -239,24 +242,27 @@ export function readThemes(css) {
 }
 
 export const SETS = [
-  { name: "series", kind: "categorical", status: true, names: ["series-1", "series-2", "series-3", "series-4", "series-5", "series-6", "series-7", "series-8", "series-other"] },
-  { name: "slice", kind: "ramp", status: false, names: ["slice-1", "slice-2", "slice-3", "slice-4", "slice-5", "slice-6", "slice-other"] },
+  { name: "series", kind: "categorical", status: true, surface: "card", names: ["series-1", "series-2", "series-3", "series-4", "series-5", "series-6", "series-7", "series-8", "series-other"] },
+  // The donut's family slices may be lime or pink: their meaning is in the legend,
+  // and the status colours have their own pair below.
+  { name: "slice", kind: "categorical", status: false, surface: "sidebar", names: ["slice-1", "slice-2", "slice-3", "slice-4", "slice-5", "slice-6", "slice-other"] },
+  { name: "slice-status", kind: "categorical", status: false, surface: "sidebar", names: ["slice-critical", "slice-warning"] },
 ]
 
 export function validate(css) {
   const themes = readThemes(css)
   const report = []
   for (const [theme, { ground, palette }] of Object.entries(themes)) {
-    const card = declared(ground, "card")
-    if (!card) throw new Error(`--card not found for ${theme}`)
     for (const set of SETS) {
+      const surface = declared(ground, set.surface ?? "card")
+      if (!surface) throw new Error(`--${set.surface ?? "card"} not found for ${theme}`)
       const colors = set.names.map((n) => {
         const v = declared(palette, n)
         if (!v) throw new Error(`--${n} missing in the ${theme} palette block`)
         return { name: n, color: v }
       })
       // "other" is deliberately a neutral: it must clear contrast and stay apart from the rest
-      const result = checkSet(colors, card, { kind: set.kind, status: set.status })
+      const result = checkSet(colors, surface, { kind: set.kind, status: set.status })
       report.push({ theme, set: set.name, colors, ...result })
     }
   }

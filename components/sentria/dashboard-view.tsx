@@ -14,6 +14,7 @@ import {
   ShieldCheck,
 
   Activity,
+  Layers,
   Cpu,
   TrendingUp,
   TrendingDown,
@@ -2049,8 +2050,8 @@ export function DashboardView({
     color:
       breakdown.kind === "severity"
         ? slice.label === tx("Critiques", "Critical")
-          ? "var(--tag-danger-fg)"
-          : "var(--tag-warning-fg)"
+          ? "var(--slice-critical)"
+          : "var(--slice-warning)"
         : sliceColor(slice.key),
   }))
 
@@ -3268,17 +3269,36 @@ export function DashboardView({
           )}
         </div>
 
-        <div className="rounded-3xl border border-border bg-card p-6">
-          <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-
+        {/* The donut's card is black in every theme, like the other dark
+            cards: its colours are validated on that surface. */}
+        <div
+          data-card="breakdown"
+          className="flex flex-col rounded-3xl bg-sidebar p-6 text-sidebar-foreground"
+        >
+          <div className="flex items-center justify-between gap-2">
             <h3 className="font-heading text-lg font-bold">
               {tx("Répartition", "Breakdown")}
             </h3>
+
+            {alertsLoaded && slices.length > 0 && (
+              <span
+                data-breakdown-kind={breakdown.kind}
+                className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold"
+              >
+                <Layers className="h-3.5 w-3.5" aria-hidden="true" />
+                {breakdown.kind === "severity"
+                  ? tx("Par gravité", "By severity")
+                  : tx("Par type", "By type")}
+              </span>
+            )}
           </div>
 
           {!alertsLoaded ? (
-            <Skeleton className="mx-auto mt-5 h-40 w-40 rounded-full" />
+            <div
+              aria-hidden="true"
+              data-skeleton=""
+              className="mx-auto mt-5 h-44 w-44 animate-pulse rounded-full border-[22px] border-white/10 motion-reduce:animate-none"
+            />
           ) : slices.length > 0 ? (
             <DonutChart
               className="mt-5"
@@ -3286,7 +3306,7 @@ export function DashboardView({
               centerLabel={tx("alertes", "alerts")}
             />
           ) : (
-            <p className="mt-6 text-sm text-muted-foreground">
+            <p className="mt-6 text-sm text-sidebar-foreground/70">
               {tx(
                 "Rien à répartir pour cette activité sur la période sélectionnée.",
                 "Nothing to break down for this activity over the selected period."

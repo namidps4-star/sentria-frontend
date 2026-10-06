@@ -296,7 +296,7 @@ const menu = p => p.getByRole('dialog', { name: 'Chart options' });
     pass(await p.locator('[data-chart="donut"] path[data-slice], [data-chart="donut"] circle[data-slice]').count() === 6, 'six slices drawn');
     const colors = await p.locator('[data-chart="donut"] ul li > span:first-child').evaluateAll(els => els.map(e => e.style.background));
     pass(colors.slice(0, 5).every((c, i) => c.includes(`--slice-${i + 1}`)) && colors[5].includes('--slice-other'), 'ranked colours, "Other" in the neutral');
-    pass(eq(await p.locator('[data-chart="donut"] [data-slice]').evaluateAll(els => els.map(e => e.getAttribute('stroke'))), ['var(--slice-1)', 'var(--slice-2)', 'var(--slice-3)', 'var(--slice-4)', 'var(--slice-5)', 'var(--slice-other)']), 'the slices carry the same tokens as their legend rows');
+    pass(eq(await p.locator('[data-chart="donut"] [data-slice]').evaluateAll(els => els.map(e => e.getAttribute('fill'))), ['var(--slice-1)', 'var(--slice-2)', 'var(--slice-3)', 'var(--slice-4)', 'var(--slice-5)', 'var(--slice-other)']), 'the slices carry the same tokens as their legend rows');
     await p.locator('[data-chart="donut"] ul li').nth(1).hover(); await p.waitForTimeout(150);
     const centre = await p.locator('[data-donut-center]').innerText();
     pass(centre.includes(String(wantVals[1])) && centre.includes('%'), `pointing at a legend row reads that slice in the centre (${centre.replace(/\n/g, ' · ')})`);
@@ -311,7 +311,7 @@ const menu = p => p.getByRole('dialog', { name: 'Chart options' });
     const { ctx, p } = await open(b, { alerts: bare });
     const rows = await p.locator('[data-chart="donut"] ul li').evaluateAll(els => els.map(e => ({ t: e.innerText.replace(/\s+/g, ' '), bg: e.querySelector('span').style.background })));
     pass(rows.length === 2 && rows[0].t.startsWith('Warnings 9') && rows[1].t.startsWith('Critical 3'), `two slices, biggest first (${rows.map(r => r.t).join(' | ')})`);
-    pass(rows[1].bg.includes('--tag-danger-fg') && rows[0].bg.includes('--tag-warning-fg'), 'Critical uses the danger colour, Warnings the warning colour, whatever their order');
+    pass(rows[1].bg.includes('--slice-critical') && rows[0].bg.includes('--slice-warning'), 'Critical uses the critical slice colour, Warnings the warning one, whatever their order');
     await ctx.close();
   }
 

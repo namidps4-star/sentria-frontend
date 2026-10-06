@@ -409,10 +409,13 @@
 }
 
 /* Chart colours. `series` is one colour per sector, fixed everywhere in the
-   app (lib/chart-series.ts holds the order); `slice` is the donut's ramp,
-   biggest slice first. Each theme has its own values, checked on the card by
-   scripts/validate-palette.mjs, which reads these three blocks (keep the
-   markers). Never reuse the status red / amber for a series. */
+   app (lib/chart-series.ts holds the order). `slice` is the donut's: six
+   pastels, biggest slice first, plus a neutral "other", and `slice-critical`
+   / `slice-warning` for the severity breakdown. The donut sits on a black
+   card in every theme, so its values are the same in all three blocks and are
+   checked against --sidebar. Each theme's series has its own values, checked
+   on the card by scripts/validate-palette.mjs, which reads these three blocks
+   (keep the markers). Never reuse the status red / amber for a series. */
 /* palette:light */
 :root {
   --series-1: #566f00;
@@ -424,13 +427,15 @@
   --series-7: #8336b4;
   --series-8: #ae5292;
   --series-other: #92938b;
-  --slice-1: #00353c;
-  --slice-2: #004b40;
-  --slice-3: #00603b;
-  --slice-4: #007327;
-  --slice-5: #338300;
-  --slice-6: #738e00;
-  --slice-other: #868780;
+  --slice-1: #dbf168;
+  --slice-2: #698af1;
+  --slice-3: #94d1bf;
+  --slice-4: #7e7bb2;
+  --slice-5: #e48fc9;
+  --slice-6: #5ec3ea;
+  --slice-other: #868781;
+  --slice-critical: #ff7a88;
+  --slice-warning: #f7c14d;
 }
 /* palette:dark */
 .dark {
@@ -443,13 +448,15 @@
   --series-7: #d78cff;
   --series-8: #a64b8b;
   --series-other: #8d8d85;
-  --slice-1: #8ef9ff;
-  --slice-2: #60e7d6;
-  --slice-3: #3ed2a5;
-  --slice-4: #3cbb6c;
-  --slice-5: #51a016;
-  --slice-6: #688200;
-  --slice-other: #989992;
+  --slice-1: #dbf168;
+  --slice-2: #698af1;
+  --slice-3: #94d1bf;
+  --slice-4: #7e7bb2;
+  --slice-5: #e48fc9;
+  --slice-6: #5ec3ea;
+  --slice-other: #868781;
+  --slice-critical: #ff7a88;
+  --slice-warning: #f7c14d;
 }
 /* palette:system-dark */
 @media (prefers-color-scheme: dark) {
@@ -463,13 +470,15 @@
     --series-7: #d78cff;
     --series-8: #a64b8b;
     --series-other: #8d8d85;
-    --slice-1: #8ef9ff;
-    --slice-2: #60e7d6;
-    --slice-3: #3ed2a5;
-    --slice-4: #3cbb6c;
-    --slice-5: #51a016;
-    --slice-6: #688200;
-    --slice-other: #989992;
+    --slice-1: #dbf168;
+    --slice-2: #698af1;
+    --slice-3: #94d1bf;
+    --slice-4: #7e7bb2;
+    --slice-5: #e48fc9;
+    --slice-6: #5ec3ea;
+    --slice-other: #868781;
+    --slice-critical: #ff7a88;
+    --slice-warning: #f7c14d;
   }
 }
 
