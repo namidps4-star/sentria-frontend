@@ -48,6 +48,7 @@
   --color-destructive: var(--destructive);
   --color-warning: var(--warning);
   --color-canvas: var(--canvas);
+  --color-outer: var(--outer);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -100,6 +101,9 @@
      sidebar), so white, black and lime cards read as cards instead of
      white on white. */
   --canvas: oklch(0.955 0.003 110);
+  /* The outer background of the app: the strip around the rounded panel
+     and behind the sidebar. Warm cream in light. Dark keeps --background. */
+  --outer: #f8f1e7;
   --border: oklch(0.91 0.003 110);
   --input: oklch(0.91 0.003 110);
   /* The brand lime, available in both themes. Deliberately separate
@@ -159,6 +163,7 @@
      into it the way the light-mode bronze would. */
   --warning: oklch(0.8 0.145 78);
   --canvas: oklch(0.125 0.002 110);
+  --outer: var(--background);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   /* Brand lime, very slightly tempered so it does not glare
@@ -215,6 +220,7 @@
      into it the way the light-mode bronze would. */
   --warning: oklch(0.8 0.145 78);
   --canvas: oklch(0.125 0.002 110);
+    --outer: var(--background);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
     /* Brand lime, very slightly tempered so it does not glare

@@ -124,3 +124,8 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Problem:** Trimming `COUNTRIES` to the launch markets breaks the currency, time zone and phone checks of every account that already chose another country.
 **Reality:** `COUNTRIES` (`lib/locale.ts`) is the whole table that `countryFor`, `currencyFor`, `writeCountryCode` and `lib/phone.ts` read. What a picker offers is `pickableCountries(current)`: the codes in `LAUNCH_COUNTRY_CODES` (Benin, Côte d'Ivoire, Senegal, the markets the legal review covers) plus the country the account already has.
 **Rule:** Open a market by adding its code to `LAUNCH_COUNTRY_CODES` after its legal check. Never delete a row from `COUNTRIES`. A new country picker calls `pickableCountries`. `tests/e2e/launchcountries.js` guards this.
+
+## Three page colours: `--outer`, `--canvas`, `--background`
+**Problem:** The grey behind the dashboard looks like one token, and `--background` looks like the place to recolour it.
+**Reality:** `--outer` (`bg-outer`, only `app-shell.tsx`'s root) is the strip around the rounded panel and behind the sidebar: cream `#f8f1e7` in light, and `var(--background)` in both dark blocks. `--canvas` is the panel inside. `--background` is also the fill of inputs, pills, chips and the sign-in and loading screens (about 40 call sites).
+**Rule:** Recolour the outer frame through `--outer` only. Changing `--background` tints every input and pill. A new dark block needs its own `--outer`. `tests/e2e/outerbg.js` guards this.
