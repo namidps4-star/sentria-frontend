@@ -313,6 +313,113 @@ export function deactivateContractor(
 }
 
 /* ------------------------------------------------------------------ */
+/*  Removing a contractor: hand their open tasks over first (F-CDELETE) */
+/* ------------------------------------------------------------------ */
+
+/** One person who could take a task, with the facts behind the ranking. */
+export type HandoverCandidate = {
+  id: string
+  name: string
+  role: string | null
+  availability: Availability
+  /** Same role as the person leaving. */
+  role_match: boolean
+  /** Open tasks they already hold. */
+  open: number
+  /** Open tasks of theirs due within a day of this one. */
+  conflicts: number
+  score: number
+}
+
+export type HandoverTask = {
+  task_key: string
+  status: AssignmentStatus
+  priority: AssignmentPriority
+  deadline: string | null
+  /** The asset, and what the alert says (may be empty). */
+  equipment: string
+  message: string
+  /** Others already on the task: they keep it. */
+  co_holders: string[]
+  /** The API's first pick, and the ranked runners-up. */
+  suggested: string | null
+  candidates: HandoverCandidate[]
+}
+
+export type Handover = {
+  contractor: { id: string; name: string; role: string | null }
+  open_count: number
+  tasks: HandoverTask[]
+}
+
+/** A text for one person who gained a task. Nothing is sent: per-contractor
+ *  SMS is not live yet, so the app keeps these (lib/sms-drafts.ts). */
+export type HandoverDraft = {
+  contractor_id: string
+  name: string
+  phone: string | null
+  sms_ready: boolean | null
+  task_keys: string[]
+  body: string
+}
+
+export type HandoverResult = {
+  contractor: Contractor
+  handed_over: number
+  unassigned: string[]
+  drafts: HandoverDraft[]
+}
+
+/** What leaving would orphan, and who could take each task. Read only. */
+export function fetchHandover(
+  contractorId: string,
+  lang: "fr" | "en"
+): Promise<CrmResult<Handover>> {
+  return call(
+    `/contractors/${encodeURIComponent(contractorId)}/handover?lang=${lang}`,
+    { method: "GET" },
+    (body) => {
+      const plan = (body.handover ?? {}) as Partial<Handover>
+
+      return {
+        contractor: plan.contractor ?? { id: contractorId, name: "", role: null },
+        open_count: typeof plan.open_count === "number" ? plan.open_count : 0,
+        tasks: asArray<HandoverTask>(plan.tasks).map((task) => ({
+          ...task,
+          equipment: task.equipment || task.task_key,
+          message: task.message ?? "",
+          co_holders: asArray<string>(task.co_holders),
+          candidates: asArray<HandoverCandidate>(task.candidates),
+        })),
+      }
+    }
+  )
+}
+
+/** Move the open tasks to the people chosen, then remove the person. A
+ *  task left out of `moves` (or sent with no one) is left without them. */
+export function applyHandover(
+  contractorId: string,
+  moves: { task_key: string; contractor_ids: string[] }[],
+  lang: "fr" | "en"
+): Promise<CrmResult<HandoverResult>> {
+  return call(
+    `/contractors/${encodeURIComponent(contractorId)}/handover`,
+    { method: "POST", body: JSON.stringify({ moves, lang }) },
+    (body) => {
+      const result = (body.result ?? {}) as Partial<HandoverResult>
+
+      return {
+        contractor: result.contractor as Contractor,
+        handed_over: typeof result.handed_over === "number" ? result.handed_over : 0,
+        unassigned: asArray<string>(result.unassigned),
+        drafts: asArray<HandoverDraft>(result.drafts),
+      }
+    }
+  )
+}
+
+/* ------------------------------------------------------------------ */
 /*  Assignments                                                        */
 /* ------------------------------------------------------------------ */
 

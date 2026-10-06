@@ -41,6 +41,8 @@ export const ACCOUNT_KEYS = [
 const LOCAL_ONLY_USER_KEYS = [
   "sentria_notifications_seen_at",
   "sentria_recommendation_tasks_v2",
+  // Texts drafted when a contractor was removed (lib/sms-drafts.ts).
+  "sentria_sms_drafts",
   // Read from the account's own columns at sign-in, never saved back:
   // only an admin (or, later, payment) changes a plan.
   PLAN_KEY,

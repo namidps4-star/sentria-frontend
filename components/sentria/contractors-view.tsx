@@ -23,7 +23,6 @@ import { useCompanyIdentity } from "@/lib/company"
 import {
   AVAILABILITY_LABEL,
   createContractor,
-  deactivateContractor,
   fetchContractors,
   updateContractor,
   type Availability,
@@ -33,6 +32,8 @@ import { cn } from "@/lib/utils"
 import { useTx, type Localized, resolve } from "@/lib/i18n"
 import type { ViewKey } from "./types"
 import { PhoneField } from "./phone-field"
+import { HandoverDialog } from "./handover-dialog"
+import { SmsDraftsCard } from "./sms-drafts-card"
 import { checkPhone, defaultPhoneCountry } from "@/lib/phone"
 
 /* --------------------------------------------------------------------------
@@ -108,6 +109,9 @@ export function ContractorsView({
     phone: "",
     email: "",
   })
+
+  const [leaving, setLeaving] = useState<Contractor | null>(null)
+  const [leavingOpen, setLeavingOpen] = useState(false)
 
   const [roleFilter, setRoleFilter] = useState<string | null>(null)
   const [availabilityFilter, setAvailabilityFilter] =
@@ -221,22 +225,15 @@ export function ContractorsView({
     await reload()
   }
 
-  async function remove(contractor: Contractor) {
+  /* The trash button opens the hand-over dialog instead of removing on the
+     spot: a person who still holds open tasks cannot just disappear (the API
+     refuses it too). The dialog stays mounted through its close animation,
+     so the person it is about is kept until then. */
+  function remove(contractor: Contractor) {
     if (busy) return
 
-    setBusy(true)
-
-    const result = await deactivateContractor(contractor.id)
-
-    setBusy(false)
-
-    if (!result.ok) {
-      setError(px(result.detail))
-      return
-    }
-
-    setError(null)
-    await reload()
+    setLeaving(contractor)
+    setLeavingOpen(true)
   }
 
   /* Without a company name there is no partition to read or write, and
@@ -493,6 +490,9 @@ export function ContractorsView({
           </button>
         )}
       </AskHeader>
+
+      {/* Texts drafted when someone was removed; shows nothing when empty. */}
+      <SmsDraftsCard />
 
       {/* LIST */}
       {!loaded ? (
@@ -769,6 +769,15 @@ export function ContractorsView({
           )}
         </div>
       )}
+
+      <HandoverDialog
+        contractor={leaving}
+        open={leavingOpen}
+        people={contractors}
+        tx={tx}
+        onClose={() => setLeavingOpen(false)}
+        onChanged={reload}
+      />
     </div>
   )
 }
