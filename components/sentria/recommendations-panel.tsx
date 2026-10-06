@@ -226,7 +226,7 @@ function reasoningOf(
   tx: Tx
 ): string {
   /* Written by the backend in the language it fired in, so it is passed
-     through rather than re-derived. See PASSATION.md. */
+     through rather than re-derived. */
   if (rec.reasoning) return rec.reasoning
 
   const parts: string[] = []
