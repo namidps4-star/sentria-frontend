@@ -236,7 +236,7 @@ export function AppShell({
   // page taller and dragging the whole box when scrolled or focused.
   // h-dvh follows the phone's visible height as its URL bar shows/hides.
   return (
-    <div className="relative flex h-dvh overflow-hidden bg-outer text-foreground">
+    <div className="relative flex h-dvh overflow-hidden bg-background text-foreground">
       {/* Corrects the tab title and <html lang> once the operator's
           language is known. Renders nothing. */}
       <DocumentLanguage />
