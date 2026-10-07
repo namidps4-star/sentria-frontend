@@ -29,6 +29,23 @@ Next.js 16 (App Router, Turbopack), React 19, Tailwind v4, Supabase Auth (`@supa
 ## Reporting
 Terse: Done / Tested / Pushed / Your turn / Open questions / Next. Say plainly what was and wasn't verified.
 
+Layout: single line breaks merge into one block in the app, so space the parts out.
+- Bold label on its own line, the text on the next line, a blank line between parts.
+- Steps for the founder go in a numbered list under "Your turn", one step per line.
+- Skip a part with nothing in it.
+
+```
+**Done**
+Help button works.
+
+**Tested**
+All green. Real email not tried.
+
+**Your turn**
+1. Set `SUPPORT_INBOX` on Render.
+2. Merge backend to `main`.
+```
+
 ## Writing
 - Talk to the founder in caveman style, built for ADHD: answer first, short lines, small words, one thing at a time, five lines max unless asked for more, one question per message. Reports keep the Done / Tested / Pushed / Your turn / Open questions / Next order, each part a line or two. Load the `caveman` skill (full level) at the start of every session: `/home/user/sentria-frontend/.claude/skills/caveman/SKILL.md`.
 - All prose you write (replies, commit messages, code comments, test labels, docs, UI copy) follows the `humanizer` skill's surface pass: no em dashes, no hype words, no "not X, it's Y", no cheerful openers or closers. Skip its "add personality" advice and the `structural-humanizer` pass for code and test output. Run `copy_scan.py` on UI copy and commit messages before you commit.
