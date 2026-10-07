@@ -1,6 +1,6 @@
 // The panel of the app (--canvas, the rounded frame next to the sidebar) is
-// warm cream #f8f1e7 in light, and the outer background behind it is the same
-// colour, so the page reads as one cream surface with white cards on it. Dark
+// white #ffffff in light, and the outer background behind it is the same
+// colour, so the page reads as one white surface with white cards on it. Dark
 // keeps its own colour for both. --background (inputs, pills, the sign-in and
 // onboarding screens) does not change. Checked on desktop, on a phone, and with
 // the theme forced and following the system, plus the pricing page and the
@@ -11,7 +11,7 @@ const { signedIn } = require('./auth-mock');
 let fails = 0;
 const pass = (ok, l) => { fails += !ok; console.log(`   ${ok ? 'PASS' : 'FAIL'} ${l}`); };
 
-const CREAM = 'rgb(248, 241, 231)';
+const CREAM = 'rgb(255, 255, 255)'; // white now; the name stays for the checks below
 const ONB = { sentria_onboarded: 'true', sentria_company_name: 'Acme', sentria_sector: 'industry', sentria_sectors: '["industry"]' };
 
 (async () => {
@@ -36,7 +36,7 @@ const ONB = { sentria_onboarded: 'true', sentria_company_name: 'Acme', sentria_s
   console.log('== light: cream panel, and the outer background is the same cream');
   { const { p, ctx } = await open({});
     const c = await read(p);
-    pass(c.panel === CREAM, `panel is #f8f1e7 (${c.panel})`);
+    pass(c.panel === CREAM, `panel is #ffffff (${c.panel})`);
     pass(/bg-canvas/.test(c.panelClass), 'it comes from the bg-canvas token, not a hex in the component');
     pass(c.outer === CREAM && c.outer === c.panel, `the outer background is the panel's cream (${c.outer})`);
     pass(/bg-canvas/.test(c.outerClass) && !/bg-background/.test(c.outerClass), 'it comes from the same bg-canvas token');
@@ -46,10 +46,9 @@ const ONB = { sentria_onboarded: 'true', sentria_company_name: 'Acme', sentria_s
     // What a CSS value paints, read back the way the browser reports it.
     const paint = (v) => p.evaluate(x => { const d = document.createElement('div'); d.style.background = x; document.body.appendChild(d); const r = getComputedStyle(d).backgroundColor; d.remove(); return r; }, v);
     const cardColour = await paint('var(--card)');
-    pass(cardColour !== c.panel, `the card colour differs from the panel (${cardColour} on ${c.panel})`);
     pass(await p.evaluate(x => [...document.querySelectorAll('main *')].some(e => getComputedStyle(e).backgroundColor === x), cardColour), 'and a white card is on screen');
     const bar = await p.evaluate(() => getComputedStyle(document.querySelector('header')).backgroundColor);
-    pass(bar === await paint('color-mix(in oklab, #f8f1e7 80%, transparent)'), `the top bar is the cream at 80% (${bar})`);
+    pass(bar === await paint('color-mix(in oklab, #ffffff 80%, transparent)'), `the top bar is the white at 80% (${bar})`);
     await p.screenshot({ path: 'canvasbg-light.png' });
     pass(p._errors.length === 0, `no page errors ${p._errors.join('|')}`);
     await ctx.close(); }

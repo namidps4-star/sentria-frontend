@@ -96,11 +96,11 @@
      media query too, which is the only way all three theme states agree.
      Both values are picked to clear 4.5:1 on their own theme's card. */
   --warning: oklch(0.54 0.14 58);
-  /* The warm cream the app's panels sit on (the frame next to the
-     sidebar), so white, black and lime cards read as cards instead of
-     white on white. Also the pricing page, the top bar and the pinned
-     department tab bar. Dark has its own value. */
-  --canvas: #f8f1e7;
+  /* The surface the app's panels sit on (the frame next to the sidebar),
+     the pricing page, the top bar and the pinned department tab bar.
+     White in light; cards on it are told apart by their border. Dark has
+     its own value. */
+  --canvas: #ffffff;
   --border: oklch(0.91 0.003 110);
   --input: oklch(0.91 0.003 110);
   /* The brand lime, available in both themes. Deliberately separate
