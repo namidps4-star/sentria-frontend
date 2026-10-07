@@ -28,6 +28,7 @@ import {
   type Availability,
   type Contractor,
 } from "@/lib/crm"
+import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import { useTx, type Localized, resolve } from "@/lib/i18n"
 import type { ViewKey } from "./types"
@@ -500,7 +501,7 @@ export function ContractorsView({
           {tx("Chargement des intervenants…", "Loading contractors…")}
         </p>
       ) : contractors.length === 0 ? (
-        <div className="rounded-[28px] bg-card p-8 text-center shadow-sm">
+        <div className="t-enter rounded-[28px] bg-card p-8 text-center shadow-sm" style={enterAt(1.6)}>
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
             <UserPlus
               className="h-5 w-5 text-muted-foreground"
@@ -520,7 +521,7 @@ export function ContractorsView({
           </p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="t-enter space-y-6" style={enterAt(1.6)}>
           {/* FILTERS — only the fields the CRM actually has. */}
           <div className="flex flex-wrap items-center gap-2 rounded-[28px] bg-card p-4 shadow-sm">
             <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">

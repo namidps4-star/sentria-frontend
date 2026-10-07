@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Globe, Bell, Moon, Check, Building2, Mail } from "@/lib/icons"
+import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import { readTheme, resolvedTheme, writeTheme } from "@/lib/theme"
 import {
@@ -375,7 +376,7 @@ export function SettingsView() {
     >
       {/* ---------------------------------------------------------- LEFT */}
       <div className="flex flex-col gap-4">
-        <div className="rounded-[28px] bg-brand p-5 text-[#141414]">
+        <div className="t-enter rounded-[28px] bg-brand p-5 text-[#141414]" style={enterAt(0)}>
           <div className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--ink)] text-brand">
               <Globe className="h-4 w-4" aria-hidden="true" />
@@ -414,7 +415,7 @@ export function SettingsView() {
       </div>
 
       {/* -------------------------------------------------------- CENTER */}
-      <section className="rounded-[28px] bg-foreground/[0.055] p-5 sm:p-6">
+      <section className="t-enter rounded-[28px] bg-foreground/[0.055] p-5 sm:p-6" style={enterAt(0.4)}>
         <h2 className="font-heading text-3xl font-semibold leading-[1.05] tracking-tight">{t.title}</h2>
         <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
           <span className="h-2 w-2 rounded-full bg-brand ring-2 ring-brand/30" aria-hidden="true" />
@@ -467,7 +468,7 @@ export function SettingsView() {
       </section>
 
       {/* --------------------------------------------------------- RIGHT */}
-      <section className="rounded-[28px] bg-[var(--ink)] p-5 text-white lg:col-start-2 xl:col-start-auto">
+      <section className="t-enter rounded-[28px] bg-[var(--ink)] p-5 text-white lg:col-start-2 xl:col-start-auto" style={enterAt(0.8)}>
         <div className="flex items-center justify-between">
           <h3 className="font-heading text-xl font-semibold tracking-tight">{t.org}</h3>
           <Building2 className="h-4 w-4 text-white/50" aria-hidden="true" />

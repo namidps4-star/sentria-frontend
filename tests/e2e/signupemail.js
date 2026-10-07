@@ -189,7 +189,7 @@ const token = (b, name) => (b.match(new RegExp('--' + name + ':\\s*([^;]+);')) |
     const TOKENS = [
       ['--brand (the lime)', token(light, 'brand'), '#bced31'], ['--brand-foreground (text on lime)', token(light, 'brand-foreground'), '#171e07'],
       ['--sidebar (the black card)', token(light, 'sidebar'), '#141412'], ['--sidebar-foreground (text on black)', token(light, 'sidebar-foreground'), '#f8f8f8'],
-      ['--canvas (the cream)', token(light, 'canvas'), '#f8f1e7'], ['--muted-foreground, light', token(light, 'muted-foreground'), '#696965'],
+      ['--outer (the cream)', token(light, 'outer'), '#f8f1e7'], ['--muted-foreground, light', token(light, 'muted-foreground'), '#696965'],
       ['--background, dark', token(dark, 'background'), '#0a0a0a'], ['--muted-foreground, dark', token(dark, 'muted-foreground'), '#a1a1a1'],
     ];
     for (const [name, tokenValue, hex] of TOKENS) {

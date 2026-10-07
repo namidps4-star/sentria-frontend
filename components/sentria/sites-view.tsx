@@ -30,6 +30,7 @@ import {
 } from "@/lib/icons"
 import { usePresence } from "@/lib/use-presence"
 import { useShake } from "@/lib/use-shake"
+import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import { PLAN_NAMES, PLAN_UPDATED_EVENT, maxSitesFor, readAccountPlan, type PlanId } from "@/lib/plans"
 import { StatusTag, type TagTone } from "./status-tag"
@@ -797,7 +798,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
       <div className="grid gap-4 lg:grid-cols-[250px_minmax(0,1fr)] xl:grid-cols-[250px_minmax(0,1fr)_290px]">
         {/* -------------------------------------------------------- LEFT */}
         <div className="flex flex-col gap-4">
-          <div className="rounded-[28px] bg-brand p-5 text-[#141414]">
+          <div className="t-enter rounded-[28px] bg-brand p-5 text-[#141414]" style={enterAt(0)}>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2.5">
                 <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--ink)] text-brand">
@@ -884,7 +885,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
         </div>
 
         {/* ------------------------------------------------------ CENTER */}
-        <section className="flex min-h-[420px] flex-col rounded-[28px] bg-foreground/[0.055] p-5 sm:p-6">
+        <section className="t-enter flex min-h-[420px] flex-col rounded-[28px] bg-foreground/[0.055] p-5 sm:p-6" style={enterAt(0.4)}>
           <h2 className="font-heading text-3xl font-semibold leading-[1.05] tracking-tight">{tx("Sites", "Sites")}</h2>
           <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
             <span className="h-2 w-2 rounded-full bg-brand ring-2 ring-brand/30" aria-hidden="true" />
@@ -984,7 +985,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
 
         {/* ------------------------------------------------------- RIGHT */}
         <div className="flex flex-col gap-4 lg:col-start-2 xl:col-start-auto">
-          <div className="rounded-[28px] bg-[var(--ink)] p-5 text-white">
+          <div className="t-enter rounded-[28px] bg-[var(--ink)] p-5 text-white" style={enterAt(0.8)}>
             <div className="flex items-center justify-between">
               <p className="font-heading text-xl font-semibold tracking-tight">{tx("En un coup d'œil", "At a glance")}</p>
               <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold">{tx("Sites", "Sites")}</span>

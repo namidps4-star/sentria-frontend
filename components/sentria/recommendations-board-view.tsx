@@ -31,6 +31,7 @@ import {
 import type { LucideIcon } from "@/lib/icons"
 import { useArrivals } from "@/lib/use-arrivals"
 import { useEnter } from "@/lib/use-presence"
+import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import { useCompanyIdentity } from "@/lib/company"
 import {
@@ -1766,7 +1767,8 @@ export function RecommendationsBoard({
 
       <div
         id="priorities-board"
-        className="overflow-hidden rounded-[28px] bg-card shadow-sm"
+        className="t-enter overflow-hidden rounded-[28px] bg-card shadow-sm"
+        style={enterAt(1.6)}
       >
       {/* One atomic sentence rather than four competing live regions, so a
           screen reader hears what the board holds instead of a bare number

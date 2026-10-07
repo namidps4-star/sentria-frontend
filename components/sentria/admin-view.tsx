@@ -8,6 +8,7 @@ import { API_BASE, apiFetch } from "@/lib/api"
 import { useTx } from "@/lib/i18n"
 import { PLAN_NAMES, PLAN_ORDER, trialDaysLeft, type PlanId } from "@/lib/plans"
 import { sectorLabel } from "@/lib/priorities"
+import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
 import { AdminThresholds } from "./admin-thresholds"
@@ -142,7 +143,7 @@ export function AdminView() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="t-enter grid grid-cols-2 gap-4 lg:grid-cols-4" style={enterAt(0)}>
         {stats.map((stat) => (
           <div key={stat.label} className="rounded-2xl border border-border bg-card p-5">
             <p className="text-xs font-medium text-muted-foreground">{stat.label}</p>
@@ -151,7 +152,7 @@ export function AdminView() {
         ))}
       </div>
 
-      <div className="rounded-3xl border border-border bg-card">
+      <div className="t-enter rounded-3xl border border-border bg-card" style={enterAt(1)}>
         <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5" aria-hidden="true" />

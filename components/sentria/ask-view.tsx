@@ -19,6 +19,7 @@ import { useTx, type Tx } from "@/lib/i18n"
 import { readDepartments } from "@/lib/plans"
 import { sectorLabel } from "@/lib/priorities"
 import { withOurSector } from "@/lib/sector"
+import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
 import { StatusTag } from "./status-tag"
@@ -302,7 +303,7 @@ export function AskView({
       {/* ---------------------------------------------------------- LEFT */}
       <div className="hidden min-h-0 flex-col gap-4 lg:flex">
         {/* Lime: who, and how far the critical list has come. */}
-        <div className="rounded-[28px] bg-brand p-5 text-[#141414]">
+        <div className="t-enter rounded-[28px] bg-brand p-5 text-[#141414]" style={enterAt(0)}>
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2.5">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--ink)] text-brand">
@@ -399,7 +400,8 @@ export function AskView({
 
       {/* -------------------------------------------------------- CENTER */}
       <section
-        className="flex min-h-[70dvh] flex-col rounded-[28px] bg-foreground/[0.055] p-4 sm:p-6 lg:min-h-0"
+        className="t-enter flex min-h-[70dvh] flex-col rounded-[28px] bg-foreground/[0.055] p-4 sm:p-6 lg:min-h-0"
+        style={enterAt(0.4)}
         aria-label={tx("Conversation", "Conversation")}
       >
         <div className="flex items-start justify-between gap-4">
@@ -539,7 +541,7 @@ export function AskView({
       {/* --------------------------------------------------------- RIGHT */}
       <div className="hidden min-h-0 flex-col gap-4 xl:flex">
         {/* Black: what SentrIA reads to answer. */}
-        <div className="rounded-[28px] bg-[var(--ink)] p-5 text-white">
+        <div className="t-enter rounded-[28px] bg-[var(--ink)] p-5 text-white" style={enterAt(0.8)}>
           <div className="flex items-start justify-between gap-3">
             <h2 className="font-heading text-xl font-semibold leading-tight tracking-tight">
               {tx("Ce que SentrIA lit", "What SentrIA reads")}

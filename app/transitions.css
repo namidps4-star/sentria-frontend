@@ -492,6 +492,11 @@
   animation-delay: calc(var(--grow-dur) * 0.7);
 }
 
+/* A page printed while it is still rising comes out whole. */
+@media print {
+  .t-enter { animation: none !important; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .t-enter, .t-grow-y, .t-draw, .t-sweep, .t-reveal-x, .t-pop { animation: none !important; }
   .t-count-live { display: none; }

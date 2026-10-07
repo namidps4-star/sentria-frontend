@@ -44,6 +44,7 @@ import {
 import { useTx } from "@/lib/i18n"
 import { sectorLabel } from "@/lib/priorities"
 import { withOurSector } from "@/lib/sector"
+import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import { PLAN_NAMES, readAccountPlan, readDepartments, trialDaysLeft, type AccountPlan } from "@/lib/plans"
 import type { ViewKey } from "./types"
@@ -293,7 +294,7 @@ export function ProfileView({
       <div className="grid gap-4 lg:grid-cols-[250px_minmax(0,1fr)] xl:grid-cols-[250px_minmax(0,1fr)_290px]">
         {/* -------------------------------------------------------- LEFT */}
         <div className="flex flex-col gap-4">
-          <div className="rounded-[28px] bg-brand p-5 text-[#141414]">
+          <div className="t-enter rounded-[28px] bg-brand p-5 text-[#141414]" style={enterAt(0)}>
             <div className="flex items-center justify-between gap-2">
               <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--ink)] text-lg font-bold text-brand">
                 {companyName ? initialsOf(companyName) : <User className="h-6 w-6" aria-hidden="true" />}
@@ -363,7 +364,7 @@ export function ProfileView({
         </div>
 
         {/* ------------------------------------------------------ CENTER */}
-        <section className="flex min-w-0 flex-col rounded-[28px] bg-foreground/[0.055] p-5 sm:p-6">
+        <section className="t-enter flex min-w-0 flex-col rounded-[28px] bg-foreground/[0.055] p-5 sm:p-6" style={enterAt(0.4)}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="font-heading text-3xl font-semibold leading-[1.05] tracking-tight">
@@ -546,7 +547,7 @@ export function ProfileView({
 
         {/* ------------------------------------------------------- RIGHT */}
         <div className="flex flex-col gap-4 lg:col-start-2 xl:col-start-auto">
-        <div className="rounded-[28px] bg-[var(--ink)] p-5 text-white">
+        <div className="t-enter rounded-[28px] bg-[var(--ink)] p-5 text-white" style={enterAt(0.8)}>
           <div className="flex items-center justify-between">
             <p className="font-heading text-xl font-semibold tracking-tight">{tx("Votre activité", "Your activity")}</p>
             <SectorTag />

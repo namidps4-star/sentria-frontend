@@ -14,6 +14,7 @@ import {
   Wrench,
   X,
 } from "@/lib/icons"
+import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import { useCompanyIdentity } from "@/lib/company"
 import { inAccountScope, readSectors } from "@/lib/activities"
@@ -494,7 +495,7 @@ export function CalendarView() {
           week's three counts). */}
       <div className="grid gap-4 lg:grid-cols-[250px_minmax(0,1fr)] xl:grid-cols-[250px_minmax(0,1fr)_290px]">
         {/* -------------------------------------------------------- LEFT */}
-        <div className="rounded-[28px] bg-brand p-5 text-[#141414]">
+        <div className="t-enter rounded-[28px] bg-brand p-5 text-[#141414]" style={enterAt(0)}>
           <div className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--ink)] text-brand">
               <CalendarClock className="h-4 w-4" aria-hidden="true" />
@@ -536,7 +537,7 @@ export function CalendarView() {
         </div>
 
         {/* ------------------------------------------------------ CENTER */}
-        <section className="flex flex-col rounded-[28px] bg-foreground/[0.055] p-5 sm:p-6">
+        <section className="t-enter flex flex-col rounded-[28px] bg-foreground/[0.055] p-5 sm:p-6" style={enterAt(0.4)}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="font-heading text-3xl font-semibold leading-[1.05] tracking-tight">
@@ -637,7 +638,7 @@ export function CalendarView() {
         </section>
 
         {/* ------------------------------------------------------- RIGHT */}
-        <div className="rounded-[28px] bg-[var(--ink)] p-5 text-white lg:col-start-2 xl:col-start-auto">
+        <div className="t-enter rounded-[28px] bg-[var(--ink)] p-5 text-white lg:col-start-2 xl:col-start-auto" style={enterAt(0.8)}>
           <div className="flex items-center justify-between">
             <p className="font-heading text-xl font-semibold tracking-tight">{tx("Cette semaine", "This week")}</p>
             <SectorTag />
@@ -676,7 +677,7 @@ export function CalendarView() {
 
       {/* MONTH VIEW */}
       {viewMode === "month" && (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px]">
+        <div className="t-enter grid grid-cols-1 gap-4 lg:grid-cols-[1fr_380px]" style={enterAt(1.6)}>
           {/* October-style calendar */}
           <div className="overflow-hidden rounded-[28px] bg-card shadow-sm">
             <div
@@ -1010,7 +1011,7 @@ export function CalendarView() {
 
       {/* WEEK AGENDA */}
       {viewMode === "week" && (
-        <div id="calendar-grid" className="rounded-[28px] bg-card p-4 shadow-sm">
+        <div id="calendar-grid" className="t-enter rounded-[28px] bg-card p-4 shadow-sm" style={enterAt(1.6)}>
           {!loaded ? (
             <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -1227,7 +1228,7 @@ export function CalendarView() {
       )}
 
       {/* LEGEND */}
-      <div className="flex flex-wrap items-center gap-4 px-1 text-[11px] text-muted-foreground">
+      <div className="t-enter flex flex-wrap items-center gap-4 px-1 text-[11px] text-muted-foreground" style={enterAt(2.4)}>
         {(Object.keys(TYPE_LABEL) as EventKind[]).map((kind) => {
           const Icon = TYPE_ICON[kind]
           return (

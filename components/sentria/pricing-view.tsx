@@ -20,6 +20,7 @@ import {
   type AccountPlan,
   type PlanId,
 } from "@/lib/plans"
+import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
 import { CapabilityMatrix } from "./capability-matrix"
@@ -150,7 +151,7 @@ export function PricingView() {
     <div className="-m-4 min-h-[calc(100%+2rem)] bg-canvas px-4 py-10 text-foreground lg:-m-8 lg:min-h-[calc(100%+4rem)] lg:px-10 lg:py-14">
       <div className="mx-auto flex max-w-7xl flex-col gap-10">
         {/* Header */}
-        <header className="flex flex-col items-center text-center">
+        <header className="t-enter flex flex-col items-center text-center" style={enterAt(0)}>
           <p className="text-sm font-bold uppercase tracking-[0.18em] text-muted-foreground">
             {tx("Offres", "Plans")}
           </p>
@@ -203,7 +204,7 @@ export function PricingView() {
         </header>
 
         {/* Plans */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="t-enter grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4" style={enterAt(1)}>
           {PLAN_ORDER.map((plan) => {
             const look = LOOK[plan]
             const current = account?.effective === plan
@@ -279,7 +280,7 @@ export function PricingView() {
           })}
         </div>
 
-        <p className="-mt-4 text-center text-xs text-muted-foreground">
+        <p className="t-enter -mt-4 text-center text-xs text-muted-foreground" style={enterAt(1.6)}>
           {tx(
             "Le paiement en ligne (carte et mobile money) arrive bientôt.",
             "Online payment (card and mobile money) is coming soon."
@@ -287,7 +288,7 @@ export function PricingView() {
         </p>
 
         {/* SentrIA Intelligence + add-ons */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]">
+        <div className="t-enter grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]" style={enterAt(2.2)}>
           <section className="rounded-[28px] bg-brand-deep p-7 text-white">
             <h3 className="flex flex-wrap items-center gap-2 font-heading text-xl font-bold">
               <BrainCircuit className="h-5 w-5 text-[#d4f542]" aria-hidden="true" />

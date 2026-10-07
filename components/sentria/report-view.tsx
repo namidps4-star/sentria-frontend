@@ -20,6 +20,7 @@ import { readCompanyName, readTimezoneId } from "@/lib/company"
 import { buildReport } from "@/lib/report"
 import type { LogisticsAlert } from "@/lib/logistics-signals"
 import { SECTOR_LABELS, sectorLabel, type Sector } from "@/lib/priorities"
+import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import { StatusTag } from "./status-tag"
 import { WeekCard } from "./week-card"
@@ -844,7 +845,7 @@ function ReportBody({
         className="grid gap-4 lg:grid-cols-[250px_minmax(0,1fr)] xl:grid-cols-[250px_minmax(0,1fr)_290px] print:block print:space-y-4"
       >
         {/* -------------------------------------------------------- LEFT */}
-        <div className="flex flex-col gap-4">
+        <div className="t-enter flex flex-col gap-4" style={enterAt(0)}>
           <div className="rounded-[28px] bg-brand p-5 text-[#141414] print:rounded-none print:bg-transparent print:p-0">
             <div className="flex items-center gap-2.5">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--ink)] text-brand print:hidden">
@@ -913,7 +914,7 @@ function ReportBody({
         </div>
 
         {/* ------------------------------------------------------ CENTER */}
-        <section className="min-w-0 space-y-6 rounded-[28px] bg-foreground/[0.055] p-5 sm:p-6 print:bg-transparent print:p-0">
+        <section className="t-enter min-w-0 space-y-6 rounded-[28px] bg-foreground/[0.055] p-5 sm:p-6 print:bg-transparent print:p-0" style={enterAt(0.4)}>
           <div>
             <h2 className="font-heading text-3xl font-semibold leading-[1.05] tracking-tight">
               {tx("Votre rapport", "Your report")}
@@ -951,7 +952,7 @@ function ReportBody({
         </section>
 
         {/* ------------------------------------------------------- RIGHT */}
-        <div className="flex flex-col gap-4 lg:col-start-2 xl:col-start-auto">
+        <div className="t-enter flex flex-col gap-4 lg:col-start-2 xl:col-start-auto" style={enterAt(0.8)}>
           <div className="rounded-[28px] bg-[var(--ink)] p-5 text-white print:hidden">
             <div className="flex items-center justify-between">
               <p className="font-heading text-xl font-semibold tracking-tight">{tx("La période", "The period")}</p>
