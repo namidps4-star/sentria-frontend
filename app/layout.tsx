@@ -1,12 +1,12 @@
 
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
-import { Plus_Jakarta_Sans, Outfit, Space_Grotesk, Geist_Mono } from 'next/font/google'
+import { Plus_Jakarta_Sans, Outfit, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import './transitions.css'
 import { THEME_INIT_SCRIPT } from "@/lib/theme"
 
-/* Body text, headings, and the sign-in screen (which keeps the old face). */
+/* Body text and headings. */
 const bodySans = Plus_Jakarta_Sans({
   variable: '--font-body',
   subsets: ['latin'],
@@ -14,11 +14,6 @@ const bodySans = Plus_Jakarta_Sans({
 
 const displaySans = Outfit({
   variable: '--font-display',
-  subsets: ['latin'],
-})
-
-const authSans = Space_Grotesk({
-  variable: '--font-auth',
   subsets: ['latin'],
 })
 
@@ -82,7 +77,7 @@ export default function RootLayout({
     <html
       /* The default. DocumentLanguage sets the real one after mount. */
       lang="fr"
-      className={`${bodySans.variable} ${displaySans.variable} ${authSans.variable} ${geistMono.variable} bg-background`}
+      className={`${bodySans.variable} ${displaySans.variable} ${geistMono.variable} bg-background`}
       suppressHydrationWarning
     >
       <head>

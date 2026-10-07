@@ -16,13 +16,6 @@
   }
 }
 
-/* The sign-in screen keeps its own face: it points both font variables at it. */
-.auth-font {
-  --font-body: var(--font-auth);
-  --font-display: var(--font-auth);
-  font-family: var(--font-auth), 'Geist Fallback', sans-serif;
-}
-
 @theme inline {
   --font-heading: var(--font-display), 'Geist Fallback';
   --font-sans: var(--font-body), 'Geist Fallback';
