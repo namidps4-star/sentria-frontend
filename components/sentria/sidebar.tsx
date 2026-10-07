@@ -296,12 +296,16 @@ export function Sidebar({
 
           {/* NAVIGATION */}
           {/* Scrolls on short screens so the sign-out button below always
-              fits. Collapsed, it stays unclipped: its labels pop out to
-              the right. */}
+              fits, with no scrollbar: a classic one is a pale bar with
+              arrows on the dark sidebar. The wheel, touch and keys still
+              scroll it. Collapsed, it stays unclipped: its labels pop out
+              to the right. */}
           <nav
             className={[
               "flex flex-1 flex-col px-3 py-3",
-              collapsed ? "overflow-visible" : "min-h-0 overflow-y-auto overscroll-contain",
+              collapsed
+                ? "overflow-visible"
+                : "min-h-0 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
             ].join(" ")}
           >
             {visibleSections.map((section, sectionIndex) => (
