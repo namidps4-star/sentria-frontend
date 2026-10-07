@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 import type { ViewKey } from "./types"
 import { StatusTag, type TagTone } from "./status-tag"
-import { useT, type MessageKey } from "@/lib/i18n"
+import { SupportDialog } from "./support-dialog"
+import { useT, useTx, type MessageKey } from "@/lib/i18n"
 import { PLAN_NAMES, PLAN_UPDATED_EVENT, readAccountPlan, type PlanId } from "@/lib/plans"
 import { usePresence } from "@/lib/use-presence"
 import { cn } from "@/lib/utils"
@@ -23,6 +24,7 @@ import {
   Bot,
   UsersRound,
   LogOut,
+  MessageSquare,
   ShieldCheck,
   Sprout,
   Zap,
@@ -189,6 +191,19 @@ export function Sidebar({
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
   }, [confirmingSignOut, cancelSignOut])
+
+  /* Help and feedback (F-SUPPORT): a form in a dialog, from any page. It
+     says which page it was sent from, so the label is the one in the nav. */
+  const tx = useTx()
+  const [supportOpen, setSupportOpen] = useState(false)
+  const supportButton = useRef<HTMLButtonElement>(null)
+  const closeSupport = useCallback(() => {
+    setSupportOpen(false)
+    supportButton.current?.focus()
+  }, [])
+  const here = [...sections.flatMap((section) => section.items), { id: "admin", label: "nav.admin" } satisfies Pick<SidebarItem, "id" | "label">].find(
+    (item) => item.id === active
+  )
 
   const visibleSections: typeof sections = isAdmin
     ? sections.map((section) =>
@@ -433,6 +448,25 @@ export function Sidebar({
               )}
 
               <button
+                ref={supportButton}
+                type="button"
+                onClick={() => setSupportOpen(true)}
+                aria-label={collapsed ? tx("Aide et retours", "Help & feedback") : undefined}
+                title={collapsed ? tx("Aide et retours", "Help & feedback") : undefined}
+                data-support-open=""
+                className={[
+                  "mb-0.5 flex h-10 w-full items-center rounded-xl text-sidebar-foreground/65 transition hover:bg-accent/10 hover:text-accent",
+                  collapsed ? "justify-center" : "gap-3 px-3 text-left",
+                  SIDEBAR_FOCUS,
+                ].join(" ")}
+              >
+                <MessageSquare className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} aria-hidden="true" />
+                {!collapsed && (
+                  <span className="text-sm font-medium">{tx("Aide et retours", "Help & feedback")}</span>
+                )}
+              </button>
+
+              <button
                 ref={signOutButton}
                 type="button"
                 onClick={() => setConfirmingSignOut(true)}
@@ -470,6 +504,13 @@ export function Sidebar({
 
       {/* Beside the <aside>, not inside it: its transform would make a
           fixed child position against the sidebar instead of the screen. */}
+      <SupportDialog
+        open={supportOpen}
+        page={active}
+        pageLabel={here ? t(here.label) : active}
+        onClose={closeSupport}
+      />
+
       {signOutDialog.present && (
         <div
           className={cn("fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 t-modal-backdrop", signOutDialog.className)}
