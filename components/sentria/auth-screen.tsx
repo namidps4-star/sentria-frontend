@@ -258,7 +258,14 @@ export function AuthScreen({
           password,
           options: {
             emailRedirectTo: origin,
-            data: { full_name: name.trim(), company_name: company.trim(), username: wanted },
+            // The confirmation email is one template for both languages
+            // (supabase/templates/confirmation.html) and reads `language`.
+            data: {
+              full_name: name.trim(),
+              company_name: company.trim(),
+              username: wanted,
+              language: ui === "en" ? "en" : "fr",
+            },
           },
         })
         // The database refuses a username taken in the meantime; Supabase
