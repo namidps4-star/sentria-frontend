@@ -2427,7 +2427,7 @@ export function DashboardView({
             )
 
       return (
-        <div className="space-y-6">
+        <div key="industry" className="space-y-6">
           {importPortal}
           <div className="t-enter flex items-center justify-between" style={enterAt(0)}>
             <button
@@ -2693,7 +2693,7 @@ export function DashboardView({
       }
 
       return (
-        <div className="space-y-6">
+        <div key="logistics" className="space-y-6">
           {importPortal}
           <div className="t-enter flex items-center justify-between" style={enterAt(0)}>
             <button
@@ -2950,8 +2950,13 @@ export function DashboardView({
     )
   }
 
+  /* A key per layout. `filterSector` starts at "all", so a sector's own page
+     always replaces the generic one a frame after it mounted. Without keys
+     React hands the generic page's blocks to the new page, and a block whose
+     delay changes after it began to rise starts again (a second
+     `animationstart`, and a block that hides and rises twice). */
   return (
-    <div className="space-y-6">
+    <div key="overview" className="space-y-6">
       {importPortal}
       {freshnessNote}
 
