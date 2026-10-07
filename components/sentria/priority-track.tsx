@@ -118,6 +118,8 @@ export function PriorityTrack({
                 )}
               </span>
 
+              {!open && <span className="sr-only">{label}</span>}
+
               {open && (
                 <span className="flex min-w-0 flex-1 items-center justify-between gap-3">
                   <span className="min-w-0 text-left">

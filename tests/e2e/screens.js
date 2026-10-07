@@ -31,12 +31,13 @@ const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y
     pass(c.bg === want.crit && c.fg === want.critFg, `${label}: Critical is a pastel pink with deep/bright text (${c.bg} / ${c.fg})`);
     if (await warn.count()) { const w = await style(warn); pass(w.bg === want.warn && contrast(w.bg, w.fg) >= 4.5, `${label}: Warning is butter pastel, readable (${w.bg}, ${contrast(w.bg, w.fg).toFixed(1)}:1)`); }
     pass(contrast(c.bg, c.fg) >= 4.5, `${label}: Critical text contrast ${contrast(c.bg, c.fg).toFixed(2)}:1`);
-    const tags = await p.$$eval('span.rounded-full.border.font-semibold', els => els.filter(e => e.offsetParent).map(e => { const s = getComputedStyle(e); return { t: e.innerText.trim(), bg: s.backgroundColor, fg: s.color }; }));
+    const tags = await p.$$eval('span.rounded-full.border.font-semibold', els => els.filter(e => e.offsetParent).map(e => { const s = getComputedStyle(e); return { t: e.innerText.trim(), bg: s.backgroundColor, fg: s.color, bright: !!e.closest('.tags-light') }; }));
     // Solid fills only: the see-through chips on the black banner are not status tags.
     const solid = t => /^rgb\(/.test(t.bg);
     const bad = tags.filter(t => solid(t) && contrast(t.bg, t.fg) < 4.5);
     pass(tags.length > 0 && bad.length === 0, `${label}: all ${tags.length} tags on the dashboard ≥ 4.5:1` + (bad.length ? ' — ' + JSON.stringify(bad.slice(0, 3)) : ''));
-    if (theme !== 'light') { const all = tags.filter(solid); pass(all.length > 0 && all.every(t => lum(t.bg) < 0.12 && lum(t.fg) > 0.4), `${label}: every tag is a deep tint with bright pastel text, no glare (${all.map(t => t.t).slice(0, 5).join(', ')})`); }
+    // A surface that stays bright in dark (the lime and white KPI tiles) takes .tags-light, so its tags are light on purpose.
+    if (theme !== 'light') { const all = tags.filter(solid).filter(t => !t.bright); pass(all.length > 0 && all.every(t => lum(t.bg) < 0.12 && lum(t.fg) > 0.4), `${label}: every tag is a deep tint with bright pastel text, no glare (${all.map(t => t.t).slice(0, 5).join(', ')})`); }
     else { const all = tags.filter(solid); pass(all.length > 0 && all.every(t => lum(t.bg) > 0.6), `${label}: every tag is a light pastel fill`); }
     pass(p._errs.length === 0, `${label}: no page errors ` + p._errs.join('|'));
     await p._ctx.close();

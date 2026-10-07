@@ -830,10 +830,10 @@ const LOGISTICS_OPS_META: Record<
 /* The general KPI tiles: lime, white, charcoal, white. Lime and white stay
    bright in dark mode, so they carry .tags-light (the tag colours stay light). */
 const KPI_SKIN = [
-  "tags-light bg-brand text-[#141414]",
-  "tags-light border border-border bg-white text-[#141414]",
-  "bg-[var(--ink)] text-white",
-  "tags-light border border-border bg-white text-[#141414]",
+  "tags-light bg-brand text-[#141414] [--muted-foreground:rgb(20_20_20/0.7)]",
+  "tags-light border border-border bg-white text-[#141414] [--muted-foreground:rgb(20_20_20/0.7)]",
+  "bg-[var(--ink)] text-white [--muted-foreground:rgb(255_255_255/0.7)]",
+  "tags-light border border-border bg-white text-[#141414] [--muted-foreground:rgb(20_20_20/0.7)]",
 ] as const
 
 function getSavedPriorities(
@@ -3425,7 +3425,7 @@ export function DashboardView({
             data-kpi-skeleton={alertsLoaded ? undefined : ""}
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="text-sm opacity-70">
+              <span className="text-sm text-muted-foreground">
                 {k.label}
               </span>
 
@@ -3462,7 +3462,11 @@ export function DashboardView({
 
                 <Sparkline
                   data={dailySeries(filteredAlerts, 7, k.match)}
-                  className="mt-auto h-9 w-full text-current opacity-60"
+                  className={cn(
+                    "mt-auto h-9 w-full",
+                    // Lime on the lime tile would vanish: that tile draws its good line in ink.
+                    k.up ? (index === 0 ? "text-[#141414]" : "text-accent") : "text-destructive"
+                  )}
                 />
               </>
             )}
