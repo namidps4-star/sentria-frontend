@@ -1,5 +1,5 @@
 // The panel of the app (--canvas, the rounded frame next to the sidebar) is
-// white #ffffff in light, and the outer background behind it is the same
+// white #ffffff in light, and the outer background behind it is warm cream #f8f1e7
 // colour, so the page reads as one white surface with white cards on it. Dark
 // keeps its own colour for both. --background (inputs, pills, the sign-in and
 // onboarding screens) does not change. Checked on desktop, on a phone, and with
@@ -11,7 +11,7 @@ const { signedIn } = require('./auth-mock');
 let fails = 0;
 const pass = (ok, l) => { fails += !ok; console.log(`   ${ok ? 'PASS' : 'FAIL'} ${l}`); };
 
-const CREAM = 'rgb(255, 255, 255)'; // white now; the name stays for the checks below
+const WHITE = 'rgb(255, 255, 255)', CREAM = 'rgb(248, 241, 231)';
 const ONB = { sentria_onboarded: 'true', sentria_company_name: 'Acme', sentria_sector: 'industry', sentria_sectors: '["industry"]' };
 
 (async () => {
@@ -33,16 +33,16 @@ const ONB = { sentria_onboarded: 'true', sentria_company_name: 'Acme', sentria_s
     return { panel: getComputedStyle(panel).backgroundColor, panelClass: panel.className, outer: getComputedStyle(outer).backgroundColor, outerClass: outer.className, covers: box.left <= 0 && box.top <= 0 && box.right >= window.innerWidth && box.bottom >= window.innerHeight, body: getComputedStyle(document.body).backgroundColor };
   });
 
-  console.log('== light: cream panel, and the outer background is the same cream');
+  console.log('== light: white panel, cream outer background');
   { const { p, ctx } = await open({});
     const c = await read(p);
-    pass(c.panel === CREAM, `panel is #ffffff (${c.panel})`);
+    pass(c.panel === WHITE, `panel is #ffffff (${c.panel})`);
     pass(/bg-canvas/.test(c.panelClass), 'it comes from the bg-canvas token, not a hex in the component');
-    pass(c.outer === CREAM && c.outer === c.panel, `the outer background is the panel's cream (${c.outer})`);
-    pass(/bg-canvas/.test(c.outerClass) && !/bg-background/.test(c.outerClass), 'it comes from the same bg-canvas token');
+    pass(c.outer === CREAM, `the outer background is the cream (${c.outer})`);
+    pass(/bg-outer/.test(c.outerClass) && !/bg-background/.test(c.outerClass), 'it comes from the bg-outer token');
     pass(c.covers, 'the outer wrapper covers the whole screen, so the page colour behind it never shows');
     const bgToken = await p.evaluate(() => { const d = document.createElement('div'); d.style.background = 'var(--background)'; document.body.appendChild(d); const v = getComputedStyle(d).backgroundColor; d.remove(); return v; });
-    pass(bgToken !== CREAM && bgToken === c.body, `--background is untouched (${bgToken}), so inputs, pills and the sign-in screens keep their colour`);
+    pass(bgToken !== CREAM && bgToken !== WHITE && bgToken === c.body, `--background is untouched (${bgToken}), so inputs, pills and the sign-in screens keep their colour`);
     // What a CSS value paints, read back the way the browser reports it.
     const paint = (v) => p.evaluate(x => { const d = document.createElement('div'); d.style.background = x; document.body.appendChild(d); const r = getComputedStyle(d).backgroundColor; d.remove(); return r; }, v);
     const cardColour = await paint('var(--card)');
@@ -56,7 +56,7 @@ const ONB = { sentria_onboarded: 'true', sentria_company_name: 'Acme', sentria_s
   console.log('== dark (forced): not cream, outer and panel the same');
   { const { p, ctx } = await open({ theme: 'dark', scheme: 'light' });
     const c = await read(p);
-    pass(c.panel !== CREAM, `panel is not cream (${c.panel})`);
+    pass(c.panel !== WHITE, `panel is dark (${c.panel})`);
     pass(c.panel === c.outer, `outer and panel are the same dark (${c.outer})`);
     await p.screenshot({ path: 'canvasbg-dark.png' });
     await ctx.close(); }
@@ -64,19 +64,19 @@ const ONB = { sentria_onboarded: 'true', sentria_company_name: 'Acme', sentria_s
   console.log('== system theme follows the OS');
   { const { p, ctx } = await open({ theme: 'system', scheme: 'dark' });
     const c = await read(p);
-    pass(c.panel !== CREAM && c.outer === c.panel, `system + OS dark: panel is not cream, outer matches (${c.panel})`);
+    pass(c.panel !== WHITE && c.outer === c.panel, `system + OS dark: panel is dark, outer matches (${c.panel})`);
     await ctx.close(); }
   { const { p, ctx } = await open({ theme: 'system', scheme: 'light' });
     const c = await read(p);
-    pass(c.panel === CREAM && c.outer === CREAM, `system + OS light: panel and outer are cream (${c.panel})`);
+    pass(c.panel === WHITE && c.outer === CREAM, `system + OS light: white panel on cream (${c.panel})`);
     await ctx.close(); }
 
   console.log('== phone, 390 px');
   for (const theme of ['light', 'dark']) {
     const { p, ctx } = await open({ theme, vw: 390 });
     const c = await read(p);
-    pass(theme === 'light' ? c.panel === CREAM : c.panel !== CREAM, `${theme}: panel ${theme === 'light' ? 'is cream' : 'is not cream'} (${c.panel})`);
-    pass(c.outer === c.panel && c.covers, `${theme}: the outer background matches the panel and covers the screen`);
+    pass(theme === 'light' ? c.panel === WHITE : c.panel !== WHITE, `${theme}: panel ${theme === 'light' ? 'is white' : 'is dark'} (${c.panel})`);
+    pass((theme === 'light' ? c.outer === CREAM : c.outer === c.panel) && c.covers, `${theme}: the outer background is right and covers the screen`);
     pass(await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `${theme}: no sideways scroll`);
     await p.screenshot({ path: `canvasbg-390-${theme}.png` });
     await ctx.close();

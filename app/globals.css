@@ -48,6 +48,7 @@
   --color-destructive: var(--destructive);
   --color-warning: var(--warning);
   --color-canvas: var(--canvas);
+  --color-outer: var(--outer);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -101,6 +102,8 @@
      White in light; cards on it are told apart by their border. Dark has
      its own value. */
   --canvas: #ffffff;
+  /* The cream around the white panel. Dark: the same as its panel. */
+  --outer: #f8f1e7;
   --border: oklch(0.91 0.003 110);
   --input: oklch(0.91 0.003 110);
   /* The brand lime, available in both themes. Deliberately separate
@@ -160,6 +163,7 @@
      into it the way the light-mode bronze would. */
   --warning: oklch(0.8 0.145 78);
   --canvas: oklch(0.125 0.002 110);
+  --outer: oklch(0.125 0.002 110);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   /* Brand lime, very slightly tempered so it does not glare
@@ -216,6 +220,7 @@
      into it the way the light-mode bronze would. */
   --warning: oklch(0.8 0.145 78);
   --canvas: oklch(0.125 0.002 110);
+  --outer: oklch(0.125 0.002 110);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
     /* Brand lime, very slightly tempered so it does not glare
