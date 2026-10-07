@@ -23,6 +23,8 @@ const DATA = [
   A('Metformin 500 mg', 'health.expiry.soon', 'WARNING', 26, 'Expires in 30 days'),
   A('Salbutamol inhaler', 'health.expiry.soon', 'WARNING', 100, 'Expires in 28 days'),
 ];
+// Recommendations make the page long. The frame bug below only shows on a long page.
+const RECS = DATA.map((a, i) => ({ ...a, recommended_action: ['Order 120 boxes', 'Call the supplier', 'Check the freezer'][i % 3], action_category: 'restock', date: new Date(Date.now() + (i % 5 - 2) * 864e5).toISOString() }));
 const LS = {
   sentria_onboarded: 'true', sentria_company_name: 'Pharmacie A', sentria_sector: 'health', sentria_sectors: '["health"]',
   sentria_business_type: 'pharmacie', sentria_departments: '{"health":["pharmacie","clinique-hopital","laboratoire"]}',
@@ -43,7 +45,7 @@ const LS = {
         if (alerts === 'fail') return r.fulfill({ status: 500, contentType: 'application/json', body: '{}' });
         return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(DATA) });
       }
-      return r.fulfill({ status: 200, contentType: 'application/json', body: /\/recommendations/.test(u) ? '{"recommendations":[]}' : '{"assignments":[],"contractors":[]}' });
+      return r.fulfill({ status: 200, contentType: 'application/json', body: /\/recommendations/.test(u) ? JSON.stringify({ recommendations: RECS }) : '{"assignments":[],"contractors":[]}' });
     });
     await p.addInitScript(v => { if (!sessionStorage.x) { sessionStorage.x = 1; localStorage.clear(); for (const [k, val] of Object.entries(v)) localStorage.setItem(k, val); } }, { ...LS, sentria_language: lang, sentria_theme: theme });
     await signedIn(p, 'u-1', 'ama@pharma.test', { plan: 'business' });
@@ -85,6 +87,12 @@ const LS = {
     pass(/active filters/i.test(await p.locator('#alerts-table').innerText()) && /clear filters/i.test(await p.locator('#alerts-table').innerText()), 'the table says it is filtered and offers to clear');
     await pill(p, 'Temperature').click(); await p.waitForTimeout(500);
     pass(await rows(p) === 1 && await pill(p, 'Stock').getAttribute('aria-pressed') === 'false', 'Temperature replaces Stock: 1 alert');
+    // A one-row table is short: the content cannot scroll far enough, and a careless scroll slides the app frame instead.
+    await p.waitForTimeout(900);
+    const frame = await p.evaluate(() => { const bad = []; for (let e = document.querySelector('main'); e; e = e.parentElement) { if (e.tagName !== 'MAIN' && e.scrollTop !== 0) bad.push(e.tagName + '.' + String(e.className).slice(0, 30)); } return { bad, win: window.scrollY, main: document.querySelector('main').scrollTop, panel: Math.round(document.querySelector('main').parentElement.getBoundingClientRect().top) }; });
+    pass(frame.bad.length === 0 && frame.win === 0 && frame.panel === 12, `the app frame stays put when a pill is pressed (panel at ${frame.panel}px, moved: ${frame.bad.join(',') || 'nothing'})`);
+    pass(frame.main > 0, `the page content scrolls to the table (${frame.main} px)`);
+
     await p.getByRole('button', { name: /Clear filters/ }).click(); await p.waitForTimeout(400);
     pass(await rows(p) === 9 && await pill(p, 'Temperature').getAttribute('aria-pressed') === 'false', 'Clear filters brings every alert back and un-presses the pill');
     await pill(p, 'Expiry').click(); await p.waitForTimeout(400);

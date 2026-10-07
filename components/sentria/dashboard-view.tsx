@@ -1960,11 +1960,18 @@ export function DashboardView({
 
     // The result is in the table below: bring it into view, unless the
     // person asked for less motion. Priorities with no filter stay put.
+    // Scroll <main> itself: scrollIntoView would also slide the app frame
+    // (its parents are overflow-hidden), and the whole panel moves up.
     if (next && HEALTH_PRIORITY_CATEGORY[next]) {
       const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      document
-        .getElementById("alerts-table")
-        ?.scrollIntoView({ behavior: calm ? "auto" : "smooth", block: "start" })
+      const main = document.querySelector("main")
+      const table = document.getElementById("alerts-table")
+
+      if (main && table) {
+        const top =
+          table.getBoundingClientRect().top - main.getBoundingClientRect().top + main.scrollTop - 16
+        main.scrollTo({ top, behavior: calm ? "auto" : "smooth" })
+      }
     }
   }
 
