@@ -263,7 +263,7 @@ export function Sidebar({
                 />
 
                 <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-sidebar-foreground">
+                  <span className="font-brand text-lg font-normal tracking-wide text-sidebar-foreground">
                     SentrIA
                   </span>
 

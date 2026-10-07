@@ -1,7 +1,7 @@
 
 import { Analytics } from '@vercel/analytics/next'
 import type { Metadata, Viewport } from 'next'
-import { Plus_Jakarta_Sans, Outfit, Geist_Mono } from 'next/font/google'
+import { Plus_Jakarta_Sans, Outfit, Michroma, Geist_Mono } from 'next/font/google'
 import './globals.css'
 import './transitions.css'
 import { THEME_INIT_SCRIPT } from "@/lib/theme"
@@ -14,6 +14,13 @@ const bodySans = Plus_Jakarta_Sans({
 
 const displaySans = Outfit({
   variable: '--font-display',
+  subsets: ['latin'],
+})
+
+/* The SentrIA wordmark in the sidebar. Michroma has one weight. */
+const brandSans = Michroma({
+  variable: '--font-brand-face',
+  weight: '400',
   subsets: ['latin'],
 })
 
@@ -77,7 +84,7 @@ export default function RootLayout({
     <html
       /* The default. DocumentLanguage sets the real one after mount. */
       lang="fr"
-      className={`${bodySans.variable} ${displaySans.variable} ${geistMono.variable} bg-background`}
+      className={`${bodySans.variable} ${displaySans.variable} ${brandSans.variable} ${geistMono.variable} bg-background`}
       suppressHydrationWarning
     >
       <head>

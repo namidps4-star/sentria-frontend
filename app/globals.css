@@ -17,6 +17,7 @@
 }
 
 @theme inline {
+  --font-brand: var(--font-brand-face), var(--font-display), 'Geist Fallback';
   --font-heading: var(--font-display), 'Geist Fallback';
   --font-sans: var(--font-body), 'Geist Fallback';
   --font-mono: var(--font-geist-mono), 'Geist Mono Fallback';
