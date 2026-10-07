@@ -57,6 +57,8 @@ import { LogisticsCostView } from "./logistics-cost-view"
 import { LogisticsAnticipateView } from "./logistics-anticipate-view"
 import { RecommendationsPanel } from "./recommendations-panel"
 import { Skeleton } from "./skeleton"
+import { PriorityTrack } from "./priority-track"
+import { HEALTH_PRIORITY_CATEGORY, healthCategoryOf, healthRows } from "@/lib/health-priorities"
 import { enterAt } from "@/lib/motion"
 import { announceAlertsUpdated } from "@/lib/alerts-event"
 import { RecommendationsBoard } from "./recommendations-board-view"
@@ -80,7 +82,7 @@ import {
   PriorityPills,
   priorityCount,
 } from "./priority-nav"
-import { featurePriorityIds, orderPriorities, prioritiesFor } from "@/lib/priorities"
+import { featurePriorityIds, orderPriorities, prioritiesFor, priorityLabel } from "@/lib/priorities"
 import { deriveRecommendations } from "@/lib/logistics-signals"
 import {
   activitiesFor,
@@ -825,6 +827,15 @@ const LOGISTICS_OPS_META: Record<
   multi: SECTOR_META.logistics,
 }
 
+/* The general KPI tiles: lime, white, charcoal, white. Lime and white stay
+   bright in dark mode, so they carry .tags-light (the tag colours stay light). */
+const KPI_SKIN = [
+  "tags-light bg-brand text-[#141414]",
+  "tags-light border border-border bg-white text-[#141414]",
+  "bg-[var(--ink)] text-white",
+  "tags-light border border-border bg-white text-[#141414]",
+] as const
+
 function getSavedPriorities(
   sector: string,
   businessType?: string | null
@@ -1052,6 +1063,8 @@ export function DashboardView({
   const [uploadSector, setUploadSector] = useState("industry")
 
   const [filterSector, setFilterSector] = useState("all")
+  // The Health priority pressed in the priority track; it filters the alerts table.
+  const [healthPick, setHealthPick] = useState<string | null>(null)
 
   // The trend chart's own choices (its "…" menu). The sectors picked belong
   // to the pill they were picked on: another pill shows its own default
@@ -1153,6 +1166,10 @@ export function DashboardView({
   >([])
 
   const [taskMap, setTaskMap] = useState<Record<string, Assignment>>({})
+
+  useEffect(() => {
+    setHealthPick(null)
+  }, [filterSector])
 
   useEffect(() => {
     setSelectedSectorPriorities(getSavedPriorities(filterSector, businessType))
@@ -1875,7 +1892,15 @@ export function DashboardView({
     customToTime !== null &&
     customFromTime > customToTime
 
+  // Only Health has priorities that filter the table; any other sector ignores a stale pick.
+  const healthCat =
+    filterSector === "health" && healthPick
+      ? (HEALTH_PRIORITY_CATEGORY[healthPick] ?? null)
+      : null
+
   const tableAlerts = filteredAlerts.filter((a) => {
+    if (healthCat && healthCategoryOf(a) !== healthCat) return false
+
     if (statusFilter === "critical" && a.severity !== "CRITICAL") {
       return false
     }
@@ -1924,11 +1949,27 @@ export function DashboardView({
   })
 
   const activeFilterCount =
+    (healthCat ? 1 : 0) +
     (statusFilter !== "all" ? 1 : 0) +
     (periodPreset !== "all" ? 1 : 0) +
     (alertSearch.trim() ? 1 : 0)
 
+  function pickHealthPriority(id: string) {
+    const next = healthPick === id ? null : id
+    setHealthPick(next)
+
+    // The result is in the table below: bring it into view, unless the
+    // person asked for less motion. Priorities with no filter stay put.
+    if (next && HEALTH_PRIORITY_CATEGORY[next]) {
+      const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      document
+        .getElementById("alerts-table")
+        ?.scrollIntoView({ behavior: calm ? "auto" : "smooth", block: "start" })
+    }
+  }
+
   function clearAlertFilters() {
+    setHealthPick(null)
     setStatusFilter("all")
     setPeriodPreset("all")
     setCustomFrom("")
@@ -3291,11 +3332,33 @@ export function DashboardView({
           )}
         </>
       ) : (
-        <PriorityPills
-          sector={filterSector}
-          ids={selectedSectorPriorities}
-          label={tx("Vos priorités", "Your priorities")}
-        />
+        filterSector === "health" && selectedSectorPriorities.length > 0 ? (
+          <div>
+            <PriorityHeading
+              count={selectedSectorPriorities.length}
+              total={priorityCount("health", businessType)}
+            />
+
+            <PriorityTrack
+              sector="health"
+              rows={healthRows(
+                selectedSectorPriorities,
+                filteredAlerts,
+                alertsLoaded && !zeroUnknown
+              )}
+              selected={healthPick}
+              loaded={alertsLoaded}
+              zeroUnknown={zeroUnknown}
+              onPick={pickHealthPriority}
+            />
+          </div>
+        ) : (
+          <PriorityPills
+            sector={filterSector}
+            ids={selectedSectorPriorities}
+            label={tx("Vos priorités", "Your priorities")}
+          />
+        )
       )}
 
       {filterSector === "logistics" &&
@@ -3356,12 +3419,13 @@ export function DashboardView({
         {kpis.map((k, index) => (
           <div
             key={k.id}
-            className="t-enter rounded-3xl border border-border bg-card p-5"
-            style={enterAt(3.6 + index * 0.4)}
+            className={cn("t-enter flex min-h-[170px] flex-col rounded-3xl p-5", KPI_SKIN[index % KPI_SKIN.length])}
+            // The squircle radius is set here so the tile keeps its rounded-3xl class (tests find it by that class).
+            style={{ ...enterAt(3.6 + index * 0.4), borderRadius: 34 }}
             data-kpi-skeleton={alertsLoaded ? undefined : ""}
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm opacity-70">
                 {k.label}
               </span>
 
@@ -3392,16 +3456,13 @@ export function DashboardView({
               </>
             ) : (
               <>
-                <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
+                <p className="mt-3 font-heading text-5xl font-medium leading-none tracking-tight tabular-nums">
                   <CountNumber value={k.value} />
                 </p>
 
                 <Sparkline
                   data={dailySeries(filteredAlerts, 7, k.match)}
-                  className={cn(
-                    "mt-2 h-9 w-full",
-                    k.up ? "text-accent" : "text-destructive"
-                  )}
+                  className="mt-auto h-9 w-full text-current opacity-60"
                 />
               </>
             )}
@@ -3784,6 +3845,12 @@ export function DashboardView({
             <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               {tx("Filtres actifs", "Active filters")}
             </span>
+
+            {healthCat && healthPick && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-foreground/10 px-2.5 py-1 text-[11px] font-semibold text-foreground">
+                {priorityLabel("health", healthPick, tx)}
+              </span>
+            )}
 
             {statusFilter !== "all" && (
               <span className="inline-flex items-center gap-1 rounded-full bg-foreground/10 px-2.5 py-1 text-[11px] font-semibold text-foreground">
