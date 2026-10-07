@@ -10,27 +10,31 @@ person saw on the sign-up screen (`user_metadata.language`, set by
 It never prints the name, the company or the username, because whoever fills the
 form types those, and the email would reach the address they typed.
 
-## Set it up (about 15 minutes)
+## Set it up (about 15 minutes, no paid Supabase plan needed)
 
-1. **Template.** Supabase dashboard, Authentication, Email Templates, "Confirm signup".
-   Paste the whole of `confirmation.html` as the message body. Subject:
-   `Confirmez votre email · Confirm your email`. Save.
-2. **Sender.** Authentication, SMTP Settings, turn on custom SMTP.
+Do the sender first. Custom SMTP is free on every Supabase plan, and Supabase's own
+sender cannot do this job: it only sends to addresses in your own Supabase
+organization (since September 2024), so a customer would get nothing. Since
+3 June 2026 a free project created after that date also cannot edit its email
+templates while it uses Supabase's own sender. Turning on custom SMTP unlocks the
+editor on any plan.
+
+1. **Sender.** Authentication, SMTP Settings, turn on custom SMTP.
    - Sender email: an address on your own domain, such as `no-reply@your-domain`.
      Sender name: `SentrIA`.
    - If you send mail with Resend: host `smtp.resend.com`, port `465`, username
      `resend`, password a Resend API key. Verify the domain in Resend first (the
      DNS records it shows), or the mail goes to spam or is refused.
    - The key stays in the dashboard. Never put it in the repo.
+2. **Template.** Authentication, Email Templates, "Confirm signup". Paste the whole
+   of `confirmation.html` as the message body. Subject:
+   `Confirmez votre email · Confirm your email`. Save.
 3. **Links.** Authentication, URL Configuration. The Site URL is the production
    app. Add the preview address to the redirect list if you test there. The app
    asks for a redirect to the address it runs on.
 4. **Try it.** Open the sign-up screen, pick the language, and create an account
    with an address you can read. Check the sender, the words, and that the button
    opens the app. Do it once in French and once in English.
-
-Supabase's own sender is meant for tests and allows only a few emails an hour,
-so custom SMTP also lifts that limit.
 
 ## Changing the email
 
