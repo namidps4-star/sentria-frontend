@@ -370,7 +370,7 @@ export function AuthScreen({
      (the form, introduced like a chat), black card (an example alert).
      Glossy cards floating on the canvas instead of one outlined frame. */
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-[radial-gradient(ellipse_at_top_left,var(--auth-glow)_0%,transparent_55%),radial-gradient(ellipse_at_bottom_right,var(--auth-glow)_0%,transparent_60%)] bg-[var(--auth-bg)] px-4 py-8">
+    <div className="auth-font flex min-h-dvh items-center justify-center bg-[radial-gradient(ellipse_at_top_left,var(--auth-glow)_0%,transparent_55%),radial-gradient(ellipse_at_bottom_right,var(--auth-glow)_0%,transparent_60%)] bg-[var(--auth-bg)] px-4 py-8">
       <main className="grid w-full max-w-[1120px] gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
         {/* --------------------------------------------------------- LEFT */}
         <div className="flex flex-col gap-4">
