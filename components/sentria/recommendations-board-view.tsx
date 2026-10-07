@@ -99,6 +99,9 @@ type Card = {
 type RecommendationsBoardProps = {
   recommendations: Recommendation[]
   opsType?: string | null
+  /** The data behind the board is old (L4): an empty board is then not
+   *  "everything is under control". */
+  unmeasured?: boolean
 }
 
 /** Which cards the pill row is showing. Every one of these is counted
@@ -1063,6 +1066,7 @@ function DetailDialog({
 export function RecommendationsBoard({
   recommendations,
   opsType,
+  unmeasured = false,
 }: RecommendationsBoardProps) {
   const tx = useTx()
 
@@ -1532,10 +1536,15 @@ export function RecommendationsBoard({
     return (
       <div className="flex items-center gap-3 rounded-3xl border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
         <Sparkles className="h-4 w-4 shrink-0 text-brand-foreground" />
-        {tx(
-          "Aucune priorité urgente pour ce secteur pour le moment. Tout est sous contrôle ici.",
-          "No urgent priority for this sector right now. Everything here is under control."
-        )}
+        {unmeasured
+          ? tx(
+              "Aucune priorité urgente pour ce secteur dans les données dont nous disposons. Elles ne sont pas à jour : cela ne dit pas que tout va bien.",
+              "No urgent priority for this sector in the data we hold. It is not up to date, so this does not say all is well."
+            )
+          : tx(
+              "Aucune priorité urgente pour ce secteur pour le moment. Tout est sous contrôle ici.",
+              "No urgent priority for this sector right now. Everything here is under control."
+            )}
       </div>
     )
   }

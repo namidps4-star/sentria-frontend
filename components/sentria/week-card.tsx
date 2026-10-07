@@ -23,8 +23,9 @@ export type WeekSummary = {
 
 export const WEEKLY_REPORT_KEY = "sentria_weekly_report"
 
-/** This week in four numbers, and the switch for the Monday email. */
-export function WeekCard() {
+/** This week in four numbers, and the switch for the Monday email.
+ *  `stale`: the data behind it is old (L4), so a zero is not a reading. */
+export function WeekCard({ stale = false }: { stale?: boolean }) {
   const tx = useTx()
   const [week, setWeek] = useState<WeekSummary | null>(null)
   const [emailOn, setEmailOn] = useState(false)
@@ -96,6 +97,18 @@ export function WeekCard() {
     },
   ] as const
 
+  // A zero over a week with no recent data is not "nothing happened".
+  const shownCells = cells.map((cell) =>
+    stale && cell.value === 0
+      ? {
+          ...cell,
+          value: "—",
+          tone: null,
+          note: tx("Non mesuré : pas de données récentes", "Not measured: no recent data"),
+        }
+      : cell
+  )
+
   const status = !emailOn
     ? tx("Recevez ce résumé par e-mail chaque lundi.", "Get this summary by email every Monday.")
     : week.email?.configured
@@ -136,7 +149,7 @@ export function WeekCard() {
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-[22px] bg-border lg:grid-cols-4">
-        {cells.map((cell) => (
+        {shownCells.map((cell) => (
           <div key={cell.label} className="bg-card px-4 py-3">
             <p className="text-xs font-medium text-muted-foreground">{cell.label}</p>
             <p

@@ -14,7 +14,8 @@ import {
   ShieldAlert,
   Truck,
 } from "@/lib/icons"
-import { useEffect, useId, useMemo, useState } from "react"
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react"
+import { readList } from "@/lib/answer"
 import { API_BASE, apiFetch } from "@/lib/api"
 import { readCompanyName, readTimezoneId } from "@/lib/company"
 import { buildReport } from "@/lib/report"
@@ -24,6 +25,8 @@ import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import { StatusTag } from "./status-tag"
 import { WeekCard } from "./week-card"
+import { AccountFreshnessNote, useAccountFreshness } from "./account-freshness"
+import { SourceNotice } from "./not-measured"
 import { localized, resolve, useTx, type Localized } from "@/lib/i18n"
 
 // ---------------------------------------------------------------------------
@@ -641,6 +644,12 @@ export function ReportView({ data }: { data?: ReportData }) {
      so when there are none. */
   const [alerts, setAlerts] = useState<LogisticsAlert[]>([])
   const [loaded, setLoaded] = useState(false)
+  /* Why the last /alerts read did not answer, or null (L4). A report built
+     from a failed read is an empty one, which reads as a clean week. */
+  const [alertsError, setAlertsError] = useState<string | null>(null)
+  // "Try again" on the notice: a new read.
+  const [attempt, setAttempt] = useState(0)
+  const freshness = useAccountFreshness()
   const [companyName, setCompanyName] = useState("")
   const [timezoneId, setTimezoneId] = useState("")
   const [sectors] = useState<Sector[]>(readOnboardedSectors)
@@ -651,15 +660,21 @@ export function ReportView({ data }: { data?: ReportData }) {
     setTimezoneId(readTimezoneId())
 
     apiFetch(`${API_BASE}/alerts?lang=${tx("fr", "en")}`)
-      .then((r) => (r.ok ? r.json() : []))
-      .then((d) => setAlerts(Array.isArray(d) ? d : []))
+      .then((r) => readList<LogisticsAlert>(r, "alerts"))
+      .then((answer) => {
+        // A failed read keeps the rows held and says so, never "no alerts".
+        setAlertsError(answer.ok ? null : answer.reason)
+        if (answer.ok) setAlerts(answer.rows)
+        else console.error("Failed to load alerts for the report:", answer.reason)
+      })
       .catch((error) => {
         console.error("Failed to load alerts for the report:", error)
+        setAlertsError("network")
       })
       .finally(() => setLoaded(true))
     // Refetched on a language switch: /alerts rebuilds messages (B-11).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tx("fr", "en")])
+  }, [tx("fr", "en"), attempt])
 
   /* Only actually filters once there is more than one real choice — see
      SectorTabs. A single-sector company keeps seeing every one of its
@@ -711,6 +726,30 @@ export function ReportView({ data }: { data?: ReportData }) {
   const showSectorTabs = !data && sectors.length > 1
   const activeSectorLabel =
     !data && activeSector !== "all" ? sectorLabel(activeSector, tx) : null
+
+  const retry = () => {
+    setLoaded(false)
+    setAttempt((n) => n + 1)
+  }
+
+  // Nothing held and the read failed: no report, and not "a clean week".
+  if (!data && loaded && alertsError !== null && alerts.length === 0) {
+    return (
+      <div className="space-y-6">
+        <SourceNotice
+          title={tx(
+            "Non mesuré : le rapport ne peut pas être construit.",
+            "Not measured: the report cannot be built."
+          )}
+          detail={tx(
+            "Les alertes n'ont pas pu être chargées. Un rapport bâti sur rien se lirait comme une semaine sans incident.",
+            "The alerts could not be loaded. A report built from nothing would read as a week with no incident."
+          )}
+          onRetry={retry}
+        />
+      </div>
+    )
+  }
 
   if (!data && loaded && built.empty) {
     return (
@@ -767,13 +806,31 @@ export function ReportView({ data }: { data?: ReportData }) {
         />
       )}
 
+      {/* The read failed but rows are held: they stand, with the notice. */}
+      {!data && alertsError !== null && (
+        <SourceNotice
+          title={tx(
+            "Non mesuré : les alertes n'ont pas pu être actualisées.",
+            "Not measured: the alerts could not be refreshed."
+          )}
+          detail={tx(
+            "Le rapport montre les alertes déjà chargées. Il ne dit rien de ce qui a pu arriver depuis.",
+            "The report shows the alerts already loaded. It says nothing about what may have happened since."
+          )}
+          onRetry={retry}
+        />
+      )}
+
       {/* F-REPORT: the week in the numbers the Monday email sends. */}
-      {!data && <WeekCard />}
+      {!data && <WeekCard stale={freshness.kind === "stale"} />}
 
       <ReportBody
         data={resolved}
         timezoneLabel={built.timezoneLabel}
         sectorContext={activeSectorLabel}
+        staleNote={
+          !data && alertsError === null ? <AccountFreshnessNote assessment={freshness} /> : null
+        }
       />
     </div>
   )
@@ -783,8 +840,11 @@ function ReportBody({
   data,
   timezoneLabel,
   sectorContext,
+  staleNote,
 }: {
   data: ReportData
+  /** The warning that the data is old, which prints with the report. */
+  staleNote?: ReactNode
   timezoneLabel?: string
   /** The onboarded sector this report is currently scoped to, already
    *  resolved to its display label. Null when showing every sector. */
@@ -924,6 +984,8 @@ function ReportBody({
               {tx("Construit à partir de vos alertes", "Built from your alerts")}
             </p>
           </div>
+
+          {staleNote}
 
           {/* KPI summary */}
           <div>

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react"
 
 import { inAccountScope, readSectors } from "@/lib/activities"
 import { ALERTS_UPDATED_EVENT } from "@/lib/alerts-event"
+import { readList, type ListAnswer } from "@/lib/answer"
 import { API_BASE, apiFetch } from "@/lib/api"
 import { useCompanyIdentity } from "@/lib/company"
 import { fetchAssignments, taskKeyFor } from "@/lib/crm"
@@ -27,6 +28,18 @@ import { TrackingView } from "./tracking-view"
 import { AdminView } from "./admin-view"
 import { UploadPanelHost } from "./upload-panel-host"
 import { readAccountPlan } from "@/lib/plans"
+
+/** What the bell reads of an alert row. */
+type BellAlert = {
+  id?: string | number | null
+  equipment: string
+  severity?: string | null
+  message?: string | null
+  date?: string | null
+  sector?: string | null
+  alert_key?: string | null
+  business_type?: string | null
+}
 
 /* Message keys, not labels. app-shell was holding a second copy of
    every view name next to the sidebar's. */
@@ -106,14 +119,16 @@ export function AppShell({
   // The bell (B-22): critical alerts of the account's sectors and
   // activity that nobody has marked handled, newest first. Fetched by the
   // shell, which owns the chrome, and again on every page change so a
-  // task closed on the board leaves the bell. Failure is silent on
-  // purpose: an unreachable API leaves the bell quiet rather than showing
-  // a dot for alerts nobody can read.
+  // task closed on the board leaves the bell. A failed read raises no dot
+  // for alerts nobody can read, and keeps the list it held, but the list
+  // says it could not check: a quiet bell is not "all clear" (L4).
   const tx = useTx()
   const lang = tx("fr", "en")
   const { name: companyName } = useCompanyIdentity()
 
   const [bellAlerts, setBellAlerts] = useState<Notification[]>([])
+  // The last read of the alerts did not answer: what the bell holds is old.
+  const [bellUnknown, setBellUnknown] = useState(false)
   const [seenAt, setSeenAt] = useState("")
 
   /* The bell rings when a critical alert shows up that the bell did not
@@ -146,10 +161,10 @@ export function AppShell({
     let cancelled = false
 
     async function load() {
-      const [alerts, handled] = await Promise.all([
+      const [answer, handled] = await Promise.all([
         apiFetch(`${API_BASE}/alerts?lang=${lang}`)
-          .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-          .then((d) => (Array.isArray(d) ? d.map(withOurSector) : [])),
+          .then((r) => readList<BellAlert>(r, "alerts"))
+          .catch((): ListAnswer<BellAlert> => ({ ok: false, reason: "network" })),
         companyName
           ? fetchAssignments(companyName).then((result) =>
               result.ok
@@ -164,6 +179,13 @@ export function AppShell({
       ])
 
       if (cancelled) return
+
+      // The API answers a failed read with 200 and an empty list: that
+      // would empty the bell and read "all clear". Keep what it held.
+      setBellUnknown(!answer.ok)
+      if (!answer.ok) return
+
+      const alerts = answer.rows.map(withOurSector)
 
       let businessType: string | null = null
 
@@ -326,6 +348,7 @@ export function AppShell({
               unreadCount={unreadCount}
               ring={bellRing}
               notifications={bellAlerts}
+              notificationsUnknown={bellUnknown}
               onNotificationsOpen={markNotificationsSeen}
               onOpenTracking={() => setView("tracking")}
             />

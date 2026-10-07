@@ -141,7 +141,10 @@ function getSector(sector: Sector) {
   )
 }
 
-function HealthScore({ value }: { value: number }) {
+/** `measured` is false for a site no data has reached (L4): a ring at zero
+ *  reads "action required" and a full one reads "operational", and neither
+ *  is a reading. */
+function HealthScore({ value, measured = true }: { value: number; measured?: boolean }) {
   const tx = useTx()
 
   return (
@@ -161,27 +164,31 @@ function HealthScore({ value }: { value: number }) {
             className="text-muted"
           />
 
-          <path
-            d="M18 2.0845
-              a 15.9155 15.9155 0 0 1 0 31.831
-              a 15.9155 15.9155 0 0 1 0 -31.831"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="3"
-            strokeDasharray={`${value}, 100`}
-            strokeLinecap="round"
-            className={
-              value >= 80
-                ? "text-green-500"
-                : value >= 50
-                  ? "text-warning"
-                  : "text-destructive"
-            }
-          />
+          {/* Nothing measured, nothing drawn: a zero-length arc with a round
+              cap still leaves a dot. */}
+          {measured && (
+            <path
+              d="M18 2.0845
+                a 15.9155 15.9155 0 0 1 0 31.831
+                a 15.9155 15.9155 0 0 1 0 -31.831"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeDasharray={`${value}, 100`}
+              strokeLinecap="round"
+              className={
+                value >= 80
+                  ? "text-green-500"
+                  : value >= 50
+                    ? "text-warning"
+                    : "text-destructive"
+              }
+            />
+          )}
         </svg>
 
         <span className="absolute inset-0 flex items-center justify-center text-xs font-bold">
-          {value}
+          {measured ? value : "—"}
         </span>
       </div>
 
@@ -190,11 +197,13 @@ function HealthScore({ value }: { value: number }) {
           {tx("Santé du site", "Site health")}
         </p>
         <p className="text-sm font-semibold">
-          {value >= 80
-            ? tx("Opérationnel", "Operational")
-            : value >= 50
-              ? tx("À surveiller", "Worth watching")
-              : tx("Action requise", "Action required")}
+          {!measured
+            ? tx("Non mesuré", "Not measured")
+            : value >= 80
+              ? tx("Opérationnel", "Operational")
+              : value >= 50
+                ? tx("À surveiller", "Worth watching")
+                : tx("Action requise", "Action required")}
         </p>
       </div>
     </div>
@@ -444,7 +453,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
             </div>
 
             <div className="mt-4">
-              <HealthScore value={activeSite.health} />
+              <HealthScore value={activeSite.health} measured={activeSite.assets > 0} />
             </div>
           </div>
 
@@ -479,7 +488,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                   "text-destructive"
               )}
             >
-              {activeSite.critical}
+              {activeSite.assets > 0 ? activeSite.critical : "—"}
             </p>
 
             <p className="mt-1 text-xs text-muted-foreground">
@@ -497,7 +506,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
             </div>
 
             <p className="mt-3 font-heading text-3xl font-bold">
-              {activeSite.warnings}
+              {activeSite.assets > 0 ? activeSite.warnings : "—"}
             </p>
 
             <p className="mt-1 text-xs text-muted-foreground">
@@ -526,7 +535,24 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
               <AlertTriangle className="h-5 w-5 text-muted-foreground" />
             </div>
 
-            {activeSite.critical === 0 &&
+            {activeSite.assets === 0 ? (
+              <div data-not-measured="" className="mt-6 flex items-center gap-3 rounded-2xl bg-muted p-4">
+                <CircleDot className="h-5 w-5 text-muted-foreground" />
+
+                <div>
+                  <p className="text-sm font-semibold">
+                    {tx("Non mesuré", "Not measured")}
+                  </p>
+
+                  <p className="text-xs text-muted-foreground">
+                    {tx(
+                      "Aucune donnée n'est arrivée de ce site : il n'y a pas d'état à annoncer.",
+                      "No data has reached this site, so there is no status to report."
+                    )}
+                  </p>
+                </div>
+              </div>
+            ) : activeSite.critical === 0 &&
             activeSite.warnings === 0 ? (
               <div className="mt-6 flex items-center gap-3 rounded-2xl bg-muted p-4">
                 <CheckCircle2 className="h-5 w-5 text-green-500" />
@@ -705,7 +731,12 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
             </div>
 
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="h-2 w-2 rounded-full bg-green-500" />
+              <span
+                className={cn(
+                  "h-2 w-2 rounded-full",
+                  activeSite.lastData === "none" ? "bg-muted-foreground/40" : "bg-green-500"
+                )}
+              />
               {tx("Dernière donnée :", "Last data:")}{" "}
               {freshnessLabel(activeSite.lastData, tx)}
             </div>
@@ -959,8 +990,8 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                     <div className="mt-4 grid grid-cols-3 gap-2">
                       {[
                         { label: tx("Actifs", "Assets"), value: site.assets, hot: false },
-                        { label: tx("Warnings", "Warnings"), value: site.warnings, hot: false },
-                        { label: tx("Critiques", "Critical"), value: site.critical, hot: site.critical > 0 },
+                        { label: tx("Warnings", "Warnings"), value: site.assets > 0 ? site.warnings : "—", hot: false },
+                        { label: tx("Critiques", "Critical"), value: site.assets > 0 ? site.critical : "—", hot: site.critical > 0 },
                       ].map((cell) => (
                         <div key={cell.label} className="rounded-2xl bg-muted p-3">
                           <p className="text-[11px] text-muted-foreground">{cell.label}</p>
@@ -970,7 +1001,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                     </div>
 
                     <div className="mt-4 flex items-center justify-between">
-                      <HealthScore value={site.health} />
+                      <HealthScore value={site.health} measured={site.assets > 0} />
                       <div className="text-right">
                         <p className="text-xs text-muted-foreground">{tx("Dernière donnée", "Last data")}</p>
                         <p className="mt-1 text-sm font-semibold">{freshnessLabel(site.lastData, tx)}</p>
@@ -1006,7 +1037,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
             </dl>
             <div className="mt-4 flex items-end justify-between border-t border-white/10 pt-4">
               <span className="text-xs text-white/55">{tx("Alertes critiques", "Critical alerts")}</span>
-              <span className="font-heading text-4xl font-bold leading-none text-brand">{criticalCount}</span>
+              <span className="font-heading text-4xl font-bold leading-none text-brand">{sites.some((site) => site.assets > 0) ? criticalCount : "—"}</span>
             </div>
           </div>
 

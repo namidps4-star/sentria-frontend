@@ -4,11 +4,14 @@ import { useEffect, useMemo, useState } from "react"
 import { Loader2 } from "@/lib/icons"
 
 import { inAccountScope, readSectors } from "@/lib/activities"
+import { readList } from "@/lib/answer"
 import { API_BASE, apiFetch } from "@/lib/api"
 import { taskKeyFor } from "@/lib/crm"
 import { useTx } from "@/lib/i18n"
 import { withOurSector } from "@/lib/sector"
 
+import { AccountFreshnessNote, useAccountFreshness } from "./account-freshness"
+import { SourceNotice } from "./not-measured"
 import { RecommendationsBoard } from "./recommendations-board-view"
 
 type ApiRecommendation = {
@@ -36,10 +39,13 @@ type ApiRecommendation = {
 export function TrackingView() {
   const tx = useTx()
   const lang = tx("fr", "en")
+  const freshness = useAccountFreshness()
 
   const [recommendations, setRecommendations] = useState<ApiRecommendation[]>([])
   const [loaded, setLoaded] = useState(false)
   const [failed, setFailed] = useState(false)
+  // "Try again" on the notice: a new read.
+  const [attempt, setAttempt] = useState(0)
   const [sectors, setSectors] = useState<string[]>([])
   const [businessType, setBusinessType] = useState<string | null>(null)
 
@@ -59,15 +65,15 @@ export function TrackingView() {
     setFailed(false)
 
     apiFetch(`${API_BASE}/recommendations?limit=100&lang=${lang}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then((d) => {
+      .then((r) => readList<ApiRecommendation>(r, "recommendations"))
+      .then((answer) => {
         if (cancelled) return
 
-        setRecommendations(
-          Array.isArray(d?.recommendations)
-            ? d.recommendations.map(withOurSector)
-            : []
-        )
+        // The API answers a failed read with 200, an empty list and an
+        // error beside it. That is not "nothing to track" (L4).
+        if (!answer.ok) throw new Error(answer.reason)
+
+        setRecommendations(answer.rows.map(withOurSector))
       })
       .catch((error) => {
         console.error("Failed to load recommendations for tracking:", error)
@@ -80,7 +86,7 @@ export function TrackingView() {
     return () => {
       cancelled = true
     }
-  }, [lang])
+  }, [lang, attempt])
 
   const cards = useMemo(() => {
     const byTask = new Map<string, ApiRecommendation & { id: string }>()
@@ -117,14 +123,28 @@ export function TrackingView() {
 
   if (failed) {
     return (
-      <div className="rounded-3xl border border-destructive/40 bg-card p-6 text-sm text-destructive">
-        {tx(
-          "Les recommandations n'ont pas pu être chargées. Réessayez dans un instant.",
-          "The recommendations could not be loaded. Try again in a moment."
+      <SourceNotice
+        title={tx(
+          "Non mesuré : les recommandations n'ont pas pu être chargées.",
+          "Not measured: the recommendations could not be loaded."
         )}
-      </div>
+        detail={tx(
+          "Un tableau vide ici ne voudrait pas dire que rien n'est à suivre.",
+          "An empty board here would not mean there is nothing to track."
+        )}
+        onRetry={() => {
+          setLoaded(false)
+          setAttempt((n) => n + 1)
+        }}
+      />
     )
   }
 
-  return <RecommendationsBoard recommendations={cards} />
+  return (
+    <div className="space-y-4">
+      {/* An empty board reads as "nothing to do": only true if the data is recent (L4). */}
+      <AccountFreshnessNote assessment={freshness} />
+      <RecommendationsBoard recommendations={cards} unmeasured={freshness.kind === "stale"} />
+    </div>
+  )
 }

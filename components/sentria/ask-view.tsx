@@ -12,6 +12,7 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 
 import { activityLabel, inAccountScope, readSectors } from "@/lib/activities"
+import { readList } from "@/lib/answer"
 import { API_BASE, apiFetch } from "@/lib/api"
 import { readTimezoneId, timezoneFor, useCompanyIdentity } from "@/lib/company"
 import { taskKeyFor } from "@/lib/crm"
@@ -162,9 +163,11 @@ export function AskView({
   useEffect(() => {
     let cancelled = false
     apiFetch(`${API_BASE}/alerts?lang=${lang}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then((d) => {
-        if (!cancelled) setAlerts(Array.isArray(d) ? d.map(withOurSector) : [])
+      .then((r) => readList<Alert>(r, "alerts"))
+      .then((answer) => {
+        // null is "could not read them" (L4): the API answers a failed read
+        // with 200 and an empty list, which is not "no alerts".
+        if (!cancelled) setAlerts(answer.ok ? answer.rows.map(withOurSector) : null)
       })
       .catch(() => {
         if (!cancelled) setAlerts(null)
@@ -342,7 +345,7 @@ export function AskView({
             <div className="mt-1.5 flex items-center justify-between text-[11px] font-semibold">
               <span>{tx("Critiques traitées", "Critical handled")}</span>
               <span className="tabular-nums">
-                {handledCount} / {criticalTasks}
+                {alerts ? `${handledCount} / ${criticalTasks}` : "—"}
               </span>
             </div>
           </div>
@@ -568,7 +571,7 @@ export function AskView({
           </dl>
           <div className="mt-4 flex items-end justify-between border-t border-white/10 pt-4">
             <span className="text-xs text-white/55">{tx("Critiques ouvertes", "Open critical")}</span>
-            <span className="font-heading text-4xl font-semibold leading-none text-brand tabular-nums">{openCount}</span>
+            <span className="font-heading text-4xl font-semibold leading-none text-brand tabular-nums">{alerts ? openCount : "—"}</span>
           </div>
         </div>
 

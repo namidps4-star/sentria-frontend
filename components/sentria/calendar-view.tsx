@@ -18,6 +18,7 @@ import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import { useCompanyIdentity } from "@/lib/company"
 import { inAccountScope, readSectors } from "@/lib/activities"
+import { readList, type ListAnswer } from "@/lib/answer"
 import { API_BASE, apiFetch } from "@/lib/api"
 import { fromApiSector } from "@/lib/sector"
 import {
@@ -29,6 +30,8 @@ import {
 } from "@/lib/crm"
 import { sectorLabel } from "@/lib/priorities"
 import { localized, useTx, type Localized } from "@/lib/i18n"
+import { AccountFreshnessNote, useAccountFreshness } from "./account-freshness"
+import { SourceNotice } from "./not-measured"
 import { SectorTag } from "./sector-tag"
 
 type EventKind = "incident" | "threshold" | "deadline" | "resolved"
@@ -267,6 +270,13 @@ export function CalendarView() {
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [contractors, setContractors] = useState<Contractor[]>([])
   const [loaded, setLoaded] = useState(false)
+  /* Why a read did not answer (L4). An empty week after a failed read is
+     not an empty week: the counters then say "not measured". */
+  const [recsError, setRecsError] = useState<string | null>(null)
+  const [crmDown, setCrmDown] = useState(false)
+  // "Try again" on the notice: a new read.
+  const [attempt, setAttempt] = useState(0)
+  const freshness = useAccountFreshness()
 
   const [weekOffset, setWeekOffset] = useState(0)
   const [monthOffset, setMonthOffset] = useState(0)
@@ -283,9 +293,8 @@ export function CalendarView() {
       const recsPromise = apiFetch(
         `${API_BASE}/recommendations?limit=100&lang=${tx("fr", "en")}`
       )
-        .then((r) => r.json())
-        .then((d) => (Array.isArray(d?.recommendations) ? d.recommendations : []))
-        .catch(() => [])
+        .then((r) => readList<Partial<Recommendation> & { id?: string | null }>(r, "recommendations"))
+        .catch((): ListAnswer<Partial<Recommendation>> => ({ ok: false, reason: "network" }))
 
       const [recs, assignmentsResult, contractorsResult] = await Promise.all([
         recsPromise,
@@ -295,14 +304,23 @@ export function CalendarView() {
 
       if (cancelled) return
 
-      // Only the account's sectors and activity, as on the dashboard.
-      setRecommendations(
-        inAccountScope(
-          normalizeRecommendations(recs),
-          readSectors(),
-          readBusinessType()
-        )
+      // A read that did not answer keeps what was held and says so.
+      setRecsError(recs.ok ? null : recs.reason)
+      setCrmDown(
+        (assignmentsResult !== null && !assignmentsResult.ok) ||
+          (contractorsResult !== null && !contractorsResult.ok)
       )
+
+      // Only the account's sectors and activity, as on the dashboard.
+      if (recs.ok) {
+        setRecommendations(
+          inAccountScope(
+            normalizeRecommendations(recs.rows),
+            readSectors(),
+            readBusinessType()
+          )
+        )
+      }
       setAssignments(assignmentsResult?.ok ? assignmentsResult.data : [])
       setContractors(contractorsResult?.ok ? contractorsResult.data : [])
       setLoaded(true)
@@ -313,7 +331,7 @@ export function CalendarView() {
     return () => {
       cancelled = true
     }
-  }, [companyName, tx])
+  }, [companyName, tx, attempt])
 
   const contractorsById = useMemo(
     () => new Map(contractors.map((c) => [c.id, c])),
@@ -409,6 +427,16 @@ export function CalendarView() {
 
   const equipmentCount = new Set(visibleEvents.map((e) => e.equipment)).size
 
+  /* A count is a reading only when the read answered and the data is recent
+     (L4): a failed read and a silent department both leave zeros. Non-zero
+     counts stay, they happened. */
+  const known = loaded && recsError === null
+  const stale = freshness.kind === "stale"
+  const deadlinesKnown = known && !(stale && stats.deadlines === 0)
+  const incidentsKnown = known && !(stale && stats.incidents === 0)
+  const thresholdsKnown = known && !(stale && stats.thresholds === 0)
+  const assetsKnown = known && !(stale && equipmentCount === 0)
+
   const weekLabel = tx("fr-FR", "en-GB")
   const rangeLabel = `${new Intl.DateTimeFormat(weekLabel, {
     day: "numeric",
@@ -490,6 +518,36 @@ export function CalendarView() {
 
   return (
     <div className="flex flex-col gap-6">
+      {recsError !== null ? (
+        <SourceNotice
+          title={tx(
+            "Non mesuré : les échéances n'ont pas pu être chargées.",
+            "Not measured: the deadlines could not be loaded."
+          )}
+          onRetry={() => {
+            setLoaded(false)
+            setAttempt((n) => n + 1)
+          }}
+        />
+      ) : crmDown ? (
+        <SourceNotice
+          title={tx(
+            "L'équipe terrain n'a pas pu être chargée.",
+            "The field team could not be loaded."
+          )}
+          detail={tx(
+            "Les tâches peuvent apparaître ouvertes ou sans responsable alors qu'elles sont traitées.",
+            "Tasks may show as open or unassigned even when they are handled."
+          )}
+          onRetry={() => {
+            setLoaded(false)
+            setAttempt((n) => n + 1)
+          }}
+        />
+      ) : (
+        <AccountFreshnessNote assessment={freshness} />
+      )}
+
       {/* The Ask SentrIA layout: lime card (which view), grey panel (the
           period, its controls and filters, in words), black card (the
           week's three counts). */}
@@ -529,7 +587,7 @@ export function CalendarView() {
 
           <p className="mt-3 flex items-center gap-1.5 text-[11px] font-semibold">
             <Wrench className="h-3.5 w-3.5" aria-hidden="true" />
-            {equipmentCount}{" "}
+            {assetsKnown ? equipmentCount : "—"}{" "}
             {equipmentCount > 1
               ? tx("équipements suivis", "assets tracked")
               : tx("équipement suivi", "asset tracked")}
@@ -585,6 +643,11 @@ export function CalendarView() {
                 )
               : !loaded
                 ? tx("Je rassemble vos échéances…", "Gathering your deadlines…")
+                : recsError !== null
+                  ? tx(
+                      "Non mesuré : je n'ai pas pu charger vos échéances. Des compteurs vides ici ne sont pas des mesures.",
+                      "Not measured: I could not load your deadlines. Empty counters here are not readings."
+                    )
                 : tx(
                     `Cette semaine : ${stats.deadlines} échéance${stats.deadlines > 1 ? "s" : ""}, ${stats.incidents} incident${stats.incidents > 1 ? "s" : ""} actif${stats.incidents > 1 ? "s" : ""} et ${stats.thresholds} seuil${stats.thresholds > 1 ? "s" : ""} critique${stats.thresholds > 1 ? "s" : ""} à surveiller.`,
                     `This week: ${stats.deadlines} deadline${stats.deadlines === 1 ? "" : "s"}, ${stats.incidents} active incident${stats.incidents === 1 ? "" : "s"} and ${stats.thresholds} critical threshold${stats.thresholds === 1 ? "" : "s"} to watch.`
@@ -649,28 +712,28 @@ export function CalendarView() {
                 <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
                 {tx("Échéances à traiter", "Deadlines due")}
               </dt>
-              <dd className="font-semibold tabular-nums">{loaded ? stats.deadlines : "—"}</dd>
+              <dd className="font-semibold tabular-nums">{deadlinesKnown ? stats.deadlines : "—"}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
               <dt className="flex items-center gap-2 text-white/55">
                 <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
                 {tx("Incidents actifs", "Active incidents")}
               </dt>
-              <dd className="font-semibold tabular-nums">{loaded ? stats.incidents : "—"}</dd>
+              <dd className="font-semibold tabular-nums">{incidentsKnown ? stats.incidents : "—"}</dd>
             </div>
             <div className="flex items-center justify-between gap-3">
               <dt className="flex items-center gap-2 text-white/55">
                 <Timer className="h-3.5 w-3.5" aria-hidden="true" />
                 {tx("Seuils à risque", "Thresholds at risk")}
               </dt>
-              <dd className={cn("font-semibold tabular-nums", loaded && stats.thresholds > 0 && "text-[#ffd97a]")}>
-                {loaded ? stats.thresholds : "—"}
+              <dd className={cn("font-semibold tabular-nums", known && stats.thresholds > 0 && "text-[#ffd97a]")}>
+                {thresholdsKnown ? stats.thresholds : "—"}
               </dd>
             </div>
           </dl>
           <div className="mt-4 flex items-end justify-between border-t border-white/10 pt-4">
             <span className="text-xs text-white/55">{tx("Échéances cette semaine", "Deadlines this week")}</span>
-            <span className="font-heading text-4xl font-bold leading-none text-brand">{loaded ? stats.deadlines : "—"}</span>
+            <span className="font-heading text-4xl font-bold leading-none text-brand">{deadlinesKnown ? stats.deadlines : "—"}</span>
           </div>
         </div>
       </div>
@@ -900,7 +963,7 @@ export function CalendarView() {
                         className="text-[10px] font-semibold italic"
                         style={{ color: "#1d1d1b", opacity: 0.5 }}
                       >
-                        {tx("Rien", "Nothing")}
+                        {known ? tx("Rien", "Nothing") : "—"}
                       </p>
                     ) : (
                       <div className="space-y-1.5">
@@ -1023,13 +1086,18 @@ export function CalendarView() {
                 <Inbox className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
               </div>
               <h3 className="font-heading text-base font-bold">
-                {tx("Rien à afficher", "Nothing to show")}
+                {recsError !== null ? tx("Non mesuré", "Not measured") : tx("Rien à afficher", "Nothing to show")}
               </h3>
               <p className="max-w-sm text-sm text-muted-foreground">
-                {tx(
-                  "Le calendrier se remplit dès qu'une alerte est détectée ou qu'une échéance est fixée sur le tableau des priorités.",
-                  "The calendar fills in as soon as an alert is detected or a deadline is set on the priorities board."
-                )}
+                {recsError !== null
+                  ? tx(
+                      "Les échéances n'ont pas pu être chargées : une semaine vide ici ne veut pas dire qu'il n'y a rien à faire.",
+                      "The deadlines could not be loaded, so an empty week here does not mean there is nothing to do."
+                    )
+                  : tx(
+                      "Le calendrier se remplit dès qu'une alerte est détectée ou qu'une échéance est fixée sur le tableau des priorités.",
+                      "The calendar fills in as soon as an alert is detected or a deadline is set on the priorities board."
+                    )}
               </p>
             </div>
           ) : (
@@ -1059,7 +1127,7 @@ export function CalendarView() {
                     <div className="space-y-1.5">
                       {dayEvents.length === 0 && (
                         <p className="rounded-xl border border-dashed border-border/60 px-2 py-3 text-center text-[10px] text-muted-foreground">
-                          {tx("Rien", "Nothing")}
+                          {known ? tx("Rien", "Nothing") : "—"}
                         </p>
                       )}
 

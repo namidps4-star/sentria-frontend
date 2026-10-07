@@ -46,7 +46,9 @@ import {
 import { cn } from "@/lib/utils"
 import { usePresence } from "@/lib/use-presence"
 import { assessFreshness, isZeroFigure, useFreshness } from "@/lib/freshness"
+import { readList } from "@/lib/answer"
 import { FreshnessNote } from "./freshness-note"
+import { NotMeasuredFigure, SourceNotice } from "./not-measured"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
 import { computeConfidence, confidenceWord, convergenceFor, signalsTogether } from "@/lib/confidence"
 import { LogisticsBlockagesView } from "./logistics-blockages-view"
@@ -1044,6 +1046,8 @@ export function DashboardView({
   const [recommendations, setRecommendations] = useState<
     Recommendation[]
   >([])
+  // Why the last /recommendations read did not answer, or null (L4).
+  const [recommendationsError, setRecommendationsError] = useState<string | null>(null)
 
   const [uploadSector, setUploadSector] = useState("industry")
 
@@ -1090,11 +1094,17 @@ export function DashboardView({
 
   const [uploadMsg, setUploadMsg] = useState("")
   const [uploadFailed, setUploadFailed] = useState(false)
+  /* Why the last /alerts read did not answer (L4): an HTTP error, a network
+     failure, or an answer that carries an error beside an empty list. Null
+     when it answered. While it is set, a zero is not a reading. */
   const [alertsError, setAlertsError] = useState<string | null>(null)
   /* False until the first /alerts answer, good or bad. Until then the KPI
      tiles and the charts are placeholders: an empty array reads as "0
      alerts", which is not the same as "not loaded yet". */
   const [alertsLoaded, setAlertsLoaded] = useState(false)
+  // "Try again" on the not-measured notice: a new read, and the button busy.
+  const [alertsRetry, setAlertsRetry] = useState(0)
+  const [alertsRetrying, setAlertsRetrying] = useState(false)
 
   const [activeSectors, setActiveSectors] = useState<string[]>([
     "industry",
@@ -1430,19 +1440,28 @@ export function DashboardView({
   const alertsLang = tx("fr", "en")
 
   useEffect(() => {
+    let cancelled = false
+
     apiFetch(`${API}/alerts?lang=${alertsLang}`)
-      .then((r) => {
-        if (!r.ok) {
-          throw new Error(`HTTP ${r.status}`)
+      .then((r) => readList<Alert>(r, "alerts"))
+      .then((answer) => {
+        if (cancelled) return
+
+        // The API answers a failed read with 200, an empty list and an
+        // error beside it: that is "not measured", not "no alerts" (L4).
+        if (answer.ok) {
+          setAlerts(answer.rows.map(withOurSector))
+          setAlertsError(null)
+        } else {
+          console.error("Failed to load alerts:", answer.reason)
+          setAlertsError(answer.reason)
         }
-        return r.json()
-      })
-      .then((d) => {
-        setAlerts(Array.isArray(d) ? d.map(withOurSector) : [])
-        setAlertsError(null)
+
         setAlertsLoaded(true)
       })
       .catch((err) => {
+        if (cancelled) return
+
         console.error("Failed to load alerts:", err)
         setAlertsError(
           err instanceof Error
@@ -1453,30 +1472,41 @@ export function DashboardView({
         // placeholder must not pulse forever over it.
         setAlertsLoaded(true)
       })
+      .finally(() => {
+        if (!cancelled) setAlertsRetrying(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alertsLang])
+  }, [alertsLang, alertsRetry])
 
   function refreshRecommendations() {
     return apiFetch(
       `${API}/recommendations?limit=20&lang=${tx("fr", "en")}`
     )
-      .then((r) => r.json())
-      .then((d) => {
-        if (!Array.isArray(d?.recommendations)) {
-          setRecommendations([])
+      .then((r) =>
+        readList<Omit<Recommendation, "id"> & { id?: string | null }>(
+          r,
+          "recommendations"
+        )
+      )
+      .then((answer) => {
+        // A failed read keeps what is on screen and says so (L4): "no
+        // priorities" must not stand for "could not ask".
+        setRecommendationsError(answer.ok ? null : answer.reason)
+
+        if (!answer.ok) {
+          console.error("Failed to load recommendations:", answer.reason)
           return
         }
 
         const usedIds = new Set<string>()
 
         const normalized: Recommendation[] =
-          d.recommendations.map(
-            (
-              rec: Omit<Recommendation, "id"> & {
-                id?: string | null
-              },
-              index: number
-            ) => {
+          answer.rows.map(
+            (rec, index) => {
               const baseId =
                 rec.id ??
                 [
@@ -1514,6 +1544,9 @@ export function DashboardView({
         console.error(
           "Failed to load recommendations:",
           err
+        )
+        setRecommendationsError(
+          err instanceof Error ? err.message : "network"
         )
       })
   }
@@ -1705,9 +1738,17 @@ export function DashboardView({
       await new Promise((r) => setTimeout(r, 1500))
 
       const r2 = await apiFetch(`${API}/alerts?lang=${tx("fr", "en")}`)
-      const d2 = await r2.json()
+      const answer2 = await readList<Alert>(r2, "alerts")
 
-      setAlerts(Array.isArray(d2) ? d2.map(withOurSector) : [])
+      // The file went through. If the list did not come back, the screen
+      // says "not measured" and keeps the rows it had (L4).
+      if (answer2.ok) {
+        setAlerts(answer2.rows.map(withOurSector))
+        setAlertsError(null)
+      } else {
+        setAlertsError(answer2.reason)
+      }
+
       announceAlertsUpdated()
 
       // Awaited so the recommendations panel above has its final height
@@ -1925,11 +1966,10 @@ export function DashboardView({
         expandedAlert.equipment
       )}&limit=1&lang=${tx("fr", "en")}`
     )
-      .then((r) => r.json())
-      .then((d) => {
-        const found = Array.isArray(d?.recommendations)
-          ? d.recommendations[0]
-          : null
+      .then((r) => readList<Recommendation>(r, "recommendations"))
+      .then((answer) => {
+        // A read that failed leaves the panel at "N/A", which is true.
+        const found = answer.ok ? answer.rows[0] : null
         if (found) setFetchedRecommendation(found)
       })
       .catch((err) => {
@@ -2003,11 +2043,6 @@ export function DashboardView({
     (viewActivity ? SUBTYPE_CHART_TITLES[viewActivity] : undefined) ??
       meta.chartTitle
   )
-
-  // Not before the first answer: an empty list that has not loaded yet is
-  // not "no data", and the empty card would flash up over the placeholders.
-  const hasNoDataForSector =
-    alertsLoaded && filteredAlerts.length === 0 && !alertsError
 
   // The trend chart: one line per sector, same colour everywhere.
   const chartAvailable = availableSeries(scopedAlerts)
@@ -2335,6 +2370,75 @@ export function DashboardView({
     />
   )
 
+  /* A zero is a reading only when the alerts loaded and the data is recent
+     (L4). A failed read and a silent department both leave zeros on screen,
+     so every zero figure says "not measured" instead. Non-zero figures stay:
+     they happened. */
+  const zeroUnknown = alertsError !== null || dataIsStale
+  const notMeasured = (value: string) => zeroUnknown && isZeroFigure(value)
+  const notMeasuredWhy =
+    alertsError !== null
+      ? tx("Non mesuré : les alertes n'ont pas été chargées", "Not measured: the alerts did not load")
+      : tx("Non mesuré : pas de données récentes", "Not measured: no recent data")
+  // A tile that counts zero is not "all clear" when that zero is not a
+  // reading: it falls back to what the priority is, with no number.
+  const measuredStats = (stats: Record<string, PriorityStat>) =>
+    Object.fromEntries(
+      Object.entries(stats).filter(([, stat]) => !notMeasured(stat.value))
+    )
+  // Nothing came back and nothing was held: a view would only say "none".
+  const nothingLoaded = alertsError !== null && alerts.length === 0
+
+  // Not before the first answer: an empty list that has not loaded yet is
+  // not "no data", and the empty card would flash up over the placeholders.
+  // Nor when the list is empty because it failed, or because the data is
+  // old: a file was imported then, and "nothing imported" would be false.
+  const hasNoDataForSector =
+    alertsLoaded && filteredAlerts.length === 0 && !zeroUnknown
+
+  // The page's one line about its data: the read failed, else how old it is.
+  const sourceNote =
+    alertsError !== null ? (
+      <SourceNotice
+        title={tx(
+          "Non mesuré : les alertes n'ont pas pu être chargées.",
+          "Not measured: the alerts could not be loaded."
+        )}
+        onRetry={() => {
+          setAlertsRetrying(true)
+          setAlertsRetry((n) => n + 1)
+        }}
+        busy={alertsRetrying}
+      />
+    ) : (
+      freshnessNote
+    )
+
+  /* The two sector overviews carry no quiet "updated N days ago" line (the
+     generic page does): they speak up only for a failed read or old data. */
+  const warningNote = alertsError !== null || dataIsStale ? sourceNote : null
+
+  /* The priorities panel is its own read. When the alerts are fine, a
+     failed one is said on its own; when they are not, the notice above
+     already covers the page. */
+  const recommendationsNote =
+    recommendationsError !== null && alertsError === null ? (
+      <SourceNotice
+        title={tx(
+          "Les priorités n'ont pas pu être chargées.",
+          "The priorities could not be loaded."
+        )}
+        detail={tx(
+          "L'absence de priorité ici ne veut pas dire qu'il n'y en a pas.",
+          "No priority shown here does not mean there are none."
+        )}
+        onRetry={() => {
+          void refreshRecommendations()
+        }}
+        className="mb-4"
+      />
+    ) : null
+
   const inDepartment = (a: Alert, id: string) =>
     isLogisticsTabs
       ? normalizeOpsType(id) === "multi" ||
@@ -2412,7 +2516,7 @@ export function DashboardView({
       const industryStats: Record<string, PriorityStat> | undefined =
         industryAlerts.length === 0
           ? undefined
-          : Object.fromEntries(
+          : measuredStats(Object.fromEntries(
               selectedIndustryPriorities.map((id) => {
                 const own = industryPriorityAlerts(id, industryAlerts)
                 const crit = own.filter((a) => a.severity === "CRITICAL").length
@@ -2424,11 +2528,12 @@ export function DashboardView({
                       : { value: "0", label: tx("rien à signaler", "all clear"), tone: "good" }
                 return [id, stat]
               })
-            )
+            ))
 
       return (
         <div key="industry" className="space-y-6">
           {importPortal}
+          {warningNote}
           <div className="t-enter flex items-center justify-between" style={enterAt(0)}>
             <button
               type="button"
@@ -2458,13 +2563,15 @@ export function DashboardView({
                 </span>
               )}
               <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--ink)] px-3 py-1.5 text-xs font-semibold text-white">
-                <span className={cn("h-1.5 w-1.5 rounded-full", industryCritical > 0 ? "bg-[var(--tag-danger-bg)]" : "bg-brand")} aria-hidden="true" />
+                <span className={cn("h-1.5 w-1.5 rounded-full", alertsLoaded && zeroUnknown && industryAlerts.length === 0 ? "bg-white/40" : industryCritical > 0 ? "bg-[var(--tag-danger-bg)]" : "bg-brand")} aria-hidden="true" />
                 {!alertsLoaded
                   ? tx("Chargement…", "Loading…")
-                  : tx(
-                      `${industryAlerts.length} signaux · ${industryCritical} critique${industryCritical > 1 ? "s" : ""}`,
-                      `${industryAlerts.length} signals · ${industryCritical} critical`
-                    )}
+                  : zeroUnknown && industryAlerts.length === 0
+                    ? tx("Non mesuré", "Not measured")
+                    : tx(
+                        `${industryAlerts.length} signaux · ${industryCritical} critique${industryCritical > 1 ? "s" : ""}`,
+                        `${industryAlerts.length} signals · ${industryCritical} critical`
+                      )}
               </span>
             </div>
           </div>
@@ -2492,7 +2599,7 @@ export function DashboardView({
             />
           </div>
 
-          {alertsLoaded && industryAlerts.length === 0 ? (
+          {alertsLoaded && industryAlerts.length === 0 && !zeroUnknown ? (
             <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
                 <Upload
@@ -2532,16 +2639,26 @@ export function DashboardView({
                     {k.label}
                   </span>
 
-                  {alertsLoaded ? (
+                  {!alertsLoaded ? (
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                  ) : notMeasured(k.value) ? null : (
                     <StatusTag tone={k.up ? "brand" : "danger"} size="xs" icon={k.up ? TrendingUp : TrendingDown}>
                       {k.delta}
                     </StatusTag>
-                  ) : (
-                    <Skeleton className="h-5 w-20 rounded-full" />
                   )}
                 </div>
 
-                {alertsLoaded ? (
+                {alertsLoaded && notMeasured(k.value) ? (
+                  <>
+                    <p className="mt-1 font-heading text-2xl font-bold tracking-tight">
+                      <NotMeasuredFigure />
+                    </p>
+
+                    <p className="mt-1 flex h-7 items-end text-[11px] leading-tight text-muted-foreground">
+                      {notMeasuredWhy}
+                    </p>
+                  </>
+                ) : alertsLoaded ? (
                   <>
                     <p className="mt-1 font-heading text-2xl font-bold tabular-nums tracking-tight">
                       <CountNumber value={k.value} />
@@ -2573,7 +2690,7 @@ export function DashboardView({
     return (
       <div className="space-y-4">
         {importPortal}
-        {freshnessNote}
+        {sourceNote}
         <div className="flex items-center justify-between">
           <button
             type="button"
@@ -2593,7 +2710,7 @@ export function DashboardView({
           onOpen={(id) => openIndustryPriority(id as IndustryPriority)}
         />
 
-        {industryPriority === "machines" ? (
+        {nothingLoaded ? null : industryPriority === "machines" ? (
           <IndustryMachinesView alerts={industryAlerts} />
         ) : industryPriority === "motors" ? (
           <IndustryMotorsView alerts={industryAlerts} />
@@ -2681,7 +2798,9 @@ export function DashboardView({
       // [one, many] in each language.
       const say = (n: number, fr: [string, string], en: [string, string]) =>
         tx(n > 1 ? fr[1] : fr[0], n === 1 ? en[0] : en[1])
-      const logisticsStats: Record<string, PriorityStat> = {
+      /* No numbers before any data (an empty account is not "all clear"),
+         and no zero that is not a reading. */
+      const logisticsStats: Record<string, PriorityStat> | undefined = logisticsViewAlerts.length === 0 ? undefined : measuredStats({
         blockages: critical > 0
           ? { value: String(critical), label: say(critical, ["signal critique", "signaux critiques"], ["critical signal", "critical signals"]), tone: "risk" }
           : { value: "0", label: tx("rien de bloqué", "nothing blocked"), tone: "good" },
@@ -2690,11 +2809,12 @@ export function DashboardView({
         anticipate: { value: String(early), label: say(early, ["alerte préventive", "alertes préventives"], ["early warning", "early warnings"]), tone: early > 0 ? "watch" : "good" },
         recommend: { value: String(assets), label: say(assets, ["équipement à traiter", "équipements à traiter"], ["asset to act on", "assets to act on"]), tone: assets > 0 ? "risk" : "good" },
         resources: { value: String(capacity), label: say(capacity, ["ressource sous tension", "ressources sous tension"], ["resource under strain", "resources under strain"]), tone: capacity > 0 ? "watch" : "good" },
-      }
+      })
 
       return (
         <div key="logistics" className="space-y-6">
           {importPortal}
+          {warningNote}
           <div className="t-enter flex items-center justify-between" style={enterAt(0)}>
             <button
               type="button"
@@ -2724,13 +2844,15 @@ export function DashboardView({
                 </span>
               )}
               <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--ink)] px-3 py-1.5 text-xs font-semibold text-white">
-                <span className={cn("h-1.5 w-1.5 rounded-full", critical > 0 ? "bg-[var(--tag-danger-bg)]" : "bg-brand")} aria-hidden="true" />
+                <span className={cn("h-1.5 w-1.5 rounded-full", alertsLoaded && zeroUnknown && logisticsViewAlerts.length === 0 ? "bg-white/40" : critical > 0 ? "bg-[var(--tag-danger-bg)]" : "bg-brand")} aria-hidden="true" />
                 {!alertsLoaded
                   ? tx("Chargement…", "Loading…")
-                  : tx(
-                      `${logisticsViewAlerts.length} signaux · ${critical} critique${critical > 1 ? "s" : ""}`,
-                      `${logisticsViewAlerts.length} signals · ${critical} critical`
-                    )}
+                  : zeroUnknown && logisticsViewAlerts.length === 0
+                    ? tx("Non mesuré", "Not measured")
+                    : tx(
+                        `${logisticsViewAlerts.length} signaux · ${critical} critique${critical > 1 ? "s" : ""}`,
+                        `${logisticsViewAlerts.length} signals · ${critical} critical`
+                      )}
               </span>
             </div>
           </div>
@@ -2776,16 +2898,26 @@ export function DashboardView({
                     {k.label}
                   </span>
 
-                  {alertsLoaded ? (
+                  {!alertsLoaded ? (
+                    <Skeleton className="h-5 w-20 rounded-full" />
+                  ) : notMeasured(k.value) ? null : (
                     <StatusTag tone={k.up ? "brand" : "danger"} size="xs" icon={k.up ? TrendingUp : TrendingDown}>
                       {k.delta}
                     </StatusTag>
-                  ) : (
-                    <Skeleton className="h-5 w-20 rounded-full" />
                   )}
                 </div>
 
-                {alertsLoaded ? (
+                {alertsLoaded && notMeasured(k.value) ? (
+                  <>
+                    <p className="mt-1 font-heading text-2xl font-bold tracking-tight">
+                      <NotMeasuredFigure />
+                    </p>
+
+                    <p className="mt-1 flex h-7 items-end text-[11px] leading-tight text-muted-foreground">
+                      {notMeasuredWhy}
+                    </p>
+                  </>
+                ) : alertsLoaded ? (
                   <>
                     <p className="mt-1 font-heading text-2xl font-bold tabular-nums tracking-tight">
                       <CountNumber value={k.value} />
@@ -2816,7 +2948,7 @@ export function DashboardView({
     return (
       <div className="space-y-4">
         {importPortal}
-        {freshnessNote}
+        {sourceNote}
         <div className="flex items-center justify-between">
           <button
             type="button"
@@ -2844,7 +2976,7 @@ export function DashboardView({
             </div>
           )}
 
-        {logisticsPriority === "recommend" ? (
+        {nothingLoaded ? null : logisticsPriority === "recommend" ? (
           <RecommendationsBoard
             recommendations={deriveRecommendations(
               logisticsViewAlerts,
@@ -2853,6 +2985,7 @@ export function DashboardView({
               opsTypesForChain
             )}
             opsType={normalizedOpsType}
+            unmeasured={zeroUnknown}
           />
         ) : logisticsPriority === "wait" ? (
           <LogisticsWaitingView
@@ -2958,7 +3091,7 @@ export function DashboardView({
   return (
     <div key="overview" className="space-y-6">
       {importPortal}
-      {freshnessNote}
+      {sourceNote}
 
       <div
         className="t-enter flex flex-col gap-4 rounded-3xl bg-sidebar-shell p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8"
@@ -3042,9 +3175,11 @@ export function DashboardView({
       </div>
 
       <div className="t-enter" style={enterAt(1)}>
+        {recommendationsNote}
         <RecommendationsPanel
           recommendations={filteredRecommendations}
           totalRecommendationsCount={recommendations.length}
+          unmeasured={zeroUnknown}
           // Recurrence counts only this view's alerts: the same equipment
           // name in another sector or activity is another asset (B-08).
           alerts={alerts.filter(
@@ -3071,7 +3206,7 @@ export function DashboardView({
         >
           {tx("Tous", "All")}
 
-          {alertsLoaded && (
+          {alertsLoaded && !notMeasured(String(alerts.filter(matchesActivity).length)) && (
             <span className="ml-1.5 text-[10px] opacity-60">
               {alerts.filter(matchesActivity).length}
             </span>
@@ -3114,7 +3249,10 @@ export function DashboardView({
           >
             {px(s.label)}
 
-            {alertsLoaded && (
+            {alertsLoaded &&
+              !notMeasured(
+                String(alerts.filter((a) => a.sector === s.key).filter(matchesActivity).length)
+              ) && (
               <span className="ml-1.5 text-[10px] opacity-60">
                 {
                   alerts
@@ -3227,12 +3365,13 @@ export function DashboardView({
                 {k.label}
               </span>
 
-              {alertsLoaded ? (
+              {!alertsLoaded ? (
+                <Skeleton className="h-5 w-12 rounded-full" />
+              ) : notMeasured(k.value) ? null : (
+                // No "OK" or "Live" tag over a figure that was not measured.
                 <StatusTag tone={k.up ? "brand" : "danger"} size="xs" icon={k.up ? TrendingUp : TrendingDown}>
                   {k.delta}
                 </StatusTag>
-              ) : (
-                <Skeleton className="h-5 w-12 rounded-full" />
               )}
             </div>
 
@@ -3241,18 +3380,14 @@ export function DashboardView({
                 <Skeleton className="mt-3 h-9 w-16" />
                 <Skeleton className="mt-2 h-9 w-full" />
               </>
-            ) : dataIsStale && isZeroFigure(k.value) ? (
+            ) : notMeasured(k.value) ? (
               <>
-                <p
-                  data-not-measured=""
-                  className="mt-3 font-heading text-3xl font-bold tracking-tight text-muted-foreground"
-                >
-                  <span aria-hidden="true">—</span>
-                  <span className="sr-only">{tx("Non mesuré", "Not measured")}</span>
+                <p className="mt-3 font-heading text-3xl font-bold tracking-tight">
+                  <NotMeasuredFigure />
                 </p>
 
                 <p className="mt-2 flex h-9 items-end text-xs text-muted-foreground">
-                  {tx("Non mesuré : pas de données récentes", "Not measured: no recent data")}
+                  {notMeasuredWhy}
                 </p>
               </>
             ) : (
@@ -3335,7 +3470,11 @@ export function DashboardView({
               `${chartRange} derniers jours`,
               `last ${chartRange} days`
             )}`}
-            emptyLabel={tx("Aucune alerte sur cette période.", "No alerts in this period.")}
+            emptyLabel={
+              zeroUnknown
+                ? notMeasuredWhy
+                : tx("Aucune alerte sur cette période.", "No alerts in this period.")
+            }
           />
           )}
         </div>
@@ -3379,10 +3518,12 @@ export function DashboardView({
             />
           ) : (
             <p className="mt-6 text-sm text-sidebar-foreground/70">
-              {tx(
-                "Rien à répartir pour cette activité sur la période sélectionnée.",
-                "Nothing to break down for this activity over the selected period."
-              )}
+              {zeroUnknown
+                ? notMeasuredWhy
+                : tx(
+                    "Rien à répartir pour cette activité sur la période sélectionnée.",
+                    "Nothing to break down for this activity over the selected period."
+                  )}
             </p>
           )}
         </div>
@@ -3483,7 +3624,7 @@ export function DashboardView({
             </h3>
 
             <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-semibold text-muted-foreground">
-              {tableAlerts.length}
+              {!alertsLoaded || notMeasured(String(tableAlerts.length)) ? "—" : tableAlerts.length}
             </span>
           </div>
 
@@ -3673,10 +3814,16 @@ export function DashboardView({
             )}
 
             <span className="ml-auto text-[11px] font-medium text-muted-foreground">
-              {tableAlerts.length}{" "}
-              {tableAlerts.length === 1
-                ? tx("alerte", "alert")
-                : tx("alertes", "alerts")}
+              {notMeasured(String(tableAlerts.length)) ? (
+                tx("Non mesuré", "Not measured")
+              ) : (
+                <>
+                  {tableAlerts.length}{" "}
+                  {tableAlerts.length === 1
+                    ? tx("alerte", "alert")
+                    : tx("alertes", "alerts")}
+                </>
+              )}
             </span>
           </div>
         )}

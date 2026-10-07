@@ -28,8 +28,10 @@ import {
   sectorOfActivity,
   type SingleOpsType,
 } from "@/lib/activities"
+import { readList } from "@/lib/answer"
 import { API_BASE, apiFetch } from "@/lib/api"
 import { fetchAssignments, taskKeyFor, type Assignment } from "@/lib/crm"
+import { isZeroFigure } from "@/lib/freshness"
 import {
   formatInCompanyZone,
   initialsOf,
@@ -48,6 +50,8 @@ import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import { PLAN_NAMES, readAccountPlan, readDepartments, trialDaysLeft, type AccountPlan } from "@/lib/plans"
 import type { ViewKey } from "./types"
+import { AccountFreshnessNote, useAccountFreshness } from "./account-freshness"
+import { SourceNotice } from "./not-measured"
 import { SectorTag } from "./sector-tag"
 
 /* -------------------------------------------------------------------------- */
@@ -97,6 +101,12 @@ export function ProfileView({
 
   const [alerts, setAlerts] = useState<LogisticsAlert[]>([])
   const [loaded, setLoaded] = useState(false)
+  /* Why the last /alerts read did not answer, or null (L4). Counters over a
+     failed read are zeros that nothing measured. */
+  const [alertsError, setAlertsError] = useState<string | null>(null)
+  // "Try again" on the notice: a new read.
+  const [attempt, setAttempt] = useState(0)
+  const freshness = useAccountFreshness()
   const [sectors, setSectors] = useState<string[]>([])
   const [opsTypes, setOpsTypes] = useState<SingleOpsType[]>([])
   const [businessType, setBusinessType] = useState<string | null>(null)
@@ -118,15 +128,19 @@ export function ProfileView({
   // Refetched on a language switch: /alerts rebuilds messages (B-11).
   useEffect(() => {
     apiFetch(`${API_BASE}/alerts?lang=${lang}`)
-      .then((r) => (r.ok ? r.json() : []))
-      .then((d) =>
-        setAlerts(Array.isArray(d) ? d.map(withOurSector) : [])
-      )
+      .then((r) => readList<LogisticsAlert>(r, "alerts"))
+      .then((answer) => {
+        // A failed read keeps the rows held and says so, never "no alerts".
+        setAlertsError(answer.ok ? null : answer.reason)
+        if (answer.ok) setAlerts(answer.rows.map(withOurSector))
+        else console.error("Failed to load alerts for the profile page:", answer.reason)
+      })
       .catch((error) => {
         console.error("Failed to load alerts for the profile page:", error)
+        setAlertsError("network")
       })
       .finally(() => setLoaded(true))
-  }, [lang])
+  }, [lang, attempt])
 
   /* Only the account's own signals (B-09): alerts of the sectors it
      selected and, in the sector of its configured activity, of that
@@ -158,6 +172,16 @@ export function ProfileView({
   )
 
   const empty = loaded && accountAlerts.length === 0
+  const failedEmpty = empty && alertsError !== null
+  const stale = freshness.kind === "stale"
+  // When the newest upload was, a string so the memo below can depend on it.
+  const stampedAt = freshness.newest?.lastUploadAt ?? null
+
+  /* A counter is a reading only when the read answered and the data is
+     recent (L4). A zero from a failed read or a silent department is
+     "not measured"; non-zero counts stay, they happened. */
+  const shown = (value: number | string) =>
+    loaded && !((alertsError !== null || stale) && isZeroFigure(String(value))) ? value : "—"
 
   // The plan and departments, read after mount (localStorage).
   const [account, setAccount] = useState<AccountPlan | null>(null)
@@ -173,7 +197,12 @@ export function ProfileView({
   const mission = useMemo(() => {
     const times = accountAlerts.map(timeOf).filter((t) => Number.isFinite(t) && t > 0)
     const latest = times.length ? Math.max(...times) : null
-    const hours = latest === null ? null : Math.max(0, (Date.now() - latest) / 3_600_000)
+    /* The age of the data is the age of the newest upload (GET /freshness):
+       a clean file leaves no alert, so the last alert's date would call
+       fresh data old. The last alert stands in only when no stamp exists. */
+    const stamped = stampedAt ? Date.parse(stampedAt) : Number.NaN
+    const since = Number.isFinite(stamped) ? stamped : latest
+    const hours = since === null ? null : Math.max(0, (Date.now() - since) / 3_600_000)
 
     const done = new Set((assignments ?? []).filter((a) => a.status === "done").map((a) => a.task_key))
     const openCritical = accountAlerts
@@ -182,7 +211,7 @@ export function ProfileView({
       .sort((a, b) => timeOf(a) - timeOf(b))
 
     return { latest, hours, openCritical, next: openCritical[0] ?? null }
-  }, [accountAlerts, assignments])
+  }, [accountAlerts, assignments, stampedAt])
 
   const stats = useMemo(() => {
     const equipment = new Set(
@@ -291,6 +320,21 @@ export function ProfileView({
      (the counters). */
   return (
     <div className="space-y-4">
+      {alertsError !== null ? (
+        <SourceNotice
+          title={tx(
+            "Non mesuré : les signaux n'ont pas pu être chargés.",
+            "Not measured: the signals could not be loaded."
+          )}
+          onRetry={() => {
+            setLoaded(false)
+            setAttempt((n) => n + 1)
+          }}
+        />
+      ) : (
+        <AccountFreshnessNote assessment={freshness} />
+      )}
+
       <div className="grid gap-4 lg:grid-cols-[250px_minmax(0,1fr)] xl:grid-cols-[250px_minmax(0,1fr)_290px]">
         {/* -------------------------------------------------------- LEFT */}
         <div className="flex flex-col gap-4">
@@ -331,7 +375,7 @@ export function ProfileView({
               </div>
               <div className="mt-1.5 flex items-center justify-between text-[11px] font-semibold">
                 <span>{resolvedStat.label}</span>
-                <span className="tabular-nums">{loaded ? resolvedStat.value : "—"}</span>
+                <span className="tabular-nums">{shown(resolvedStat.value)}</span>
               </div>
             </div>
           </div>
@@ -387,6 +431,16 @@ export function ProfileView({
           <div className="mt-5 max-w-[85%] self-start rounded-[22px] bg-[var(--ink)] p-4 text-sm leading-relaxed text-white">
             {!loaded
               ? tx("Je charge votre activité…", "Loading your activity…")
+              : failedEmpty
+                ? tx(
+                    "Non mesuré : je n'ai pas pu charger vos signaux. Ces compteurs sont vides parce que la lecture a échoué. Rien ici ne dit que tout va bien.",
+                    "Not measured: I could not load your signals. These counters are blank because the read failed. Nothing here says all is well."
+                  )
+              : empty && stale
+                ? tx(
+                    "Ces compteurs sont à zéro et vos données ne sont pas récentes : ce n'est pas une mesure. Importez un fichier pour les actualiser.",
+                    "These counters are at zero and your data is not recent, so zero is not a reading. Import a file to refresh them."
+                  )
               : empty
                 ? tx(
                     "Ces compteurs sont à zéro parce qu'aucun signal n'a encore été importé, pas parce que tout va bien. Importez un CSV depuis le tableau de bord pour les remplir.",
@@ -537,7 +591,7 @@ export function ProfileView({
                 >
                   {sector.label}
                   <span className="flex h-7 min-w-7 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-bold tabular-nums">
-                    {loaded ? sector.count : "—"}
+                    {shown(sector.count)}
                   </span>
                 </span>
               ))}
@@ -565,7 +619,7 @@ export function ProfileView({
                     stat === criticalStat && loaded && Number(stat.value) > 0 && "text-[#ffb8bf]"
                   )}
                 >
-                  {loaded ? stat.value : "—"}
+                  {shown(stat.value)}
                 </dd>
               </div>
             ))}
@@ -573,7 +627,7 @@ export function ProfileView({
           <div className="mt-4 flex items-end justify-between border-t border-white/10 pt-4">
             <span className="text-xs text-white/55">{resolvedStat.label}</span>
             <span className="font-heading text-4xl font-bold leading-none text-brand tabular-nums">
-              {loaded ? resolvedStat.value : "—"}
+              {shown(resolvedStat.value)}
             </span>
           </div>
         </div>

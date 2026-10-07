@@ -33,6 +33,7 @@ export function Topbar({
   unreadCount = 0,
   ring = 0,
   notifications = [],
+  notificationsUnknown = false,
   onNotificationsOpen,
   onOpenTracking,
 }: {
@@ -50,6 +51,8 @@ export function Topbar({
   ring?: number
   /** Open critical alerts, newest first. */
   notifications?: Notification[]
+  /** The last read did not answer (L4): an empty list is not "all clear". */
+  notificationsUnknown?: boolean
   /** Called when the list opens: what it shows is now read. */
   onNotificationsOpen?: () => void
   onOpenTracking?: () => void
@@ -195,13 +198,27 @@ export function Topbar({
             {tx("Alertes critiques à traiter", "Critical alerts to handle")}
           </p>
 
-          {notifications.length === 0 ? (
-            <p className="px-2 py-3 text-sm text-muted-foreground">
+          {notificationsUnknown && (
+            <p
+              data-bell-unknown=""
+              className="mx-2 mb-1 rounded-xl border border-[var(--tag-warning-bd)] bg-[var(--tag-warning-bg)] px-3 py-2 text-xs text-[var(--tag-warning-fg)]"
+            >
               {tx(
-                "Aucune alerte critique en attente.",
-                "No critical alert waiting."
+                "Non mesuré : les alertes n'ont pas pu être vérifiées. Cette liste peut ne pas être à jour.",
+                "Not measured: the alerts could not be checked. This list may be out of date."
               )}
             </p>
+          )}
+
+          {notifications.length === 0 ? (
+            notificationsUnknown ? null : (
+              <p className="px-2 py-3 text-sm text-muted-foreground">
+                {tx(
+                  "Aucune alerte critique en attente.",
+                  "No critical alert waiting."
+                )}
+              </p>
+            )
           ) : (
             <ul className="max-h-80 overflow-y-auto">
               {notifications.slice(0, 8).map((n) => (
