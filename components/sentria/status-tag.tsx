@@ -15,7 +15,7 @@ import type { Tx } from "@/lib/i18n"
 import { formatAmount } from "@/lib/locale"
 import { useCanSeeAmounts } from "@/lib/use-plan"
 import { demotion, demotionSentence } from "@/lib/demotion"
-import { valueAtRisk, type AlertParams } from "@/lib/value-at-risk"
+import { lossPerHour, valueAtRisk, type AlertParams } from "@/lib/value-at-risk"
 import { cn } from "@/lib/utils"
 
 /** The app's status tags: a pastel pill with a circled icon (tokens in
@@ -161,6 +161,38 @@ export function ValueTag({
         <span className="sr-only">{label}</span>
         {risk.estimate ? "≈ " : ""}
         {amount}
+      </StatusTag>
+    </span>
+  )
+}
+
+/** What an hour of stop costs (I-COST), from the file's own machine columns,
+ *  beside the severity. A rate, never a total. Pro and up like every amount;
+ *  nothing when the alert carries none. */
+export function LossTag({
+  params,
+  tx,
+  size = "sm",
+  className,
+}: {
+  params: AlertParams
+  tx: Tx
+  size?: keyof typeof SIZES
+  className?: string
+}) {
+  const canSee = useCanSeeAmounts()
+  const loss = lossPerHour(params)
+  if (!loss || !canSee) return null
+
+  const amount = formatAmount(loss.perHour, loss.currency, tx)
+  const label = tx("Perte par heure d'arrêt : ", "Loss per hour of stop: ")
+
+  return (
+    <span title={`${label}${amount}`} className="inline-flex">
+      <StatusTag tone="neutral" size={size} icon={Wallet} className={cn("tabular-nums", className)}>
+        <span className="sr-only">{label}</span>
+        {amount}
+        {tx("/h", "/h")}
       </StatusTag>
     </span>
   )

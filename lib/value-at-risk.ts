@@ -47,3 +47,33 @@ export function valueAtRisk(params: AlertParams): ValueAtRisk | null {
   const currency = typeof record.currency === "string" ? record.currency.trim() : ""
   return { value, currency, estimate: record.basis === "sales" }
 }
+
+export type LossPerHour = {
+  /** What one hour of stop costs: units per hour x value per unit. */
+  perHour: number
+  units: number
+  each: number
+  /** "" when the currency is unknown; the amount then stands alone. */
+  currency: string
+}
+
+/** I-COST: the hourly loss a machine alert carries, from the file's own
+ *  `units_per_hour` and `unit_value`. A rate, kept out of `value` so it never
+ *  adds into a value-at-risk sum. Null unless the backend sent all three. */
+export function lossPerHour(params: AlertParams): LossPerHour | null {
+  const record = asRecord(params)
+  if (!record) return null
+
+  const perHour = Number(record.loss_per_hour)
+  const units = Number(record.units_per_hour)
+  const each = Number(record.unit_value)
+
+  if (![perHour, units, each].every((n) => Number.isFinite(n) && n > 0)) return null
+
+  return {
+    perHour,
+    units,
+    each,
+    currency: typeof record.currency === "string" ? record.currency.trim() : "",
+  }
+}
