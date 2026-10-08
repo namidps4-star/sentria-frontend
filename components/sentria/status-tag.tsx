@@ -13,6 +13,7 @@ import {
 
 import type { Tx } from "@/lib/i18n"
 import { formatAmount } from "@/lib/locale"
+import { useCanSeeAmounts } from "@/lib/use-plan"
 import { demotion, demotionSentence } from "@/lib/demotion"
 import { valueAtRisk, type AlertParams } from "@/lib/value-at-risk"
 import { cn } from "@/lib/utils"
@@ -145,8 +146,9 @@ export function ValueTag({
   size?: keyof typeof SIZES
   className?: string
 }) {
+  const canSee = useCanSeeAmounts()
   const risk = valueAtRisk(params)
-  if (!risk) return null
+  if (!risk || !canSee) return null
 
   const amount = formatAmount(risk.value, risk.currency, tx)
   const label = risk.estimate

@@ -131,7 +131,7 @@ export function bucketAlerts(
 
 export type ValueMetric =
   | { available: true; symbol: string }
-  | { available: false; reason: "none" | "mixed" }
+  | { available: false; reason: "none" | "mixed" | "plan" }
 
 /** Whether the value-at-risk metric can be drawn on one axis: some alerts
  *  carry a money value, and they all name the same currency. */

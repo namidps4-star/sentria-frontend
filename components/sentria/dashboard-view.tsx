@@ -40,6 +40,7 @@ import {
   sliceColor,
   stockRows,
   valueMetric,
+  type ValueMetric,
   type ChartMetric,
   type ChartRange,
 } from "@/lib/chart-series"
@@ -98,6 +99,7 @@ import {
 import { useCompanyIdentity } from "@/lib/company"
 import { accountCurrencyParam, formatAmount } from "@/lib/locale"
 import { valueAtRisk } from "@/lib/value-at-risk"
+import { useCanSeeAmounts } from "@/lib/use-plan"
 import {
   DEPARTMENTS_KEY,
   checkPlan,
@@ -1076,6 +1078,7 @@ export function DashboardView({
   // overlay, and coming back to this one gives the pick back.
   const [chartPick, setChartPick] = useState<{ pill: string; keys: string[] } | null>(null)
   const freshness = useFreshness()
+  const canSeeAmounts = useCanSeeAmounts()
   const [chartMetric, setChartMetric] = useState<ChartMetric>("count")
   const [chartRange, setChartRange] = useState<ChartRange>(7)
 
@@ -2160,7 +2163,9 @@ export function DashboardView({
   const chartKeys = (
     chartPick && chartPick.pill === filterSector ? chartPick.keys : chartDefault
   ).filter((key) => chartAvailable.includes(key) || key === pillKey)
-  const chartValue = valueMetric(scopedAlerts)
+  const chartValue: ValueMetric = canSeeAmounts
+    ? valueMetric(scopedAlerts)
+    : { available: false, reason: "plan" }
   const chartMetricNow: ChartMetric =
     chartMetric === "value" && chartValue.available ? "value" : "count"
   const chartSeriesName = (key: string) =>
@@ -4612,6 +4617,19 @@ export function DashboardView({
                       const risk = valueAtRisk(source?.params)
 
                       if (!risk) return null
+
+                      /* Free plan: say there is an amount and where it
+                         comes from, never the amount itself. */
+                      if (!canSeeAmounts) {
+                        return (
+                          <p data-cost-locked="" className="mt-2 text-xs leading-5 text-sidebar-foreground/60">
+                            {tx(
+                              "Le montant en jeu est disponible avec le plan Pro.",
+                              "The amount at stake comes with the Pro plan."
+                            )}
+                          </p>
+                        )
+                      }
 
                       return (
                         <div data-cost-ignored="" className="mt-2">

@@ -79,6 +79,8 @@ export function ChartMenu({
 
   const valueHint = valueState.available
     ? null
+    : valueState.reason === "plan"
+    ? tx("Disponible avec le plan Pro.", "Available with the Pro plan.")
     : valueState.reason === "mixed"
     ? tx("Devises différentes : pas comparables sur un axe.", "Mixed currencies: not comparable on one axis.")
     : tx("Aucune alerte ne porte de valeur.", "No alert carries a value.")

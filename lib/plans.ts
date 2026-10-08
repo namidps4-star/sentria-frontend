@@ -30,6 +30,13 @@ export function atLeast(plan: PlanId, minimum: PlanId): boolean {
   return PLAN_ORDER.indexOf(plan) >= PLAN_ORDER.indexOf(minimum)
 }
 
+/** Money amounts on alerts (value at risk, the popup's figure, the chart's
+ *  value metric) come with Pro and up, as the pricing page says. UI only:
+ *  like every plan flag here, this is not security. */
+export function canSeeAmounts(plan: PlanId): boolean {
+  return atLeast(plan, "pro")
+}
+
 /** The plan in force: the paid one, or Business while the trial runs. */
 export function effectivePlan(plan: PlanId, trialEndsAt: string | null, now = Date.now()): PlanId {
   const trialing = trialEndsAt !== null && Date.parse(trialEndsAt) > now
