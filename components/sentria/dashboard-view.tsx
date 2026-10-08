@@ -6,7 +6,7 @@ import { CountNumber } from "./count-number"
 import { RevealText } from "./reveal-text"
 import { SheetTabs } from "./sheet-tabs"
 import type { ViewKey } from "./types"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import {
   Cog,
@@ -97,7 +97,8 @@ import {
   type SingleOpsType,
 } from "@/lib/activities"
 import { useCompanyIdentity } from "@/lib/company"
-import { accountCurrencyParam, formatAmount } from "@/lib/locale"
+import { bucketRange } from "@/lib/cost-ranges"
+import { accountCurrencyParam, formatAmount, useLocale } from "@/lib/locale"
 import { valueAtRisk } from "@/lib/value-at-risk"
 import { useCanSeeAmounts } from "@/lib/use-plan"
 import {
@@ -120,12 +121,15 @@ import {
   contractorIdsOf,
   fetchAssignments,
   fetchContractors,
+  fetchCost,
   saveAssignment,
   taskKeyFor,
   type Assignment,
   type Contractor,
+  type CostInputs,
 } from "@/lib/crm"
 import { rankForDispatch } from "@/lib/dispatch"
+import { CostTap } from "./cost-tap"
 import { DispatchPanel } from "./dispatch-panel"
 import { SectorTag } from "./sector-tag"
 
@@ -1298,6 +1302,32 @@ export function DashboardView({
   const [alertSearch, setAlertSearch] = useState("")
 
   const [contractors, setContractors] = useState<Contractor[]>([])
+
+  /* What a stop costs, in the customer's own words (I-COST step 2): their
+     daily figure (Pro and up) and the typical range learned from their
+     answers (Business and up). Read only when the plan allows it. */
+  const { currency: accountCurrency } = useLocale()
+  const [cost, setCost] = useState<CostInputs | null>(null)
+  const [tapFor, setTapFor] = useState<string | null>(null)
+
+  const loadCost = useCallback(() => {
+    fetchCost().then((result) => {
+      if (result.ok) setCost(result.data)
+    })
+  }, [])
+
+  useEffect(() => {
+    if (companyName && canSeeAmounts) loadCost()
+  }, [companyName, canSeeAmounts, loadCost])
+
+  const closePopup = () => {
+    setSelectedRecommendation(null)
+    setTapFor(null)
+  }
+
+  const popupAlertFor = (rec: Recommendation) =>
+    alerts.find((a) => a.equipment === rec.equipment && a.date === rec.date) ??
+    alerts.find((a) => a.equipment === rec.equipment && a.alert_key === rec.alert_key)
 
   useEffect(() => {
     if (!companyName) return
@@ -4427,7 +4457,7 @@ export function DashboardView({
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) {
-              setSelectedRecommendation(null)
+              closePopup()
             }
           }}
         >
@@ -4509,9 +4539,7 @@ export function DashboardView({
 
               <button
                 type="button"
-                onClick={() =>
-                  setSelectedRecommendation(null)
-                }
+                onClick={closePopup}
                 aria-label={tx(
                   "Fermer la recommandation",
                   "Close the recommendation"
@@ -4523,6 +4551,16 @@ export function DashboardView({
             </div>
 
             <div className="space-y-4 p-6">
+              {/* The one-tap question comes first, where it is seen. */}
+              {tapFor === taskKeyFor(selectedRecommendation) && selectedRecommendation.alert_key && (
+                <CostTap
+                  taskKey={tapFor}
+                  alertKey={selectedRecommendation.alert_key}
+                  symbol={accountCurrency.symbol}
+                  onAnswered={loadCost}
+                />
+              )}
+
               <div className="rounded-2xl border border-border bg-muted/30 p-4">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                   {tx("Alerte détectée", "Alert detected")}
@@ -4603,20 +4641,58 @@ export function DashboardView({
                         big with how it was worked out. An alert with no
                         amount shows nothing here, never a zero. */}
                     {(() => {
-                      const source =
-                        alerts.find(
-                          (a) =>
-                            a.equipment === selectedRecommendation.equipment &&
-                            a.date === selectedRecommendation.date
-                        ) ??
-                        alerts.find(
-                          (a) =>
-                            a.equipment === selectedRecommendation.equipment &&
-                            a.alert_key === selectedRecommendation.alert_key
-                        )
+                      const source = popupAlertFor(selectedRecommendation)
                       const risk = valueAtRisk(source?.params)
 
-                      if (!risk) return null
+                      if (!risk) {
+                        /* No amount from the file. What a stop costs is the
+                           customer's own word, shown as theirs: the typical
+                           range from their answers, else their daily figure
+                           on a critical alert. Free plan, nothing. */
+                        if (!canSeeAmounts || !cost) return null
+
+                        const symbol = accountCurrency.symbol
+                        const kind = selectedRecommendation.alert_key ? cost.learned[selectedRecommendation.alert_key] : undefined
+
+                        if (kind) {
+                          return (
+                            <div data-cost-learned="" className="mt-2">
+                              <p className="font-heading text-2xl font-bold leading-tight text-accent">
+                                {bucketRange(kind.bucket, kind.currency || symbol, tx)}
+                              </p>
+                              <p className="mt-1 text-[11px] leading-4 text-sidebar-foreground/60">
+                                {tx(
+                                  `Typique pour ce genre de problème, d'après vos ${kind.n} dernières réponses.`,
+                                  `Typical for this kind of problem, from your last ${kind.n} answers.`
+                                )}
+                              </p>
+                            </div>
+                          )
+                        }
+
+                        if (selectedRecommendation.severity !== "CRITICAL") return null
+
+                        if (cost.starter) {
+                          return (
+                            <p data-cost-starter-shown="" className="mt-2 text-xs leading-5 text-sidebar-foreground/70">
+                              {tx("Vous nous avez dit qu'un arrêt coûte environ ", "You told us a stop costs about ")}
+                              <span className="font-semibold text-accent">
+                                {formatAmount(cost.starter.amount, cost.starter.currency || symbol, tx)}
+                              </span>
+                              {tx(" par jour.", " a day.")}
+                            </p>
+                          )
+                        }
+
+                        return (
+                          <p data-cost-starter-ask="" className="mt-2 text-xs leading-5 text-sidebar-foreground/60">
+                            {tx(
+                              "Indiquez dans Paramètres ce qu'un arrêt vous coûte par jour pour le voir ici.",
+                              "Add what a stop costs per day in Settings to see it here."
+                            )}
+                          </p>
+                        )
+                      }
 
                       /* Free plan: say there is an amount and where it
                          comes from, never the amount itself. */
@@ -4702,6 +4778,7 @@ export function DashboardView({
                 if (row.status !== "done") return null
 
                 return (
+                  <>
                   <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
                     <p className="text-[10px] font-semibold uppercase tracking-widest text-[var(--tag-success-fg)]">
                       {tx("Résultat", "Outcome")}
@@ -4714,6 +4791,8 @@ export function DashboardView({
                       )}
                     </p>
                   </div>
+
+                  </>
                 )
               })()}
             </div>
@@ -4721,26 +4800,36 @@ export function DashboardView({
             <div className="sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t border-border bg-card p-6">
               <button
                 type="button"
-                onClick={() =>
-                  setSelectedRecommendation(null)
-                }
+                onClick={closePopup}
                 className="rounded-full border border-border px-4 py-2.5 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 {tx("Fermer", "Close")}
               </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  const actionKey = taskKeyFor(selectedRecommendation)
-                  markHandled(actionKey, selectedRecommendation)
-                  setSelectedRecommendation(null)
-                }}
-                className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-xs font-bold text-accent-foreground transition-transform hover:scale-[1.02]"
-              >
-                <Check className="h-3.5 w-3.5" />
-                {tx("Marquer traité", "Mark handled")}
-              </button>
+              {taskMap[taskKeyFor(selectedRecommendation)]?.status !== "done" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const actionKey = taskKeyFor(selectedRecommendation)
+                    markHandled(actionKey, selectedRecommendation)
+
+                    /* Business and up are asked, once, what it cost: only
+                       for an alert with no amount from the file. The popup
+                       stays open for that one tap; otherwise it closes. */
+                    const asks =
+                      cost?.can_tap === true &&
+                      Boolean(selectedRecommendation.alert_key) &&
+                      !valueAtRisk(popupAlertFor(selectedRecommendation)?.params)
+
+                    if (asks) setTapFor(actionKey)
+                    else closePopup()
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-xs font-bold text-accent-foreground transition-transform hover:scale-[1.02]"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  {tx("Marquer traité", "Mark handled")}
+                </button>
+              )}
             </div>
           </div>
         </div>

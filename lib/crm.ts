@@ -540,3 +540,92 @@ const SMS_ERRORS: Record<string, Localized> = {
 export function smsErrorText(code: string, fallback: Localized): Localized {
   return SMS_ERRORS[code] ?? fallback
 }
+
+/* ------------------------------------------------------------------ */
+/*  What a stop costs, in the customer's own words (I-COST step 2)      */
+/* ------------------------------------------------------------------ */
+
+/** The ranges an answer can take, smallest first. The API stores the range,
+ *  never a number: a guess made after the fact is not precise. */
+export type CostBucket = "lt100" | "100_1k" | "1k_10k" | "gt10k"
+
+export const COST_BUCKETS: CostBucket[] = ["lt100", "100_1k", "1k_10k", "gt10k"]
+
+export type CostInputs = {
+  plan: PlanKey
+  /** "What do you lose per day if something stops?" Sent from Pro. */
+  starter: { amount: number; currency: string } | null
+  /** The typical range per kind of problem (alert key), sent from Business
+   *  and only once there are enough answers. */
+  learned: Record<string, { bucket: CostBucket; n: number; currency: string }>
+  can_set_starter: boolean
+  can_tap: boolean
+}
+
+type PlanKey = "decouverte" | "pro" | "business" | "entreprise"
+
+export function fetchCost(): Promise<CrmResult<CostInputs>> {
+  return call("/cost", { method: "GET" }, (body) => {
+    const cost = (body.cost ?? {}) as Partial<CostInputs>
+    const starter = cost.starter && Number(cost.starter.amount) > 0 ? cost.starter : null
+
+    return {
+      plan: (cost.plan as PlanKey) ?? "decouverte",
+      starter: starter ? { amount: Number(starter.amount), currency: String(starter.currency ?? "") } : null,
+      learned: cost.learned && typeof cost.learned === "object" ? cost.learned : {},
+      can_set_starter: cost.can_set_starter === true,
+      can_tap: cost.can_tap === true,
+    }
+  })
+}
+
+export function saveCostStarter(
+  amount: number,
+  currency: string
+): Promise<CrmResult<{ amount: number; currency: string }>> {
+  return call(
+    "/cost/starter",
+    { method: "PUT", body: JSON.stringify({ amount, currency }) },
+    (body) => {
+      const starter = (body.starter ?? {}) as { amount?: unknown; currency?: unknown }
+
+      return { amount: Number(starter.amount), currency: String(starter.currency ?? "") }
+    }
+  )
+}
+
+/** One answer for one handled task. `alertKey` is the kind of problem. */
+export function sendCostTap(
+  taskKey: string,
+  alertKey: string,
+  bucket: CostBucket,
+  currency: string
+): Promise<CrmResult<{ bucket: CostBucket }>> {
+  return call(
+    "/cost/tap",
+    {
+      method: "POST",
+      body: JSON.stringify({ task_key: taskKey, alert_key: alertKey, bucket, currency }),
+    },
+    () => ({ bucket })
+  )
+}
+
+const COST_ERRORS: Record<string, Localized> = {
+  plan_required: localized(
+    "Cette fonction fait partie d'un plan supérieur.",
+    "This comes with a higher plan."
+  ),
+  amount_invalid: localized(
+    "Saisissez un montant supérieur à zéro.",
+    "Enter an amount above zero."
+  ),
+  cost_unavailable: localized(
+    "Cette fonction n'est pas encore prête côté serveur (migration 015).",
+    "This is not ready on the server yet (migration 015)."
+  ),
+}
+
+export function costErrorText(code: string, fallback: Localized): Localized {
+  return COST_ERRORS[code] ?? fallback
+}
