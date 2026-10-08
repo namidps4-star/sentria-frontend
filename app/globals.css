@@ -526,3 +526,8 @@
 @media (prefers-color-scheme: dark) {
   :root:not(.light) { --field-hi: rgb(255 255 255 / 0.04); }
 }
+
+/* Card shape (the design reference): a superellipse corner. Chromium 139+
+   draws it; Safari and Firefox keep the plain round corner. Pair it with a
+   border-radius, never use it alone. */
+.squircle { corner-shape: squircle; }

@@ -236,7 +236,7 @@ export function Sidebar({
           "left-2 top-2 bottom-2",
           "lg:left-3 lg:top-3 lg:bottom-3",
           collapsed ? "w-[68px]" : "w-[250px]",
-          "rounded-[28px]",
+          "squircle rounded-[64px]",
           "bg-sidebar-shell",
           "border border-sidebar-border",
           "shadow-lg",
@@ -246,7 +246,7 @@ export function Sidebar({
             : "-translate-x-[120%] lg:translate-x-0",
         ].join(" ")}
       >
-        <div className="flex h-full flex-col overflow-visible rounded-[28px]">
+        <div className="flex h-full flex-col overflow-visible rounded-[64px]">
           {/* LOGO */}
           <div
             className={[
