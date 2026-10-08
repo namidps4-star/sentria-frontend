@@ -116,10 +116,14 @@ import type { AlertParams } from "@/lib/value-at-risk"
 import {
   contractorIdsOf,
   fetchAssignments,
+  fetchContractors,
   saveAssignment,
   taskKeyFor,
   type Assignment,
+  type Contractor,
 } from "@/lib/crm"
+import { rankForDispatch } from "@/lib/dispatch"
+import { DispatchPanel } from "./dispatch-panel"
 import { SectorTag } from "./sector-tag"
 
 const SECTORS: { key: string; label: Localized }[] = [
@@ -1289,6 +1293,22 @@ export function DashboardView({
 
   const [alertSearch, setAlertSearch] = useState("")
 
+  const [contractors, setContractors] = useState<Contractor[]>([])
+
+  useEffect(() => {
+    if (!companyName) return
+
+    let cancelled = false
+
+    fetchContractors(companyName).then((result) => {
+      if (!cancelled && result.ok) setContractors(result.data)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [companyName])
+
   const [selectedRecommendation, setSelectedRecommendation] =
     useState<Recommendation | null>(null)
 
@@ -1337,6 +1357,46 @@ export function DashboardView({
 
         return rolledBack
       })
+    })
+  }
+
+  /** Send someone (F-DISPATCH): save the person on the task and move it on,
+   *  and say whether the save held, so the text is only asked for after it. */
+  function dispatchTo(taskKey: string, rec: Recommendation, personId: string): Promise<boolean> {
+    if (!companyName) return Promise.resolve(false)
+
+    const existing = taskMap[taskKey]
+
+    const next: Assignment = {
+      task_key: taskKey,
+      status: !existing || existing.status === "todo" ? "in_progress" : existing.status,
+      priority: existing?.priority ?? "medium",
+      deadline: existing?.deadline ?? null,
+      contractor_ids: [...(existing?.contractor_ids ?? []).filter((id) => id !== personId), personId],
+    }
+
+    setTaskMap((current) => ({ ...current, [taskKey]: next }))
+    setActionError(null)
+
+    return saveAssignment(companyName, next).then((result) => {
+      if (result.ok) {
+        setTaskMap((current) => ({ ...current, [taskKey]: result.data }))
+        sendAlertFeedback(rec.alert_key, rec.equipment, "acted")
+        return true
+      }
+
+      setActionError(px(result.detail))
+
+      setTaskMap((current) => {
+        const rolledBack = { ...current }
+
+        if (existing) rolledBack[taskKey] = existing
+        else delete rolledBack[taskKey]
+
+        return rolledBack
+      })
+
+      return false
     })
   }
 
@@ -4562,9 +4622,17 @@ export function DashboardView({
                 const actionKey = taskKeyFor(selectedRecommendation)
                 const row = taskMap[actionKey]
 
-                if (!row || row.status !== "done") {
-                  return null
+                if (!row || (row.status !== "done" && row.status !== "dismissed")) {
+                  return (
+                    <DispatchPanel
+                      taskKey={actionKey}
+                      ranked={rankForDispatch(contractors, row?.contractor_ids ?? [])}
+                      onDispatch={(personId) => dispatchTo(actionKey, selectedRecommendation, personId)}
+                    />
+                  )
                 }
+
+                if (row.status !== "done") return null
 
                 return (
                   <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4">
@@ -4583,7 +4651,7 @@ export function DashboardView({
               })()}
             </div>
 
-            <div className="flex items-center justify-end gap-2 border-t border-border p-6">
+            <div className="sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t border-border bg-card p-6">
               <button
                 type="button"
                 onClick={() =>

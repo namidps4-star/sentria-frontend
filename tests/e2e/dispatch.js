@@ -149,6 +149,56 @@ const PEOPLE = [
     pass(box && box.x + box.width <= 390, 'the Send button stays inside the screen');
     await p.screenshot({ path: 'dispatch-phone.png' }); await ctx.close(); }
 
+
+  console.log('== the same panel in the dashboard alert popup');
+  const openDash = async ({ put = 'ok', assignments = [{ task_key: 'Doliprane-health.stock.low', status: 'todo', priority: 'high', deadline: null, contractor_ids: ['c6'] }], vw = 1440, vh = 1000 } = {}) => {
+    const ctx = await browser.newContext({ viewport: { width: vw, height: vh }, locale: 'en-US' });
+    const p = await ctx.newPage(); p._errors = []; p.on('pageerror', e => p._errors.push(e.message));
+    p._calls = []; p._puts = []; p._texts = []; p._answer = { sms: { status: 'placeholder', live: false } };
+    const alert = { id: 'a1', equipment: 'Doliprane', sector: 'health', business_type: 'pharmacie', severity: 'CRITICAL', date: now, alert_key: 'health.stock.low', message: 'MSG Doliprane', risk_score: 70 };
+    await p.route(/\/alerts(\?|$)/, r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([alert]) }));
+    await p.route(/\/recommendations/, r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ recommendations: [recs[0]] }) }));
+    await p.route(/\/contractors/, r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ contractors: PEOPLE }) }));
+    await p.route(/\/assignments\/sms/, r => { p._calls.push('sms'); p._texts.push(JSON.parse(r.request().postData())); r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(p._answer) }); });
+    await p.route(/\/assignments(\?|$)/, r => {
+      if (r.request().method() === 'PUT') {
+        p._calls.push('put'); const body = JSON.parse(r.request().postData()); p._puts.push(body);
+        if (put === 'fail') return r.fulfill({ status: 500, contentType: 'application/json', body: '{}' });
+        return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ assignment: body }) });
+      }
+      r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ assignments }) });
+    });
+    await p.addInitScript(() => { const s = { sentria_onboarded: '1', sentria_sector: 'health', sentria_sectors: '["health"]', sentria_business_type: 'pharmacie', sentria_language: 'en', sentria_company_name: 'Acme' }; for (const k in s) localStorage.setItem(k, s[k]); });
+    await signedIn(p); await p.goto(APP_URL, { waitUntil: 'networkidle' }); await p.waitForTimeout(1500);
+    await p.locator('tbody tr').first().click(); await p.waitForTimeout(400);
+    await p.getByRole('button', { name: /See the recommendation/ }).first().click(); await p.waitForTimeout(600);
+    return { p, ctx };
+  };
+  { const { p, ctx } = await openDash();
+    pass(await p.locator('[data-dispatch]').count() === 1, 'the popup has the Send someone panel');
+    pass((await names(p)).join('|') === 'Kofi Mensah|Awa Diop|Extra Eve' && /Suggested/.test(await p.locator('[data-dispatch-person="c2"]').innerText()), 'same order, same Suggested tag');
+    await p.locator('[data-dispatch-person="c2"] [data-dispatch-send]').click(); await p.waitForTimeout(800);
+    pass(p._calls.join(',') === 'put,sms', `saved first, text second (${p._calls.join(',')})`);
+    pass(p._puts[0].task_key === 'Doliprane-health.stock.low' && p._puts[0].status === 'in_progress' && JSON.stringify(p._puts[0].contractor_ids) === '["c6","c2"]', `under the shared task key, In progress (${JSON.stringify([p._puts[0].task_key, p._puts[0].status, p._puts[0].contractor_ids])})`);
+    pass(/not sent/i.test(await p.locator('[data-dispatch-outcome]').innerText()) && !/Text sent/.test(await p.locator('[data-dispatch-outcome]').innerText()), 'with SMS off it says "Logged, not sent"');
+    const footer = await p.getByRole('button', { name: /Mark handled/ }).last().boundingBox();
+    pass(footer && footer.y + footer.height <= 1000, 'Mark handled stays on screen with the panel in the popup');
+    await p.getByRole('button', { name: /Mark handled/ }).last().click(); await p.waitForTimeout(600);
+    pass(p._puts[p._puts.length - 1].status === 'done' && p._puts[p._puts.length - 1].contractor_ids.includes('c2'), 'Mark handled still saves done and keeps the person on the task');
+    pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
+    await p.screenshot({ path: 'dispatch-dash.png' }); await ctx.close(); }
+  { const { p, ctx } = await openDash({ put: 'fail' });
+    await p.locator('[data-dispatch-person="c2"] [data-dispatch-send]').click(); await p.waitForTimeout(800);
+    pass(p._calls.join(',') === 'put' && /Nothing was sent/.test(await p.locator('[data-dispatch-error]').innerText()), 'a failed save texts nobody and says so');
+    await ctx.close(); }
+  { const { p, ctx } = await openDash({ assignments: [{ task_key: 'Doliprane-health.stock.low', status: 'done', priority: 'medium', deadline: null, contractor_ids: [] }] });
+    pass(await p.locator('[data-dispatch]').count() === 0, 'a task already handled has no panel in the popup');
+    await ctx.close(); }
+  { const { p, ctx } = await openDash({ vw: 390, vh: 844 });
+    await p.evaluate(() => { const d = document.querySelector('[role=dialog]'); d.scrollTop = d.scrollHeight; }); await p.waitForTimeout(300);
+    pass(await p.locator('[data-dispatch]').count() === 1 && !(await p.evaluate(() => document.documentElement.scrollWidth > innerWidth)), 'at 390 px the panel is there and nothing scrolls sideways');
+    await p.screenshot({ path: 'dispatch-dash-phone.png' }); await ctx.close(); }
+
   await browser.close();
   console.log(fails ? `\n${fails} FAILED` : '\nALL OK'); process.exit(fails ? 1 : 0);
 })();
