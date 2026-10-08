@@ -1,6 +1,7 @@
 "use client"
 
 import { AskHeader } from "./ask-header"
+import { DispatchPanel } from "./dispatch-panel"
 import { TaskTextButton } from "./task-text-button"
 import { StatusTag, type TagTone } from "./status-tag"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -44,6 +45,7 @@ import {
   type Assignment,
   type Contractor,
 } from "@/lib/crm"
+import { rankForDispatch } from "@/lib/dispatch"
 import { sendAlertFeedback } from "@/lib/feedback"
 import { formatMoney, useLocale, type Currency } from "@/lib/locale"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
@@ -687,6 +689,7 @@ function DetailDialog({
   contractorsLoaded,
   currency,
   onPatch,
+  onDispatch,
   onDismiss,
   onClose,
 }: {
@@ -695,6 +698,7 @@ function DetailDialog({
   contractorsLoaded: boolean
   currency: Currency
   onPatch: (patch: Partial<TaskMeta>) => void
+  onDispatch: (personId: string) => Promise<boolean>
   onDismiss: () => void
   onClose: () => void
 }) {
@@ -908,6 +912,15 @@ function DetailDialog({
               })}
             </div>
           </div>
+
+          {/* Send someone (F-DISPATCH): only on a task that is still open. */}
+          {(task.status === "todo" || task.status === "in_progress") && (
+            <DispatchPanel
+              taskKey={card.id}
+              ranked={rankForDispatch(contractors, task.contractor_ids)}
+              onDispatch={onDispatch}
+            />
+          )}
 
           {/* A checkbox list rather than a multiple <select>. A native
               multi-select needs ctrl-click to add a second name and
@@ -1444,10 +1457,10 @@ export function RecommendationsBoard({
   // every render of the board.
   const closeAssign = useCallback(() => setAssigningId(null), [])
 
-  function updateTask(id: string, patch: Partial<TaskMeta>) {
+  function updateTask(id: string, patch: Partial<TaskMeta>): Promise<boolean> {
     const card = cards.find((entry) => entry.id === id)
 
-    if (!card) return
+    if (!card) return Promise.resolve(false)
 
     const before = taskMap[id]
     const next: TaskMeta = { ...card.task, ...patch }
@@ -1461,10 +1474,10 @@ export function RecommendationsBoard({
           "No company name is set, so the change cannot be saved. Set it in Settings."
         )
       )
-      return
+      return Promise.resolve(false)
     }
 
-    saveAssignment(companyName, { task_key: id, ...next }).then((result) => {
+    return saveAssignment(companyName, { task_key: id, ...next }).then((result) => {
       if (result.ok) {
         setSaveError(null)
 
@@ -1484,7 +1497,7 @@ export function RecommendationsBoard({
           refreshContractors()
         }
 
-        return
+        return true
       }
 
       setSaveError(px(result.detail))
@@ -1497,6 +1510,8 @@ export function RecommendationsBoard({
 
         return rolledBack
       })
+
+      return false
     })
   }
 
@@ -2362,6 +2377,12 @@ export function RecommendationsBoard({
           contractorsLoaded={loaded}
           currency={currency}
           onPatch={(patch) => updateTask(editingCard.id, patch)}
+          onDispatch={(personId) =>
+            updateTask(editingCard.id, {
+              contractor_ids: [...editingCard.task.contractor_ids.filter((id) => id !== personId), personId],
+              status: editingCard.task.status === "todo" ? "in_progress" : editingCard.task.status,
+            })
+          }
           onDismiss={() => dismissCard(editingCard.id)}
           onClose={() => setEditingId(null)}
         />

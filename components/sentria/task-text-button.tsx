@@ -18,11 +18,13 @@ import { StatusTag } from "./status-tag"
  * a person was texted when they were not.
  * -------------------------------------------------------------------------- */
 
-type State =
+export type TextState =
   | { kind: "idle" }
   | { kind: "sending" }
   | { kind: "done"; result: TaskText }
   | { kind: "error"; message: string }
+
+type State = TextState
 
 export function TaskTextButton({
   taskKey,
@@ -65,6 +67,19 @@ export function TaskTextButton({
         {busy ? tx("Envoi…", "Sending…") : tx("Envoyer un SMS", "Text")}
       </button>
 
+      <TextOutcome state={state} />
+    </div>
+  )
+}
+
+/** What a text came to: sent, logged only, or refused. The one wording for
+ *  both the Text button and Dispatch, so neither can claim more than the
+ *  API said. */
+export function TextOutcome({ state }: { state: TextState }) {
+  const tx = useTx()
+
+  return (
+    <>
       {state.kind === "done" && (
         <span data-task-text-result="" role="status" className="text-xs leading-5 text-muted-foreground">
           {state.result.live ? (
@@ -87,6 +102,6 @@ export function TaskTextButton({
           {state.message}
         </span>
       )}
-    </div>
+    </>
   )
 }
