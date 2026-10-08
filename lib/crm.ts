@@ -473,3 +473,70 @@ export function saveAssignment(
     }
   )
 }
+
+/* ------------------------------------------------------------------ */
+/*  Two-way SMS (F-SMS2)                                               */
+/* ------------------------------------------------------------------ */
+
+/** What the API did with a text about a task. `live` is false until the SMS
+ *  provider is switched on: the text is then logged, and not sent. */
+export type TaskText = {
+  status: "placeholder" | "sent" | "failed"
+  live: boolean
+}
+
+/** Text one person on a task. Only the task and the person are sent: the
+ *  words are the API's, so this cannot be used to send arbitrary text. The
+ *  task must already be saved with that person on it. */
+export function textContractor(
+  taskKey: string,
+  contractorId: string,
+  language: "fr" | "en"
+): Promise<CrmResult<TaskText>> {
+  return call(
+    "/assignments/sms",
+    {
+      method: "POST",
+      body: JSON.stringify({ task_key: taskKey, contractor_id: contractorId, lang: language }),
+    },
+    (body) => {
+      const sms = (body.sms ?? {}) as Record<string, unknown>
+      const status = sms.status === "sent" || sms.status === "failed" ? sms.status : "placeholder"
+
+      return { status, live: sms.live === true }
+    }
+  )
+}
+
+const SMS_ERRORS: Record<string, Localized> = {
+  sms_capped: localized(
+    "La limite quotidienne de SMS de votre entreprise est atteinte.",
+    "Your company's daily text limit is reached."
+  ),
+  phone_invalid: localized(
+    "Ce numéro n'est pas valide. Corrigez-le dans Intervenants.",
+    "This number is not valid. Fix it in Field team."
+  ),
+  contractor_not_on_task: localized(
+    "La tâche n'est pas encore enregistrée avec cette personne. Réessayez dans un instant.",
+    "The task is not saved with this person yet. Try again in a moment."
+  ),
+  task_closed: localized(
+    "Cette tâche est déjà fermée.",
+    "This task is already closed."
+  ),
+  sms_log_unavailable: localized(
+    "L'envoi de SMS n'est pas encore prêt côté serveur (migration 014).",
+    "Texting is not ready on the server yet (migration 014)."
+  ),
+  sms_send_failed: localized(
+    "Le SMS n'a pas pu partir.",
+    "The text could not be sent."
+  ),
+}
+
+/** The wording for a failed text: ours when we know the reason, else what
+ *  the API said. */
+export function smsErrorText(code: string, fallback: Localized): Localized {
+  return SMS_ERRORS[code] ?? fallback
+}

@@ -1,6 +1,7 @@
 "use client"
 
 import { AskHeader } from "./ask-header"
+import { TaskTextButton } from "./task-text-button"
 import { StatusTag, type TagTone } from "./status-tag"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
@@ -75,6 +76,9 @@ type Recommendation = {
 type Status = "todo" | "in_progress" | "done"
 
 const LAYOUT_KEY = "sentria_board_layout"
+
+/** How often the board looks for tasks closed by a text reply (F-SMS2), while its tab is open. */
+const REPLY_LOOK_MS = 20000
 
 type Priority = "low" | "medium" | "high" | "critical"
 
@@ -924,10 +928,10 @@ function DetailDialog({
                   const picked = task.contractor_ids.includes(person.id)
 
                   return (
+                    <div key={person.id} className="border-b border-border last:border-0">
                     <label
-                      key={person.id}
                       className={cn(
-                        "flex cursor-pointer items-center gap-3 border-b border-border px-3 py-2.5 last:border-0",
+                        "flex cursor-pointer items-center gap-3 px-3 py-2.5",
                         "transition-colors hover:bg-muted",
                         "focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-inset",
                         picked && "bg-muted"
@@ -964,6 +968,16 @@ function DetailDialog({
                         </span>
                       </span>
                     </label>
+
+                    {/* A text about this task, for a person who is on it and
+                        can be texted (F-SMS2). The task must be saved with
+                        them first, which a tick does at once. */}
+                    {picked && person.sms_ready === true && (
+                      <div className={cn(picked && "bg-muted")}>
+                        <TaskTextButton taskKey={card.id} contractorId={person.id} name={person.name} />
+                      </div>
+                    )}
+                    </div>
                   )
                 })}
               </div>
@@ -1190,6 +1204,75 @@ export function RecommendationsBoard({
 
     if (people.ok) setContractors(people.data)
   }
+
+  /* A reply to a text ("1" handled, "9" dismiss) changes a task on the
+     server, not in this browser (F-SMS2). Look again on a timer and when the
+     tab comes back, and take over only what a reply can do: a task that
+     became done or dismissed. Everything else stays as this browser has it,
+     so an edit in progress is never overwritten. */
+  const taskMapRef = useRef(taskMap)
+  useEffect(() => {
+    taskMapRef.current = taskMap
+  })
+
+  useEffect(() => {
+    if (!loaded || !companyName) return
+
+    let cancelled = false
+
+    async function look() {
+      if (document.visibilityState !== "visible") return
+
+      const stored = await fetchAssignments(companyName)
+
+      if (cancelled || !stored.ok) return
+
+      const closed = stored.data.filter(
+        (row) => row?.task_key && (row.status === "done" || row.status === "dismissed")
+      )
+      const mine = taskMapRef.current
+      const moved = closed.filter((row) =>
+        row.status === "dismissed" ? !!mine[row.task_key] : !!mine[row.task_key] && mine[row.task_key].status !== "done"
+      )
+
+      if (moved.length === 0) return
+
+      setTaskMap((current) => {
+        const next = { ...current }
+
+        for (const row of moved) {
+          if (!next[row.task_key]) continue
+
+          if (row.status === "dismissed") delete next[row.task_key]
+          else next[row.task_key] = { ...next[row.task_key], status: "done" }
+        }
+
+        return next
+      })
+
+      setDismissed((current) => {
+        const add = moved.filter((row) => row.status === "dismissed").map((row) => row.task_key)
+
+        return add.length > 0 ? new Set([...current, ...add]) : current
+      })
+
+      // The open-task counts next to each person are derived from these rows.
+      refreshContractors()
+    }
+
+    const timer = window.setInterval(look, REPLY_LOOK_MS)
+    document.addEventListener("visibilitychange", look)
+    window.addEventListener("focus", look)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(timer)
+      document.removeEventListener("visibilitychange", look)
+      window.removeEventListener("focus", look)
+    }
+    // refreshContractors only reads companyName, which is in the list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, companyName])
 
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<Status | null>(null)
