@@ -1119,23 +1119,15 @@ export function DashboardView({
         const topRecurrence = recurrenceOf(top.equipment)
 
         return (
-          <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6">
-            <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-accent/20 blur-3xl" />
-
+          <div className="relative rounded-3xl border border-border bg-card p-6">
             <div className="relative flex flex-wrap items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-                  <Sparkles className="h-4 w-4" />
-                </div>
-
-                <div>
-                  <h3 className="font-heading text-lg font-bold">
-                    Priorités du moment
-                  </h3>
-                  <p className="mt-0.5 text-sm text-muted-foreground">
-                    {filteredRecommendations.length} situations classées par urgence, avec une action concrète pour chacune.
-                  </p>
-                </div>
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Priorités du moment
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {filteredRecommendations.length} situations classées par urgence, avec une action concrète pour chacune.
+                </p>
               </div>
 
               {rest.length > 0 && (
@@ -1207,7 +1199,7 @@ export function DashboardView({
                       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-background/70">
                         <div
                           className={cn(
-                            "h-full rounded-full transition-all duration-500",
+                            "h-full rounded-full transition-[width] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]",
                             topCritical
                               ? "bg-destructive"
                               : "bg-amber-500"
