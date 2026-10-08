@@ -1,6 +1,6 @@
 "use client"
 
-import { DemotedTag, SeverityTag, StatusTag, ValueTag } from "./status-tag"
+import { DemotedTag, LossTag, SeverityTag, StatusTag, ValueTag } from "./status-tag"
 import { demotion, demotionSentence } from "@/lib/demotion"
 import { CountNumber } from "./count-number"
 import { RevealText } from "./reveal-text"
@@ -99,8 +99,8 @@ import {
 } from "@/lib/activities"
 import { useCompanyIdentity } from "@/lib/company"
 import { bucketRange } from "@/lib/cost-ranges"
-import { accountCurrencyParam, formatAmount, useLocale } from "@/lib/locale"
-import { valueAtRisk } from "@/lib/value-at-risk"
+import { accountCurrencyParam, formatAmount, readCurrency } from "@/lib/locale"
+import { lossPerHour, valueAtRisk } from "@/lib/value-at-risk"
 import { useCanSeeAmounts } from "@/lib/use-plan"
 import {
   DEPARTMENTS_KEY,
@@ -1306,8 +1306,9 @@ export function DashboardView({
 
   /* What a stop costs, in the customer's own words (I-COST step 2): their
      daily figure (Pro and up) and the typical range learned from their
-     answers (Business and up). Read only when the plan allows it. */
-  const { currency: accountCurrency } = useLocale()
+     answers (Business and up). Read when a recommendation popup opens, not
+     on every load: the dashboard's entrance animation is timed and an extra
+     fetch-and-rerender while it plays costs frames (dashmotion). */
   const [cost, setCost] = useState<CostInputs | null>(null)
   const [tapFor, setTapFor] = useState<string | null>(null)
 
@@ -1316,10 +1317,6 @@ export function DashboardView({
       if (result.ok) setCost(result.data)
     })
   }, [])
-
-  useEffect(() => {
-    if (companyName && canSeeAmounts) loadCost()
-  }, [companyName, canSeeAmounts, loadCost])
 
   const closePopup = () => {
     setSelectedRecommendation(null)
@@ -1330,22 +1327,35 @@ export function DashboardView({
     alerts.find((a) => a.equipment === rec.equipment && a.date === rec.date) ??
     alerts.find((a) => a.equipment === rec.equipment && a.alert_key === rec.alert_key)
 
+  const [selectedRecommendation, setSelectedRecommendation] =
+    useState<Recommendation | null>(null)
+
+  /* The people and the figures are only read when a popup opens (F-DISPATCH,
+     I-COST). `contractorsLoaded` keeps "nobody free" from showing while the
+     list is still on its way. */
+  const popupOpen = selectedRecommendation !== null
+  const [contractorsLoaded, setContractorsLoaded] = useState(false)
+
   useEffect(() => {
-    if (!companyName) return
+    if (!popupOpen || !companyName) return
 
     let cancelled = false
 
     fetchContractors(companyName).then((result) => {
-      if (!cancelled && result.ok) setContractors(result.data)
+      if (cancelled) return
+
+      if (result.ok) {
+        setContractors(result.data)
+        setContractorsLoaded(true)
+      }
     })
+
+    if (canSeeAmounts) loadCost()
 
     return () => {
       cancelled = true
     }
-  }, [companyName])
-
-  const [selectedRecommendation, setSelectedRecommendation] =
-    useState<Recommendation | null>(null)
+  }, [popupOpen, companyName, canSeeAmounts, loadCost])
 
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -2459,6 +2469,28 @@ export function DashboardView({
               </>
             )}
           </p>
+
+          {/* Machines (Industry): two optional columns that let SentrIA work
+              out what an hour of stop costs. Health needs none: its
+              cold-chain alerts already carry the stock value. */}
+          {uploadSector === "industry" && (
+            <div data-cost-columns="" className="mt-4 rounded-2xl border border-border bg-muted/40 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {tx("Facultatif · pour voir ce qu'une heure d'arrêt coûte", "Optional · to see what an hour of stop costs")}
+              </p>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                <code className="rounded-md bg-card px-1.5 py-0.5 font-mono text-[11px] text-foreground">units_per_hour</code>{" "}
+                <code className="rounded-md bg-card px-1.5 py-0.5 font-mono text-[11px] text-foreground">unit_value</code>{" "}
+                {tx("ce qu'une machine produit par heure, et ce que vaut chaque unité", "what a machine makes per hour, and what each unit is worth")}
+              </p>
+              <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
+                {tx(
+                  "Sans ces colonnes, l'alerte n'affiche aucun montant. SentrIA n'invente rien.",
+                  "Without these columns the alert shows no amount. SentrIA never guesses."
+                )}
+              </p>
+            </div>
+          )}
         </div>
         </div>,
         actionsSlot
@@ -4106,6 +4138,7 @@ export function DashboardView({
                           <div className="flex items-center gap-1.5">
                             <SeverityTag severity={alert.severity} tx={tx} size="sm" />
                             <ValueTag params={alert.params} tx={tx} size="sm" />
+                            <LossTag params={alert.params} tx={tx} size="sm" />
                             <DemotedTag params={alert.params} tx={tx} size="sm" />
                           </div>
                         </td>
@@ -4194,6 +4227,7 @@ export function DashboardView({
                 <div className="flex shrink-0 items-center gap-2">
                   <SeverityTag severity={expandedAlert.severity} tx={tx} size="sm" />
                   <ValueTag params={expandedAlert.params} tx={tx} size="sm" />
+                  <LossTag params={expandedAlert.params} tx={tx} size="sm" />
                   <DemotedTag params={expandedAlert.params} tx={tx} size="sm" />
 
                   <button
@@ -4550,7 +4584,7 @@ export function DashboardView({
                 <CostTap
                   taskKey={tapFor}
                   alertKey={selectedRecommendation.alert_key}
-                  symbol={accountCurrency.symbol}
+                  symbol={readCurrency().symbol}
                   onAnswered={loadCost}
                 />
               )}
@@ -4637,6 +4671,44 @@ export function DashboardView({
                     {(() => {
                       const source = popupAlertFor(selectedRecommendation)
                       const risk = valueAtRisk(source?.params)
+                      const loss = lossPerHour(source?.params)
+
+                      /* A machine that is failing or about to stop: what an
+                         hour of stop costs, from the file's own columns. A
+                         rate, not a total: nobody knows how long it stays
+                         down. Same plan rule as every amount. */
+                      if (loss) {
+                        if (!canSeeAmounts) {
+                          return (
+                            <p data-cost-locked="" className="mt-2 text-xs leading-5 text-sidebar-foreground/60">
+                              {tx(
+                                "Le montant en jeu est disponible avec le plan Pro.",
+                                "The amount at stake comes with the Pro plan."
+                              )}
+                            </p>
+                          )
+                        }
+
+                        return (
+                          <div data-cost-rate="" className="mt-2">
+                            <div className="flex flex-wrap items-end gap-x-3 gap-y-0.5">
+                              <span className="font-heading text-4xl font-bold leading-none tabular-nums text-accent">
+                                {formatAmount(loss.perHour, loss.currency, tx)}
+                              </span>
+                              <span className="pb-0.5 text-xs text-sidebar-foreground/60">
+                                {tx("par heure d'arrêt", "for each hour it stays down")}
+                              </span>
+                            </div>
+
+                            <p className="mt-1.5 text-[11px] leading-4 text-sidebar-foreground/60">
+                              {tx(
+                                `${loss.units.toLocaleString("fr-FR")} unités par heure × ${formatAmount(loss.each, loss.currency, tx)} l'unité, d'après votre fichier.`,
+                                `${loss.units.toLocaleString("en-GB")} units per hour × ${formatAmount(loss.each, loss.currency, tx)} each, from your file.`
+                              )}
+                            </p>
+                          </div>
+                        )
+                      }
 
                       if (!risk) {
                         /* No amount from the file. What a stop costs is the
@@ -4645,7 +4717,7 @@ export function DashboardView({
                            on a critical alert. Free plan, nothing. */
                         if (!canSeeAmounts || !cost) return null
 
-                        const symbol = accountCurrency.symbol
+                        const symbol = readCurrency().symbol
                         const kind = selectedRecommendation.alert_key ? cost.learned[selectedRecommendation.alert_key] : undefined
 
                         if (kind) {
@@ -4764,6 +4836,7 @@ export function DashboardView({
                     <DispatchPanel
                       taskKey={actionKey}
                       ranked={rankForDispatch(contractors, row?.contractor_ids ?? [])}
+                      loading={!contractorsLoaded}
                       onDispatch={(personId) => dispatchTo(actionKey, selectedRecommendation, personId)}
                     />
                   )

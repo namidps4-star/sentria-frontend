@@ -31,11 +31,14 @@ const SHOWN = 3
 export function DispatchPanel({
   taskKey,
   ranked,
+  loading = false,
   onDispatch,
 }: {
   taskKey: string
   /** Best first, already without anyone on the task or unavailable. */
   ranked: Contractor[]
+  /** The people are still on their way: say so, never "nobody free". */
+  loading?: boolean
   /** Puts the person on the task and moves it on; true when it was saved. */
   onDispatch: (personId: string) => Promise<boolean>
 }) {
@@ -87,7 +90,11 @@ export function DispatchPanel({
         {tx("Envoyer quelqu'un", "Send someone")}
       </h4>
 
-      {ranked.length === 0 ? (
+      {loading && ranked.length === 0 ? (
+        <p data-dispatch-loading="" className="text-xs leading-5 text-muted-foreground">
+          {tx("Chargement des intervenants…", "Loading people…")}
+        </p>
+      ) : ranked.length === 0 ? (
         <p data-dispatch-empty="" className="text-xs leading-5 text-muted-foreground">
           {tx(
             "Personne de libre à envoyer. Ajoutez des intervenants ou changez leur disponibilité.",

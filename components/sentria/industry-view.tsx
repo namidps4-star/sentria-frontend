@@ -1,7 +1,7 @@
 "use client"
 
 import { AlertIcon } from "./alert-icon"
-import { SeverityTag, StatusTag, ValueTag } from "./status-tag"
+import { LossTag, SeverityTag, StatusTag, ValueTag } from "./status-tag"
 import type { AlertParams } from "@/lib/value-at-risk"
 import {
   Cog,
@@ -188,6 +188,7 @@ function AlertRow({
 
           <SeverityTag severity={alert.severity} tx={tx} size="xs" />
           <ValueTag params={alert.params} tx={tx} size="xs" />
+          <LossTag params={alert.params} tx={tx} size="xs" />
         </div>
 
         <p className="mt-1 truncate text-xs text-muted-foreground">
@@ -225,8 +226,10 @@ export function IndustryMachinesView({ alerts }: { alerts: Alert[] }) {
   }
 
   const critical = relevant.filter((a) => a.severity === "CRITICAL")
-  // No money figure: there is no downtime cost rate to base one on, and a
-  // flat 2 800 € per alert showed euros to every account (B-05, B-23).
+  // No total here: nobody knows how long a machine stays down, and a flat
+  // 2 800 € per alert showed euros to every account (B-05, B-23). Each alert
+  // row shows an hourly loss only when the file gave units per hour and a
+  // value per unit (LossTag, I-COST).
   const warnings = relevant.length - critical.length
 
   return (
