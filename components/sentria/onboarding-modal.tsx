@@ -544,7 +544,7 @@ export function OnboardingView({ onComplete }: { onComplete?: () => void }) {
                         disabled
                           ? "cursor-not-allowed border-border bg-background opacity-60"
                           : active
-                            ? "border-foreground bg-foreground text-background"
+                            ? "border-accent bg-accent/10"
                             : "border-border hover:bg-muted"
                       )}
                     >
@@ -556,10 +556,14 @@ export function OnboardingView({ onComplete }: { onComplete?: () => void }) {
 
                       <div className="flex w-full items-center justify-between">
                         <Icon className="h-5 w-5" />
-                        {!disabled && active && <Check className="h-4 w-4" />}
+                        {!disabled && active && (
+                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-accent text-accent-foreground">
+                            <Check className="h-3 w-3" strokeWidth={3} />
+                          </span>
+                        )}
                       </div>
                       <span className="mt-2 text-sm font-semibold">{item.label}</span>
-                      <span className={cn("text-xs leading-5", active && !disabled ? "text-background/70" : "text-muted-foreground")}>
+                      <span className="text-xs leading-5 text-muted-foreground">
                         {item.description}
                       </span>
                     </button>
