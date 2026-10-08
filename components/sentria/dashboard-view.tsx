@@ -97,6 +97,7 @@ import {
 } from "@/lib/activities"
 import { useCompanyIdentity } from "@/lib/company"
 import { accountCurrencyParam, formatAmount } from "@/lib/locale"
+import { valueAtRisk } from "@/lib/value-at-risk"
 import {
   DEPARTMENTS_KEY,
   checkPlan,
@@ -4593,7 +4594,55 @@ export function DashboardView({
                       )}
                     </p>
 
-                    <p className="mt-1.5 text-sm leading-6 text-sidebar-foreground/75">
+                    {/* The amount the alert itself carries (F-MONEY), shown
+                        big with how it was worked out. An alert with no
+                        amount shows nothing here, never a zero. */}
+                    {(() => {
+                      const source =
+                        alerts.find(
+                          (a) =>
+                            a.equipment === selectedRecommendation.equipment &&
+                            a.date === selectedRecommendation.date
+                        ) ??
+                        alerts.find(
+                          (a) =>
+                            a.equipment === selectedRecommendation.equipment &&
+                            a.alert_key === selectedRecommendation.alert_key
+                        )
+                      const risk = valueAtRisk(source?.params)
+
+                      if (!risk) return null
+
+                      return (
+                        <div data-cost-ignored="" className="mt-2">
+                          <div className="flex flex-wrap items-end gap-x-3 gap-y-0.5">
+                            <span className="font-heading text-4xl font-bold leading-none tabular-nums text-accent">
+                              {risk.estimate ? "≈ " : ""}
+                              {formatAmount(risk.value, risk.currency, tx)}
+                            </span>
+                            <span className="pb-0.5 text-xs text-sidebar-foreground/60">
+                              {risk.estimate
+                                ? tx("de ventes perdues en attendant la livraison", "of sales lost while waiting for the delivery")
+                                : tx("de stock en jeu", "of stock at stake")}
+                            </span>
+                          </div>
+
+                          <p className="mt-1.5 text-[11px] leading-4 text-sidebar-foreground/60">
+                            {risk.estimate
+                              ? tx(
+                                  "Estimation : (ventes par jour × jours de livraison − stock) × coût unitaire, d'après votre fichier.",
+                                  "Estimate: (daily sales × delivery days − stock) × unit cost, from your file."
+                                )
+                              : tx(
+                                  "Stock en main × coût unitaire, d'après votre fichier.",
+                                  "Stock on hand × unit cost, from your file."
+                                )}
+                          </p>
+                        </div>
+                      )
+                    })()}
+
+                    <p className="mt-3 text-sm leading-6 text-sidebar-foreground/75">
                       {getRecommendationContext(
                         selectedRecommendation,
                         tx
