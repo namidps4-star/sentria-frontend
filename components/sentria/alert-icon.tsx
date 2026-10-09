@@ -14,6 +14,11 @@ import { cn } from "@/lib/utils"
 
 type IconData = Record<string, { viewBox: string; body: string }>
 
+/** After the dashboard's entrance (about 1.5 s) has finished. */
+const ICON_DELAY_MS = 2000
+/** Icons already in memory: shown as soon as the entrance is over. */
+const ICON_REVISIT_DELAY_MS = 1200
+
 let loaded: IconData | null = null
 let loading: Promise<IconData> | null = null
 
@@ -35,10 +40,20 @@ export function AlertIcon({
   }
   className?: string
 }) {
-  const [data, setData] = useState<IconData | null>(loaded)
+  const [data, setData] = useState<IconData | null>(null)
 
+  /* Not on mount: the icons arrive after the dashboard's entrance has played.
+     Drawing a dozen 3D icons while the blocks are still rising costs frames
+     (dashmotion times the entrance); the empty chip holds the row's size, so
+     nothing moves when they appear. */
   useEffect(() => {
-    if (!data) void loadIcons().then(setData)
+    if (data) return
+
+    const timer = window.setTimeout(() => {
+      void loadIcons().then(setData)
+    }, loaded ? ICON_REVISIT_DELAY_MS : ICON_DELAY_MS)
+
+    return () => window.clearTimeout(timer)
   }, [data])
 
   const icon = data?.[alertIconName(alert)]
