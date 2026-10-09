@@ -6,6 +6,7 @@
  * product. It lists the wholesalers in the order the pharmacy prefers them
  * and shows, for each, when an order placed now would arrive. */
 
+import { requestAccountSave } from "@/lib/account"
 import { TIMEZONES, readTimezoneId } from "@/lib/company"
 import { asRecord, type AlertParams } from "@/lib/value-at-risk"
 
@@ -105,6 +106,7 @@ export function readWholesalers(): Wholesaler[] {
 export function writeWholesalers(list: Wholesaler[]) {
   try {
     localStorage.setItem(WHOLESALERS_KEY, JSON.stringify(list.slice(0, MAX_WHOLESALERS)))
+    requestAccountSave()
   } catch {
     /* storage full or blocked: the page keeps what it shows */
   }

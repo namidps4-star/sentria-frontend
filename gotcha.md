@@ -36,7 +36,8 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 
 ## Settings follow the account only if listed
 **Reality:** `lib/account.ts` `ACCOUNT_KEYS` are synced to `accounts.profile` (polled every 2 s). Other `sentria_*` localStorage keys stay in the browser.
-**Rule:** New setting that must follow the user: add its key there.
+**A view that saves an account value calls `requestAccountSave()` (`lib/account.ts`).** It saves at once and marks `sentria_account_dirty` until the server has it. Without it, the value waits for the next 2 second look, and a reload in that gap loaded the saved account over it: the wholesalers list vanished that way. While the mark is set, a page load keeps this browser's values and sends them. The mark is also why the first look after a load sends everything when it is set.
+**Rule:** New setting that must follow the user: add its key there, and call `requestAccountSave()` after writing it. `tests/e2e/accountsync.js` guards this.
 
 ## Plan and admin flags in localStorage are UI-only
 **Reality:** `sentria_plan`, `sentria_trial_ends_at`, `sentria_is_admin` only drive the UI. The server enforces plan on `/upload`, admin on `/admin`, `/ask` limits. Site limits (`maxSitesFor`) are currently UI-only.

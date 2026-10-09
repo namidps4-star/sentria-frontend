@@ -50,10 +50,30 @@ const LOCAL_ONLY_USER_KEYS = [
   PLAN_KEY,
   TRIAL_KEY,
   ADMIN_KEY,
+  "sentria_account_dirty",
 ]
 
 /** Whose values localStorage holds. */
 export const ACCOUNT_OWNER_KEY = "sentria_account_owner"
+
+/** "1" while a change made by a view has not reached the account yet. A page
+ *  that loads while it is set keeps this browser's values instead of the
+ *  saved ones, so a reload a moment after an edit does not undo it. */
+export const ACCOUNT_DIRTY_KEY = "sentria_account_dirty"
+
+/** Sent by a view that has just written an account value, so the save does
+ *  not wait for the next 2 second look. */
+export const ACCOUNT_CHANGED_EVENT = "sentria-account-changed"
+
+/** Say that an account value has just changed in localStorage. */
+export function requestAccountSave() {
+  try {
+    localStorage.setItem(ACCOUNT_DIRTY_KEY, "1")
+  } catch {
+    /* storage blocked: the 2 second look still tries */
+  }
+  window.dispatchEvent(new Event(ACCOUNT_CHANGED_EVENT))
+}
 
 /** Kept after sign-out: the sign-in screen stays in the user's language. */
 const KEPT_AFTER_SIGN_OUT = new Set<string>(["sentria_language"])
@@ -174,6 +194,10 @@ export async function loadAccount(
   } else if (!saved.sentria_onboarded && local.sentria_onboarded) {
     // This user's own setup that hadn't reached the server yet: keep it,
     // the sync sends it.
+  } else if (localStorage.getItem(ACCOUNT_DIRTY_KEY) === "1") {
+    // A change this browser made a moment ago and has not sent: keep it, the
+    // sync sends it. Without this, a reload before the save reached the
+    // server would put the old values back.
   } else {
     // Same user: the saved account wins (another device may have changed
     // it). Their browser-only values, like the bell's read state, stay.
@@ -216,7 +240,9 @@ export async function loadAccount(
  *  than asking each of them to save. Returns stop(), which also sends
  *  what hasn't been sent yet. */
 export function syncAccount(client: SupabaseClient, userId: string) {
-  let sent = JSON.stringify(readProfile())
+  // What the account is known to hold. A change still marked as unsent at
+  // start-up is not known to be there, so the first look sends it.
+  let sent = localStorage.getItem(ACCOUNT_DIRTY_KEY) === "1" ? "" : JSON.stringify(readProfile())
   let retryAt = 0
   let inFlight: Promise<void> | null = null
 
@@ -239,6 +265,8 @@ export function syncAccount(client: SupabaseClient, userId: string) {
         if (error) throw error
 
         sent = snapshot
+        // Nothing changed while it was in flight: the account is up to date.
+        if (JSON.stringify(readProfile()) === snapshot) localStorage.removeItem(ACCOUNT_DIRTY_KEY)
       } catch (error) {
         console.error("The account could not be saved:", error)
         retryAt = Date.now() + 30_000
@@ -258,12 +286,26 @@ export function syncAccount(client: SupabaseClient, userId: string) {
     if (document.visibilityState === "hidden") void send()
   }
 
+  // A view just wrote a value: save now, and once more if it changed again
+  // while the first save was on its way.
+  const flush = () => void send()
+
+  const onChanged = () => {
+    retryAt = 0
+    const first = send()
+    void first.then(() => send())
+  }
+
   const timer = window.setInterval(tick, 2000)
   document.addEventListener("visibilitychange", onHide)
+  window.addEventListener("pagehide", flush)
+  window.addEventListener(ACCOUNT_CHANGED_EVENT, onChanged)
 
   return async function stop() {
     window.clearInterval(timer)
     document.removeEventListener("visibilitychange", onHide)
+    window.removeEventListener("pagehide", flush)
+    window.removeEventListener(ACCOUNT_CHANGED_EVENT, onChanged)
     retryAt = 0
     await send()
   }
