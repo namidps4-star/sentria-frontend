@@ -109,6 +109,7 @@ export const ICONS = {
   TrendingUp: "solar:graph-up-linear",
   TriangleAlert: "solar:danger-triangle-linear",
   Truck: "tabler:truck",
+  GripVertical: "tabler:grip-vertical",
   Upload: "solar:upload-linear",
   User: "solar:user-linear",
   UserPlus: "solar:user-plus-linear",

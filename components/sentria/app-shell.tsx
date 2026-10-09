@@ -24,6 +24,7 @@ import { SettingsView } from "./settings-view"
 import { OnboardingView } from "./onboarding-modal"
 import { ReportView } from "./report-view"
 import { ContractorsView } from "./contractors-view"
+import { WholesalersView } from "./wholesalers-view"
 import { TrackingView } from "./tracking-view"
 import { AdminView } from "./admin-view"
 import { UploadPanelHost } from "./upload-panel-host"
@@ -83,6 +84,10 @@ const META: Record<ViewKey, { title: MessageKey; subtitle: MessageKey }> = {
   contractors: {
     title: "view.contractors.title",
     subtitle: "view.contractors.subtitle",
+  },
+  wholesalers: {
+    title: "view.wholesalers.title",
+    subtitle: "view.wholesalers.subtitle",
   },
   admin: {
     title: "view.admin.title",
@@ -369,6 +374,7 @@ export function AppShell({
             {view === "contractors" && (
               <ContractorsView onNavigate={setView} />
             )}
+            {view === "wholesalers" && <WholesalersView />}
             {view === "admin" && isAdmin && <AdminView />}
           </main>
         </div>

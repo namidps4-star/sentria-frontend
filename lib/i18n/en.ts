@@ -42,6 +42,7 @@ export const en: Record<keyof typeof fr, string> = {
   /* Not "Contractors" alone: the list holds anyone who can be sent out,
      staff included. "Field team" says that and stays short in a rail. */
   "nav.contractors": "Field team",
+  "nav.wholesalers": "Wholesalers",
   "nav.tracking": "Tracking",
   "nav.ask": "Ask SentrIA",
   "nav.report": "Report",
@@ -101,6 +102,8 @@ export const en: Record<keyof typeof fr, string> = {
 
   "view.contractors.title": "Field team",
   "view.contractors.subtitle": "Who is available, and who is on what",
+  "view.wholesalers.title": "Wholesalers",
+  "view.wholesalers.subtitle": "Who delivers to you, and how fast",
 
   /* ---------------------------------------------------------------- */
   /*  Buttons and states                                               */

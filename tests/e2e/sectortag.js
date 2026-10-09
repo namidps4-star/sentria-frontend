@@ -9,6 +9,7 @@ let fails = 0;
 const pass = (ok, l) => { fails += !ok; console.log(`   ${ok ? 'PASS' : 'FAIL'} ${l}`); };
 
 // Sidebar position, so the French labels do not matter.
+// A health account has one more row in the sidebar, Wholesalers, after Field team.
 const PAGES = [['Dashboard', 0], ['Tracking', 1], ['Calendar', 2], ['Field team', 4], ['Ask SentrIA', 5], ['Profile', 8]];
 const REC = { equipment: 'Doliprane', sector: 'health', business_type: 'pharmacie', severity: 'CRITICAL', date: new Date().toISOString(), message: 'MSG Doliprane', alert_key: 'health.stock.low', recommended_action: 'ACT Doliprane', action_category: 'stock', confidence: 0.8, risk_score: null };
 const tag = p => p.locator('[data-testid="sector-tag"]').locator('visible=true');
@@ -30,11 +31,13 @@ const oldBadges = p => p.evaluate(() => [...document.querySelectorAll('span.roun
       { sentria_onboarded: 'true', sentria_company_name: 'Acme', sentria_sector: sectors[0] || '', sentria_sectors: JSON.stringify(sectors), sentria_language: lang, sentria_theme: theme });
     await signedIn(p, 'u-1', 'ama@acme.test', { plan });
     await p.goto(APP_URL); await p.waitForTimeout(2000);
+    p._sectors = sectors;
     await go(p, page, vw);
     return { p, ctx };
   };
   const go = async (p, name, vw = 1440) => {
-    const index = PAGES.find(x => x[0] === name)[1];
+    const base = PAGES.find(x => x[0] === name)[1];
+    const index = base + (base > 4 && (p._sectors || []).includes('health') ? 1 : 0);
     if (vw < 768) { await p.getByRole('button', { name: /open.*(menu|navigation)|ouvrir.*(menu|navigation)/i }).first().click().catch(() => {}); await p.waitForTimeout(300); }
     await p.locator('aside nav button').locator('visible=true').nth(index).click();
     await p.waitForTimeout(900);

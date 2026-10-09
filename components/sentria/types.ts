@@ -9,4 +9,5 @@ export type ViewKey =
   | "settings"
   | "report"
   | "contractors"
+  | "wholesalers"
   | "admin"
