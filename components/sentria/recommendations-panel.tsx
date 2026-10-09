@@ -1,6 +1,8 @@
 "use client"
 
 import { SeverityTag, StatusTag } from "./status-tag"
+import { WholesalerAdvice } from "./wholesaler-advice"
+import type { AlertParams } from "@/lib/value-at-risk"
 import { useState } from "react"
 import {
   Shield,
@@ -32,6 +34,8 @@ type Alert = {
   severity: "WARNING" | "CRITICAL" | string
   date: string
   sector?: string | null
+  alert_key?: string | null
+  params?: AlertParams
 }
 
 type Recommendation = {
@@ -270,6 +274,14 @@ export function RecommendationsPanel({
   unmeasured = false,
 }: RecommendationsPanelProps) {
   const tx = useTx()
+
+  /** The params of the alert a recommendation came from: what the delivery
+   *  advice reads (days of stock left). */
+  const paramsOf = (rec: Recommendation) =>
+    (
+      alerts.find((a) => a.equipment === rec.equipment && a.date === rec.date) ??
+      alerts.find((a) => a.equipment === rec.equipment && a.alert_key === rec.alert_key)
+    )?.params
 
   /** Resolve a module-level pair. */
   const px = (text: Localized | undefined) => resolve(text, tx)
@@ -532,6 +544,14 @@ export function RecommendationsPanel({
               <p className="mt-1 text-sm leading-5 text-foreground/90">
                 {top.recommended_action}
               </p>
+
+              <WholesalerAdvice
+                variant="line"
+                tone="light"
+                alertKey={top.alert_key}
+                params={paramsOf(top)}
+                className="mt-2 text-foreground"
+              />
             </div>
           </div>
 
@@ -637,6 +657,14 @@ export function RecommendationsPanel({
                   <p className="mt-1 line-clamp-2 text-xs leading-4 text-muted-foreground">
                     {rec.recommended_action}
                   </p>
+
+                  <WholesalerAdvice
+                    variant="line"
+                    tone="light"
+                    alertKey={rec.alert_key}
+                    params={paramsOf(rec)}
+                    className="mt-1.5 text-foreground/80"
+                  />
 
                   {recurrence > 1 && (
                     <div className="mt-2 inline-flex w-fit items-center gap-1 rounded-full bg-destructive/10 px-1.5 py-0.5 text-[9px] font-semibold text-destructive">

@@ -4116,6 +4116,14 @@ export function DashboardView({
                           )}
                         >
                           {alert.message}
+
+                          <WholesalerAdvice
+                            variant="line"
+                            tone={isSelected ? "dark" : "light"}
+                            alertKey={alert.alert_key}
+                            params={alert.params}
+                            className={cn("mt-1 whitespace-normal", isSelected ? "text-background/90" : "text-foreground/80")}
+                          />
                         </td>
 
                         <td
