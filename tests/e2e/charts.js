@@ -319,7 +319,7 @@ const menu = p => p.getByRole('dialog', { name: 'Chart options' });
   {
     const old = fixture(60, s => (s === 'energy' ? '$' : '€')).filter(a => new Date(a.date) < at(40));
     const { ctx, p, errs } = await open(b, { alerts: old });
-    pass(await p.locator('[data-chart="line"]').getByText('No alerts in this period.').isVisible() && await lines(p).count() === 0, 'only old alerts, 7 days: an honest empty note, not a flat line');
+    pass(!(await p.locator('[data-chart="line"]').getByText('No alerts in this period.').isVisible()) && await lines(p).count() > 0, 'only old alerts: the chart widens to the range that has them, no empty note');
     await menuBtn(p).click(); await p.waitForTimeout(250);
     const value = menu(p).locator('input[data-metric="value"]');
     pass(await value.isDisabled() && await menu(p).getByText('Mixed currencies', { exact: false }).isVisible(), 'two currencies: value at risk is off, and says why');

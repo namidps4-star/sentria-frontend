@@ -6,7 +6,7 @@ const path = require('path');
 
 const SUITES = ['auth', 'usernames', 'dash2', 'ask', 'showcase', 'onb7', 'admin', 'plans',
   'imports', 'verify', 'b25', 'p2', 'track', 'slide', 'allviews', 'sidebarfit',
-  'sheettabs', 'userlogin', 'screens', 'logicompact', 'indtiles', 'teach', 'weekrep', 'money', 'suppress', 'sitegate', 'conf', 'ptier', 'tiertag', 'signout', 'thresholds', 'brand', 'motion', 'palette', 'healthtrack', 'smstext', 'dispatch', 'costpopup', 'amountgate', 'costsetup', 'costrate', 'roles', 'charts', 'vizlimits', 'phone', 'stepslide', 'fresh', 'capabilities', 'sectortag', 'shake', 'launchcountries', 'canvasbg', 'cdelete', 'vizpolish', 'donut', 'dashmotion', 'signupemail', 'support', 'pagemotion', 'notmeasured'].concat(['alerticons', 'wholesalers', 'alertadvice', 'accountsync']);
+  'sheettabs', 'userlogin', 'screens', 'logicompact', 'indtiles', 'teach', 'weekrep', 'money', 'suppress', 'sitegate', 'conf', 'ptier', 'tiertag', 'signout', 'thresholds', 'brand', 'motion', 'palette', 'healthtrack', 'smstext', 'dispatch', 'costpopup', 'amountgate', 'costsetup', 'costrate', 'roles', 'charts', 'vizlimits', 'phone', 'stepslide', 'fresh', 'capabilities', 'sectortag', 'shake', 'launchcountries', 'canvasbg', 'cdelete', 'vizpolish', 'donut', 'dashmotion', 'signupemail', 'support', 'pagemotion', 'notmeasured'].concat(['alerticons', 'wholesalers', 'alertadvice', 'accountsync', 'chartrange']);
 const only = process.argv.slice(2);
 const list = only.length ? SUITES.filter(s => only.includes(s)) : SUITES;
 

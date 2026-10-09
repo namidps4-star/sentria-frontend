@@ -43,6 +43,7 @@ import {
   type ValueMetric,
   type ChartMetric,
   type ChartRange,
+  CHART_RANGES,
 } from "@/lib/chart-series"
 import { cn } from "@/lib/utils"
 import { usePresence } from "@/lib/use-presence"
@@ -1086,7 +1087,8 @@ export function DashboardView({
   const freshness = useFreshness()
   const canSeeAmounts = useCanSeeAmounts()
   const [chartMetric, setChartMetric] = useState<ChartMetric>("count")
-  const [chartRange, setChartRange] = useState<ChartRange>(7)
+  // null: the shortest range that has alerts in it. Picked in the menu: that range, even if empty.
+  const [chartRangePick, setChartRangePick] = useState<ChartRange | null>(null)
 
   const [uploadActivity, setUploadActivity] = useState<string | null>(null)
 
@@ -2214,6 +2216,13 @@ export function DashboardView({
     key === OTHER_KEY
       ? tx("Autres", "Other")
       : sectorName(key) ?? key
+  const chartRange: ChartRange =
+    chartRangePick ??
+    CHART_RANGES.find((days) =>
+      bucketAlerts(scopedAlerts, { keys: chartKeys, days, metric: "count" }).series.some((row) => row.total > 0)
+    ) ??
+    7
+  const chartHeading = chartTitle.replace(/\b7 (jours|days)/, `${chartRange} $1`)
   const chartBucketed = bucketAlerts(scopedAlerts, {
     keys: chartKeys,
     days: chartRange,
@@ -2221,7 +2230,7 @@ export function DashboardView({
   })
   const chartIsDefault =
     chartMetric === "count" &&
-    chartRange === 7 &&
+    chartRangePick === null &&
     (chartPick === null || chartPick.pill !== filterSector)
 
   // The two charts that need a limit: a reading against the limit it crossed,
@@ -3619,7 +3628,7 @@ export function DashboardView({
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-heading text-lg font-bold">
-                {chartTitle}
+                {chartHeading}
               </h3>
 
               <p className="text-sm text-muted-foreground">
@@ -3639,11 +3648,11 @@ export function DashboardView({
               onMetric={setChartMetric}
               valueState={chartValue}
               range={chartRange}
-              onRange={setChartRange}
+              onRange={setChartRangePick}
               onReset={() => {
                 setChartPick(null)
                 setChartMetric("count")
-                setChartRange(7)
+                setChartRangePick(null)
               }}
               isDefault={chartIsDefault}
             />
@@ -3668,7 +3677,7 @@ export function DashboardView({
                 ? `${approx ? "≈ " : ""}${formatAmount(value, chartValue.symbol, tx)}`
                 : String(value)
             }
-            summary={`${chartTitle}: ${tx(
+            summary={`${chartHeading}: ${tx(
               `${chartRange} derniers jours`,
               `last ${chartRange} days`
             )}`}
