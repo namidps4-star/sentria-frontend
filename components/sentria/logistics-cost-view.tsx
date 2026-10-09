@@ -385,7 +385,7 @@ export function LogisticsCostView({
 
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[42rem] text-left text-sm">
-            <thead>
+            <thead className="table-head">
               <tr className="border-b border-border text-[11px] uppercase tracking-wide text-muted-foreground">
                 <th scope="col" className="py-2 pr-3 font-semibold">
                   {tx("Équipement", "Asset")}

@@ -112,6 +112,11 @@
      21 hover:bg-accent call sites rely on staying quiet. */
   --brand: oklch(0.88 0.205 124);
   --brand-foreground: oklch(0.22 0.04 124);
+  /* Table header band: soft lime with a lime line in light, the full
+     lime bar in dark. Used through .table-head on a <thead>. */
+  --table-head-bg: color-mix(in oklab, var(--brand) 22%, var(--card));
+  --table-head-fg: var(--foreground);
+  --table-head-line: var(--brand);
   /* Deep green: the palette's second brand colour, the same in every
      theme. Used on the pricing page's most complete plan and, in dark
      mode, for the sidebar and the sign-in sector panel. */
@@ -171,6 +176,9 @@
      against a near-black surface. */
   --brand: oklch(0.85 0.195 124);
   --brand-foreground: oklch(0.2 0.04 124);
+  --table-head-bg: var(--brand);
+  --table-head-fg: var(--brand-foreground);
+  --table-head-line: var(--brand);
 
   /* Was oklch(0.556 0 0), a mid grey, which left every focus
      ring in the app almost invisible on a dark background. */
@@ -228,6 +236,9 @@
        against a near-black surface. */
     --brand: oklch(0.85 0.195 124);
     --brand-foreground: oklch(0.2 0.04 124);
+    --table-head-bg: var(--brand);
+    --table-head-fg: var(--brand-foreground);
+    --table-head-line: var(--brand);
 
     /* Was oklch(0.556 0 0), a mid grey, which left every focus
        ring in the app almost invisible on a dark background. */
@@ -531,3 +542,13 @@
    draws it; Safari and Firefox keep the plain round corner. Pair it with a
    border-radius, never use it alone. */
 .squircle { corner-shape: squircle; }
+
+/* Header row of a data table. Unlayered on purpose: it must beat the
+   utility classes (bg-card, text-muted-foreground) already on each head. */
+.table-head { background: var(--table-head-bg); }
+.table-head tr { border-bottom-color: var(--table-head-line); }
+.table-head th {
+  color: var(--table-head-fg);
+  background: var(--table-head-bg);
+  border-bottom: 2px solid var(--table-head-line);
+}
