@@ -7,6 +7,7 @@
  * and shows, for each, when an order placed now would arrive. */
 
 import { TIMEZONES, readTimezoneId } from "@/lib/company"
+import { asRecord, type AlertParams } from "@/lib/value-at-risk"
 
 export const WHOLESALERS_KEY = "sentria_wholesalers"
 
@@ -227,4 +228,22 @@ export function moveItem<T>(list: T[], from: number, to: number): T[] {
   next.splice(to, 0, item)
 
   return next
+}
+
+/* ------------------------- the alert's side of it ------------------------ */
+
+/** The stock alerts a pharmacy's wholesalers can answer. */
+const STOCK_ALERT = /^health\.(stock|reorder)\./
+
+/** Whole days of stock left, from the number the API puts on a pharmacy stock
+ *  alert (`stock_days_left`: stock over daily sales, rounded down). Null for
+ *  any other alert and for an alert saved before the API sent it: the app then
+ *  says nothing about delivery, never a guess. Not `days_left`: on an expiry
+ *  alert that is the days until the expiry date. */
+export function stockDaysFromAlert(alertKey: string | null | undefined, params: AlertParams): number | null {
+  if (!alertKey || !STOCK_ALERT.test(alertKey)) return null
+  const value = asRecord(params)?.stock_days_left
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return null
+
+  return Math.floor(value)
 }

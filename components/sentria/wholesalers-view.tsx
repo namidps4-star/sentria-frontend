@@ -23,6 +23,7 @@ import {
   type Wholesaler,
 } from "@/lib/wholesalers"
 import { cn } from "@/lib/utils"
+import { DANGER, adviceLines, daysWord, formatTime, leadLabel, weekdayName, when } from "./wholesaler-text"
 
 /* The wholesalers a pharmacy orders from, in order of preference, and a panel
  * that shows who would arrive in time for a product that is running out.
@@ -32,42 +33,6 @@ import { cn } from "@/lib/utils"
  * answer. See lib/wholesalers.ts for the arithmetic. */
 
 /* ------------------------------- formatting ------------------------------ */
-
-function formatTime(minutes: number, lang: string): string {
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
-  const mm = String(m).padStart(2, "0")
-
-  if (lang === "fr") return `${String(h).padStart(2, "0")}:${mm}`
-
-  return `${h % 12 === 0 ? 12 : h % 12}:${mm} ${h < 12 ? "am" : "pm"}`
-}
-
-/** A weekday name, Monday first (0). */
-function weekdayName(index: number, lang: string, style: "long" | "short" | "narrow"): string {
-  // 1 January 2024 is a Monday.
-  return new Intl.DateTimeFormat(lang, { weekday: style }).format(new Date(2024, 0, 1 + index))
-}
-
-function leadLabel(days: number, tx: Tx): string {
-  if (days === 0) return tx("Le jour même", "Same day")
-  if (days === 1) return tx("Le lendemain", "Next day")
-
-  return tx(`Dans ${days} jours`, `In ${days} days`)
-}
-
-function daysWord(n: number, tx: Tx): string {
-  return n === 1 ? tx("1 jour", "1 day") : tx(`${n} jours`, `${n} days`)
-}
-
-/** "today", "tomorrow", a weekday, or "in 9 days". */
-function when(arrives: number, today: Moment, lang: string, tx: Tx): string {
-  if (arrives === 0) return tx("aujourd'hui", "today")
-  if (arrives === 1) return tx("demain", "tomorrow")
-  if (arrives < LADDER_DAYS) return weekdayName((today.weekday + arrives) % 7, lang, "long")
-
-  return tx(`dans ${arrives} jours`, `in ${arrives} days`)
-}
 
 function toHHMM(minutes: number): string {
   return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`
@@ -387,8 +352,6 @@ function Row({
 
 /* ---------------------------- the test panel ----------------------------- */
 
-const DANGER = "#ff8a8a"
-
 function Cell({ red, children }: { red: boolean; children?: React.ReactNode }) {
   return (
     <div
@@ -421,7 +384,6 @@ function TestPanel({
   const lang = tx("fr", "en")
   const readings = useMemo(() => readLadder(list, orderAt, stockDays), [list, orderAt, stockDays])
   const advice = useMemo(() => advise(readings), [readings])
-  const name = (r: Reading) => r.wholesaler.name.trim() || tx(`Grossiste ${list.indexOf(r.wholesaler) + 1}`, `Wholesaler ${list.indexOf(r.wholesaler) + 1}`)
   const columns = Array.from({ length: LADDER_DAYS }, (_, i) => i)
 
   const arrivalText = (r: Reading) =>
@@ -431,65 +393,7 @@ function TestPanel({
         ? tx(`Livré ${when(r.arrives, today, lang, tx)}`, `Arrives ${when(r.arrives, today, lang, tx)}`)
         : tx(`Livré ${when(r.arrives, today, lang, tx)}, trop tard`, `Arrives ${when(r.arrives, today, lang, tx)}, too late`)
 
-  let message: React.ReactNode = null
-  let fallback: React.ReactNode = null
-  let late = false
-
-  if (advice.kind === "order") {
-    const { pick, fallback: next } = advice
-    const day = when(pick.arrives as number, today, lang, tx)
-    const early = pick.wholesaler.cutoff !== null && pick.beforeCutoff && pick.arrives === pick.wholesaler.before
-    const timing = early
-      ? tx(`avant ${formatTime(pick.wholesaler.cutoff as number, lang)}`, `before ${formatTime(pick.wholesaler.cutoff as number, lang)}`)
-      : tx("maintenant", "now")
-
-    message = tx(
-      `Commandez chez ${name(pick)} ${timing}. Livraison ${day}.`,
-      `Order from ${name(pick)} ${timing}. It arrives ${day}.`
-    )
-
-    fallback = next ? (
-      <>
-        <b className="text-sidebar-foreground">{tx(`Si ${name(pick)} n'en a pas :`, `If ${name(pick)} has none:`)}</b>{" "}
-        {next.arrives === null
-          ? tx(`${name(next)} ne livre aucun jour.`, `${name(next)} never delivers.`)
-          : next.inTime
-            ? tx(
-                `${name(next)} livre ${when(next.arrives, today, lang, tx)}, à temps.`,
-                `${name(next)} arrives ${when(next.arrives, today, lang, tx)}, in time.`
-              )
-            : (
-              <>
-                {tx(
-                  `${name(next)} livre ${when(next.arrives, today, lang, tx)}. Vous seriez en rupture `,
-                  `${name(next)} arrives ${when(next.arrives, today, lang, tx)}. You would run out for `
-                )}
-                <b style={{ color: DANGER }}>{daysWord(next.gap, tx)}</b>.
-              </>
-            )}
-      </>
-    ) : (
-      <>
-        <b className="text-sidebar-foreground">{tx(`Si ${name(pick)} n'en a pas :`, `If ${name(pick)} has none:`)}</b>{" "}
-        {tx("aucun autre grossiste dans la liste.", "no other wholesaler on the list.")}
-      </>
-    )
-  } else if (advice.kind === "late") {
-    late = true
-    const f = advice.fastest
-    message = f
-      ? tx(
-          `Aucun grossiste n'arrive à temps. ${name(f)} est le plus rapide : ${when(f.arrives as number, today, lang, tx)}.`,
-          `No wholesaler arrives in time. ${name(f)} is the fastest: ${when(f.arrives as number, today, lang, tx)}.`
-        )
-      : tx("Aucun grossiste ne livre un jour que vous avez réglé.", "No wholesaler delivers on a day you set.")
-    fallback = f ? (
-      <>
-        {tx("Vous seriez en rupture ", "You would run out for ")}
-        <b style={{ color: DANGER }}>{daysWord(f.gap, tx)}</b>.
-      </>
-    ) : null
-  }
+  const { message, fallback, late, name } = adviceLines(list, readings, advice, today, lang, tx)
 
   return (
     <div

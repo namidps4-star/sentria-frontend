@@ -132,6 +132,7 @@ import {
 import { rankForDispatch } from "@/lib/dispatch"
 import { CostTap } from "./cost-tap"
 import { DispatchPanel } from "./dispatch-panel"
+import { WholesalerAdvice } from "./wholesaler-advice"
 import { SectorTag } from "./sector-tag"
 
 const SECTORS: { key: string; label: Localized }[] = [
@@ -4261,6 +4262,13 @@ export function DashboardView({
                 </p>
               </div>
 
+              <WholesalerAdvice
+                alertKey={expandedAlert.alert_key}
+                params={expandedAlert.params}
+                onSetup={onNavigate ? () => onNavigate("wholesalers") : undefined}
+                className="mt-3"
+              />
+
               <div className="mt-3 grid grid-cols-2 gap-2 rounded-2xl bg-white/[0.06] p-4 ring-1 ring-white/10">
                 <div>
                   <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
@@ -4608,6 +4616,20 @@ export function DashboardView({
                   {selectedRecommendation.recommended_action}
                 </p>
               </div>
+
+              <WholesalerAdvice
+                alertKey={selectedRecommendation.alert_key}
+                params={popupAlertFor(selectedRecommendation)?.params}
+                onSetup={
+                  onNavigate
+                    ? () => {
+                        closePopup()
+                        onNavigate("wholesalers")
+                      }
+                    : undefined
+                }
+                tone="light"
+              />
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-border bg-background p-4">
