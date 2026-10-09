@@ -6,6 +6,7 @@ import type { ViewKey } from "./types"
 import { StatusTag, type TagTone } from "./status-tag"
 import { SupportDialog } from "./support-dialog"
 import { useT, useTx, type MessageKey } from "@/lib/i18n"
+import { readSectors } from "@/lib/activities"
 import { PLAN_NAMES, PLAN_UPDATED_EVENT, readAccountPlan, type PlanId } from "@/lib/plans"
 import { usePresence } from "@/lib/use-presence"
 import { cn } from "@/lib/utils"
@@ -22,6 +23,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Bot,
+  Truck,
   UsersRound,
   LogOut,
   MessageSquare,
@@ -66,6 +68,8 @@ type SidebarItem = {
   label: MessageKey
   icon: React.ElementType
   green?: boolean
+  /** Shown only to accounts that selected this sector. */
+  sector?: string
 }
 
 const sections: {
@@ -99,6 +103,12 @@ const sections: {
         id: "contractors",
         label: "nav.contractors",
         icon: UsersRound,
+      },
+      {
+        id: "wholesalers",
+        label: "nav.wholesalers",
+        icon: Truck,
+        sector: "health",
       },
     ],
   },
@@ -205,8 +215,18 @@ export function Sidebar({
     (item) => item.id === active
   )
 
+  /* The sectors the account selected (read after mount: they live in
+     localStorage), again on each page change so a new choice shows up. */
+  const [sectors, setSectors] = useState<string[]>([])
+  useEffect(() => setSectors(readSectors()), [active])
+
+  const shown: typeof sections = sections.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => !item.sector || sectors.includes(item.sector) || item.id === active),
+  }))
+
   const visibleSections: typeof sections = isAdmin
-    ? sections.map((section) =>
+    ? shown.map((section) =>
         section.title === "sidebar.section.studio"
           ? {
               ...section,
@@ -217,7 +237,7 @@ export function Sidebar({
             }
           : section
       )
-    : sections
+    : shown
 
   return (
     <>
