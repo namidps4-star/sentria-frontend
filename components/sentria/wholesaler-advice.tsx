@@ -29,7 +29,6 @@ export function WholesalerAdvice({
   params,
   onSetup,
   tone = "dark",
-  variant = "card",
   className,
 }: {
   alertKey?: string | null
@@ -38,9 +37,6 @@ export function WholesalerAdvice({
   onSetup?: () => void
   /** The card it sits in: "dark" is the black detail card, "light" a white one. */
   tone?: "dark" | "light"
-  /** "line" is one short sentence for a list row: no card, no prompt to set
-   *  wholesalers up, nothing at all when there is nothing to say. */
-  variant?: "card" | "line"
   className?: string
 }) {
   const tx = useTx()
@@ -62,27 +58,6 @@ export function WholesalerAdvice({
   if (stockDays === null || list === null || now === null) return null
 
   const dark = tone === "dark"
-
-  if (variant === "line") {
-    if (list.length === 0) return null
-
-    const { message, late } = adviceLines(list, readings, advise(readings), now, lang, tx)
-
-    return (
-      <p
-        data-testid="alert-advice-line"
-        data-late={late ? "" : undefined}
-        className={cn(
-          "flex items-start gap-1.5 text-xs font-semibold leading-4",
-          late && (dark ? "text-[#ff8a8a]" : "text-destructive"),
-          className
-        )}
-      >
-        <Truck className="mt-px h-3 w-3 shrink-0" aria-hidden="true" />
-        <span>{message}</span>
-      </p>
-    )
-  }
 
   const frame = cn(
     "rounded-2xl px-4 py-3",

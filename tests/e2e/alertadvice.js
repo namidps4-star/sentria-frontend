@@ -38,14 +38,17 @@ const alertOf = (eq, key, params) => ({ id: eq, equipment: eq, sector: 'health',
 
   console.log('== with wholesalers: the alert detail');
   { const { p, ctx } = await open({ wholesalers: [W('a', 'Dakar Centre', 0), W('b', 'Thiès', 3)] });
-    pass(await p.getByTestId('alert-advice').count() === 1, 'a stock alert with days of stock left shows the advice');
-    const rowLine = p.locator('#alerts-table tbody tr').first().getByTestId('alert-advice-line');
-    pass(await rowLine.count() === 1 && /Order from Dakar Centre now\. It arrives today\./.test(await rowLine.innerText()), 'and the alerts list says it in the message itself, under the alert');
-    const panelLine = p.locator('[data-testid=alert-advice-line]').filter({ hasNot: p.locator('#alerts-table') });
-    pass(await p.locator('main').getByTestId('alert-advice-line').count() >= 2, 'and the priority card above the list says it too');
+    pass(await p.getByTestId('alert-advice').count() === 2, 'a stock alert with days of stock left shows the advice: in the priority card and in its opened detail');
+    const cell = await p.locator('#alerts-table tbody tr').first().locator('td').nth(1).innerText();
+    pass(cell.trim() === 'MSG Amoxicillin', `the alerts list keeps the alert's own message as it was (${JSON.stringify(cell.trim())})`);
+    pass(await p.locator('#alerts-table tbody').getByTestId('alert-advice').count() === 0, 'and carries no order text in its rows');
+    const card = p.locator('main').getByTestId('alert-advice');
+    pass(await card.count() === 2, 'the order advice has its own block in the priority card above the list, and in the opened alert');
     pass(await msg(p) === 'Order from Dakar Centre now. It arrives today.', `stock lasts 2 days: ${await msg(p)}`);
     pass((await fb(p)).includes(`Thiès arrives ${dayName(3)}. You would run out for 1 day.`), `and what a miss costs: ${await fb(p)}`);
-    pass(!/has the product|has it in stock/i.test(await p.getByTestId('alert-advice').innerText()), 'it never says a wholesaler has the product');
+    pass(!/has the product|has it in stock/i.test(await p.getByTestId('alert-advice').last().innerText()), 'it never says a wholesaler has the product');
+    await p.getByTestId('alert-advice').first().scrollIntoViewIfNeeded(); await p.waitForTimeout(300);
+    await p.screenshot({ path: 'alertadvice-priority-light.png' });
     await p.screenshot({ path: 'alertadvice-detail-light.png' });
     await p.locator('main').screenshot({ path: 'alertadvice-list-light.png' });
     pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
@@ -55,7 +58,7 @@ const alertOf = (eq, key, params) => ({ id: eq, equipment: eq, sector: 'health',
   { const { p, ctx } = await open({ params: [['stock', 20], ['stock_days_left', 1]], wholesalers: [W('a', 'Dakar Centre', 3), W('b', 'Thiès', 4)] });
     pass((await msg(p)).includes(`No wholesaler arrives in time. Dakar Centre is the fastest: ${dayName(3)}.`), `nobody in time: ${await msg(p)}`);
     pass((await fb(p)).includes('run out for 2 days'), `and the gap: ${await fb(p)}`);
-    pass(await p.getByTestId('alert-advice').getAttribute('data-late') !== null, 'the card is marked late');
+    pass(await p.getByTestId('alert-advice').first().getAttribute('data-late') !== null, 'the card is marked late');
     await ctx.close(); }
   { const { p, ctx } = await open({ params: [['stock', 20], ['stock_days_left', 5]], wholesalers: [W('a', 'Dakar Centre', 6), W('b', 'Thiès', 2)] });
     pass((await msg(p)).startsWith('Order from Thiès now. It arrives ' + dayName(2)), `the first wholesaler too slow, the second in time: ${await msg(p)}`);
@@ -71,10 +74,10 @@ const alertOf = (eq, key, params) => ({ id: eq, equipment: eq, sector: 'health',
 
   console.log('== no wholesaler yet');
   { const { p, ctx } = await open({});
-    pass(await p.getByTestId('alert-advice').count() === 0 && await p.getByTestId('alert-advice-setup').count() === 1, 'it offers to add wholesalers, and gives no delivery advice');
-    pass(await p.getByTestId('alert-advice-line').count() === 0, 'and the list rows stay quiet: no prompt on every row');
-    pass(/Add your wholesalers to know when to order/.test(await p.getByTestId('alert-advice-setup').innerText()), 'in plain words');
-    await p.getByRole('button', { name: 'Add my wholesalers' }).click(); await p.waitForTimeout(1000);
+    pass(await p.getByTestId('alert-advice').count() === 0 && await p.getByTestId('alert-advice-setup').count() === 2, 'it offers to add wholesalers, and gives no delivery advice');
+    pass(await p.locator('#alerts-table tbody').getByTestId('alert-advice-setup').count() === 0, 'and the list rows stay quiet: no prompt on every row');
+    pass(/Add your wholesalers to know when to order/.test(await p.getByTestId('alert-advice-setup').first().innerText()), 'in plain words');
+    await p.getByRole('button', { name: 'Add my wholesalers' }).first().click(); await p.waitForTimeout(1000);
     pass(await p.getByTestId('wholesalers-card').count() === 1, 'the button opens the Wholesalers page');
     await ctx.close(); }
   { const { p, ctx } = await open({ popup: true });
@@ -88,7 +91,7 @@ const alertOf = (eq, key, params) => ({ id: eq, equipment: eq, sector: 'health',
     await ctx.close(); }
   { const { p, ctx } = await open({ key: 'health.expiry.soon', params: [['days_left', 3]], wholesalers: [W('a', 'Dakar Centre', 0)] });
     pass(await p.getByTestId('alert-advice').count() === 0, 'an expiry alert (days_left is days to expiry) says nothing about delivery');
-    pass(await p.getByTestId('alert-advice-line').count() === 0, 'not in the list either');
+
     await ctx.close(); }
   { const { p, ctx } = await open({ params: [['stock_days_left', 'soon']], wholesalers: [W('a', 'Dakar Centre', 0)] });
     pass(await p.getByTestId('alert-advice').count() === 0, 'a figure that is not a number is ignored');
