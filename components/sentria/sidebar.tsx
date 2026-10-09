@@ -250,7 +250,7 @@ export function Sidebar({
           {/* LOGO */}
           <div
             className={[
-              "flex h-[76px] shrink-0 items-center",
+              "flex h-[76px] shrink-0 items-center [@media(max-height:700px)]:h-14",
               collapsed ? "justify-center px-2" : "px-4",
             ].join(" ")}
           >
@@ -295,32 +295,34 @@ export function Sidebar({
           </div>
 
           {/* NAVIGATION */}
-          {/* Scrolls on short screens so the sign-out button below always
-              fits, with no scrollbar: a classic one is a pale bar with
-              arrows on the dark sidebar. The wheel, touch and keys still
-              scroll it. Collapsed, it stays unclipped: its labels pop out
-              to the right. */}
+          {/* Every item stays on screen: on a short screen the rows, the
+              gaps and the section titles shrink to fit (see the
+              max-height rules below), so the list does not need to scroll.
+              If the screen is so short that even the smallest rows do not
+              fit, it still scrolls, with no scrollbar: a classic one is a
+              pale bar with arrows on the dark sidebar. Collapsed, it stays
+              unclipped: its labels pop out to the right. */}
           <nav
             className={[
-              "flex flex-1 flex-col px-3 py-3",
+              "flex flex-1 flex-col px-3 py-3 [@media(max-height:700px)]:py-1.5",
               collapsed
                 ? "overflow-visible"
                 : "min-h-0 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
             ].join(" ")}
           >
             {visibleSections.map((section, sectionIndex) => (
-              <div key={section.title}>
+              <div key={section.title} className="flex min-h-0 shrink flex-col">
                 {sectionIndex > 0 && (
-                  <div className="my-4 h-px w-full bg-white/15 [@media(max-height:820px)]:my-2" />
+                  <div className="my-4 h-px w-full shrink-0 bg-white/15 [@media(max-height:820px)]:my-2 [@media(max-height:700px)]:my-1" />
                 )}
 
                 {!collapsed && (
-                  <div className="mb-2 px-3 text-[10px] font-semibold tracking-[0.16em] text-sidebar-foreground/40">
+                  <div className="mb-2 shrink-0 px-3 text-[10px] font-semibold tracking-[0.16em] text-sidebar-foreground/40 [@media(max-height:700px)]:hidden">
                     {t(section.title)}
                   </div>
                 )}
 
-                <div className="flex flex-col gap-1">
+                <div className="flex min-h-0 shrink flex-col gap-1 [@media(max-height:700px)]:gap-0.5">
                   {section.items.map((item) => {
                     const isActive = active === item.id
                     const Icon = item.icon
@@ -335,7 +337,7 @@ export function Sidebar({
                         }}
                         aria-current={isActive ? "page" : undefined}
                         className={[
-                          "group relative flex h-11 w-full items-center rounded-xl transition-all duration-200 [@media(max-height:820px)]:h-9",
+                          "group relative flex h-11 min-h-[26px] w-full shrink items-center rounded-xl transition-all duration-200 [@media(max-height:820px)]:h-9",
                           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar-shell",
                           collapsed
                             ? "justify-center px-0"
@@ -428,9 +430,9 @@ export function Sidebar({
 
           {/* SIGN OUT */}
           {onSignOut && (
-            <div className="shrink-0 border-t border-white/10 px-3 py-3">
+            <div className="shrink-0 border-t border-white/10 px-3 py-3 [@media(max-height:700px)]:py-1.5">
               {!collapsed && (name || username || email) && (
-                <div className="mb-1 px-3" title={email} data-testid="signed-in-user">
+                <div className="mb-1 px-3 [@media(max-height:700px)]:hidden" title={email} data-testid="signed-in-user">
                   <div className="flex items-center gap-1.5">
                     <span className="min-w-0 truncate text-xs font-semibold text-sidebar-foreground/80">
                       {name || (username ? `@${username}` : email)}
@@ -459,7 +461,7 @@ export function Sidebar({
                 title={collapsed ? tx("Aide et retours", "Help & feedback") : undefined}
                 data-support-open=""
                 className={[
-                  "mb-0.5 flex h-10 w-full items-center rounded-xl text-sidebar-foreground/65 transition hover:bg-accent/10 hover:text-accent",
+                  "mb-0.5 flex h-10 w-full items-center rounded-xl [@media(max-height:700px)]:h-8 text-sidebar-foreground/65 transition hover:bg-accent/10 hover:text-accent",
                   collapsed ? "justify-center" : "gap-3 px-3 text-left",
                   SIDEBAR_FOCUS,
                 ].join(" ")}
@@ -477,7 +479,7 @@ export function Sidebar({
                 aria-label={collapsed ? t("sidebar.signOut") : undefined}
                 title={collapsed ? t("sidebar.signOut") : undefined}
                 className={[
-                  "flex h-10 w-full items-center rounded-xl text-sidebar-foreground/65 transition hover:bg-accent/10 hover:text-accent",
+                  "flex h-10 w-full items-center rounded-xl [@media(max-height:700px)]:h-8 text-sidebar-foreground/65 transition hover:bg-accent/10 hover:text-accent",
                   collapsed ? "justify-center" : "gap-3 px-3 text-left",
                   SIDEBAR_FOCUS,
                 ].join(" ")}
