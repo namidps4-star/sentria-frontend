@@ -36,6 +36,7 @@ import { PhoneField } from "./phone-field"
 import { HandoverDialog } from "./handover-dialog"
 import { SmsDraftsCard } from "./sms-drafts-card"
 import { checkPhone, defaultPhoneCountry } from "@/lib/phone"
+import { roleSuggestions } from "@/lib/roles"
 
 /* --------------------------------------------------------------------------
  * The people who can be sent out, and whether they are free.
@@ -418,9 +419,19 @@ export function ContractorsView({
                   onChange={(e) =>
                     setForm((f) => ({ ...f, role: e.target.value }))
                   }
+                  list="contractor-roles"
+                  autoComplete="off"
                   placeholder={tx("Ex. Grutier", "e.g. Crane operator")}
                   className="mt-1.5 w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm outline-none focus:border-ring"
                 />
+
+                {/* The roles this team already uses (F-ROLE). Suggestions
+                    only: any other text is still a valid role. */}
+                <datalist id="contractor-roles" data-role-suggestions="">
+                  {roleSuggestions(contractors).map((role) => (
+                    <option key={role} value={role} />
+                  ))}
+                </datalist>
               </label>
 
               <PhoneField
