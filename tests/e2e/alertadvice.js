@@ -22,8 +22,8 @@ const alertOf = (eq, key, params) => ({ id: eq, equipment: eq, sector: 'health',
   const open = async ({ key = 'health.stock.critical_low', params = [['stock', 50], ['stock_days_left', 2]], wholesalers = null, lang = 'en', theme = 'light', vw = 1440, popup = false } = {}) => {
     const ctx = await browser.newContext({ viewport: { width: vw, height: vw < 500 ? 844 : 1000 }, locale: lang === 'fr' ? 'fr-FR' : 'en-US', timezoneId: 'UTC' });
     const p = await ctx.newPage(); p._errors = []; p.on('pageerror', e => p._errors.push(e.message));
-    await p.route(/\/alerts(\?|$)/, r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([alertOf('Amoxicillin', key, params)]) }));
-    await p.route(/\/recommendations/, r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ recommendations: [rec('Amoxicillin', key)] }) }));
+    await p.route(/\/alerts(\?|$)/, r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([alertOf('Amoxicillin', key, params), alertOf('Paracetamol', key, params)]) }));
+    await p.route(/\/recommendations/, r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ recommendations: [rec('Amoxicillin', key), rec('Paracetamol', key)] }) }));
     await p.route(/\/(contractors|assignments)/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '{"contractors":[],"assignments":[]}' }));
     const store = { sentria_onboarded: '1', sentria_sector: 'health', sentria_sectors: '["health"]', sentria_business_type: 'pharmacie', sentria_language: lang, sentria_company_name: 'Acme', sentria_theme: theme, sentria_timezone: 'gmt' };
     if (wholesalers) store.sentria_wholesalers = JSON.stringify(wholesalers);
@@ -33,20 +33,36 @@ const alertOf = (eq, key, params) => ({ id: eq, equipment: eq, sector: 'health',
     if (popup) { await p.getByRole('button', { name: lang === 'fr' ? /Voir la recommandation/ : /See the recommendation/ }).first().click(); await p.waitForTimeout(700); }
     return { p, ctx };
   };
-  const msg = async p => (await p.getByTestId('alert-advice-message').first().innerText()).replace(/\s+/g, ' ');
-  const fb = async p => (await p.getByTestId('alert-advice-fallback').first().innerText()).replace(/\s+/g, ' ');
+  // Every block is folded to one row. Unfold the last one on the page (the opened alert) and read it.
+  const unfold = async (p, scope = p) => { const t = scope.getByTestId('alert-advice-toggle').last(); if ((await t.getAttribute('aria-expanded')) === 'false') await t.click(); await p.waitForTimeout(100); };
+  const msg = async p => { await unfold(p); return (await p.getByTestId('alert-advice-message').first().innerText()).replace(/\s+/g, ' '); };
+  const fb = async p => { await unfold(p); return (await p.getByTestId('alert-advice-fallback').first().innerText()).replace(/\s+/g, ' '); };
 
   console.log('== with wholesalers: the alert detail');
   { const { p, ctx } = await open({ wholesalers: [W('a', 'Dakar Centre', 0), W('b', 'Thiès', 3)] });
-    pass(await p.getByTestId('alert-advice').count() === 2, 'a stock alert with days of stock left shows the advice: in the priority card and in its opened detail');
+    pass(await p.getByTestId('alert-advice').count() === 3, 'a stock alert with days of stock left shows the advice: in the top card, in the second card and in the opened alert');
     const cell = await p.locator('#alerts-table tbody tr').first().locator('td').nth(1).innerText();
     pass(cell.trim() === 'MSG Amoxicillin', `the alerts list keeps the alert's own message as it was (${JSON.stringify(cell.trim())})`);
     pass(await p.locator('#alerts-table tbody').getByTestId('alert-advice').count() === 0, 'and carries no order text in its rows');
     const card = p.locator('main').getByTestId('alert-advice');
-    pass(await card.count() === 2, 'the order advice has its own block in the priority card above the list, and in the opened alert');
+    pass(await card.count() === 3, 'each card of the top five has its own block, and so has the opened alert');
+    pass(await p.getByTestId('alert-advice-message').count() === 0 && await p.getByTestId('alert-advice-toggle').first().getAttribute('aria-expanded') === 'false', 'they start folded: a row, no sentence yet');
+    const previews = await p.getByTestId('alert-advice-preview').allInnerTexts();
+    pass(previews.length === 3 && previews.every(t => t === 'Order: Dakar Centre, today'), `folded, each says the answer in a few words: ${previews[0]}`);
+    await p.getByTestId('alert-advice').first().scrollIntoViewIfNeeded(); await p.waitForTimeout(300);
+    await p.screenshot({ path: 'alertadvice-folded-light.png' });
+    const topToggle = p.getByTestId('alert-advice-toggle').first();
+    await topToggle.click(); await p.waitForTimeout(150);
+    pass(await topToggle.getAttribute('aria-expanded') === 'true' && await p.getByTestId('alert-advice-message').count() === 1, 'a click unfolds the one block, and only that one');
+    await topToggle.click(); await p.waitForTimeout(150);
+    pass(await p.getByTestId('alert-advice-message').count() === 0, 'and a second click folds it again');
+    await p.getByTestId('alert-advice-toggle').first().focus(); await p.keyboard.press('Enter'); await p.waitForTimeout(150);
+    pass(await p.getByTestId('alert-advice-message').count() === 1, 'the keyboard unfolds it too');
+    await p.keyboard.press('Enter'); await p.waitForTimeout(150);
     pass(await msg(p) === 'Order from Dakar Centre now. It arrives today.', `stock lasts 2 days: ${await msg(p)}`);
     pass((await fb(p)).includes(`Thiès arrives ${dayName(3)}. You would run out for 1 day.`), `and what a miss costs: ${await fb(p)}`);
     pass(!/has the product|has it in stock/i.test(await p.getByTestId('alert-advice').last().innerText()), 'it never says a wholesaler has the product');
+    await p.getByTestId('alert-advice-toggle').first().click(); await p.waitForTimeout(150);
     await p.getByTestId('alert-advice').first().scrollIntoViewIfNeeded(); await p.waitForTimeout(300);
     await p.screenshot({ path: 'alertadvice-priority-light.png' });
     await p.screenshot({ path: 'alertadvice-detail-light.png' });
@@ -68,19 +84,24 @@ const alertOf = (eq, key, params) => ({ id: eq, equipment: eq, sector: 'health',
   { const { p, ctx } = await open({ popup: true, wholesalers: [W('a', 'Dakar Centre', 0), W('b', 'Thiès', 3)] });
     const dialog = p.locator('[aria-labelledby=recommendation-dialog-title]');
     pass(await dialog.getByTestId('alert-advice').count() === 1, 'the recommendation popup shows it too');
+    pass(await dialog.getByTestId('alert-advice-message').count() === 0, 'folded at first');
+    await dialog.getByTestId('alert-advice-toggle').click(); await p.waitForTimeout(150);
     pass(/Order from Dakar Centre now\. It arrives today\./.test(await dialog.getByTestId('alert-advice-message').innerText()), 'with the same sentence');
     await p.screenshot({ path: 'alertadvice-popup-light.png' });
     await ctx.close(); }
 
   console.log('== no wholesaler yet');
   { const { p, ctx } = await open({});
-    pass(await p.getByTestId('alert-advice').count() === 0 && await p.getByTestId('alert-advice-setup').count() === 2, 'it offers to add wholesalers, and gives no delivery advice');
+    pass(await p.getByTestId('alert-advice').count() === 0 && await p.getByTestId('alert-advice-setup').count() === 3, 'it offers to add wholesalers, and gives no delivery advice');
     pass(await p.locator('#alerts-table tbody').getByTestId('alert-advice-setup').count() === 0, 'and the list rows stay quiet: no prompt on every row');
-    pass(/Add your wholesalers to know when to order/.test(await p.getByTestId('alert-advice-setup').first().innerText()), 'in plain words');
+    pass((await p.getByTestId('alert-advice-preview').first().innerText()) === 'Add your wholesalers', 'a single folded row says so');
+    await unfold(p);
+    pass(/Add your wholesalers to know when to order/.test(await p.getByTestId('alert-advice-setup').last().innerText()), 'and unfolds to a plain sentence');
     await p.getByRole('button', { name: 'Add my wholesalers' }).first().click(); await p.waitForTimeout(1000);
     pass(await p.getByTestId('wholesalers-card').count() === 1, 'the button opens the Wholesalers page');
     await ctx.close(); }
   { const { p, ctx } = await open({ popup: true });
+    await unfold(p, p.locator('[aria-labelledby=recommendation-dialog-title]'));
     await p.locator('[aria-labelledby=recommendation-dialog-title]').getByRole('button', { name: 'Add my wholesalers' }).click(); await p.waitForTimeout(1000);
     pass(await p.getByTestId('wholesalers-card').count() === 1 && await p.locator('[aria-labelledby=recommendation-dialog-title]').count() === 0, 'from the popup too: it closes and opens the page');
     await ctx.close(); }

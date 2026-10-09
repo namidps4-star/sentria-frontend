@@ -617,7 +617,7 @@ export function RecommendationsPanel({
         </div>
 
         {rest.length > 0 && (
-          <div className="scrollbar-hide -mx-1 flex flex-1 snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-1">
+          <div className="scrollbar-hide -mx-1 flex flex-1 snap-x snap-mandatory items-start gap-3 overflow-x-auto px-1 pb-1">
             {rest.map((rec, idx) => {
               const rank = idx + 2
               const Icon = CATEGORY_ICON[rec.action_category] ?? Sparkles
@@ -658,6 +658,13 @@ export function RecommendationsPanel({
                   <p className="mt-1 line-clamp-2 text-xs leading-4 text-muted-foreground">
                     {rec.recommended_action}
                   </p>
+
+                  <WholesalerAdvice
+                    tone="light"
+                    alertKey={rec.alert_key}
+                    params={paramsOf(rec)}
+                    className="mt-2"
+                  />
 
                   {recurrence > 1 && (
                     <div className="mt-2 inline-flex w-fit items-center gap-1 rounded-full bg-destructive/10 px-1.5 py-0.5 text-[9px] font-semibold text-destructive">
