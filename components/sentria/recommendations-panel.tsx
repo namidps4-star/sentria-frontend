@@ -76,17 +76,6 @@ type RecommendationsPanelProps = {
   unmeasured?: boolean
 }
 
-const SECTOR_LABEL: Record<string, Localized> = {
-  all: localized("Tous", "All"),
-  industry: localized("Industrie", "Industry"),
-  health: localized("Santé", "Health"),
-  agriculture: localized("Agriculture", "Agriculture"),
-  transportation: localized("Transport", "Transport"),
-  logistics: localized("Logistique", "Logistics"),
-  energy: localized("Énergie", "Energy"),
-  retail: localized("Commerce", "Retail"),
-}
-
 const OPS_TYPE_LABEL: Record<string, Localized> = {
   port: localized("Port & conteneurs", "Port & containers"),
   entrepot: localized("Entrepôt & manutention", "Warehouse & handling"),
@@ -426,15 +415,6 @@ export function RecommendationsPanel({
             )}
           </div>
         </div>
-
-        {rest.length > 0 && (
-          <span className="hidden shrink-0 rounded-full border border-border px-3 py-1 text-[11px] font-medium text-muted-foreground sm:inline-flex">
-            {tx(
-              "Faites défiler pour voir la suite",
-              "Scroll for the rest"
-            )}
-          </span>
-        )}
       </div>
 
       <div className="relative mt-6 flex flex-col gap-4 lg:flex-row">
@@ -617,7 +597,7 @@ export function RecommendationsPanel({
         </div>
 
         {rest.length > 0 && (
-          <div className="scrollbar-hide -mx-1 flex flex-1 snap-x snap-mandatory items-start gap-3 overflow-x-auto px-1 pb-1">
+          <div className="flex min-w-0 flex-1 flex-col gap-3">
             {rest.map((rec, idx) => {
               const rank = idx + 2
               const Icon = CATEGORY_ICON[rec.action_category] ?? Sparkles
@@ -630,82 +610,87 @@ export function RecommendationsPanel({
               return (
                 <div
                   key={`${rec.equipment}-${rec.alert_key}-${idx}`}
-                  className="group flex w-64 shrink-0 snap-start flex-col rounded-2xl border border-border bg-background p-4 transition-all duration-300 ease-out animate-in fade-in slide-in-from-right-2 hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-lg"
+                  className="group flex flex-1 flex-col justify-center gap-3 rounded-2xl border border-border bg-background p-4 transition-all duration-300 ease-out animate-in fade-in slide-in-from-right-2 hover:border-accent/40 hover:shadow-md sm:flex-row sm:items-center sm:gap-4"
                   style={{
                     animationDelay: `${idx * 70}ms`,
                     animationFillMode: "backwards",
                   }}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      className={cn(
-                        "flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold tabular-nums",
-                        isCritical
-                          ? "bg-destructive/10 text-destructive"
-                          : "bg-warning/12 text-warning"
-                      )}
-                    >
-                      {String(rank).padStart(2, "0")}
-                    </span>
+                  <span
+                    className={cn(
+                      "hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold tabular-nums sm:flex",
+                      isCritical
+                        ? "bg-destructive/10 text-destructive"
+                        : "bg-warning/12 text-warning"
+                    )}
+                  >
+                    {String(rank).padStart(2, "0")}
+                  </span>
 
-                    <Icon className="h-4 w-4 text-muted-foreground" />
-                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          "flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold tabular-nums sm:hidden",
+                          isCritical
+                            ? "bg-destructive/10 text-destructive"
+                            : "bg-warning/12 text-warning"
+                        )}
+                      >
+                        {String(rank).padStart(2, "0")}
+                      </span>
 
-                  <p className="mt-3 truncate text-sm font-semibold">
-                    {rec.equipment}
-                  </p>
+                      <p className="min-w-0 flex-1 truncate text-sm font-semibold">
+                        {rec.equipment}
+                      </p>
 
-                  <p className="mt-1 line-clamp-2 text-xs leading-4 text-muted-foreground">
-                    {rec.recommended_action}
-                  </p>
+                      <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    </div>
 
-                  <WholesalerAdvice
-                    tone="light"
-                    alertKey={rec.alert_key}
-                    params={paramsOf(rec)}
-                    className="mt-2"
-                  />
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <SeverityTag severity={rec.severity} tx={tx} size="xs" />
 
-                  {recurrence > 1 && (
-                    <div className="mt-2 inline-flex w-fit items-center gap-1 rounded-full bg-destructive/10 px-1.5 py-0.5 text-[9px] font-semibold text-destructive">
-                      <TrendingUp className="h-2.5 w-2.5" />
-                      {tx(
-                        `${recurrence}x cette semaine`,
-                        `${recurrence}x this week`
+                      <span
+                        className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground"
+                        title={tx(
+                          "Confiance de SentrIA dans cette analyse",
+                          "How confident SentrIA is in this analysis"
+                        )}
+                      >
+                        <Gauge className="h-3 w-3" />
+                        {confidence}%
+                      </span>
+
+                      {recurrence > 1 && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-1.5 py-0.5 text-[10px] font-semibold text-destructive">
+                          <TrendingUp className="h-3 w-3" />
+                          {tx(
+                            `${recurrence}x cette semaine`,
+                            `${recurrence}x this week`
+                          )}
+                        </span>
                       )}
                     </div>
-                  )}
 
-                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                    <SeverityTag severity={rec.severity} tx={tx} size="xs" />
+                    <p className="mt-2 line-clamp-2 text-xs leading-4 text-muted-foreground">
+                      {rec.recommended_action}
+                    </p>
 
-                    <span
-                      className="inline-flex items-center gap-1 text-[9px] font-medium text-muted-foreground"
-                      title={tx(
-                        "Confiance de SentrIA dans cette analyse",
-                        "How confident SentrIA is in this analysis"
-                      )}
-                    >
-                      <Gauge className="h-2.5 w-2.5" />
-                      {confidence}%
-                    </span>
-
-                    {rec.sector && (
-                      <span className="truncate text-[9px] uppercase tracking-wider text-muted-foreground">
-                        {SECTOR_LABEL[rec.sector]
-                          ? px(SECTOR_LABEL[rec.sector])
-                          : rec.sector}
-                      </span>
-                    )}
+                    <WholesalerAdvice
+                      tone="light"
+                      alertKey={rec.alert_key}
+                      params={paramsOf(rec)}
+                      className="mt-2"
+                    />
                   </div>
 
-                  <div className="mt-3 flex gap-1.5">
+                  <div className="flex shrink-0 gap-1.5 sm:w-36">
                     {!action ? (
                       <>
                         <button
                           type="button"
                           onClick={() => recordAction(key, "done", rec)}
-                          className={"inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-foreground px-2 py-1.5 text-[10px] font-semibold text-background transition-opacity hover:opacity-90" + PANEL_FOCUS}
+                          className={"inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-foreground px-2 py-2 text-[11px] font-semibold text-background transition-opacity hover:opacity-90" + PANEL_FOCUS}
                         >
                           <Check className="h-3 w-3" />
                           {tx("Traité", "Handled")}
@@ -714,7 +699,7 @@ export function RecommendationsPanel({
                         <button
                           type="button"
                           onClick={() => recordAction(key, "dismissed", rec)}
-                          className={"inline-flex items-center justify-center rounded-lg border border-border px-2 py-1.5 text-[10px] font-semibold text-muted-foreground transition-colors hover:bg-muted" + PANEL_FOCUS}
+                          className={"inline-flex items-center justify-center rounded-lg border border-border px-2.5 py-2 text-[11px] font-semibold text-muted-foreground transition-colors hover:bg-muted" + PANEL_FOCUS}
                           aria-label={tx("Ignorer", "Dismiss")}
                         >
                           <X className="h-3 w-3" />
@@ -724,7 +709,7 @@ export function RecommendationsPanel({
                       <span
                         role="status"
                         className={cn(
-                          "inline-flex w-full items-center justify-center gap-1 rounded-lg px-2 py-1.5 text-[10px] font-semibold",
+                          "inline-flex w-full items-center justify-center gap-1 rounded-lg px-2 py-2 text-[11px] font-semibold",
                           action.status === "done"
                             ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
                             : "bg-muted text-muted-foreground"
