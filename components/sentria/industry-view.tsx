@@ -1,5 +1,6 @@
 "use client"
 
+import { AlertIcon } from "./alert-icon"
 import { LossTag, SeverityTag, StatusTag, ValueTag } from "./status-tag"
 import type { AlertParams } from "@/lib/value-at-risk"
 import {
@@ -178,15 +179,8 @@ function AlertRow({
   return (
     <div className="flex flex-col gap-3 border-b border-border px-5 py-4 last:border-b-0 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "h-1.5 w-1.5 shrink-0 rounded-full",
-              alert.severity === "CRITICAL"
-                ? "bg-destructive"
-                : "bg-brand"
-            )}
-          />
+        <div className="flex items-center gap-3">
+          <AlertIcon alert={alert} />
 
           <p className="truncate text-sm font-semibold">
             {alert.equipment}

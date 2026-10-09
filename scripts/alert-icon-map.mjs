@@ -1,0 +1,37 @@
+// The 3D icons of the alert rows: each name the code uses, and the Fluent
+// Emoji icon (Microsoft, MIT) drawn for it. They keep their own colours, so
+// the chip behind them carries the severity.
+// After editing, run: node scripts/build-alert-icons.mjs
+export const ALERT_ICONS = {
+  pill: "pill",
+  cold: "snowflake",
+  temperature: "thermometer",
+  expiry: "hourglass-not-done",
+  health: "stethoscope",
+  hospital: "hospital",
+  pressure: "balloon",
+  fuel: "fuel-pump",
+  oil: "oil-drum",
+  engine: "gear",
+  service: "wrench",
+  maintenance: "hammer-and-wrench",
+  failure: "collision",
+  hygiene: "soap",
+  cycles: "counterclockwise-arrows-button",
+  wait: "stopwatch",
+  risk: "police-car-light",
+  truck: "delivery-truck",
+  ship: "ship",
+  customs: "page-facing-up",
+  battery: "battery",
+  power: "high-voltage",
+  cart: "shopping-cart",
+  money: "money-bag",
+  shrinkage: "chart-decreasing",
+  crop: "seedling",
+  water: "droplet",
+  factory: "factory",
+  car: "automobile",
+  package: "package",
+  warning: "warning",
+}

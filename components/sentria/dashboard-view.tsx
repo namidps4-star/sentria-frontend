@@ -58,6 +58,7 @@ import { LogisticsCostView } from "./logistics-cost-view"
 import { LogisticsAnticipateView } from "./logistics-anticipate-view"
 import { RecommendationsPanel } from "./recommendations-panel"
 import { Skeleton } from "./skeleton"
+import { AlertIcon } from "./alert-icon"
 import { PriorityTrack } from "./priority-track"
 import { HEALTH_PRIORITY_CATEGORY, healthCategoryOf, healthRows } from "@/lib/health-priorities"
 import { enterAt } from "@/lib/motion"
@@ -4098,15 +4099,8 @@ export function DashboardView({
                               : "border-b border-border"
                           )}
                         >
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={cn(
-                                "h-1.5 w-1.5 shrink-0 rounded-full",
-                                alert.severity === "CRITICAL"
-                                  ? "bg-destructive"
-                                  : "bg-brand"
-                              )}
-                            />
+                          <div className="flex items-center gap-3">
+                            <AlertIcon alert={alert} />
 
                             {alert.equipment}
                           </div>
