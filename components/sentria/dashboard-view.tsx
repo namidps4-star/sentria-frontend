@@ -2222,6 +2222,9 @@ export function DashboardView({
       bucketAlerts(scopedAlerts, { keys: chartKeys, days, metric: "count" }).series.some((row) => row.total > 0)
     ) ??
     7
+  // The tile lines look back as far as the data goes, so old alerts are not a flat line.
+  const sparkDays: number =
+    CHART_RANGES.find((days) => dailySeries(filteredAlerts, days).some((n) => n > 0)) ?? 7
   const chartHeading = chartTitle.replace(/\b7 (jours|days)/, `${chartRange} $1`)
   const chartBucketed = bucketAlerts(scopedAlerts, {
     keys: chartKeys,
@@ -2852,7 +2855,7 @@ export function DashboardView({
                     </p>
 
                     <Sparkline
-                      data={dailySeries(filteredAlerts, 7, k.match)}
+                      data={dailySeries(filteredAlerts, sparkDays, k.match)}
                       className={cn(
                         "mt-1 h-7 w-full",
                         k.up ? "text-accent" : "text-destructive"
@@ -3111,7 +3114,7 @@ export function DashboardView({
                     </p>
 
                     <Sparkline
-                      data={dailySeries(filteredAlerts, 7, k.match)}
+                      data={dailySeries(filteredAlerts, sparkDays, k.match)}
                       className={cn(
                         "mt-1 h-7 w-full",
                         k.up ? "text-accent" : "text-destructive"
@@ -3607,7 +3610,7 @@ export function DashboardView({
                 </p>
 
                 <Sparkline
-                  data={dailySeries(filteredAlerts, 7, k.match)}
+                  data={dailySeries(filteredAlerts, sparkDays, k.match)}
                   className={cn(
                     "mt-auto h-9 w-full",
                     // Lime on the lime tile would vanish: that tile draws its good line in ink.

@@ -34,6 +34,8 @@ const al = (eq, d) => ({ id: eq, equipment: eq, sector: 'health', business_type:
     pass(await p.locator('h3', { hasText: 'alerts · 30 days' }).count() === 1, 'the title says 30 days');
     const t = await card(p).innerText();
     pass(t.includes('Last 30 days') && !t.includes('No alerts in this period'), 'the chart shows them: ' + t.replace(/\s+/g, ' ').slice(0, 60));
+    const flat = async i => { const d = await p.locator('[data-sparkline] path').nth(i).getAttribute('d'); const n = d.match(/-?\d+(\.\d+)?/g).map(Number); return new Set(n.filter((_, k) => k % 2 === 1).map(v => v.toFixed(1))).size <= 1; };
+    pass(await p.locator('[data-sparkline]').count() > 0 && !(await flat(0)), 'and the tile lines are not flat either');
     await p.screenshot({ path: 'chartrange-light.png' });
     pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
     await ctx.close(); }
