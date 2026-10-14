@@ -1,5 +1,6 @@
 "use client"
 
+import { useSiteVersion } from "@/lib/sites"
 import {
   FileDown,
   Calendar,
@@ -655,6 +656,9 @@ export function ReportView({ data }: { data?: ReportData }) {
   const [sectors] = useState<Sector[]>(readOnboardedSectors)
   const [activeSector, setActiveSector] = useState<"all" | Sector>("all")
 
+  // A change of site fetches again (F-SITESCOPE).
+  const shownSite = useSiteVersion()
+
   useEffect(() => {
     setCompanyName(readCompanyName())
     setTimezoneId(readTimezoneId())
@@ -674,7 +678,7 @@ export function ReportView({ data }: { data?: ReportData }) {
       .finally(() => setLoaded(true))
     // Refetched on a language switch: /alerts rebuilds messages (B-11).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tx("fr", "en"), attempt])
+  }, [tx("fr", "en"), attempt, shownSite])
 
   /* Only actually filters once there is more than one real choice — see
      SectorTabs. A single-sector company keeps seeing every one of its

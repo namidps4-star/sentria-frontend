@@ -356,6 +356,7 @@ export function AppShell({
               notificationsUnknown={bellUnknown}
               onNotificationsOpen={markNotificationsSeen}
               onOpenTracking={() => setView("tracking")}
+              onOpenSites={() => setView("sites")}
             />
           </div>
 

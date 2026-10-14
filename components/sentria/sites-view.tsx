@@ -28,7 +28,7 @@ import {
   Zap,
   type LucideIcon,
 } from "@/lib/icons"
-import { readSites, writeSites, type StoredSite } from "@/lib/sites"
+import { addSite, deleteSite, editSite, useSites, type StoredSite } from "@/lib/sites"
 import { usePresence } from "@/lib/use-presence"
 import { useShake } from "@/lib/use-shake"
 import { enterAt } from "@/lib/motion"
@@ -95,15 +95,6 @@ const SECTORS: {
   { key: "energy", label: localized("Énergie", "Energy"), icon: Zap },
 ]
 
-/*
- * No fake operational data.
- * If no sites exist, the UI starts with a real empty state.
- *
- * You can later replace this with:
- * GET /sites
- */
-const INITIAL_SITES: Site[] = []
-
 const SOURCE_NAMES: Record<DataSource["type"], Localized> = {
   csv: localized("Import CSV", "CSV import"),
   api: localized("API", "API"),
@@ -129,22 +120,6 @@ function fromStored(stored: StoredSite): Site {
       name: SOURCE_NAMES[source.type],
       connected: source.connected,
       lastSync: source.synced ? "now" : "none",
-    })),
-  }
-}
-
-function toStored(site: Site): StoredSite {
-  return {
-    id: site.id,
-    name: site.name,
-    location: site.location,
-    sector: site.sector,
-    status: site.status,
-    synced: site.lastData === "now",
-    sources: site.sources.map((source) => ({
-      type: source.type,
-      connected: source.connected,
-      synced: source.lastSync === "now",
     })),
   }
 }
@@ -262,23 +237,27 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
   /** Resolve a module-level pair. */
   const px = (text: Localized | undefined) => resolve(text, tx)
 
-  const [sites, setSites] = useState<Site[]>(
-    INITIAL_SITES
+  // The sites are the account's, held by lib/sites.ts: in the API when it
+  // has them, else in the account profile.
+  const held = useSites()
+  const sites = useMemo(
+    () =>
+      held.sites.map((stored) => {
+        const site = fromStored(stored)
+
+        return { ...site, location: site.location || tx("Localisation à définir", "Location to be set") }
+      }),
+    [held.sites, tx]
   )
+  const [siteError, setSiteError] = useState<string | null>(null)
 
-  // The sites are the account's: read when the page opens, and again when
-  // the account finishes loading, written at every change.
-  useEffect(() => {
-    const load = () => setSites(readSites().map(fromStored))
-    load()
-    window.addEventListener(PLAN_UPDATED_EVENT, load)
-    return () => window.removeEventListener(PLAN_UPDATED_EVENT, load)
-  }, [])
-
-  const commitSites = (next: Site[]) => {
-    setSites(next)
-    writeSites(next.map(toStored))
+  const SITE_ERRORS: Record<string, string> = {
+    site_limit: tx("Ce compte a atteint le nombre maximal de sites.", "This account has reached the most sites it can hold."),
+    sites_unavailable: tx("Les sites ne sont pas encore activés. Réessayez plus tard.", "Sites are not switched on yet. Try again later."),
+    site_name_required: tx("Un site doit avoir un nom.", "A site needs a name."),
   }
+  const siteErrorText = (code: string) =>
+    SITE_ERRORS[code] ?? tx("Le site n'a pas pu être enregistré. Réessayez.", "The site could not be saved. Try again.")
 
   const [activeSiteId, setActiveSiteId] =
     useState<string | null>(null)
@@ -335,7 +314,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
     else setShowAddSite(true)
   }
 
-  function createSite() {
+  async function createSite() {
     if (atSiteCap) return
 
     if (!newSiteName.trim()) {
@@ -345,40 +324,19 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
       return
     }
 
-    const site: Site = {
-      id: `site-${Date.now()}`,
+    const made = await addSite({
       name: newSiteName.trim(),
-      location:
-        newSiteLocation.trim() ||
-        tx("Localisation à définir", "Location to be set"),
+      location: newSiteLocation.trim(),
       sector: newSiteSector,
-      status: "offline",
-      assets: 0,
-      critical: 0,
-      warnings: 0,
-      lastData: "none",
-      health: 0,
-      sources: [
-        {
-          type: "csv",
-          name: localized("Import CSV", "CSV import"),
-          connected: false,
-        },
-        {
-          type: "api",
-          name: localized("API", "API"),
-          connected: false,
-        },
-        {
-          type: "iot",
-          name: localized("Capteurs IoT", "IoT sensors"),
-          connected: false,
-        },
-      ],
+    })
+
+    if (!made.ok) {
+      setSiteError(siteErrorText(made.code))
+      return
     }
 
-    commitSites([...sites, site])
-    setActiveSiteId(site.id)
+    setSiteError(null)
+    if (made.id) setActiveSiteId(made.id)
     setShowAddSite(false)
     setNameInvalid(false)
 
@@ -389,37 +347,36 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
 
   const [confirmDelete, setConfirmDelete] = useState(false)
 
-  function removeSite(siteId: string) {
-    commitSites(sites.filter((site) => site.id !== siteId))
+  async function removeSite(siteId: string) {
+    const gone = await deleteSite(siteId)
+
+    if (!gone.ok) {
+      setSiteError(siteErrorText(gone.code))
+      setConfirmDelete(false)
+      return
+    }
+
+    setSiteError(null)
     setActiveSiteId(null)
     setConfirmDelete(false)
   }
 
-  function addSource(
+  async function addSource(
     siteId: string,
     sourceType: "csv" | "api" | "iot"
   ) {
-    commitSites(
-      sites.map((site) =>
-        site.id === siteId
-          ? {
-              ...site,
-              sources: site.sources.map(
-                (source) =>
-                  source.type === sourceType
-                    ? {
-                        ...source,
-                        connected: true,
-                        lastSync: "now",
-                      }
-                    : source
-              ),
-              status: "connected",
-              lastData: "now",
-            }
-          : site
-      )
-    )
+    const site = held.sites.find((s) => s.id === siteId)
+
+    if (!site) return
+
+    const done = await editSite(siteId, {
+      sources: site.sources.map((source) =>
+        source.type === sourceType ? { ...source, connected: true, synced: true } : source
+      ),
+      status: "connected",
+    })
+
+    if (!done.ok) setSiteError(siteErrorText(done.code))
   }
 
   /*
@@ -433,6 +390,12 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
 
     return (
       <div className="space-y-6">
+        {siteError && (
+          <p role="alert" data-testid="site-error" className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+            {siteError}
+          </p>
+        )}
+
         {/* HEADER */}
         <div className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-6 md:flex-row md:items-center md:justify-between">
           <div>
@@ -509,6 +472,15 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                 >
                   {tx("Annuler", "Cancel")}
                 </button>
+
+                {held.mode === "server" && (
+                  <p data-testid="site-delete-warning" className="basis-full text-xs text-muted-foreground">
+                    {tx(
+                      "Les alertes de ce site sont supprimées avec lui.",
+                      "This site's alerts are deleted with it."
+                    )}
+                  </p>
+                )}
               </>
             ) : (
               <button
@@ -924,8 +896,18 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
    * SITES LIST
    */
 
+  if (!held.ready) {
+    return <div aria-busy="true" className="h-64 animate-pulse rounded-3xl bg-muted" />
+  }
+
   return (
     <div className="space-y-6">
+      {siteError && (
+        <p role="alert" data-testid="site-error" className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+          {siteError}
+        </p>
+      )}
+
       {/* The Ask SentrIA layout: lime card and the site list on the left,
           the sites in the grey panel, the totals in the black card. */}
       <div className="grid gap-4 lg:grid-cols-[250px_minmax(0,1fr)] xl:grid-cols-[250px_minmax(0,1fr)_290px]">

@@ -64,6 +64,7 @@ import { PriorityTrack } from "./priority-track"
 import { HEALTH_PRIORITY_CATEGORY, healthCategoryOf, healthRows } from "@/lib/health-priorities"
 import { enterAt } from "@/lib/motion"
 import { announceAlertsUpdated } from "@/lib/alerts-event"
+import { useSites, useSiteVersion } from "@/lib/sites"
 import { RecommendationsBoard } from "./recommendations-board-view"
 import {
   IndustryMachinesView,
@@ -1564,6 +1565,15 @@ export function DashboardView({
   // language asked for (B-11).
   const alertsLang = tx("fr", "en")
 
+  // The site shown (F-SITESCOPE): a change of site fetches again.
+  const shownSite = useSiteVersion()
+  const heldSites = useSites()
+  // Where an upload goes, said only when the company has several sites.
+  const uploadSite =
+    heldSites.mode === "server" && heldSites.sites.length >= 2
+      ? heldSites.sites.find((site) => site.id === heldSites.activeId) ?? null
+      : null
+
   useEffect(() => {
     let cancelled = false
 
@@ -1605,7 +1615,7 @@ export function DashboardView({
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alertsLang, alertsRetry])
+  }, [alertsLang, alertsRetry, shownSite])
 
   function refreshRecommendations() {
     return apiFetch(
@@ -1681,7 +1691,7 @@ export function DashboardView({
   useEffect(() => {
     refreshRecommendations()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recommendationsLang])
+  }, [recommendationsLang, shownSite])
 
   function openLogisticsOverview() {
     setFilterSector("logistics")
@@ -2453,6 +2463,13 @@ export function DashboardView({
               aria-label={tx("Importer un fichier CSV", "Import a CSV file")}
             />
           </label>
+
+          {uploadSite && (
+            <p data-testid="upload-site" className="mt-2 text-xs text-muted-foreground">
+              {tx("Le fichier va dans le site :", "The file goes into site:")}{" "}
+              <span className="font-semibold text-foreground">{uploadSite.name}</span>
+            </p>
+          )}
 
           {uploadMsg && (
             <p
