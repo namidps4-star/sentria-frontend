@@ -34,6 +34,7 @@ import { useShake } from "@/lib/use-shake"
 import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import { PLAN_NAMES, PLAN_UPDATED_EVENT, maxSitesFor, readAccountPlan, type PlanId } from "@/lib/plans"
+import { CsvTemplateLink } from "./csv-template-link"
 import { StatusTag, type TagTone } from "./status-tag"
 import type { ViewKey } from "./types"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
@@ -830,6 +831,10 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                   "Connect a data source, or import your CSV history, to start monitoring."
                 )}
               </p>
+
+              <div className="mt-4">
+                <CsvTemplateLink sector={activeSite.sector} className="text-muted-foreground hover:text-foreground" />
+              </div>
 
               <div className="mt-5 flex flex-wrap justify-center gap-2">
                 <button

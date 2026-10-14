@@ -1,5 +1,6 @@
 "use client"
 
+import { CsvTemplateLink } from "./csv-template-link"
 import { DemotedTag, LossTag, SeverityTag, StatusTag, ValueTag } from "./status-tag"
 import { demotion, demotionSentence } from "@/lib/demotion"
 import { CountNumber } from "./count-number"
@@ -2463,6 +2464,12 @@ export function DashboardView({
               aria-label={tx("Importer un fichier CSV", "Import a CSV file")}
             />
           </label>
+
+          <CsvTemplateLink
+            department={uploadActivity ?? activityIn(uploadSector)}
+            sector={uploadSector}
+            className="mt-2 text-muted-foreground hover:text-foreground"
+          />
 
           {uploadSite && (
             <p data-testid="upload-site" className="mt-2 text-xs text-muted-foreground">
