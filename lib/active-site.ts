@@ -37,3 +37,27 @@ export function rememberActiveSite(id: string | null): boolean {
 
   return true
 }
+
+const ADD_SITE_HINT = "sentria_add_site_hint"
+
+/** Asks the Sites page to open "Add a site" as it opens (the top-bar menu's
+ *  "Add a site"). Read once. */
+export function requestAddSiteOnOpen() {
+  try {
+    sessionStorage.setItem(ADD_SITE_HINT, "1")
+  } catch {
+    /* no storage: the page opens on its list */
+  }
+}
+
+export function takeAddSiteHint(): boolean {
+  try {
+    const asked = sessionStorage.getItem(ADD_SITE_HINT) === "1"
+
+    if (asked) sessionStorage.removeItem(ADD_SITE_HINT)
+
+    return asked
+  } catch {
+    return false
+  }
+}

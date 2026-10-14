@@ -18,6 +18,7 @@ import {
   MapPin,
   Plus,
   Settings2,
+  Store,
   Ship,
   Truck,
   Upload,
@@ -28,12 +29,14 @@ import {
   Zap,
   type LucideIcon,
 } from "@/lib/icons"
-import { addSite, deleteSite, editSite, useSites, type StoredSite } from "@/lib/sites"
+import { takeAddSiteHint } from "@/lib/active-site"
+import { addSite, chooseSite, deleteSite, editSite, useSites, type StoredSite } from "@/lib/sites"
 import { usePresence } from "@/lib/use-presence"
 import { useShake } from "@/lib/use-shake"
 import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import { PLAN_NAMES, PLAN_UPDATED_EVENT, maxSitesFor, readAccountPlan, type PlanId } from "@/lib/plans"
+import { AddSiteWizard, type WizardResult } from "./add-site-wizard"
 import { CsvTemplateLink } from "./csv-template-link"
 import { StatusTag, type TagTone } from "./status-tag"
 import type { ViewKey } from "./types"
@@ -46,6 +49,7 @@ type Sector =
   | "transportation"
   | "logistics"
   | "energy"
+  | "commerce"
 
 type SiteStatus = "connected" | "warning" | "offline"
 
@@ -55,8 +59,10 @@ type SiteStatus = "connected" | "warning" | "offline"
 type Freshness = "none" | "now"
 
 type DataSource = {
-  type: "csv" | "api" | "iot"
+  type: "csv" | "api" | "erp" | "iot"
   name: Localized
+  /** Chosen when the site was set up. */
+  wanted: boolean
   connected: boolean
   lastSync?: Freshness
 }
@@ -94,11 +100,13 @@ const SECTORS: {
   },
   { key: "logistics", label: localized("Logistique", "Logistics"), icon: Ship },
   { key: "energy", label: localized("Énergie", "Energy"), icon: Zap },
+  { key: "commerce", label: localized("Commerce", "Retail"), icon: Store },
 ]
 
 const SOURCE_NAMES: Record<DataSource["type"], Localized> = {
   csv: localized("Import CSV", "CSV import"),
   api: localized("API", "API"),
+  erp: localized("ERP", "ERP"),
   iot: localized("Capteurs IoT", "IoT sensors"),
 }
 
@@ -119,6 +127,7 @@ function fromStored(stored: StoredSite): Site {
     sources: stored.sources.map((source) => ({
       type: source.type,
       name: SOURCE_NAMES[source.type],
+      wanted: source.wanted,
       connected: source.connected,
       lastSync: source.synced ? "now" : "none",
     })),
@@ -256,6 +265,9 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
     site_limit: tx("Ce compte a atteint le nombre maximal de sites.", "This account has reached the most sites it can hold."),
     sites_unavailable: tx("Les sites ne sont pas encore activés. Réessayez plus tard.", "Sites are not switched on yet. Try again later."),
     site_name_required: tx("Un site doit avoir un nom.", "A site needs a name."),
+    plan_sectors: tx("Votre offre couvre un seul secteur. Plusieurs secteurs : offre Entreprise.", "Your plan covers one sector. Several sectors: Entreprise plan."),
+    plan_departments: tx("Votre offre couvre un seul département. Plusieurs départements liés : offre Business.", "Your plan covers one department. Several linked departments: Business plan."),
+    plan_combo: tx("Ces départements ne vont pas ensemble. Toute combinaison : offre Entreprise.", "These departments don't run together. Any combination: Entreprise plan."),
   }
   const siteErrorText = (code: string) =>
     SITE_ERRORS[code] ?? tx("Le site n'a pas pu être enregistré. Réessayez.", "The site could not be saved. Try again.")
@@ -315,6 +327,22 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
     else setShowAddSite(true)
   }
 
+  // The top-bar menu's "Add a site" opens this page on the wizard.
+  const hintTaken = useRef(false)
+
+  useEffect(() => {
+    if (!held.ready || hintTaken.current) return
+
+    hintTaken.current = true
+
+    if (takeAddSiteHint()) {
+      // The plan state is read in an effect too: read it here, not from state.
+      if (sites.length >= maxSitesFor(readAccountPlan().effective)) setShowUpgrade(true)
+      else setShowAddSite(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [held.ready])
+
   async function createSite() {
     if (atSiteCap) return
 
@@ -348,6 +376,37 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
 
   const [confirmDelete, setConfirmDelete] = useState(false)
 
+  // "Add a site" through the onboarding's choices (the API holds the sites).
+  const [wizardBusy, setWizardBusy] = useState(false)
+  const [wizardError, setWizardError] = useState<string | null>(null)
+
+  async function createFromWizard(result: WizardResult) {
+    setWizardBusy(true)
+    setWizardError(null)
+
+    const made = await addSite({
+      name: result.name,
+      location: result.location,
+      sector: result.sector as StoredSite["sector"],
+      departments: result.departments,
+      priorities: result.priorities,
+      sources: result.sources,
+      configured: true,
+    })
+
+    setWizardBusy(false)
+
+    if (!made.ok) {
+      setWizardError(siteErrorText(made.code))
+      return
+    }
+
+    // The new site opens on its own dashboard, with its own settings.
+    if (made.id) chooseSite(made.id)
+    setShowAddSite(false)
+    onNavigate?.("dashboard")
+  }
+
   async function removeSite(siteId: string) {
     const gone = await deleteSite(siteId)
 
@@ -364,7 +423,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
 
   async function addSource(
     siteId: string,
-    sourceType: "csv" | "api" | "iot"
+    sourceType: "csv" | "api" | "erp" | "iot"
   ) {
     const site = held.sites.find((s) => s.id === siteId)
 
@@ -734,7 +793,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                     <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted">
                       {source.type === "iot" ? (
                         <Wifi className="h-4 w-4" />
-                      ) : source.type === "api" ? (
+                      ) : source.type === "api" || source.type === "erp" ? (
                         <Database className="h-4 w-4" />
                       ) : (
                         <Upload className="h-4 w-4" />
@@ -770,7 +829,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                       <CheckCircle2 className="h-3 w-3" />
                       {tx("Actif", "Active")}
                     </span>
-                  ) : (
+                  ) : source.type === "csv" ? (
                     <button
                       onClick={() =>
                         addSource(
@@ -782,6 +841,17 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                     >
                       {tx("Connecter", "Connect")}
                     </button>
+                  ) : (
+                    // Nothing connects by itself yet: the choice is kept, and
+                    // the page does not claim a live link.
+                    <span
+                      data-testid="source-not-live"
+                      className="rounded-full border border-border px-2.5 py-1 text-xs font-semibold text-muted-foreground"
+                    >
+                      {source.wanted
+                        ? tx("Choisi · pas encore actif", "Chosen · not live yet")
+                        : tx("Pas encore actif", "Not live yet")}
+                    </span>
                   )}
                 </div>
               ))}
@@ -1226,8 +1296,23 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
         </div>
       )}
 
+      {/* ADD SITE: the onboarding's choices when the API holds the sites */}
+      {showAddSite && held.mode === "server" && (
+        <AddSiteWizard
+          plan={plan}
+          heldSectors={held.sites.map((s) => s.sector)}
+          busy={wizardBusy}
+          error={wizardError}
+          onCancel={() => {
+            setShowAddSite(false)
+            setWizardError(null)
+          }}
+          onCreate={createFromWizard}
+        />
+      )}
+
       {/* ADD SITE MODAL */}
-      {showAddSite && (
+      {showAddSite && held.mode !== "server" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-xl rounded-3xl border border-border bg-card p-6 shadow-2xl">
             <div className="flex items-start justify-between">

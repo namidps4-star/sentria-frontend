@@ -36,6 +36,8 @@ export const ACCOUNT_KEYS = [
   "sentria_wholesalers",
   // The sites the company runs (lib/sites.ts).
   "sentria_sites",
+  // The account's own sector and department settings, kept while a site shows its own (lib/site-config.ts).
+  "sentria_base_config",
   // "on" when the weekly email is wanted (Settings; read by the API's
   // POST /reports/weekly/send).
   "sentria_weekly_report",

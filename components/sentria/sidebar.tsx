@@ -1,5 +1,6 @@
 "use client"
 
+import { SITES_CHANGED_EVENT } from "@/lib/active-site"
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import type { ViewKey } from "./types"
@@ -219,6 +220,14 @@ export function Sidebar({
      localStorage), again on each page change so a new choice shows up. */
   const [sectors, setSectors] = useState<string[]>([])
   useEffect(() => setSectors(readSectors()), [active])
+  // A site brings its own sectors (lib/site-config.ts).
+  useEffect(() => {
+    const reread = () => setSectors(readSectors())
+
+    window.addEventListener(SITES_CHANGED_EVENT, reread)
+
+    return () => window.removeEventListener(SITES_CHANGED_EVENT, reread)
+  }, [])
 
   const shown: typeof sections = sections.map((section) => ({
     ...section,

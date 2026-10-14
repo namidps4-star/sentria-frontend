@@ -1,11 +1,13 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { ArrowRight, Check, ChevronDown, MapPin, User } from "@/lib/icons"
+import { ArrowRight, Check, ChevronDown, MapPin, Plus, User } from "@/lib/icons"
 import { initialsOf, useCompanyIdentity } from "@/lib/company"
 import { useT, useTx } from "@/lib/i18n"
+import { requestAddSiteOnOpen } from "@/lib/active-site"
 import { chooseSite, useSites } from "@/lib/sites"
 import { usePresence } from "@/lib/use-presence"
+import { SECTORS } from "./onboarding-modal"
 import { cn } from "@/lib/utils"
 
 const FOCUS_RING =
@@ -25,6 +27,12 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
   const tx = useTx()
   const { name: companyName } = useCompanyIdentity()
   const { mode, sites, activeId } = useSites()
+
+  const sectorLabel = (id: string) => {
+    const found = SECTORS.find((s) => s.id === id)
+
+    return found ? tx(found.label.fr, found.label.en) : id
+  }
 
   const switcher = mode === "server" && sites.length >= 2
   const active = sites.find((site) => site.id === activeId) ?? null
@@ -145,9 +153,10 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
                     <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold">{site.name}</span>
-                      {site.location && (
-                        <span className="block truncate text-xs text-muted-foreground">{site.location}</span>
-                      )}
+                      <span data-testid="account-menu-sector" className="block truncate text-xs text-muted-foreground">
+                        {sectorLabel(site.sector)}
+                        {site.location ? ` · ${site.location}` : ""}
+                      </span>
                     </span>
                     <span data-testid="account-menu-count" className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
                       {site.alerts ?? 0}
@@ -158,6 +167,21 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
               )
             })}
           </ul>
+
+          <button
+            type="button"
+            role="menuitem"
+            data-testid="account-menu-add"
+            onClick={() => {
+              requestAddSiteOnOpen()
+              setOpen(false)
+              onOpenSites?.()
+            }}
+            className={"mt-1 flex w-full items-center justify-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold transition-colors hover:bg-muted" + FOCUS_RING}
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+            {tx("Ajouter un site", "Add a site")}
+          </button>
 
           <button
             type="button"

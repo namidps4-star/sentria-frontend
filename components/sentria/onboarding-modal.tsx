@@ -88,7 +88,7 @@ type Sector =
   | "energy"
   | "commerce"
 
-type SectorConfig = {
+export type SectorConfig = {
   id: Sector
   label: Localized
   description: Localized
@@ -116,7 +116,7 @@ type DataSource = {
 /* SECTORS                                                                    */
 /* -------------------------------------------------------------------------- */
 
-const SECTORS: SectorConfig[] = [
+export const SECTORS: SectorConfig[] = [
   {
     id: "logistics",
     label: localized("Logistique", "Logistics"),

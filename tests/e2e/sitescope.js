@@ -13,16 +13,16 @@ const pass = (ok, l) => { fails += !ok; console.log(`   ${ok ? 'PASS' : 'FAIL'} 
 const UID = 'u-scope', EMAIL = 'a@b.c';
 const NOW = new Date().toISOString();
 const alertOf = (name, site) => ({ id: name, equipment: name, sector: 'health', business_type: 'pharmacie', severity: 'CRITICAL', date: NOW, alert_key: null, message: `MSG ${name}`, risk_score: 70, site_id: site });
-const srcs = (c = false) => ['csv', 'api', 'iot'].map(type => ({ type, connected: c, synced: c }));
-const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', status: 'offline', sources: srcs(), created_at: NOW });
+const srcs = (c = false) => ['csv', 'api', 'erp', 'iot'].map(type => ({ type, wanted: false, connected: c, synced: c }));
+const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', status: 'offline', sources: srcs(), created_at: NOW, departments: [], priorities: [], configured: false });
 
 (async () => {
   const browser = await chromium.launch(LAUNCH);
   // `server`: the API has the sites table. `sites`: what it holds. `profile`: extra account values.
-  const open = async ({ server = true, sites = [], profile = {}, lang = 'en', vw = 1440, active = null } = {}) => {
+  const open = async ({ server = true, sites = [], profile = {}, lang = 'en', vw = 1440, active = null, plan = 'entreprise', refuse = null } = {}) => {
     const ctx = await browser.newContext({ viewport: { width: vw, height: 900 }, locale: lang === 'fr' ? 'fr-FR' : 'en-US' });
     const p = await ctx.newPage(); p._errors = []; p.on('pageerror', e => p._errors.push(e.message));
-    const api = { sites: sites.map(s => ({ ...s })), log: [], alerts: [alertOf('Amox', 's1'), alertOf('Ibu', 's1'), alertOf('Paracetamol', 's2')] };
+    const api = { refuse, sites: sites.map(s => ({ ...s })), log: [], alerts: [alertOf('Amox', 's1'), alertOf('Ibu', 's1'), alertOf('Paracetamol', 's2')] };
     await p.route(/onrender\.com\//, async r => {
       const req = r.request(), u = new URL(req.url()), m = req.method(), path = u.pathname;
       const json = (body, status = 200) => r.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
@@ -31,7 +31,7 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
         api.log.push('GET /sites');
         return json({ sites: api.sites.map(s => ({ ...s, alerts: api.alerts.filter(a => a.site_id === s.id).length })), persisted: true, max_sites: 50 });
       }
-      if (path === '/sites' && m === 'POST') { const b = JSON.parse(req.postData()); const s = mkSite('s' + (api.sites.length + 1), b.name, b.location || ''); s.sources = b.sources || srcs(); api.sites.push(s); api.log.push('POST /sites ' + b.name); return json(s, 201); }
+      if (path === '/sites' && m === 'POST') { const b = JSON.parse(req.postData()); if (api.refuse) return json({ success: false, error_code: api.refuse, message: 'no', needs: 'entreprise' }, 403); const s = mkSite('s' + (api.sites.length + 1), b.name, b.location || ''); s.sources = b.sources || srcs(); s.sector = b.sector || 'health'; s.departments = b.departments || []; s.priorities = b.priorities || []; s.configured = b.configured === true; api.body = b; api.sites.push(s); api.log.push('POST /sites ' + b.name); return json(s, 201); }
       const one = path.match(/^\/sites\/(.+)$/);
       if (one && m === 'PATCH') { const s = api.sites.find(x => x.id === one[1]); Object.assign(s, JSON.parse(req.postData())); api.log.push('PATCH ' + one[1]); return json(s); }
       if (one && m === 'DELETE') { api.sites = api.sites.filter(x => x.id !== one[1]); api.alerts = api.alerts.filter(a => a.site_id !== one[1]); api.log.push('DELETE ' + one[1]); return json({ success: true, alerts_deleted: 0 }); }
@@ -44,8 +44,8 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
       return json([]);
     });
     const prof = { sentria_onboarded: '1', sentria_sector: 'health', sentria_sectors: '["health"]', sentria_business_type: 'pharmacie', sentria_company_name: 'Acme', sentria_language: lang, ...profile };
-    const db = { users: { [EMAIL]: { uid: UID, password: 'x' } }, accounts: { [UID]: { profile: prof, plan: 'entreprise' } } };
-    await mockSupabase(p, db, { plan: 'entreprise' });
+    const db = { users: { [EMAIL]: { uid: UID, password: 'x' } }, accounts: { [UID]: { profile: prof, plan } } };
+    await mockSupabase(p, db, { plan });
     await p.addInitScript(({ key, s, active }) => { if (!localStorage.getItem(key)) { localStorage.setItem(key, JSON.stringify(s)); if (active) localStorage.setItem('sentria_active_site', active); } }, { key: STORAGE_KEY, s: session(UID, EMAIL, {}), active });
     await p.goto(APP_URL); await p.waitForTimeout(3500);
     return { p, ctx, api, db };
@@ -104,9 +104,14 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
     await p.locator('aside nav button', { hasText: /^Sites$/ }).first().click().catch(() => {});
     await p.waitForTimeout(800);
     await p.getByRole('button', { name: 'Add a site' }).locator('visible=true').first().click(); await p.waitForTimeout(300);
-    await p.getByPlaceholder('e.g. Lyon plant').fill('Dakar depot');
-    await p.getByRole('button', { name: 'Create the site' }).click(); await p.waitForTimeout(900);
+    await p.getByTestId('add-site-name').fill('Dakar depot'); await p.getByTestId('add-site-next').click(); await p.waitForTimeout(200);
+    await p.getByTestId('add-site-sector-health').click(); await p.getByTestId('add-site-next').click(); await p.waitForTimeout(200);
+    await p.getByTestId('add-site-department-pharmacie').click(); await p.getByTestId('add-site-next').click(); await p.waitForTimeout(200);
+    await p.getByTestId('add-site-next').click(); await p.waitForTimeout(200);
+    await p.getByTestId('add-site-create').click(); await p.waitForTimeout(1500);
     pass(api.log.includes('POST /sites Dakar depot') && api.sites.length === 2, 'a new site is sent to the API');
+    await p.locator('aside nav button', { hasText: /^Sites$/ }).first().click(); await p.waitForTimeout(800);
+    await p.locator('main').getByText('Dakar depot').first().click(); await p.waitForTimeout(600);
     await p.getByTestId('site-delete').click(); await p.waitForTimeout(200);
     pass(await p.getByTestId('site-delete-warning').isVisible(), 'the delete confirmation says its alerts go too');
     await p.getByTestId('site-delete-confirm').click(); await p.waitForTimeout(900);
@@ -128,6 +133,70 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
     pass(await p.getByTestId('account-menu-button').count() === 0, 'two sites in the profile give no switcher: it would cut nothing');
     pass(api.log.every(l => !/site=s/.test(l)) && api.log.some(l => l === 'GET /alerts site=null'), 'alerts are fetched with no site_id');
     pass((await rows(p)).length === 3, 'and all of the company\'s alerts show');
+    await ctx.close(); }
+
+  console.log('== Add a site: the onboarding\'s choices');
+  { const { p, ctx, api } = await open({ sites: [mkSite('s1', 'Lyon plant', 'Lyon')], profile: { sentria_departments: JSON.stringify({ health: ['pharmacie'] }) } });
+    await p.locator('aside nav button', { hasText: /^Sites$/ }).first().click(); await p.waitForTimeout(800);
+    await p.getByRole('button', { name: 'Add a site' }).locator('visible=true').first().click(); await p.waitForTimeout(400);
+    pass(await p.getByTestId('add-site-wizard').isVisible() && /Step 1 of 5/.test(await p.getByTestId('add-site-step').innerText()), 'it opens a five-step wizard');
+    await p.getByTestId('add-site-next').click(); await p.waitForTimeout(200);
+    pass(/Step 1 of 5/.test(await p.getByTestId('add-site-step').innerText()), 'a site needs a name before it goes on');
+    await p.getByTestId('add-site-name').fill('Power depot'); await p.getByTestId('add-site-next').click(); await p.waitForTimeout(300);
+    pass((await p.locator('[data-testid^="add-site-sector-"]').count()) === 7, 'step 2 offers the seven sectors, retail included');
+    await p.getByTestId('add-site-sector-energy').click(); await p.getByTestId('add-site-next').click(); await p.waitForTimeout(300);
+    const depts = await p.locator('[data-testid^="add-site-department-"]').count();
+    pass(depts >= 2, 'step 3 lists the sector\'s departments: ' + depts);
+    await p.getByTestId('add-site-department-centrale-production').click();
+    await p.getByTestId('add-site-department-distribution-energetique').click();
+    pass(await p.getByTestId('add-site-department-centrale-production').getAttribute('aria-pressed') === 'true' && await p.getByTestId('add-site-department-distribution-energetique').getAttribute('aria-pressed') === 'true', 'where the plan allows it, several departments can be ticked');
+    await p.getByTestId('add-site-next').click(); await p.waitForTimeout(300);
+    const pri = p.locator('[data-testid^="add-site-priority-"]');
+    pass(await pri.count() >= 1, 'step 4 lists what the sector can monitor');
+    await pri.first().click();
+    await p.getByTestId('add-site-next').click(); await p.waitForTimeout(300);
+    pass(await p.getByTestId('add-site-source-csv').isVisible() && await p.getByTestId('add-site-source-api').isVisible() && await p.getByTestId('add-site-source-erp').isVisible(), 'step 5 offers CSV, API and ERP (and sensors)');
+    await p.getByTestId('add-site-source-erp').click(); await p.waitForTimeout(150);
+    pass(await p.getByTestId('add-site-not-live').isVisible(), 'API and ERP say they are not live yet, so nothing claims a link');
+    pass(await p.getByTestId('csv-template').count() === 1, 'and CSV offers its empty file');
+    await p.screenshot({ path: 'sitescope-wizard-light.png' });
+    await p.getByTestId('add-site-create').click(); await p.waitForTimeout(2500);
+    pass(api.body && api.body.sector === 'energy' && api.body.departments.length === 2 && api.body.priorities.length === 1 && api.body.configured === true, 'the API gets sector, departments, priorities and configured: ' + JSON.stringify(api.body).slice(0, 140));
+    pass(api.body.sources.filter(x => x.wanted).map(x => x.type).join() === 'csv,erp' && api.body.sources.every(x => x.connected === false), 'the ways chosen are kept as wanted, none as connected');
+    pass(/Dashboard/.test(await p.locator('header h1').innerText()), 'it lands on the dashboard');
+    pass((await p.getByTestId('account-menu-active').innerText()) === 'Power depot', 'the new site is the one shown');
+    pass(await p.evaluate(() => localStorage.getItem('sentria_sector')) === 'energy' && await p.evaluate(() => localStorage.getItem('sentria_sectors')) === '["energy"]', 'the dashboard runs on the new site\'s sector');
+    pass(JSON.parse(await p.evaluate(() => localStorage.getItem('sentria_departments'))).energy.length === 2, 'and its departments');
+    await p.getByTestId('account-menu-button').click(); await p.waitForTimeout(400);
+    const rows2 = await p.getByTestId('account-menu-sector').allInnerTexts();
+    pass(rows2.length === 2 && /Health/.test(rows2[0]) && /Energy/.test(rows2[1]), 'the dropdown shows each site with its industry: ' + rows2.join(' | '));
+    await p.screenshot({ path: 'sitescope-new-site-light.png' });
+    await p.getByTestId('account-menu-site').first().click(); await p.waitForTimeout(1200);
+    pass(await p.evaluate(() => localStorage.getItem('sentria_sector')) === 'health', 'back on the first site, the account\'s own sector is back');
+    pass(JSON.parse(await p.evaluate(() => localStorage.getItem('sentria_departments'))).health[0] === 'pharmacie', 'and its departments');
+    await p.getByTestId('account-menu-button').click(); await p.waitForTimeout(300);
+    await p.getByTestId('account-menu-add').click(); await p.waitForTimeout(800);
+    pass(await p.getByTestId('add-site-wizard').isVisible(), 'the menu\'s "Add a site" opens the wizard on the Sites page');
+    pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
+    await ctx.close(); }
+
+  console.log('== a Pro plan keeps to its sector, and the API has the last word');
+  { const { p, ctx, api } = await open({ sites: [mkSite('s1', 'Lyon plant', 'Lyon')], plan: 'pro', profile: { sentria_sectors: '["health"]' } });
+    await p.locator('aside nav button', { hasText: /^Sites$/ }).first().click(); await p.waitForTimeout(800);
+    await p.getByRole('button', { name: /Add a site|Site limit/ }).locator('visible=true').first().click(); await p.waitForTimeout(400);
+    const upgrade = await p.getByRole('dialog', { name: 'Site limit reached' }).count();
+    if (upgrade) { pass(true, 'a Pro plan holds one site: the upgrade prompt shows (cap)'); }
+    await ctx.close(); }
+  { const { p, ctx, api } = await open({ sites: [mkSite('s1', 'Lyon plant', 'Lyon')], plan: 'business', profile: { sentria_sectors: '["health"]' }, refuse: 'plan_sectors' });
+    await p.locator('aside nav button', { hasText: /^Sites$/ }).first().click(); await p.waitForTimeout(800);
+    await p.getByRole('button', { name: 'Add a site' }).locator('visible=true').first().click(); await p.waitForTimeout(400);
+    await p.getByTestId('add-site-name').fill('Power depot'); await p.getByTestId('add-site-next').click(); await p.waitForTimeout(200);
+    pass(await p.getByTestId('add-site-sector-energy').isDisabled() && await p.getByTestId('add-site-sector-health').isEnabled(), 'another sector is locked for a plan that holds one');
+    await p.getByTestId('add-site-sector-health').click(); await p.getByTestId('add-site-next').click(); await p.waitForTimeout(200);
+    await p.getByTestId('add-site-department-pharmacie').click(); await p.getByTestId('add-site-next').click(); await p.waitForTimeout(200);
+    await p.getByTestId('add-site-next').click(); await p.waitForTimeout(200);
+    await p.getByTestId('add-site-create').click(); await p.waitForTimeout(1200);
+    pass(/Entreprise/.test(await p.getByTestId('add-site-error').innerText()) && await p.getByTestId('add-site-wizard').isVisible(), 'a refusal by the plan stays in the wizard and says which plan: ' + (await p.getByTestId('add-site-error').innerText()).slice(0, 70));
     await ctx.close(); }
 
   console.log('== French and a phone');

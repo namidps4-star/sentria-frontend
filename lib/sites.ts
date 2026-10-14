@@ -9,16 +9,19 @@ import { requestAccountSave } from "@/lib/account"
 import { SITES_CHANGED_EVENT, SITES_RESET_EVENT, activeSiteId, rememberActiveSite } from "@/lib/active-site"
 import { API_BASE, apiFetch } from "@/lib/api"
 import { PLAN_UPDATED_EVENT } from "@/lib/plans"
+import { applySiteConfig } from "@/lib/site-config"
 import { useEffect, useSyncExternalStore } from "react"
 
 export const SITES_KEY = "sentria_sites"
 export const MAX_STORED_SITES = 100
 
-export const SITE_SECTORS = ["industry", "health", "agriculture", "transportation", "logistics", "energy"] as const
+export const SITE_SECTORS = ["industry", "health", "agriculture", "transportation", "logistics", "energy", "commerce"] as const
 export const SITE_STATUSES = ["connected", "warning", "offline"] as const
-export const SOURCE_TYPES = ["csv", "api", "iot"] as const
+export const SOURCE_TYPES = ["csv", "api", "erp", "iot"] as const
 
-export type StoredSource = { type: (typeof SOURCE_TYPES)[number]; connected: boolean; synced: boolean }
+/** `wanted`: the way the site was set up to receive data. `connected` and
+ *  `synced`: it is actually connected, and has sent data. */
+export type StoredSource = { type: (typeof SOURCE_TYPES)[number]; wanted: boolean; connected: boolean; synced: boolean }
 
 export type StoredSite = {
   id: string
@@ -28,8 +31,20 @@ export type StoredSite = {
   status: (typeof SITE_STATUSES)[number]
   synced: boolean
   sources: StoredSource[]
+  /** What the site runs and monitors, as the onboarding asks. */
+  departments: string[]
+  priorities: string[]
+  /** Set up through "Add a site": the app then shows this site's own
+   *  sector and departments. A site from before keeps the account's. */
+  configured: boolean
   /** Alerts the API holds for this site (server mode only). */
   alerts?: number
+}
+
+function idList(value: unknown, limit: number): string[] {
+  if (!Array.isArray(value)) return []
+
+  return value.filter((v): v is string => typeof v === "string" && /^[a-z0-9][a-z0-9_-]{0,59}$/.test(v)).slice(0, limit)
 }
 
 function parseOne(raw: unknown): StoredSite | null {
@@ -45,7 +60,7 @@ function parseOne(raw: unknown): StoredSite | null {
       | Record<string, unknown>
       | undefined
 
-    return { type, connected: found?.connected === true, synced: found?.synced === true }
+    return { type, wanted: found?.wanted === true, connected: found?.connected === true, synced: found?.synced === true }
   })
 
   return {
@@ -56,6 +71,9 @@ function parseOne(raw: unknown): StoredSite | null {
     status,
     synced: r.synced === true,
     sources,
+    departments: idList(r.departments, 8),
+    priorities: idList(r.priorities, 40),
+    configured: r.configured === true,
   }
 }
 
@@ -109,7 +127,7 @@ export type SitesState = {
   activeId: string | null
 }
 
-export type SiteResult = { ok: true } | { ok: false; code: string }
+export type SiteResult = { ok: true } | { ok: false; code: string; needs?: string }
 
 const NOT_READY: SitesState = { ready: false, mode: "local", sites: [], activeId: null }
 let state: SitesState = NOT_READY
@@ -198,28 +216,36 @@ async function readSitesNow(): Promise<void> {
   }
 
   const changed = rememberActiveSite(next.activeId)
+  // The site shown brings its own sector and departments with it.
+  const reshaped =
+    next.mode === "server" ? applySiteConfig(next.sites.find((s) => s.id === next.activeId) ?? null) : false
   publish(next)
 
   // A view that shows a site's data fetches again only when the site it shows
   // changes, not at every read of the list.
-  if (changed) window.dispatchEvent(new Event(SITES_CHANGED_EVENT))
+  if (changed || reshaped) window.dispatchEvent(new Event(SITES_CHANGED_EVENT))
 }
 
 /** The words an API refusal maps to are the view's: this only says why. */
 async function refusal(res: Response): Promise<SiteResult> {
   let code = `HTTP ${res.status}`
+  let needs: string | undefined
 
   try {
     const body = await res.json()
     if (body && typeof body.error_code === "string") code = body.error_code
+    if (body && typeof body.needs === "string") needs = body.needs
   } catch {
     /* no body */
   }
 
-  return { ok: false, code }
+  return { ok: false, code, needs }
 }
 
-export async function addSite(fields: Pick<StoredSite, "name" | "location" | "sector">): Promise<SiteResult & { id?: string }> {
+export type NewSite = Pick<StoredSite, "name" | "location" | "sector"> &
+  Partial<Pick<StoredSite, "departments" | "priorities" | "configured" | "sources">>
+
+export async function addSite(fields: NewSite): Promise<SiteResult & { id?: string }> {
   if (state.mode === "server") {
     const res = await api("/sites", { method: "POST", body: JSON.stringify(fields) })
 
@@ -236,7 +262,10 @@ export async function addSite(fields: Pick<StoredSite, "name" | "location" | "se
     ...fields,
     status: "offline",
     synced: false,
-    sources: SOURCE_TYPES.map((type) => ({ type, connected: false, synced: false })),
+    sources: fields.sources ?? SOURCE_TYPES.map((type) => ({ type, wanted: false, connected: false, synced: false })),
+    departments: fields.departments ?? [],
+    priorities: fields.priorities ?? [],
+    configured: fields.configured ?? false,
   }
 
   localCommit([...state.sites, site])
@@ -292,7 +321,10 @@ function localCommit(sites: StoredSite[]) {
 export function chooseSite(id: string) {
   if (state.mode !== "server" || !state.sites.some((s) => s.id === id)) return
 
-  if (rememberActiveSite(id)) {
+  const moved = rememberActiveSite(id)
+  const reshaped = applySiteConfig(state.sites.find((s) => s.id === id) ?? null)
+
+  if (moved || reshaped) {
     publish({ ...state, activeId: id })
     window.dispatchEvent(new Event(SITES_CHANGED_EVENT))
   }
