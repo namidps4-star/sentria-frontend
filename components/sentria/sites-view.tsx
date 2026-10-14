@@ -28,6 +28,7 @@ import {
   Zap,
   type LucideIcon,
 } from "@/lib/icons"
+import { readSites, writeSites, type StoredSite } from "@/lib/sites"
 import { usePresence } from "@/lib/use-presence"
 import { useShake } from "@/lib/use-shake"
 import { enterAt } from "@/lib/motion"
@@ -102,6 +103,51 @@ const SECTORS: {
  * GET /sites
  */
 const INITIAL_SITES: Site[] = []
+
+const SOURCE_NAMES: Record<DataSource["type"], Localized> = {
+  csv: localized("Import CSV", "CSV import"),
+  api: localized("API", "API"),
+  iot: localized("Capteurs IoT", "IoT sensors"),
+}
+
+/** A stored site as the page shows it. The figures are zero: no data feeds
+ *  them yet (lib/sites.ts). */
+function fromStored(stored: StoredSite): Site {
+  return {
+    id: stored.id,
+    name: stored.name,
+    location: stored.location || "",
+    sector: stored.sector,
+    status: stored.status,
+    assets: 0,
+    critical: 0,
+    warnings: 0,
+    lastData: stored.synced ? "now" : "none",
+    health: 0,
+    sources: stored.sources.map((source) => ({
+      type: source.type,
+      name: SOURCE_NAMES[source.type],
+      connected: source.connected,
+      lastSync: source.synced ? "now" : "none",
+    })),
+  }
+}
+
+function toStored(site: Site): StoredSite {
+  return {
+    id: site.id,
+    name: site.name,
+    location: site.location,
+    sector: site.sector,
+    status: site.status,
+    synced: site.lastData === "now",
+    sources: site.sources.map((source) => ({
+      type: source.type,
+      connected: source.connected,
+      synced: source.lastSync === "now",
+    })),
+  }
+}
 
 const STATUS_META = {
   connected: {
@@ -220,6 +266,20 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
     INITIAL_SITES
   )
 
+  // The sites are the account's: read when the page opens, and again when
+  // the account finishes loading, written at every change.
+  useEffect(() => {
+    const load = () => setSites(readSites().map(fromStored))
+    load()
+    window.addEventListener(PLAN_UPDATED_EVENT, load)
+    return () => window.removeEventListener(PLAN_UPDATED_EVENT, load)
+  }, [])
+
+  const commitSites = (next: Site[]) => {
+    setSites(next)
+    writeSites(next.map(toStored))
+  }
+
   const [activeSiteId, setActiveSiteId] =
     useState<string | null>(null)
 
@@ -317,7 +377,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
       ],
     }
 
-    setSites((current) => [...current, site])
+    commitSites([...sites, site])
     setActiveSiteId(site.id)
     setShowAddSite(false)
     setNameInvalid(false)
@@ -327,12 +387,20 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
     setNewSiteSector("industry")
   }
 
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  function removeSite(siteId: string) {
+    commitSites(sites.filter((site) => site.id !== siteId))
+    setActiveSiteId(null)
+    setConfirmDelete(false)
+  }
+
   function addSource(
     siteId: string,
     sourceType: "csv" | "api" | "iot"
   ) {
-    setSites((current) =>
-      current.map((site) =>
+    commitSites(
+      sites.map((site) =>
         site.id === siteId
           ? {
               ...site,
@@ -369,7 +437,10 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
         <div className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-6 md:flex-row md:items-center md:justify-between">
           <div>
             <button
-              onClick={() => setActiveSiteId(null)}
+              onClick={() => {
+                setActiveSiteId(null)
+                setConfirmDelete(false)
+              }}
               className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -413,12 +484,43 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
             </div>
           </div>
 
-          <button
-            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-muted"
-          >
-            <Settings2 className="h-4 w-4" />
-            {tx("Configurer le site", "Configure this site")}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-muted"
+            >
+              <Settings2 className="h-4 w-4" />
+              {tx("Configurer le site", "Configure this site")}
+            </button>
+
+            {confirmDelete ? (
+              <>
+                <button
+                  data-testid="site-delete-confirm"
+                  onClick={() => removeSite(activeSite.id)}
+                  className="inline-flex items-center gap-2 rounded-full bg-destructive px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                >
+                  <X className="h-4 w-4" />
+                  {tx("Oui, supprimer", "Yes, delete")}
+                </button>
+
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="rounded-full border border-border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-muted"
+                >
+                  {tx("Annuler", "Cancel")}
+                </button>
+              </>
+            ) : (
+              <button
+                data-testid="site-delete"
+                onClick={() => setConfirmDelete(true)}
+                className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-semibold text-destructive transition-colors hover:bg-destructive/10"
+              >
+                <X className="h-4 w-4" />
+                {tx("Supprimer le site", "Delete site")}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* TABS */}

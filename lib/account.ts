@@ -33,6 +33,8 @@ export const ACCOUNT_KEYS = [
   "sentria_actions_log",
   // The wholesalers the pharmacy orders from (lib/wholesalers.ts).
   "sentria_wholesalers",
+  // The sites the company runs (lib/sites.ts).
+  "sentria_sites",
   // "on" when the weekly email is wanted (Settings; read by the API's
   // POST /reports/weekly/send).
   "sentria_weekly_report",
