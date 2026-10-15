@@ -29,6 +29,7 @@ import {
   Zap,
   type LucideIcon,
 } from "@/lib/icons"
+import { SectorBadge } from "./sector-badge"
 import { takeAddSiteHint } from "@/lib/active-site"
 import { API_BASE } from "@/lib/api"
 import { normalizeOpsType } from "@/lib/activities"
@@ -323,6 +324,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
     [sites, activeSiteId]
   )
 
+  const shownStored = held.sites.find((site) => site.id === held.activeId)
   const shownSite = sites.find((site) => site.id === held.activeId) ?? null
   const connectedCount = sites.filter((site) => site.status === "connected").length
   const criticalCount = sites.reduce((total, site) => total + site.critical, 0)
@@ -1067,9 +1069,28 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
               </button>
             </div>
 
-            <p className="mt-5 font-heading text-2xl font-semibold leading-tight tracking-tight">
-              {tx("Vos opérations, site par site.", "Your operations, site by site.")}
-            </p>
+            {shownSite ? (
+              <div className="mt-5" data-testid="site-active-card">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#141414]/65">
+                  {tx("Site actif", "Active site")}
+                </p>
+                <p className="mt-1 truncate font-heading text-2xl font-semibold leading-tight tracking-tight">
+                  {shownSite.name}
+                </p>
+                <p className="mt-1 flex items-center gap-2 text-xs font-medium text-[#141414]/75">
+                  <SectorBadge sector={shownSite.sector} size="sm" />
+                  <span className="truncate">
+                    {px(getSector(shownSite.sector).label)}
+                    {shownStored && shownStored.departments.length > 0 &&
+                      ` · ${shownStored.departments.length} ${tx(shownStored.departments.length > 1 ? "départements" : "département", shownStored.departments.length > 1 ? "departments" : "department")}`}
+                  </span>
+                </p>
+              </div>
+            ) : (
+              <p className="mt-5 font-heading text-2xl font-semibold leading-tight tracking-tight">
+                {tx("Vos opérations, site par site.", "Your operations, site by site.")}
+              </p>
+            )}
 
             <div className="mt-4">
               <div

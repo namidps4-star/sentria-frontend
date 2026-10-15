@@ -120,7 +120,7 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
     await p.getByTestId('add-site-create').click(); await p.waitForTimeout(1500);
     pass(api.log.includes('POST /sites Dakar depot') && api.sites.length === 2, 'a new site is sent to the API');
     await p.locator('aside nav button', { hasText: /^Sites$/ }).first().click(); await p.waitForTimeout(800);
-    await p.locator('main').getByText('Dakar depot').first().click(); await p.waitForTimeout(600);
+    await p.locator('main button', { hasText: 'Dakar depot' }).first().click(); await p.waitForTimeout(600);
     await p.getByTestId('site-delete').click(); await p.waitForTimeout(200);
     pass(await p.getByTestId('site-delete-warning').isVisible(), 'the delete confirmation says its alerts go too');
     await p.getByTestId('site-delete-confirm').click(); await p.waitForTimeout(900);
@@ -226,7 +226,7 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
   console.log('== a CSV for a site');
   { const { p, ctx, api } = await open({ sites: [mkSite('s1', 'Lyon plant', 'Lyon'), mkSite('s2', 'Dakar depot', 'Dakar')] });
     await p.locator('aside nav button', { hasText: /^Sites$/ }).first().click(); await p.waitForTimeout(800);
-    await p.locator('main').getByText('Dakar depot').first().click(); await p.waitForTimeout(600);
+    await p.locator('main button', { hasText: 'Dakar depot' }).first().click(); await p.waitForTimeout(600);
     pass(await p.getByTestId('site-import-csv-empty').isVisible(), 'a site with no data offers "Import CSV"');
     pass(await p.getByTestId('site-csv-input').count() === 1, 'which opens a real file chooser');
     await p.getByTestId('site-csv-input').setInputFiles({ name: 'dakar.csv', mimeType: 'text/csv', buffer: Buffer.from('medicine_name,stock_qty\nA,1\n') });
@@ -260,6 +260,7 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
     pass(await p.locator('main').getByText('Main site').first().isVisible() && await p.locator('main').getByText('Power depot').first().isVisible(), 'and the Sites page lists both');
     pass(await p.getByTestId('site-active-tag').count() === 1 && /Main site/.test(await p.locator('[data-active]').innerText()), 'the Sites page marks only the site on the dashboard as active');
     pass(await p.getByTestId('site-source-row').count() === 4, 'the sources panel lists the active site\'s own four sources');
+    pass(/Active site/i.test(await p.getByTestId('site-active-card').innerText()) && /Main site/.test(await p.getByTestId('site-active-card').innerText()), 'the lime card names the active site');
     await p.screenshot({ path: '/tmp/sites-active-light.png' });
     await ctx.close(); }
 
