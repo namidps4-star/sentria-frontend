@@ -48,16 +48,13 @@ const PROFILE = { sentria_onboarded: 'true', sentria_company_name: 'Acme', sentr
     await p.screenshot({ path: 'sitespersist-list-light.png' });
     await ctx.close(); }
 
-  console.log('== a data source stays connected');
+  console.log('== a data source is only connected by real data');
   { const { p, ctx } = await open({ db });
     await p.getByText('Lyon plant').first().click(); await p.waitForTimeout(500);
-    const btn = p.getByRole('button', { name: /Connect|Connecter/ }).first();
-    if (await btn.count()) { await btn.click(); await p.waitForTimeout(600); }
-    pass(stored(db)[0].sources.some(s => s.connected) && stored(db)[0].status === 'connected', 'a connected source and the status reach the account');
-    await ctx.close(); }
-  { const { p, ctx } = await open({ db });
-    await p.getByText('Lyon plant').first().click(); await p.waitForTimeout(500);
-    pass(/Connected|Connecté/.test(await p.locator('main').innerText()), 'and it still reads connected after a reload');
+    pass(await p.getByTestId('site-import-csv').first().isVisible() && await p.getByTestId('site-csv-input').count() === 1, 'the CSV row offers a real file import');
+    pass(await p.getByTestId('source-not-live').count() === 3, 'API, ERP and IoT say they are not live yet: nothing to "connect"');
+    pass(!(await p.getByRole('button', { name: /^Connect$/ }).count()), 'and no button flips a source to connected');
+    pass(stored(db)[0].sources.every(s => !s.connected) && stored(db)[0].status === 'offline', 'so the account holds nothing as connected');
     await ctx.close(); }
 
   console.log('== delete');

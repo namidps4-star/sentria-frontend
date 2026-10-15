@@ -30,6 +30,13 @@ import {
   type LucideIcon,
 } from "@/lib/icons"
 import { takeAddSiteHint } from "@/lib/active-site"
+import { API_BASE } from "@/lib/api"
+import { normalizeOpsType } from "@/lib/activities"
+import { accountCurrencyParam } from "@/lib/locale"
+import { toApiSector } from "@/lib/sector"
+import { runUpload } from "@/lib/upload"
+import { setUploadPanel } from "@/lib/upload-panel"
+import { uploadProblemMessage } from "@/lib/upload-problem"
 import { addSite, chooseSite, deleteSite, editSite, useSites, type StoredSite } from "@/lib/sites"
 import { usePresence } from "@/lib/use-presence"
 import { useShake } from "@/lib/use-shake"
@@ -421,22 +428,56 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
     setConfirmDelete(false)
   }
 
-  async function addSource(
-    siteId: string,
-    sourceType: "csv" | "api" | "erp" | "iot"
-  ) {
-    const site = held.sites.find((s) => s.id === siteId)
+  // A CSV for this site (F-SITESCOPE): the file goes to the site named, not
+  // to whichever one the top bar shows. The import panel (drawn by the app
+  // shell) shows its progress and the API's verdict on the columns.
+  const csvInput = useRef<HTMLInputElement>(null)
+  const [importing, setImporting] = useState(false)
 
-    if (!site) return
+  async function importCsv(file: File, site: Site) {
+    const department = held.sites.find((s) => s.id === site.id)?.departments[0]
+    const ops = site.sector === "logistics" ? normalizeOpsType(department) : undefined
 
-    const done = await editSite(siteId, {
-      sources: site.sources.map((source) =>
-        source.type === sourceType ? { ...source, connected: true, synced: true } : source
-      ),
-      status: "connected",
-    })
+    setImporting(true)
+    setSiteError(null)
+    setUploadPanel({ open: true, busy: true, title: site.name, state: { phase: "idle" } })
 
-    if (!done.ok) setSiteError(siteErrorText(done.code))
+    try {
+      const result = await runUpload(
+        `${API_BASE}/upload?sector=${toApiSector(site.sector)}&lang=${tx("fr", "en")}&site_id=${encodeURIComponent(site.id)}` +
+          (ops ? `&ops_type=${ops}` : "") +
+          (department ? `&business_type=${encodeURIComponent(department)}` : "") +
+          accountCurrencyParam(),
+        file,
+        (state) => setUploadPanel({ state }),
+        (problem) =>
+          uploadProblemMessage(problem, tx) ??
+          tx("Ce fichier ne correspond pas à ce site.", "This file doesn't match this site."),
+        tx(
+          "L'API SentrIA n'a pas répondu. Réessayez dans un instant.",
+          "The SentrIA API did not answer. Try again in a moment."
+        )
+      )
+
+      setUploadPanel({ busy: false })
+
+      if (result.phase === "done") {
+        const stored = held.sites.find((s) => s.id === site.id)
+
+        if (stored) {
+          await editSite(site.id, {
+            sources: stored.sources.map((source) =>
+              source.type === "csv" ? { ...source, wanted: true, connected: true, synced: true } : source
+            ),
+            status: "connected",
+          })
+        }
+      }
+    } finally {
+      setImporting(false)
+      setUploadPanel({ busy: false })
+      if (csvInput.current) csvInput.current.value = ""
+    }
   }
 
   /*
@@ -824,22 +865,34 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                     </div>
                   </div>
 
-                  {source.connected ? (
+                  {source.connected && source.type === "csv" ? (
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/20 px-2.5 py-1 text-xs font-semibold">
+                        <CheckCircle2 className="h-3 w-3" />
+                        {tx("Actif", "Active")}
+                      </span>
+                      <button
+                        data-testid="site-import-csv"
+                        disabled={importing}
+                        onClick={() => csvInput.current?.click()}
+                        className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold disabled:opacity-60"
+                      >
+                        {tx("Importer un autre CSV", "Import another CSV")}
+                      </button>
+                    </div>
+                  ) : source.connected ? (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/20 px-2.5 py-1 text-xs font-semibold">
                       <CheckCircle2 className="h-3 w-3" />
                       {tx("Actif", "Active")}
                     </span>
                   ) : source.type === "csv" ? (
                     <button
-                      onClick={() =>
-                        addSource(
-                          activeSite.id,
-                          source.type
-                        )
-                      }
-                      className="rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background"
+                      data-testid="site-import-csv"
+                      disabled={importing}
+                      onClick={() => csvInput.current?.click()}
+                      className="rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background disabled:opacity-60"
                     >
-                      {tx("Connecter", "Connect")}
+                      {tx("Importer un CSV", "Import a CSV")}
                     </button>
                   ) : (
                     // Nothing connects by itself yet: the choice is kept, and
@@ -858,6 +911,20 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
             </div>
           </div>
         </div>
+
+        <input
+          ref={csvInput}
+          type="file"
+          accept=".csv"
+          className="sr-only"
+          data-testid="site-csv-input"
+          aria-label={tx("Importer un fichier CSV pour ce site", "Import a CSV file for this site")}
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+
+            if (file && activeSite) void importCsv(file, activeSite)
+          }}
+        />
 
         {/* SITE DATA */}
         <div className="rounded-3xl border border-border bg-card p-6">
@@ -908,23 +975,13 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
 
               <div className="mt-5 flex flex-wrap justify-center gap-2">
                 <button
-                  onClick={() =>
-                    addSource(activeSite.id, "csv")
-                  }
-                  className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground"
+                  data-testid="site-import-csv-empty"
+                  disabled={importing}
+                  onClick={() => csvInput.current?.click()}
+                  className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground disabled:opacity-60"
                 >
                   <Upload className="h-4 w-4" />
                   {tx("Importer CSV", "Import CSV")}
-                </button>
-
-                <button
-                  onClick={() =>
-                    addSource(activeSite.id, "iot")
-                  }
-                  className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-semibold"
-                >
-                  <Wifi className="h-4 w-4" />
-                  {tx("Connecter IoT", "Connect IoT")}
                 </button>
               </div>
             </div>

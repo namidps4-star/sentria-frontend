@@ -199,6 +199,20 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
     pass(/Entreprise/.test(await p.getByTestId('add-site-error').innerText()) && await p.getByTestId('add-site-wizard').isVisible(), 'a refusal by the plan stays in the wizard and says which plan: ' + (await p.getByTestId('add-site-error').innerText()).slice(0, 70));
     await ctx.close(); }
 
+  console.log('== a CSV for a site');
+  { const { p, ctx, api } = await open({ sites: [mkSite('s1', 'Lyon plant', 'Lyon'), mkSite('s2', 'Dakar depot', 'Dakar')] });
+    await p.locator('aside nav button', { hasText: /^Sites$/ }).first().click(); await p.waitForTimeout(800);
+    await p.locator('main').getByText('Dakar depot').first().click(); await p.waitForTimeout(600);
+    pass(await p.getByTestId('site-import-csv-empty').isVisible(), 'a site with no data offers "Import CSV"');
+    pass(await p.getByTestId('site-csv-input').count() === 1, 'which opens a real file chooser');
+    await p.getByTestId('site-csv-input').setInputFiles({ name: 'dakar.csv', mimeType: 'text/csv', buffer: Buffer.from('medicine_name,stock_qty\nA,1\n') });
+    await p.waitForTimeout(2500);
+    pass(api.log.some(l => l === 'POST /upload site=s2'), 'the file goes to that site, not the one the top bar shows: ' + api.log.filter(l => /upload/.test(l)).join(','));
+    pass(api.log.some(l => l === 'PATCH s2'), 'the site is marked as receiving a CSV');
+    pass(/Active|Actif/.test(await p.locator('main').innerText()) && await p.getByTestId('site-import-csv').first().isVisible(), 'and it can take another file');
+    pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
+    await ctx.close(); }
+
   console.log('== French and a phone');
   { const { p, ctx } = await open({ sites: [mkSite('s1', 'Usine de Lyon', 'Lyon'), mkSite('s2', 'Dépôt de Dakar', 'Dakar')], lang: 'fr', vw: 390 });
     await p.getByTestId('account-menu-button').click(); await p.waitForTimeout(400);
