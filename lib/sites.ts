@@ -9,7 +9,7 @@ import { requestAccountSave } from "@/lib/account"
 import { SITES_CHANGED_EVENT, SITES_RESET_EVENT, activeDepartment, activeSiteId, rememberActiveDepartment, rememberActiveSite } from "@/lib/active-site"
 import { API_BASE, apiFetch } from "@/lib/api"
 import { PLAN_UPDATED_EVENT } from "@/lib/plans"
-import { applySiteConfig } from "@/lib/site-config"
+import { applySiteConfig, readAccountSetup } from "@/lib/site-config"
 import { useEffect, useSyncExternalStore } from "react"
 
 export const SITES_KEY = "sentria_sites"
@@ -177,6 +177,72 @@ async function api(path: string, init?: RequestInit) {
 /** Reads the sites again, from the API when it has the table. The sites an
  *  account kept in its profile before are moved to the API once, the first
  *  time it has the table and holds none. */
+/** "1" once the setup the account chose in its onboarding has been made a site
+ *  (or already was one): a site deleted later is not made again. */
+const MAIN_SITE_KEY = "sentria_main_site_done"
+
+const ID_OK = /^[a-z0-9][a-z0-9_-]{0,59}$/
+
+/** The sector, departments and priorities the account chose in its onboarding
+ *  become its first site, so the dashboard it already had is one of its sites
+ *  and can be come back to from the menu and the Sites page. Returns the sites
+ *  as they are after. */
+async function adoptSetup(sites: StoredSite[]): Promise<StoredSite[]> {
+  try {
+    if (localStorage.getItem(MAIN_SITE_KEY) === "1" || !["true", "1"].includes(localStorage.getItem("sentria_onboarded") ?? "")) return sites
+
+    const setup = readAccountSetup()
+
+    if (!setup || !(SITE_SECTORS as readonly string[]).includes(setup.sector)) return sites
+
+    const done = () => {
+      localStorage.setItem(MAIN_SITE_KEY, "1")
+      requestAccountSave()
+    }
+
+    if (sites.some((site) => site.sector === setup.sector)) {
+      done()
+      return sites
+    }
+
+    let wantedSources: string[] = []
+
+    try {
+      const saved = JSON.parse(localStorage.getItem("sentria_data_sources") ?? "[]")
+      if (Array.isArray(saved)) wantedSources = saved.filter((v: unknown): v is string => typeof v === "string")
+    } catch {
+      /* none */
+    }
+
+    const res = await api("/sites", {
+      method: "POST",
+      body: JSON.stringify({
+        name: localStorage.getItem("sentria_language") === "en" ? "Main site" : "Site principal",
+        location: "",
+        sector: setup.sector,
+        departments: setup.departments.filter((d) => ID_OK.test(d)),
+        priorities: setup.priorities.filter((d) => ID_OK.test(d)),
+        sources: SOURCE_TYPES.map((type) => ({ type, wanted: wantedSources.includes(type), connected: false, synced: false })),
+        configured: true,
+      }),
+    })
+
+    // A plan that does not allow it, or an API that cannot: try again at the next read.
+    if (!res.ok) return sites
+
+    done()
+
+    const again = await api("/sites")
+    const body = again.ok ? await again.json() : null
+
+    return body && Array.isArray(body.sites)
+      ? (body.sites as unknown[]).map(fromApi).filter((s): s is StoredSite => s !== null)
+      : sites
+  } catch {
+    return sites
+  }
+}
+
 let inflight: Promise<void> | null = null
 
 export function refreshSites(): Promise<void> {
@@ -217,6 +283,8 @@ async function readSitesNow(): Promise<void> {
         }
       }
     }
+
+    sites = await adoptSetup(sites)
 
     const activeId = pickActive(sites, "server")
 

@@ -64,6 +64,7 @@ function Tile({
   title,
   detail,
   badge,
+  wide,
 }: {
   id: string
   selected: boolean
@@ -73,6 +74,8 @@ function Tile({
   title: string
   detail?: string
   badge?: React.ReactNode
+  /** The last of an odd number of cards takes the whole row, so no cell is left empty. */
+  wide?: boolean
 }) {
   return (
     <button
@@ -84,7 +87,8 @@ function Tile({
       className={cn(
         "relative flex min-h-[4.75rem] items-center gap-3.5 rounded-[22px] border-[1.5px] p-3.5 pr-12 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         selected ? "border-foreground bg-accent/20 ring-[3px] ring-brand/55" : "border-border bg-card hover:bg-muted",
-        disabled && "cursor-not-allowed opacity-50"
+        disabled && "cursor-not-allowed opacity-50",
+        wide && "sm:col-span-2"
       )}
     >
       {lead}
@@ -375,12 +379,13 @@ export function AddSiteWizard({
                 <p className="mb-3 text-[17px] font-bold">{tx("Dans quel secteur travaille ce site ?", "Which industry does this site work in?")}</p>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {SECTORS.map((item) => {
+                  {SECTORS.map((item, index) => {
                     const count = departmentCount(item.id)
 
                     return (
                       <Tile
                         key={item.id}
+                        wide={SECTORS.length % 2 === 1 && index === SECTORS.length - 1}
                         id={`add-site-sector-${item.id}`}
                         selected={sector === item.id}
                         disabled={locked(item.id)}
@@ -419,9 +424,10 @@ export function AddSiteWizard({
                 </p>
 
                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  {departmentList.map((item) => (
+                  {departmentList.map((item, index) => (
                     <Tile
                       key={item.id}
+                      wide={departmentList.length % 2 === 1 && index === departmentList.length - 1}
                       id={`add-site-department-${item.id}`}
                       selected={departments.includes(item.id)}
                       onPick={() => chooseDepartment(item.id)}
@@ -448,9 +454,10 @@ export function AddSiteWizard({
                   <p className="mt-3 text-sm text-muted-foreground">{tx("Rien à choisir pour ce secteur.", "Nothing to pick for this sector.")}</p>
                 ) : (
                   <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                    {priorityList.map((item) => (
+                    {priorityList.map((item, index) => (
                       <Tile
                         key={item.id}
+                        wide={priorityList.length % 2 === 1 && index === priorityList.length - 1}
                         id={`add-site-priority-${item.id}`}
                         selected={priorities.includes(item.id)}
                         onPick={() => setPriorities(toggle(priorities, item.id))}

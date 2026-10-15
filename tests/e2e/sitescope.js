@@ -62,7 +62,7 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
     await ctx.close(); }
 
   console.log('== no site yet: the menu offers to add one');
-  { const { p, ctx } = await open({ sites: [] });
+  { const { p, ctx } = await open({ sites: [], profile: { sentria_main_site_done: '1' } });
     await p.getByTestId('account-menu-button').click(); await p.waitForTimeout(400);
     pass(/No sites yet/.test(await p.getByTestId('account-menu').innerText()) && await p.getByTestId('account-menu-add').isVisible(), 'it says so and offers "Add a site"');
     await ctx.close(); }
@@ -153,6 +153,8 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
     pass(/Step 1 of 5/.test(await p.getByTestId('add-site-step').innerText()), 'a site needs a name before it goes on');
     await p.getByTestId('add-site-name').fill('Power depot'); await p.getByTestId('add-site-next').click(); await p.waitForTimeout(300);
     pass((await p.locator('[data-testid^="add-site-sector-"]').count()) === 7, 'step 2 offers the seven sectors, retail included');
+    const lastBox = await p.getByTestId('add-site-sector-commerce').boundingBox(), firstBox = await p.getByTestId('add-site-sector-logistics').boundingBox();
+    pass(lastBox && firstBox && lastBox.width > firstBox.width * 1.8, 'seven is odd: the last card takes the whole row, no empty cell');
     await p.getByTestId('add-site-sector-energy').click(); await p.waitForTimeout(200);
     await p.screenshot({ path: 'sitescope-wizard-step2.png' });
     await p.getByTestId('add-site-next').click(); await p.waitForTimeout(300);
@@ -233,6 +235,29 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
     pass(api.log.some(l => l === 'PATCH s2'), 'the site is marked as receiving a CSV');
     pass(/Active|Actif/.test(await p.locator('main').innerText()) && await p.getByTestId('site-import-csv').first().isVisible(), 'and it can take another file');
     pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
+    await ctx.close(); }
+
+  console.log('== the setup the account chose in its onboarding is its first site');
+  { const { p, ctx, api } = await open({ sites: [], profile: { sentria_departments: JSON.stringify({ health: ['pharmacie'] }), sentria_business_type: 'pharmacie', sentria_equipment: JSON.stringify(['stock_expiry']) } });
+    pass(api.log.includes('POST /sites Main site') && api.sites.length === 1, 'an account with no site gets one from its onboarding');
+    pass(api.body && api.body.sector === 'health' && api.body.departments[0] === 'pharmacie' && api.body.configured === true && api.body.priorities[0] === 'stock_expiry', 'with its sector, department and priorities: ' + JSON.stringify(api.body).slice(0, 120));
+    await p.getByTestId('account-menu-button').click(); await p.waitForTimeout(400);
+    pass(/Main site/.test(await p.getByTestId('account-menu').innerText()) && /health/i.test(await p.getByTestId('account-menu-sector').first().innerText()), 'it is in the menu, under Health');
+    await p.reload(); await p.waitForTimeout(3500);
+    pass(api.sites.length === 1, 'and it is not made again after a reload');
+    await ctx.close(); }
+  { // The dashboard the account had before a new site: it comes back as a site.
+    const base = { sentria_sector: 'health', sentria_sectors: '["health"]', sentria_business_type: 'pharmacie', sentria_departments: JSON.stringify({ health: ['pharmacie'] }), sentria_equipment: '[]' };
+    const power = { ...mkSite('s9', 'Power depot', 'Dakar'), sector: 'energy', departments: ['centrale-production'], configured: true };
+    const { p, ctx, api } = await open({ sites: [power], profile: { sentria_sector: 'energy', sentria_sectors: '["energy"]', sentria_base_config: JSON.stringify(base) }, active: 's9' });
+    pass(api.log.includes('POST /sites Main site') && api.sites.length === 2, 'with a new site already made, the earlier health dashboard is added as a site');
+    await p.getByTestId('account-menu-button').click(); await p.waitForTimeout(400);
+    const heads = await p.getByTestId('account-menu-sector').allInnerTexts();
+    pass(heads.length === 2 && heads.some(t => /health/i.test(t)) && heads.some(t => /energy/i.test(t)), 'the menu lists both industries: ' + heads.join(' | '));
+    await p.getByTestId('account-menu-site').filter({ hasText: 'Main site' }).click(); await p.waitForTimeout(1500);
+    pass(await p.evaluate(() => localStorage.getItem('sentria_sector')) === 'health', 'picking it brings the health dashboard back');
+    await p.locator('aside nav button', { hasText: /^Sites$/ }).first().click(); await p.waitForTimeout(800);
+    pass(await p.locator('main').getByText('Main site').first().isVisible() && await p.locator('main').getByText('Power depot').first().isVisible(), 'and the Sites page lists both');
     await ctx.close(); }
 
   console.log('== French and a phone');

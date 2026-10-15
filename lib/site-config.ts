@@ -90,3 +90,43 @@ export function applySiteConfig(site: StoredSite | null): boolean {
     return false
   }
 }
+
+export type AccountSetup = { sector: string; departments: string[]; priorities: string[] }
+
+/** The sector, departments and priorities the account chose in its onboarding:
+ *  the kept copy when a site's settings are showing, else the live values. */
+export function readAccountSetup(): AccountSetup | null {
+  if (typeof window === "undefined") return null
+
+  try {
+    const base = localStorage.getItem(BASE_CONFIG_KEY)
+    const values: Snapshot = base ? (JSON.parse(base) as Snapshot) : snapshot()
+    const sector = values.sentria_sector
+
+    if (!sector || sector === "all") return null
+
+    let departments: string[] = []
+
+    try {
+      const map = JSON.parse(values[DEPARTMENTS_KEY] ?? "null")
+      if (map && Array.isArray(map[sector])) departments = map[sector].filter((d: unknown): d is string => typeof d === "string")
+    } catch {
+      /* no departments map */
+    }
+
+    if (departments.length === 0 && values.sentria_business_type) departments = [values.sentria_business_type]
+
+    let priorities: string[] = []
+
+    try {
+      const list = JSON.parse(values.sentria_equipment ?? "null")
+      if (Array.isArray(list)) priorities = list.filter((p: unknown): p is string => typeof p === "string")
+    } catch {
+      /* none */
+    }
+
+    return { sector, departments, priorities }
+  } catch {
+    return null
+  }
+}
