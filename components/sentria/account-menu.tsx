@@ -154,7 +154,7 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
           {sites.length === 0 ? (
             <p className="px-3 py-3 text-sm text-muted-foreground">{tx("Aucun site pour l'instant.", "No sites yet.")}</p>
           ) : (
-            <div className="max-h-[min(30rem,70vh)] overflow-y-auto">
+            <div className="max-h-[min(30rem,70vh)] overflow-y-auto px-0.5">
               {groups.map((group) => (
                 <section key={group.sector} aria-label={sectorLabel(group.sector)}>
                   <h4 className="flex items-center gap-2 px-3 pb-1.5 pt-3 text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted-foreground">
@@ -168,7 +168,7 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
                       const chips = server && site.configured && site.departments.length > 0
 
                       return (
-                        <li key={site.id} className={cn("rounded-2xl p-3", current && "bg-accent/20 ring-[1.5px] ring-foreground")}>
+                        <li key={site.id} className={cn("rounded-2xl p-3", current && "bg-accent/20 ring-[1.5px] ring-inset ring-foreground")}>
                           <button
                             type="button"
                             role="menuitem"
