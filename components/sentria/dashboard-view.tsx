@@ -1081,6 +1081,7 @@ export function DashboardView({
   const [filterSector, setFilterSector] = useState("all")
   // The Health priority pressed in the priority track; it filters the alerts table.
   const [healthPick, setHealthPick] = useState<string | null>(null)
+  const [otherPick, setOtherPick] = useState<string | null>(null)
 
   // The trend chart's own choices (its "…" menu). The sectors picked belong
   // to the pill they were picked on: another pill shows its own default
@@ -3526,11 +3527,29 @@ export function DashboardView({
             />
           </div>
         ) : (
-          <PriorityPills
-            sector={filterSector}
-            ids={selectedSectorPriorities}
-            label={tx("Vos priorités", "Your priorities")}
-          />
+          selectedSectorPriorities.length > 0 && filterSector !== "all" ? (
+            <div>
+              <PriorityHeading
+                count={selectedSectorPriorities.length}
+                total={priorityCount(filterSector, businessType)}
+              />
+
+              <PriorityTrack
+                sector={filterSector}
+                rows={selectedSectorPriorities.map((id) => ({
+                  id,
+                  count: null,
+                  critical: 0,
+                  top: undefined,
+                  items: [],
+                }))}
+                selected={otherPick}
+                loaded={alertsLoaded}
+                zeroUnknown={zeroUnknown}
+                onPick={(id) => setOtherPick((p) => (p === id ? null : id))}
+              />
+            </div>
+          ) : null
         )
       )}
 
