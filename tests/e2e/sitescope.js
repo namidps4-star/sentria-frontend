@@ -52,10 +52,19 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
   };
   const rows = async p => (await p.locator('#alerts-table tbody tr').allInnerTexts()).map(t => t.replace(/\s+/g, ' '));
 
-  console.log('== one site: no switcher');
+  console.log('== one site: the menu is there, with its one site');
   { const { p, ctx } = await open({ sites: [mkSite('s1', 'Lyon plant', 'Lyon')] });
-    pass(await p.getByTestId('account-menu-button').count() === 0, 'a single-site company sees nothing about sites in the top bar');
-    pass(await p.getByTestId('upload-site').count() === 0, 'and the upload does not name a site');
+    pass(await p.getByTestId('account-menu-button').count() === 1, 'the company menu is there even with a single site');
+    pass((await p.getByTestId('account-menu-active').innerText()) === 'Lyon plant', 'and names that site');
+    await p.getByTestId('account-menu-button').click(); await p.waitForTimeout(400);
+    pass(await p.getByTestId('account-menu-site').count() === 1 && await p.getByTestId('account-menu-add').isVisible(), 'it lists the one site and offers "Add a site"');
+    pass(await p.getByTestId('upload-site').count() === 0, 'the upload does not name a site: there is only one');
+    await ctx.close(); }
+
+  console.log('== no site yet: the menu offers to add one');
+  { const { p, ctx } = await open({ sites: [] });
+    await p.getByTestId('account-menu-button').click(); await p.waitForTimeout(400);
+    pass(/No sites yet/.test(await p.getByTestId('account-menu').innerText()) && await p.getByTestId('account-menu-add').isVisible(), 'it says so and offers "Add a site"');
     await ctx.close(); }
 
   console.log('== two sites: the switcher and the cut');
@@ -73,7 +82,7 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
     const items = await p.getByTestId('account-menu-site').allInnerTexts();
     pass(items.length === 2 && /Lyon plant/.test(items[0]) && /Dakar depot/.test(items[1]), 'the menu lists both sites');
     pass((await p.getByTestId('account-menu-count').allInnerTexts()).join(',') === '2,1', 'each with its alerts: 2 and 1');
-    pass(await p.getByTestId('account-menu-site').first().getAttribute('aria-checked') === 'true', 'the one shown is marked');
+    pass(await p.getByTestId('account-menu-site').first().getAttribute('aria-current') === 'true', 'the one shown is marked');
     await p.screenshot({ path: 'sitescope-menu-light.png' });
     await p.getByTestId('account-menu-site').nth(1).click(); await p.waitForTimeout(1200);
     pass((await p.getByTestId('account-menu-active').innerText()) === 'Dakar depot', 'choosing the second site names it');
@@ -116,7 +125,7 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
     pass(await p.getByTestId('site-delete-warning').isVisible(), 'the delete confirmation says its alerts go too');
     await p.getByTestId('site-delete-confirm').click(); await p.waitForTimeout(900);
     pass(api.log.some(l => l.startsWith('DELETE ')) && api.sites.length === 1, 'delete goes to the API');
-    pass(await p.getByTestId('account-menu-button').count() === 0, 'back to one site: the switcher is gone');
+    pass((await p.getByTestId('account-menu-active').innerText()) === 'Lyon plant', 'back to one site: the menu names it');
     pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
     await ctx.close(); }
 
@@ -130,7 +139,7 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
 
   console.log('== no sites table (migration 016 not run): nothing is cut');
   { const { p, ctx, api } = await open({ server: false, profile: { sentria_sites: JSON.stringify([{ id: 'a', name: 'A', location: '', sector: 'health', status: 'offline', synced: false, sources: srcs() }, { id: 'b', name: 'B', location: '', sector: 'health', status: 'offline', synced: false, sources: srcs() }]) } });
-    pass(await p.getByTestId('account-menu-button').count() === 0, 'two sites in the profile give no switcher: it would cut nothing');
+    pass(await p.getByTestId('account-menu-active').count() === 0, 'two sites in the profile name no site shown: nothing is cut');
     pass(api.log.every(l => !/site=s/.test(l)) && api.log.some(l => l === 'GET /alerts site=null'), 'alerts are fetched with no site_id');
     pass((await rows(p)).length === 3, 'and all of the company\'s alerts show');
     await ctx.close(); }
@@ -144,7 +153,9 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
     pass(/Step 1 of 5/.test(await p.getByTestId('add-site-step').innerText()), 'a site needs a name before it goes on');
     await p.getByTestId('add-site-name').fill('Power depot'); await p.getByTestId('add-site-next').click(); await p.waitForTimeout(300);
     pass((await p.locator('[data-testid^="add-site-sector-"]').count()) === 7, 'step 2 offers the seven sectors, retail included');
-    await p.getByTestId('add-site-sector-energy').click(); await p.getByTestId('add-site-next').click(); await p.waitForTimeout(300);
+    await p.getByTestId('add-site-sector-energy').click(); await p.waitForTimeout(200);
+    await p.screenshot({ path: 'sitescope-wizard-step2.png' });
+    await p.getByTestId('add-site-next').click(); await p.waitForTimeout(300);
     const depts = await p.locator('[data-testid^="add-site-department-"]').count();
     pass(depts >= 2, 'step 3 lists the sector\'s departments: ' + depts);
     await p.getByTestId('add-site-department-centrale-production').click();
@@ -169,11 +180,11 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
     pass(JSON.parse(await p.evaluate(() => localStorage.getItem('sentria_departments'))).energy.length === 2, 'and its departments');
     await p.getByTestId('account-menu-button').click(); await p.waitForTimeout(400);
     const rows2 = await p.getByTestId('account-menu-sector').allInnerTexts();
-    pass(rows2.length === 2 && /Health/.test(rows2[0]) && /Energy/.test(rows2[1]), 'the dropdown shows each site with its industry: ' + rows2.join(' | '));
+    pass(rows2.length === 2 && /health/i.test(rows2[0]) && /energy/i.test(rows2[1]), 'the dropdown groups the sites by industry: ' + rows2.join(' | '));
     await p.screenshot({ path: 'sitescope-new-site-light.png' });
     const deptItems = await p.getByTestId('account-menu-department-item').allInnerTexts();
-    pass(deptItems.length === 2 && /Power plant/.test(deptItems[0]) && /Power distribution/.test(deptItems[1]), 'the site that runs two departments rolls them out under it: ' + deptItems.join(' | '));
-    pass(await p.getByTestId('account-menu-site').first().getAttribute('aria-expanded') === null, 'a one-department site has nothing to roll out');
+    pass(deptItems.length === 2 && /Power plant/.test(deptItems[0]) && /Power distribution/.test(deptItems[1]), 'the site that runs two departments shows one chip each: ' + deptItems.join(' | '));
+    pass(await p.getByTestId('account-menu-department-item').count() === 2, 'a site with no departments of its own shows no chips');
     await p.getByTestId('account-menu-department-item').nth(1).click(); await p.waitForTimeout(1200);
     pass(await p.evaluate(() => localStorage.getItem('sentria_business_type')) === 'distribution-energetique', 'choosing a department opens the dashboard on it');
     pass(/Power distribution/.test(await p.getByTestId('account-menu-department').innerText()), 'and the top bar says which department is shown');
@@ -228,10 +239,19 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
   { const { p, ctx } = await open({ sites: [mkSite('s1', 'Usine de Lyon', 'Lyon'), mkSite('s2', 'Dépôt de Dakar', 'Dakar')], lang: 'fr', vw: 390 });
     await p.getByTestId('account-menu-button').click(); await p.waitForTimeout(400);
     const t = await p.getByTestId('account-menu').innerText();
-    pass(/site affiché/i.test(t) && /gérer les sites/i.test(t) && /Usine de Lyon/.test(t), 'French labels');
+    pass(/ajouter un site/i.test(t) && /gérer les sites/i.test(t) && /Usine de Lyon/.test(t) && /Dépôt de Dakar/.test(t), 'French labels');
     const box = await p.getByTestId('account-menu').boundingBox();
     pass(box && box.x >= 0 && box.x + box.width <= 390, 'the menu stays inside a 390 px screen');
     await p.screenshot({ path: 'sitescope-fr-390.png' });
+    await p.getByTestId('account-menu-add').click(); await p.waitForTimeout(900);
+    pass(await p.getByTestId('add-site-wizard').isVisible(), 'on a phone the menu\'s "Ajouter un site" opens the wizard');
+    await p.getByTestId('add-site-name').fill('Dépôt Thiès'); await p.getByTestId('add-site-next').click(); await p.waitForTimeout(300);
+    await p.getByTestId('add-site-sector-energy').click(); await p.waitForTimeout(300);
+    const wb = await p.getByTestId('add-site-wizard').boundingBox();
+    pass(wb && wb.x >= 0 && wb.x + wb.width <= 390 + 1, 'the wizard is a sheet inside the 390 px screen');
+    pass(await p.getByTestId('add-site-preview-line').isVisible() && await p.getByTestId('add-site-preview').isHidden(), 'the preview is one line, not a side panel');
+    pass(await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'no sideways scroll');
+    await p.screenshot({ path: 'sitescope-wizard-fr-390.png' });
     await ctx.close(); }
 
   await browser.close();

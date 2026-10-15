@@ -551,7 +551,7 @@ function ActivityFlowPreview({
   )
 }
 
-const SAMPLE_ALERTS: Record<Sector, Localized> = {
+export const SAMPLE_ALERTS: Record<Sector, Localized> = {
   industry: localized(
     "Ligne 2 : 3 arrêts en 4 h, au-dessus de votre seuil.",
     "Line 2: 3 stoppages in 4 h, above your threshold."
