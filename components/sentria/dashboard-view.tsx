@@ -62,6 +62,7 @@ import { RecommendationsPanel } from "./recommendations-panel"
 import { Skeleton } from "./skeleton"
 import { AlertIcon } from "./alert-icon"
 import { PriorityTrack } from "./priority-track"
+import { priorityRows } from "@/lib/priority-counts"
 import { HEALTH_PRIORITY_CATEGORY, healthCategoryOf, healthRows } from "@/lib/health-priorities"
 import { enterAt } from "@/lib/motion"
 import { announceAlertsUpdated } from "@/lib/alerts-event"
@@ -3536,13 +3537,11 @@ export function DashboardView({
 
               <PriorityTrack
                 sector={filterSector}
-                rows={selectedSectorPriorities.map((id) => ({
-                  id,
-                  count: null,
-                  critical: 0,
-                  top: undefined,
-                  items: [],
-                }))}
+                rows={priorityRows(
+                  selectedSectorPriorities,
+                  filteredAlerts,
+                  alertsLoaded && !zeroUnknown
+                )}
                 selected={otherPick}
                 loaded={alertsLoaded}
                 zeroUnknown={zeroUnknown}
