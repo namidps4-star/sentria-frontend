@@ -19,8 +19,8 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
 (async () => {
   const browser = await chromium.launch(LAUNCH);
   // `server`: the API has the sites table. `sites`: what it holds. `profile`: extra account values.
-  const open = async ({ server = true, sites = [], profile = {}, lang = 'en', vw = 1440, active = null, plan = 'entreprise', refuse = null } = {}) => {
-    const ctx = await browser.newContext({ viewport: { width: vw, height: 900 }, locale: lang === 'fr' ? 'fr-FR' : 'en-US' });
+  const open = async ({ server = true, sites = [], profile = {}, lang = 'en', vw = 1440, vh = 900, active = null, plan = 'entreprise', refuse = null } = {}) => {
+    const ctx = await browser.newContext({ viewport: { width: vw, height: vh }, locale: lang === 'fr' ? 'fr-FR' : 'en-US' });
     const p = await ctx.newPage(); p._errors = []; p.on('pageerror', e => p._errors.push(e.message));
     const api = { refuse, sites: sites.map(s => ({ ...s })), log: [], alerts: [alertOf('Amox', 's1'), alertOf('Ibu', 's1'), alertOf('Paracetamol', 's2')] };
     await p.route(/onrender\.com\//, async r => {
@@ -258,6 +258,25 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
     pass(await p.evaluate(() => localStorage.getItem('sentria_sector')) === 'health', 'picking it brings the health dashboard back');
     await p.locator('aside nav button', { hasText: /^Sites$/ }).first().click(); await p.waitForTimeout(800);
     pass(await p.locator('main').getByText('Main site').first().isVisible() && await p.locator('main').getByText('Power depot').first().isVisible(), 'and the Sites page lists both');
+    await ctx.close(); }
+
+  console.log('== a short screen: nothing runs out of the frame');
+  { const { p, ctx } = await open({ sites: [mkSite('s1', 'Lyon plant', 'Lyon')], vh: 640, vw: 1280 });
+    await p.locator('aside nav button', { hasText: /^Sites$/ }).first().click(); await p.waitForTimeout(800);
+    await p.getByRole('button', { name: 'Add a site' }).locator('visible=true').first().click(); await p.waitForTimeout(400);
+    await p.getByTestId('add-site-name').fill('Atl retails'); await p.getByTestId('add-site-next').click(); await p.waitForTimeout(200);
+    await p.getByTestId('add-site-sector-commerce').click(); await p.getByTestId('add-site-next').click(); await p.waitForTimeout(300);
+    const depts = p.locator('[data-testid^="add-site-department-"]');
+    for (let i = 0; i < await depts.count(); i++) await depts.nth(i).click();
+    await p.getByTestId('add-site-next').click(); await p.waitForTimeout(300);
+    const pri = p.locator('[data-testid^="add-site-priority-"]');
+    for (let i = 0; i < await pri.count(); i++) await pri.nth(i).click();
+    await p.waitForTimeout(200);
+    const dlg = await p.getByTestId('add-site-wizard').boundingBox(), next = await p.getByTestId('add-site-next').boundingBox();
+    pass(dlg && dlg.y >= 0 && dlg.y + dlg.height <= 640, 'with everything ticked, the wizard still fits a 640 px screen: ' + JSON.stringify(dlg));
+    pass(next && next.y >= 0 && next.y + next.height <= 640, 'and "Continue" stays on screen: ' + (next && Math.round(next.y + next.height)));
+    pass(await p.getByTestId('add-site-preview').evaluate(el => el.scrollHeight > el.clientHeight ? getComputedStyle(el).overflowY !== 'visible' : true), 'a long preview scrolls inside its panel instead of growing');
+    await p.screenshot({ path: 'sitescope-wizard-short.png' });
     await ctx.close(); }
 
   console.log('== French and a phone');

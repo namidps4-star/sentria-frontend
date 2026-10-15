@@ -217,7 +217,7 @@ export function AddSiteWizard({
     tx("Secteur", "Sector"),
     tx("Département", "Department"),
     tx("Priorités", "Priorities"),
-    tx("Vos données", "Your data"),
+    tx("Données", "Data"),
   ]
   const last = stepNames.length
 
@@ -273,9 +273,9 @@ export function AddSiteWizard({
         aria-modal="true"
         aria-labelledby="add-site-title"
         data-testid="add-site-wizard"
-        className="flex max-h-[94vh] w-full flex-col overflow-hidden rounded-t-[28px] border border-border bg-card shadow-2xl sm:max-h-[92vh] sm:max-w-5xl sm:rounded-[32px] md:grid md:grid-cols-[minmax(0,1fr)_340px]"
+        className="flex max-h-[94vh] w-full flex-col overflow-hidden rounded-t-[28px] border border-border bg-card shadow-2xl sm:max-h-[92vh] sm:max-w-5xl sm:rounded-[32px] md:h-[min(46rem,92vh)] md:grid md:grid-cols-[minmax(0,1fr)_340px] md:grid-rows-[minmax(0,1fr)]"
       >
-        <div className="flex min-h-0 flex-col px-4 pt-3 sm:px-8 sm:pt-7 md:min-h-[44rem]">
+        <div className="flex min-h-0 flex-1 flex-col px-4 pt-3 sm:px-8 sm:pt-7">
           <div className="mx-auto mb-3 h-1.5 w-11 rounded-full bg-border sm:hidden" aria-hidden="true" />
 
           <div className="flex items-start justify-between gap-3">
@@ -568,7 +568,7 @@ export function AddSiteWizard({
         </div>
 
         {/* The dashboard this site will get, as it takes shape. Black in every theme, like the other dark cards. */}
-        <aside data-testid="add-site-preview" className="hidden flex-col gap-5 bg-sidebar p-7 text-sidebar-foreground md:flex" aria-label={tx("Aperçu du tableau de bord", "Dashboard preview")}>
+        <aside data-testid="add-site-preview" className="hidden min-h-0 flex-col gap-5 overflow-y-auto bg-sidebar p-7 text-sidebar-foreground md:flex" aria-label={tx("Aperçu du tableau de bord", "Dashboard preview")}>
           <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-sidebar-foreground/60">{tx("Votre nouveau tableau de bord", "Your new dashboard")}</p>
 
           <div>
