@@ -323,6 +323,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
     [sites, activeSiteId]
   )
 
+  const shownSite = sites.find((site) => site.id === held.activeId) ?? null
   const connectedCount = sites.filter((site) => site.status === "connected").length
   const criticalCount = sites.reduce((total, site) => total + site.critical, 0)
 
@@ -1116,7 +1117,11 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                     <button
                       type="button"
                       onClick={() => setActiveSiteId(site.id)}
-                      className="w-full rounded-2xl bg-muted px-4 py-3 text-left transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      aria-current={site.id === held.activeId ? "true" : undefined}
+                      className={cn(
+                        "w-full rounded-2xl bg-muted px-4 py-3 text-left transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        site.id === held.activeId && "ring-2 ring-inset ring-brand"
+                      )}
                     >
                       <span className="flex items-center justify-between gap-2">
                         <span className="truncate text-sm font-semibold">{site.name}</span>
@@ -1174,7 +1179,11 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                     key={site.id}
                     type="button"
                     onClick={() => setActiveSiteId(site.id)}
-                    className="group rounded-[22px] bg-card p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    data-active={site.id === held.activeId ? "" : undefined}
+                    className={cn(
+                      "group rounded-[22px] bg-card p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      site.id === held.activeId && "ring-2 ring-inset ring-brand"
+                    )}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex min-w-0 items-center gap-3">
@@ -1201,6 +1210,15 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                       <StatusTag tone="neutral" size="xs" icon={false}>
                         {px(sector.label)}
                       </StatusTag>
+                      {site.id === held.activeId && (
+                        <span
+                          data-testid="site-active-tag"
+                          className="inline-flex items-center gap-1 rounded-full bg-brand px-2 py-0.5 text-[11px] font-semibold text-[#141414]"
+                        >
+                          <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+                          {tx("Site actif", "Active site")}
+                        </span>
+                      )}
                     </div>
 
                     <div className="mt-4 grid grid-cols-3 gap-2">
@@ -1259,17 +1277,38 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
 
           <div className="rounded-[28px] bg-card p-5 shadow-sm">
             <p className="font-heading text-xl font-semibold tracking-tight">{tx("Sources de données", "Data sources")}</p>
+            {shownSite && <p className="mt-0.5 truncate text-xs text-muted-foreground">{shownSite.name}</p>}
             <ul className="mt-3 flex flex-col gap-2">
-              {[
-                { icon: Upload, label: tx("Import CSV", "CSV import") },
-                { icon: Database, label: tx("API", "API") },
-                { icon: Wifi, label: tx("Capteurs IoT", "IoT sensors") },
-              ].map((row) => (
-                <li key={row.label} className="flex items-center gap-3 rounded-2xl bg-muted px-4 py-3 text-sm font-medium">
-                  <row.icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                  {row.label}
+              {shownSite ? (
+                shownSite.sources.map((source) => {
+                  const Icon =
+                    source.type === "iot" ? Wifi : source.type === "csv" ? Upload : Database
+
+                  return (
+                    <li
+                      key={source.type}
+                      data-testid="site-source-row"
+                      className="flex items-center gap-3 rounded-2xl bg-muted px-4 py-3 text-sm font-medium"
+                    >
+                      <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                      <span className="min-w-0 flex-1 truncate">{px(source.name)}</span>
+                      {source.connected ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-brand px-2 py-0.5 text-[11px] font-semibold text-[#141414]">
+                          {tx("Actif", "Active")}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-muted-foreground">
+                          {source.wanted ? tx("Pas encore actif", "Not live yet") : tx("Non connecté", "Not connected")}
+                        </span>
+                      )}
+                    </li>
+                  )
+                })
+              ) : (
+                <li className="rounded-2xl bg-muted px-4 py-3 text-xs text-muted-foreground">
+                  {tx("Aucun site actif.", "No active site.")}
                 </li>
-              ))}
+              )}
             </ul>
             <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
               {tx("Chaque site se connecte à une ou plusieurs sources.", "Each site connects to one or more sources.")}

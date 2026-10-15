@@ -258,6 +258,9 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
     pass(await p.evaluate(() => localStorage.getItem('sentria_sector')) === 'health', 'picking it brings the health dashboard back');
     await p.locator('aside nav button', { hasText: /^Sites$/ }).first().click(); await p.waitForTimeout(800);
     pass(await p.locator('main').getByText('Main site').first().isVisible() && await p.locator('main').getByText('Power depot').first().isVisible(), 'and the Sites page lists both');
+    pass(await p.getByTestId('site-active-tag').count() === 1 && /Main site/.test(await p.locator('[data-active]').innerText()), 'the Sites page marks only the site on the dashboard as active');
+    pass(await p.getByTestId('site-source-row').count() === 4, 'the sources panel lists the active site\'s own four sources');
+    await p.screenshot({ path: '/tmp/sites-active-light.png' });
     await ctx.close(); }
 
   console.log('== a short screen: nothing runs out of the frame');
