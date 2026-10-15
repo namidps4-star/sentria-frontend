@@ -39,6 +39,19 @@ export type StoredSite = {
   configured: boolean
   /** Alerts the API holds for this site (server mode only). */
   alerts?: number
+  /** Figures read from the site's own alerts (server mode only). Absent when
+   *  the site has none, or the API cannot say: never a made-up zero. */
+  stats?: SiteStats
+}
+
+export type SiteStats = { alerts: number; critical: number; warnings: number; assets: number; last: string | null }
+
+function parseStats(value: unknown): SiteStats | undefined {
+  if (!value || typeof value !== "object") return undefined
+  const v = value as Record<string, unknown>
+  const n = (x: unknown) => (typeof x === "number" && Number.isFinite(x) && x >= 0 ? x : 0)
+
+  return { alerts: n(v.alerts), critical: n(v.critical), warnings: n(v.warnings), assets: n(v.assets), last: typeof v.last === "string" ? v.last : null }
 }
 
 function idList(value: unknown, limit: number): string[] {
@@ -164,7 +177,9 @@ function fromApi(row: unknown): StoredSite | null {
 
   const alerts = row && typeof row === "object" ? (row as Record<string, unknown>).alerts : undefined
 
-  return { ...site, synced: site.sources.some((s) => s.synced), alerts: typeof alerts === "number" ? alerts : undefined }
+  const stats = row && typeof row === "object" ? parseStats((row as Record<string, unknown>).stats) : undefined
+
+  return { ...site, synced: site.sources.some((s) => s.synced), alerts: typeof alerts === "number" ? alerts : undefined, stats }
 }
 
 async function api(path: string, init?: RequestInit) {

@@ -9,6 +9,7 @@ import { SupportDialog } from "./support-dialog"
 import { useT, useTx, type MessageKey } from "@/lib/i18n"
 import { readSectors } from "@/lib/activities"
 import { PLAN_NAMES, PLAN_UPDATED_EVENT, readAccountPlan, type PlanId } from "@/lib/plans"
+import { useSites } from "@/lib/sites"
 import { usePresence } from "@/lib/use-presence"
 import { cn } from "@/lib/utils"
 import {
@@ -168,6 +169,8 @@ export function Sidebar({
   isAdmin = false,
 }: SidebarProps) {
   const t = useT()
+  const held = useSites()
+  const shownSite = held.sites.find((site) => site.id === held.activeId)
 
   /* The plan in force for this account (F-TIERTAG). Read after mount
      (it lives in localStorage) and again whenever it changes: here, via
@@ -322,6 +325,19 @@ export function Sidebar({
               </button>
             )}
           </div>
+
+          {/* The site the app is showing: green, and the way back to the Sites page. */}
+          {shownSite && !collapsed && (
+            <button
+              type="button"
+              data-testid="sidebar-active-site"
+              onClick={() => onNavigate("sites")}
+              className={"mx-3 mb-1 flex shrink-0 items-center gap-2.5 rounded-full bg-white/10 px-3 py-2 text-left text-sm font-semibold text-sidebar-foreground transition hover:bg-white/15" + SIDEBAR_FOCUS}
+            >
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-green-500 ring-2 ring-green-500/30" aria-hidden="true" />
+              <span className="min-w-0 truncate">{shownSite.name}</span>
+            </button>
+          )}
 
           {/* NAVIGATION */}
           {/* Every item stays on screen: on a short screen the rows, the

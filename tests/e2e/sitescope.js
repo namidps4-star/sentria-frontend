@@ -29,7 +29,7 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
       if (path === '/sites' && m === 'GET') {
         if (!server) return json({ message: 'not found' }, 404);
         api.log.push('GET /sites');
-        return json({ sites: api.sites.map(s => ({ ...s, alerts: api.alerts.filter(a => a.site_id === s.id).length })), persisted: true, max_sites: 50 });
+        return json({ sites: api.sites.map(s => { const mine = api.alerts.filter(a => a.site_id === s.id); return { ...s, alerts: mine.length, stats: mine.length ? { alerts: mine.length, critical: mine.filter(a => a.severity === 'CRITICAL').length, warnings: mine.filter(a => a.severity !== 'CRITICAL').length, assets: new Set(mine.map(a => a.equipment)).size, last: NOW } : null }; }), persisted: true, max_sites: 50 });
       }
       if (path === '/sites' && m === 'POST') { const b = JSON.parse(req.postData()); if (api.refuse) return json({ success: false, error_code: api.refuse, message: 'no', needs: 'entreprise' }, 403); const s = mkSite('s' + (api.sites.length + 1), b.name, b.location || ''); s.sources = b.sources || srcs(); s.sector = b.sector || 'health'; s.departments = b.departments || []; s.priorities = b.priorities || []; s.configured = b.configured === true; api.body = b; api.sites.push(s); api.log.push('POST /sites ' + b.name); return json(s, 201); }
       const one = path.match(/^\/sites\/(.+)$/);
@@ -224,15 +224,15 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
     await ctx.close(); }
 
   console.log('== a CSV for a site');
-  { const { p, ctx, api } = await open({ sites: [mkSite('s1', 'Lyon plant', 'Lyon'), mkSite('s2', 'Dakar depot', 'Dakar')] });
+  { const { p, ctx, api } = await open({ sites: [mkSite('s1', 'Lyon plant', 'Lyon'), mkSite('s3', 'Dakar depot', 'Dakar')] });
     await p.locator('aside nav button', { hasText: /^Sites$/ }).first().click(); await p.waitForTimeout(800);
     await p.locator('main button', { hasText: 'Dakar depot' }).first().click(); await p.waitForTimeout(600);
     pass(await p.getByTestId('site-import-csv-empty').isVisible(), 'a site with no data offers "Import CSV"');
     pass(await p.getByTestId('site-csv-input').count() === 1, 'which opens a real file chooser');
     await p.getByTestId('site-csv-input').setInputFiles({ name: 'dakar.csv', mimeType: 'text/csv', buffer: Buffer.from('medicine_name,stock_qty\nA,1\n') });
     await p.waitForTimeout(2500);
-    pass(api.log.some(l => l === 'POST /upload site=s2'), 'the file goes to that site, not the one the top bar shows: ' + api.log.filter(l => /upload/.test(l)).join(','));
-    pass(api.log.some(l => l === 'PATCH s2'), 'the site is marked as receiving a CSV');
+    pass(api.log.some(l => l === 'POST /upload site=s3'), 'the file goes to that site, not the one the top bar shows: ' + api.log.filter(l => /upload/.test(l)).join(','));
+    pass(api.log.some(l => l === 'PATCH s3'), 'the site is marked as receiving a CSV');
     pass(/Active|Actif/.test(await p.locator('main').innerText()) && await p.getByTestId('site-import-csv').first().isVisible(), 'and it can take another file');
     pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
     await ctx.close(); }
@@ -261,6 +261,17 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
     pass(await p.getByTestId('site-active-tag').count() === 1 && /Main site/.test(await p.locator('[data-active]').innerText()), 'the Sites page marks only the site on the dashboard as active');
     pass(await p.getByTestId('site-source-row').count() === 4, 'the sources panel lists the active site\'s own four sources');
     pass(/Active site/i.test(await p.getByTestId('site-active-card').innerText()) && /Main site/.test(await p.getByTestId('site-active-card').innerText()), 'the lime card names the active site');
+    const first = await p.locator('main [data-active], main button.group').first().getAttribute('data-active');
+    pass(first !== null, 'the active site card comes first');
+    pass(await p.getByTestId('sidebar-active-site').isVisible() && /Main site/.test(await p.getByTestId('sidebar-active-site').innerText()), 'the left bar names the active site');
+    pass(await p.locator('[data-active]').evaluate(el => getComputedStyle(el).boxShadow.includes('34, 197, 94') || /ring-green-500/.test(el.className)), 'and it is framed green');
+    await p.locator('main button.group').first().click(); await p.waitForTimeout(500);
+    const txt = await p.locator('main').innerText();
+    const shownAssets = await p.locator('p', { hasText: /^Assets$/ }).first().locator('xpath=following-sibling::p').first().innerText();
+    pass(Number(shownAssets) === new Set(api.alerts.filter(a => a.site_id === api.sites.find(x => x.name === 'Main site').id).map(a => a.equipment)).size && Number(shownAssets) > 0, 'the site shows its real asset count, not 0: ' + shownAssets);
+    await p.getByTestId('site-open-dashboard').click(); await p.waitForTimeout(1200);
+    pass(await p.locator('aside nav button', { hasText: /^Dashboard$/ }).first().getAttribute('aria-current') !== null || /dashboard/i.test(await p.locator('header').first().innerText()), 'Go to dashboard leaves the Sites page');
+    await p.locator('aside nav button', { hasText: /^Sites$/ }).first().click(); await p.waitForTimeout(600);
     await p.screenshot({ path: '/tmp/sites-active-light.png' });
     await ctx.close(); }
 

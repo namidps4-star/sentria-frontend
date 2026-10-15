@@ -17,7 +17,6 @@ import {
   HeartPulse,
   MapPin,
   Plus,
-  Settings2,
   Store,
   Ship,
   Truck,
@@ -64,7 +63,8 @@ type SiteStatus = "connected" | "warning" | "offline"
 /** When the last sync happened. A marker, not a sentence: storing
  *  "À l'instant" in state meant a site created in French still said it
  *  after the operator switched the interface to English. */
-type Freshness = "none" | "now"
+/** "none", "now" (a source synced, no date known) or the ISO date of the newest alert. */
+type Freshness = string
 
 type DataSource = {
   type: "csv" | "api" | "erp" | "iot"
@@ -118,20 +118,38 @@ const SOURCE_NAMES: Record<DataSource["type"], Localized> = {
   iot: localized("Capteurs IoT", "IoT sensors"),
 }
 
-/** A stored site as the page shows it. The figures are zero: no data feeds
- *  them yet (lib/sites.ts). */
+/** Health out of 100, from the site's own open alerts: each critical costs 20
+ *  points, each warning 5. Only given when alerts have reached the site. */
+function healthOf(stats: { critical: number; warnings: number }): number {
+  return Math.max(0, Math.min(100, 100 - stats.critical * 20 - stats.warnings * 5))
+}
+
+/** Data that reached the site makes it connected, or "attention" once the
+ *  newest alert is over 30 days old. A site with none keeps its stored status. */
+function statusOf(stored: StoredSite): Site["status"] {
+  const last = stored.stats?.last ? new Date(stored.stats.last).getTime() : NaN
+
+  if (Number.isNaN(last)) return stored.status
+
+  return Date.now() - last > 30 * 86_400_000 ? "warning" : "connected"
+}
+
+/** A stored site as the page shows it. The figures come from the site's own
+ *  alerts (lib/sites.ts); a site none have reached shows none. */
 function fromStored(stored: StoredSite): Site {
+  const stats = stored.stats
+
   return {
     id: stored.id,
     name: stored.name,
     location: stored.location || "",
     sector: stored.sector,
-    status: stored.status,
-    assets: 0,
-    critical: 0,
-    warnings: 0,
-    lastData: stored.synced ? "now" : "none",
-    health: 0,
+    status: statusOf(stored),
+    assets: stats?.assets ?? 0,
+    critical: stats?.critical ?? 0,
+    warnings: stats?.warnings ?? 0,
+    lastData: stats?.last ?? (stored.synced ? "now" : "none"),
+    health: stats ? healthOf(stats) : 0,
     sources: stored.sources.map((source) => ({
       type: source.type,
       name: SOURCE_NAMES[source.type],
@@ -168,9 +186,17 @@ const STATUS_META = {
 
 /** The words for a Freshness marker. */
 function freshnessLabel(value: Freshness, tx: Tx): string {
-  return value === "now"
-    ? tx("À l'instant", "Just now")
-    : tx("Aucune donnée", "No data")
+  if (value === "none") return tx("Aucune donnée", "No data")
+  if (value === "now") return tx("À l'instant", "Just now")
+
+  const hours = Math.floor((Date.now() - new Date(value).getTime()) / 3_600_000)
+
+  if (!Number.isFinite(hours) || hours < 1) return tx("À l'instant", "Just now")
+  if (hours < 24) return tx(`Il y a ${hours} h`, `${hours} h ago`)
+
+  const days = Math.floor(hours / 24)
+
+  return tx(`Il y a ${days} j`, `${days} d ago`)
 }
 
 function getSector(sector: Sector) {
@@ -324,6 +350,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
     [sites, activeSiteId]
   )
 
+  const ordered = [...sites].sort((a, b) => Number(b.id === held.activeId) - Number(a.id === held.activeId))
   const shownStored = held.sites.find((site) => site.id === held.activeId)
   const shownSite = sites.find((site) => site.id === held.activeId) ?? null
   const connectedCount = sites.filter((site) => site.status === "connected").length
@@ -553,10 +580,16 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
 
           <div className="flex flex-wrap items-center gap-2">
             <button
-              className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-muted"
+              type="button"
+              data-testid="site-open-dashboard"
+              onClick={() => {
+                chooseSite(activeSite.id, held.sites.find((s) => s.id === activeSite.id)?.departments[0] ?? null)
+                onNavigate?.("dashboard")
+              }}
+              className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-[#141414] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <Settings2 className="h-4 w-4" />
-              {tx("Configurer le site", "Configure this site")}
+              <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              {tx("Ouvrir le tableau de bord", "Go to dashboard")}
             </button>
 
             {confirmDelete ? (
@@ -1133,7 +1166,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
               </p>
             ) : (
               <ul className="mt-4 flex flex-col gap-2">
-                {sites.map((site) => (
+                {ordered.map((site) => (
                   <li key={site.id}>
                     <button
                       type="button"
@@ -1141,12 +1174,12 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                       aria-current={site.id === held.activeId ? "true" : undefined}
                       className={cn(
                         "w-full rounded-2xl bg-muted px-4 py-3 text-left transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                        site.id === held.activeId && "ring-2 ring-inset ring-brand"
+                        site.id === held.activeId && "ring-2 ring-inset ring-green-500"
                       )}
                     >
                       <span className="flex items-center justify-between gap-2">
                         <span className="truncate text-sm font-semibold">{site.name}</span>
-                        <span className={cn("h-2 w-2 shrink-0 rounded-full", STATUS_META[site.status].dot)} aria-hidden="true" />
+                        <span className={cn("h-2 w-2 shrink-0 rounded-full", site.id === held.activeId ? "bg-green-500" : STATUS_META[site.status].dot)} aria-hidden="true" />
                       </span>
                       <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{site.location}</span>
                     </button>
@@ -1190,7 +1223,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
             </div>
           ) : (
             <div className="mt-5 grid grid-cols-1 gap-3 2xl:grid-cols-2">
-              {sites.map((site) => {
+              {ordered.map((site) => {
                 const sector = getSector(site.sector)
                 const SectorIcon = sector.icon
                 const status = STATUS_META[site.status]
@@ -1203,7 +1236,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                     data-active={site.id === held.activeId ? "" : undefined}
                     className={cn(
                       "group rounded-[22px] bg-card p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      site.id === held.activeId && "ring-2 ring-inset ring-brand"
+                      site.id === held.activeId && "ring-2 ring-inset ring-green-500"
                     )}
                   >
                     <div className="flex items-start justify-between gap-4">
