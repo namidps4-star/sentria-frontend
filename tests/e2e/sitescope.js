@@ -171,6 +171,17 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
     const rows2 = await p.getByTestId('account-menu-sector').allInnerTexts();
     pass(rows2.length === 2 && /Health/.test(rows2[0]) && /Energy/.test(rows2[1]), 'the dropdown shows each site with its industry: ' + rows2.join(' | '));
     await p.screenshot({ path: 'sitescope-new-site-light.png' });
+    const deptItems = await p.getByTestId('account-menu-department-item').allInnerTexts();
+    pass(deptItems.length === 2 && /Power plant/.test(deptItems[0]) && /Power distribution/.test(deptItems[1]), 'the site that runs two departments rolls them out under it: ' + deptItems.join(' | '));
+    pass(await p.getByTestId('account-menu-site').first().getAttribute('aria-expanded') === null, 'a one-department site has nothing to roll out');
+    await p.getByTestId('account-menu-department-item').nth(1).click(); await p.waitForTimeout(1200);
+    pass(await p.evaluate(() => localStorage.getItem('sentria_business_type')) === 'distribution-energetique', 'choosing a department opens the dashboard on it');
+    pass(/Power distribution/.test(await p.getByTestId('account-menu-department').innerText()), 'and the top bar says which department is shown');
+    pass(/Energy/.test(await p.getByTestId('workspace-context').innerText()) && !/Pharmacy/.test(await p.getByTestId('workspace-context').innerText()), 'the sector chip in the top bar follows the site: ' + (await p.getByTestId('workspace-context').innerText()).replace(/\s+/g, ' '));
+    await p.screenshot({ path: 'sitescope-department-light.png' });
+    await p.reload(); await p.waitForTimeout(3500);
+    pass(await p.evaluate(() => localStorage.getItem('sentria_business_type')) === 'distribution-energetique', 'a reload keeps the department');
+    await p.getByTestId('account-menu-button').click(); await p.waitForTimeout(400);
     await p.getByTestId('account-menu-site').first().click(); await p.waitForTimeout(1200);
     pass(await p.evaluate(() => localStorage.getItem('sentria_sector')) === 'health', 'back on the first site, the account\'s own sector is back');
     pass(JSON.parse(await p.evaluate(() => localStorage.getItem('sentria_departments'))).health[0] === 'pharmacie', 'and its departments');

@@ -1,6 +1,6 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js"
 
-import { ACTIVE_SITE_KEY, SITES_RESET_EVENT } from "@/lib/active-site"
+import { ACTIVE_DEPARTMENT_KEY, ACTIVE_SITE_KEY, SITES_RESET_EVENT } from "@/lib/active-site"
 import { ADMIN_KEY, PLAN_KEY, PLAN_UPDATED_EVENT, TRIAL_KEY, isPlanId } from "@/lib/plans"
 
 /** The account (S-3 step 1).
@@ -58,6 +58,7 @@ const LOCAL_ONLY_USER_KEYS = [
   "sentria_account_dirty",
   // The site this browser shows (lib/active-site.ts).
   ACTIVE_SITE_KEY,
+  ACTIVE_DEPARTMENT_KEY,
 ]
 
 /** Whose values localStorage holds. */

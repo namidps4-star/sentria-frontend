@@ -5,6 +5,7 @@ import { ArrowRight, Check, ChevronDown, MapPin, Plus, User } from "@/lib/icons"
 import { initialsOf, useCompanyIdentity } from "@/lib/company"
 import { useT, useTx } from "@/lib/i18n"
 import { requestAddSiteOnOpen } from "@/lib/active-site"
+import { activityLabel } from "@/lib/activities"
 import { chooseSite, useSites } from "@/lib/sites"
 import { usePresence } from "@/lib/use-presence"
 import { SECTORS } from "./onboarding-modal"
@@ -26,7 +27,7 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
   const t = useT()
   const tx = useTx()
   const { name: companyName } = useCompanyIdentity()
-  const { mode, sites, activeId } = useSites()
+  const { mode, sites, activeId, activeDepartment } = useSites()
 
   const sectorLabel = (id: string) => {
     const found = SECTORS.find((s) => s.id === id)
@@ -37,6 +38,8 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
   const switcher = mode === "server" && sites.length >= 2
   const active = sites.find((site) => site.id === activeId) ?? null
 
+  // The site whose departments are rolled out (the one shown, when it opens).
+  const [rolled, setRolled] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
   const menu = usePresence(open && switcher, "--dropdown-close-dur")
   const ref = useRef<HTMLDivElement>(null)
@@ -61,6 +64,13 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
     }
   }, [open])
 
+  const departmentName = (sector: string, id: string) => activityLabel(sector, id, tx) ?? id
+  // The department shown on the button, only for a site that runs several.
+  const shownDepartment =
+    active && active.departments.length >= 2
+      ? departmentName(active.sector, activeDepartment ?? active.departments[0])
+      : null
+
   const label = companyName ? t("topbar.account.of", { name: companyName }) : t("topbar.account")
   const face = (
     <>
@@ -80,6 +90,11 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
           <span className="flex items-center gap-1 text-sm font-semibold leading-4">
             <MapPin className="h-3 w-3 shrink-0" aria-hidden="true" />
             <span data-testid="account-menu-active" className="truncate">{active?.name ?? ""}</span>
+            {shownDepartment && (
+              <span data-testid="account-menu-department" className="hidden truncate text-xs font-normal text-muted-foreground md:inline">
+                · {shownDepartment}
+              </span>
+            )}
           </span>
         </span>
       )}
@@ -102,7 +117,10 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
     <div ref={ref} className="relative">
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          if (!open) setRolled(activeId)
+          setOpen(!open)
+        }}
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={active ? `${label}, ${tx("site", "site")} ${active.name}` : label}
@@ -132,6 +150,8 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
           <ul className="max-h-72 overflow-y-auto">
             {sites.map((site) => {
               const current = site.id === activeId
+              const several = site.configured && site.departments.length >= 2
+              const isRolled = several && rolled === site.id
 
               return (
                 <li key={site.id}>
@@ -139,9 +159,18 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
                     type="button"
                     role="menuitemradio"
                     aria-checked={current}
+                    aria-expanded={several ? isRolled : undefined}
                     data-testid="account-menu-site"
                     data-active={current ? "" : undefined}
                     onClick={() => {
+                      if (several) {
+                        // A site that runs several departments rolls them out:
+                        // the site opens on its first, or the one picked below.
+                        setRolled(isRolled ? null : site.id)
+                        if (!current) chooseSite(site.id)
+                        return
+                      }
+
                       chooseSite(site.id)
                       setOpen(false)
                     }}
@@ -161,8 +190,43 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
                     <span data-testid="account-menu-count" className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold tabular-nums text-muted-foreground">
                       {site.alerts ?? 0}
                     </span>
-                    {current && <Check className="h-4 w-4 shrink-0" aria-hidden="true" />}
+                    {several ? (
+                      <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", isRolled && "rotate-180")} aria-hidden="true" />
+                    ) : (
+                      current && <Check className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    )}
                   </button>
+
+                  {isRolled && (
+                    <ul data-testid="account-menu-departments" className="mb-1 ml-6 mt-0.5 border-l border-border pl-2">
+                      {site.departments.map((department) => {
+                        const picked = current && (activeDepartment ?? site.departments[0]) === department
+
+                        return (
+                          <li key={department}>
+                            <button
+                              type="button"
+                              role="menuitemradio"
+                              aria-checked={picked}
+                              data-testid="account-menu-department-item"
+                              data-department={department}
+                              onClick={() => {
+                                chooseSite(site.id, department)
+                                setOpen(false)
+                              }}
+                              className={cn(
+                                "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted" + FOCUS_RING,
+                                picked && "bg-accent/20 font-semibold"
+                              )}
+                            >
+                              <span className="min-w-0 flex-1 truncate">{departmentName(site.sector, department)}</span>
+                              {picked && <Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
                 </li>
               )
             })}

@@ -6,7 +6,7 @@
  * stored zero would read as a measure. */
 
 import { requestAccountSave } from "@/lib/account"
-import { SITES_CHANGED_EVENT, SITES_RESET_EVENT, activeSiteId, rememberActiveSite } from "@/lib/active-site"
+import { SITES_CHANGED_EVENT, SITES_RESET_EVENT, activeDepartment, activeSiteId, rememberActiveDepartment, rememberActiveSite } from "@/lib/active-site"
 import { API_BASE, apiFetch } from "@/lib/api"
 import { PLAN_UPDATED_EVENT } from "@/lib/plans"
 import { applySiteConfig } from "@/lib/site-config"
@@ -125,11 +125,13 @@ export type SitesState = {
   sites: StoredSite[]
   /** The site the app shows: always one of `sites`, or null with none. */
   activeId: string | null
+  /** The department of that site the dashboard opens on, or null. */
+  activeDepartment: string | null
 }
 
 export type SiteResult = { ok: true } | { ok: false; code: string; needs?: string }
 
-const NOT_READY: SitesState = { ready: false, mode: "local", sites: [], activeId: null }
+const NOT_READY: SitesState = { ready: false, mode: "local", sites: [], activeId: null, activeDepartment: null }
 let state: SitesState = NOT_READY
 const listeners = new Set<() => void>()
 
@@ -145,6 +147,14 @@ function pickActive(sites: StoredSite[], mode: SitesMode): string | null {
   const remembered = activeSiteId()
 
   return sites.some((s) => s.id === remembered) ? remembered : sites[0].id
+}
+
+/** The remembered department when it is one of the site's, else null. */
+function pickDepartment(sites: StoredSite[], activeId: string | null): string | null {
+  const site = sites.find((s) => s.id === activeId)
+  const remembered = activeDepartment()
+
+  return site && remembered && site.departments.includes(remembered) ? remembered : null
 }
 
 function fromApi(row: unknown): StoredSite | null {
@@ -208,14 +218,17 @@ async function readSitesNow(): Promise<void> {
       }
     }
 
-    next = { ready: true, mode: "server", sites, activeId: pickActive(sites, "server") }
+    const activeId = pickActive(sites, "server")
+
+    next = { ready: true, mode: "server", sites, activeId, activeDepartment: pickDepartment(sites, activeId) }
   } catch {
     const sites = readSites()
 
-    next = { ready: true, mode: "local", sites, activeId: null }
+    next = { ready: true, mode: "local", sites, activeId: null, activeDepartment: null }
   }
 
   const changed = rememberActiveSite(next.activeId)
+  rememberActiveDepartment(next.activeDepartment)
   // The site shown brings its own sector and departments with it.
   const reshaped =
     next.mode === "server" ? applySiteConfig(next.sites.find((s) => s.id === next.activeId) ?? null) : false
@@ -318,14 +331,17 @@ function localCommit(sites: StoredSite[]) {
 
 /** Chooses the site the app shows. Every view that shows a site's data fetches
  *  again. */
-export function chooseSite(id: string) {
+export function chooseSite(id: string, department: string | null = null) {
   if (state.mode !== "server" || !state.sites.some((s) => s.id === id)) return
 
+  const site = state.sites.find((s) => s.id === id) ?? null
+  const dept = department && site?.departments.includes(department) ? department : null
   const moved = rememberActiveSite(id)
-  const reshaped = applySiteConfig(state.sites.find((s) => s.id === id) ?? null)
+  const movedDepartment = rememberActiveDepartment(dept)
+  const reshaped = applySiteConfig(site)
 
-  if (moved || reshaped) {
-    publish({ ...state, activeId: id })
+  if (moved || movedDepartment || reshaped) {
+    publish({ ...state, activeId: id, activeDepartment: dept })
     window.dispatchEvent(new Event(SITES_CHANGED_EVENT))
   }
 }
@@ -372,7 +388,7 @@ export function useSites(): SitesState {
 /** A change of site, for a view that shows a site's data: it fetches again
  *  when the returned number changes. */
 export function useSiteVersion(): string | null {
-  const { activeId } = useSites()
+  const { activeId, activeDepartment: department } = useSites()
 
-  return activeId
+  return activeId ? `${activeId}|${department ?? ""}` : null
 }

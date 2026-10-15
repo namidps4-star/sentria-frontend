@@ -6,6 +6,7 @@
  * the sidebar and the upload follow it. The account's own settings are kept
  * the first time this happens and put back for a site that has none. */
 
+import { activeDepartment } from "@/lib/active-site"
 import { normalizeOpsType, writeOpsTypes, type SingleOpsType } from "@/lib/activities"
 import { DEPARTMENTS_KEY } from "@/lib/plans"
 import type { StoredSite } from "@/lib/sites"
@@ -56,10 +57,14 @@ export function applySiteConfig(site: StoredSite | null): boolean {
     if (site && site.configured) {
       if (!saved) localStorage.setItem(BASE_CONFIG_KEY, before)
 
+      // The department shown: the one picked in the top-bar menu, else the first.
+      const picked = activeDepartment()
+      const department = picked && site.departments.includes(picked) ? picked : (site.departments[0] ?? null)
+
       const next: Snapshot = {
         sentria_sector: site.sector,
         sentria_sectors: JSON.stringify([site.sector]),
-        sentria_business_type: site.departments[0] ?? null,
+        sentria_business_type: department,
         [DEPARTMENTS_KEY]: site.departments.length > 0 ? JSON.stringify({ [site.sector]: site.departments }) : null,
         sentria_equipment: JSON.stringify(site.priorities),
         sentria_monitoring: JSON.stringify(site.priorities),

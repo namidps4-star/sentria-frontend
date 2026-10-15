@@ -6,6 +6,9 @@
 
 export const ACTIVE_SITE_KEY = "sentria_active_site"
 
+/** The department of the active site the dashboard opens on. */
+export const ACTIVE_DEPARTMENT_KEY = "sentria_active_department"
+
 /** Sent when the active site, or the list of sites, changes. A view that
  *  shows a site's data fetches again on it. */
 export const SITES_CHANGED_EVENT = "sentria-sites-changed"
@@ -60,4 +63,28 @@ export function takeAddSiteHint(): boolean {
   } catch {
     return false
   }
+}
+
+export function activeDepartment(): string | null {
+  if (typeof window === "undefined") return null
+
+  try {
+    return localStorage.getItem(ACTIVE_DEPARTMENT_KEY) || null
+  } catch {
+    return null
+  }
+}
+
+/** Remembers the department shown. Returns true when it changed. */
+export function rememberActiveDepartment(id: string | null): boolean {
+  if (activeDepartment() === id) return false
+
+  try {
+    if (id) localStorage.setItem(ACTIVE_DEPARTMENT_KEY, id)
+    else localStorage.removeItem(ACTIVE_DEPARTMENT_KEY)
+  } catch {
+    /* storage blocked: the site's first department opens */
+  }
+
+  return true
 }

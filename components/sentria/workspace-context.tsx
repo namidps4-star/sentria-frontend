@@ -13,6 +13,7 @@ import {
   type LucideIcon,
 } from "@/lib/icons"
 
+import { SITES_CHANGED_EVENT } from "@/lib/active-site"
 import { activityLabel, readSectors } from "@/lib/activities"
 import { useTx } from "@/lib/i18n"
 import { PLAN_UPDATED_EVENT, readDepartments } from "@/lib/plans"
@@ -43,7 +44,7 @@ export function WorkspaceContext() {
   useEffect(() => {
     const refresh = () => setScope(readScope())
     refresh()
-    const events = ["sentria_sectors_updated", "sentria_onboarding_completed", PLAN_UPDATED_EVENT, "storage"]
+    const events = ["sentria_sectors_updated", "sentria_onboarding_completed", PLAN_UPDATED_EVENT, SITES_CHANGED_EVENT, "storage"]
     events.forEach((name) => window.addEventListener(name, refresh))
     return () => events.forEach((name) => window.removeEventListener(name, refresh))
   }, [])
