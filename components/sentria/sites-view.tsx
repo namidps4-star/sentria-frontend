@@ -615,6 +615,30 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
               </button>
             )}
 
+            {held.mode === "server" &&
+              held.sites
+                .filter((s) => s.id !== activeSite.id && s.sector === activeSite.sector && (s.stats?.alerts ?? 0) > 0)
+                .map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    data-testid="site-claim-from"
+                    onClick={async () => {
+                      const moved = await claimSite(activeSite.id, s.id)
+
+                      setClaimNote(
+                        moved === null
+                          ? tx("Impossible pour l'instant. Réessayez.", "Not possible right now. Try again.")
+                          : tx(`${moved} alerte(s) déplacée(s) de ${s.name} vers ce site.`, `${moved} alert(s) moved from ${s.name} to this site.`)
+                      )
+                    }}
+                    className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-muted"
+                  >
+                    <Database className="h-4 w-4" aria-hidden="true" />
+                    {tx(`Déplacer les ${s.stats?.alerts} alertes de ${s.name} ici`, `Move ${s.name}'s ${s.stats?.alerts} alerts here`)}
+                  </button>
+                ))}
+
             {claimNote && (
               <p data-testid="site-claim-note" role="status" className="basis-full text-xs text-muted-foreground">
                 {claimNote}

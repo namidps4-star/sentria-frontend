@@ -409,11 +409,15 @@ export async function deleteSite(id: string): Promise<SiteResult> {
 
 /** Brings the company's earlier alerts of this site's sector into the site
  *  (server mode only). Returns how many moved, or null when it could not. */
-export async function claimSite(id: string): Promise<number | null> {
+export async function claimSite(id: string, from?: string): Promise<number | null> {
   if (state.mode !== "server") return null
 
   try {
-    const res = await api(`/sites/${encodeURIComponent(id)}/claim`, { method: "POST" })
+    const res = await api(`/sites/${encodeURIComponent(id)}/claim`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(from ? { from } : {}),
+    })
 
     if (!res.ok) return null
 
