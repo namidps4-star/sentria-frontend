@@ -37,7 +37,7 @@ import { toApiSector } from "@/lib/sector"
 import { runUpload } from "@/lib/upload"
 import { setUploadPanel } from "@/lib/upload-panel"
 import { uploadProblemMessage } from "@/lib/upload-problem"
-import { addSite, chooseSite, deleteSite, editSite, useSites, type StoredSite } from "@/lib/sites"
+import { addSite, chooseSite, claimSite, deleteSite, editSite, useSites, type StoredSite } from "@/lib/sites"
 import { usePresence } from "@/lib/use-presence"
 import { useShake } from "@/lib/use-shake"
 import { enterAt } from "@/lib/motion"
@@ -294,6 +294,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
     [held.sites, tx]
   )
   const [siteError, setSiteError] = useState<string | null>(null)
+  const [claimNote, setClaimNote] = useState<string | null>(null)
 
   const SITE_ERRORS: Record<string, string> = {
     site_limit: tx("Ce compte a atteint le nombre maximal de sites.", "This account has reached the most sites it can hold."),
@@ -591,6 +592,34 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
               <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
               {tx("Ouvrir le tableau de bord", "Go to dashboard")}
             </button>
+
+            {held.mode === "server" && (
+              <button
+                type="button"
+                data-testid="site-claim"
+                onClick={async () => {
+                  const moved = await claimSite(activeSite.id)
+
+                  setClaimNote(
+                    moved === null
+                      ? tx("Impossible pour l'instant. Réessayez.", "Not possible right now. Try again.")
+                      : moved === 0
+                        ? tx("Rien à ramener : toutes vos données de ce secteur sont déjà ici.", "Nothing to bring: all your data for this sector is already here.")
+                        : tx(`${moved} alerte(s) ramenée(s) dans ce site.`, `${moved} alert(s) brought into this site.`)
+                  )
+                }}
+                className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-muted"
+              >
+                <Database className="h-4 w-4" aria-hidden="true" />
+                {tx("Ramener mes anciennes données ici", "Bring my earlier data here")}
+              </button>
+            )}
+
+            {claimNote && (
+              <p data-testid="site-claim-note" role="status" className="basis-full text-xs text-muted-foreground">
+                {claimNote}
+              </p>
+            )}
 
             {confirmDelete ? (
               <>

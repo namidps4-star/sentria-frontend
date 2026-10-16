@@ -407,6 +407,27 @@ export async function deleteSite(id: string): Promise<SiteResult> {
   return { ok: true }
 }
 
+/** Brings the company's earlier alerts of this site's sector into the site
+ *  (server mode only). Returns how many moved, or null when it could not. */
+export async function claimSite(id: string): Promise<number | null> {
+  if (state.mode !== "server") return null
+
+  try {
+    const res = await api(`/sites/${encodeURIComponent(id)}/claim`, { method: "POST" })
+
+    if (!res.ok) return null
+
+    const body = (await res.json()) as { moved?: number }
+
+    await refreshSites()
+    window.dispatchEvent(new Event(SITES_CHANGED_EVENT))
+
+    return typeof body.moved === "number" ? body.moved : 0
+  } catch {
+    return null
+  }
+}
+
 function localCommit(sites: StoredSite[]) {
   writeSites(sites)
   publish({ ...state, sites })
