@@ -270,7 +270,7 @@ const reply = (status, body, json) => ({ ok: status >= 200 && status < 300, stat
   // ----------------------------------------------- industry and logistics overviews
   console.log('== industry overview');
   {
-    const open2 = async o => { const x = await open({ ls: LS_INDUSTRY, alertRows: IND_ROWS, ...o }); const ind = x.p.getByRole('button', { name: /^Industry/ }).first(); if (await x.p.getByTestId('priority-bento').count() === 0 && await ind.count()) { await ind.click(); await x.p.waitForTimeout(800); } return x; };
+    const open2 = async o => { const x = await open({ ls: LS_INDUSTRY, alertRows: IND_ROWS, ...o }); const ind = x.p.getByRole('button', { name: /^Industry/ }).first(); if (await x.p.getByTestId('priority-track').count() === 0 && await ind.count()) { await ind.click(); await x.p.waitForTimeout(800); } return x; };
     let x = await open2({ alerts: 'answerError' });
     let body = await text(x.p);
     pass(await notices(x.p).count() === 1, 'failed read: the notice');
@@ -278,8 +278,8 @@ const reply = (status, body, json) => ({ ok: status >= 200 && status < 300, stat
     pass(!/signals · \d+ critical/.test(body), 'no signal count');
     pass(await dashes(x.p).count() === 4, 'the four KPI cells show dashes');
     pass(!/No industry data/.test(body), 'not "No industry data": nobody knows');
-    const bento = await x.p.getByTestId('priority-bento').innerText();
-    pass(!/all clear|critical alert|to watch/.test(bento), 'the priority tiles carry no number');
+    const bento = (await x.p.getByTestId('priority-track').locator('button').evaluateAll(els => els.map(e => e.getAttribute('aria-label')))).join(' | ');
+    pass(!/all clear|critical|to watch/.test(bento), 'the priority pills carry no number: ' + bento.slice(0, 80));
     await x.p.screenshot({ path: 'notmeasured-industry-light.png' });
     noPageErrors(x.p, 'industry');
     await x.ctx.close();
@@ -296,13 +296,13 @@ const reply = (status, body, json) => ({ ok: status >= 200 && status < 300, stat
     await x.ctx.close();
 
     x = await open2({ alertRows: IND_ROWS, freshness: stamp('industry', 12, 'usine-production') });
-    const tiles = await x.p.getByTestId('priority-bento').locator(':scope > button').evaluateAll(els => els.map(e => e.innerText.replace(/\s+/g, ' ')));
-    pass(/1 critical alert/.test(tiles[0]) && /1 alert to watch/.test(tiles[1]) && !/all clear/.test(tiles.join(' ')), `old data: what happened stays, and no tile says "all clear" (${tiles.map(t => t.slice(-34)).join(' | ')})`);
+    const tiles = await x.p.getByTestId('priority-track').locator('button').evaluateAll(els => els.map(e => e.getAttribute('aria-label')));
+    pass(/, 1, 1 critical/.test(tiles[0]) && /, 1, to watch/.test(tiles[1]) && !/all clear/.test(tiles.join(' ')), `old data: what happened stays, and no pill says "all clear" (${tiles.map(t => t.slice(-30)).join(' | ')})`);
     await x.ctx.close();
 
     // A priority's own screen: nothing to show without the rows.
     x = await open2({ alerts: 'answerError' });
-    await x.p.getByTestId('priority-bento').locator(':scope > button').first().click(); await x.p.waitForTimeout(900);
+    await x.p.getByTestId('priority-track').locator('button').first().click(); await x.p.waitForTimeout(900);
     body = await text(x.p);
     pass(await notices(x.p).count() === 1 && !/No machine alert|No alerts? for now|Aucune alerte/.test(body), 'a priority screen: the notice, and not "No machine alert for now"');
     await x.ctx.close();
