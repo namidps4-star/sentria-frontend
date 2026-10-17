@@ -1,5 +1,6 @@
 "use client"
 
+import { CsvTemplateLink } from "./csv-template-link"
 import { DemotedTag, LossTag, SeverityTag, StatusTag, ValueTag } from "./status-tag"
 import { demotion, demotionSentence } from "@/lib/demotion"
 import { CountNumber } from "./count-number"
@@ -43,6 +44,7 @@ import {
   type ValueMetric,
   type ChartMetric,
   type ChartRange,
+  CHART_RANGES,
 } from "@/lib/chart-series"
 import { cn } from "@/lib/utils"
 import { usePresence } from "@/lib/use-presence"
@@ -60,9 +62,11 @@ import { RecommendationsPanel } from "./recommendations-panel"
 import { Skeleton } from "./skeleton"
 import { AlertIcon } from "./alert-icon"
 import { PriorityTrack } from "./priority-track"
+import { priorityRows } from "@/lib/priority-counts"
 import { HEALTH_PRIORITY_CATEGORY, healthCategoryOf, healthRows } from "@/lib/health-priorities"
 import { enterAt } from "@/lib/motion"
 import { announceAlertsUpdated } from "@/lib/alerts-event"
+import { useSites, useSiteVersion } from "@/lib/sites"
 import { RecommendationsBoard } from "./recommendations-board-view"
 import {
   IndustryMachinesView,
@@ -1078,6 +1082,7 @@ export function DashboardView({
   const [filterSector, setFilterSector] = useState("all")
   // The Health priority pressed in the priority track; it filters the alerts table.
   const [healthPick, setHealthPick] = useState<string | null>(null)
+  const [otherPick, setOtherPick] = useState<string | null>(null)
 
   // The trend chart's own choices (its "…" menu). The sectors picked belong
   // to the pill they were picked on: another pill shows its own default
@@ -1086,7 +1091,8 @@ export function DashboardView({
   const freshness = useFreshness()
   const canSeeAmounts = useCanSeeAmounts()
   const [chartMetric, setChartMetric] = useState<ChartMetric>("count")
-  const [chartRange, setChartRange] = useState<ChartRange>(7)
+  // null: the shortest range that has alerts in it. Picked in the menu: that range, even if empty.
+  const [chartRangePick, setChartRangePick] = useState<ChartRange | null>(null)
 
   const [uploadActivity, setUploadActivity] = useState<string | null>(null)
 
@@ -1562,6 +1568,15 @@ export function DashboardView({
   // language asked for (B-11).
   const alertsLang = tx("fr", "en")
 
+  // The site shown (F-SITESCOPE): a change of site fetches again.
+  const shownSite = useSiteVersion()
+  const heldSites = useSites()
+  // Where an upload goes, said only when the company has several sites.
+  const uploadSite =
+    heldSites.mode === "server" && heldSites.sites.length >= 2
+      ? heldSites.sites.find((site) => site.id === heldSites.activeId) ?? null
+      : null
+
   useEffect(() => {
     let cancelled = false
 
@@ -1603,7 +1618,7 @@ export function DashboardView({
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [alertsLang, alertsRetry])
+  }, [alertsLang, alertsRetry, shownSite])
 
   function refreshRecommendations() {
     return apiFetch(
@@ -1679,7 +1694,7 @@ export function DashboardView({
   useEffect(() => {
     refreshRecommendations()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recommendationsLang])
+  }, [recommendationsLang, shownSite])
 
   function openLogisticsOverview() {
     setFilterSector("logistics")
@@ -2214,6 +2229,16 @@ export function DashboardView({
     key === OTHER_KEY
       ? tx("Autres", "Other")
       : sectorName(key) ?? key
+  const chartRange: ChartRange =
+    chartRangePick ??
+    CHART_RANGES.find((days) =>
+      bucketAlerts(scopedAlerts, { keys: chartKeys, days, metric: "count" }).series.some((row) => row.total > 0)
+    ) ??
+    7
+  // The tile lines look back as far as the data goes, so old alerts are not a flat line.
+  const sparkDays: number =
+    CHART_RANGES.find((days) => dailySeries(filteredAlerts, days).some((n) => n > 0)) ?? 7
+  const chartHeading = chartTitle.replace(/\b7 (jours|days)/, `${chartRange} $1`)
   const chartBucketed = bucketAlerts(scopedAlerts, {
     keys: chartKeys,
     days: chartRange,
@@ -2221,7 +2246,7 @@ export function DashboardView({
   })
   const chartIsDefault =
     chartMetric === "count" &&
-    chartRange === 7 &&
+    chartRangePick === null &&
     (chartPick === null || chartPick.pill !== filterSector)
 
   // The two charts that need a limit: a reading against the limit it crossed,
@@ -2441,6 +2466,19 @@ export function DashboardView({
               aria-label={tx("Importer un fichier CSV", "Import a CSV file")}
             />
           </label>
+
+          <CsvTemplateLink
+            department={uploadActivity ?? activityIn(uploadSector)}
+            sector={uploadSector}
+            className="mt-2 text-muted-foreground hover:text-foreground"
+          />
+
+          {uploadSite && (
+            <p data-testid="upload-site" className="mt-2 text-xs text-muted-foreground">
+              {tx("Le fichier va dans le site :", "The file goes into site:")}{" "}
+              <span className="font-semibold text-foreground">{uploadSite.name}</span>
+            </p>
+          )}
 
           {uploadMsg && (
             <p
@@ -2843,7 +2881,7 @@ export function DashboardView({
                     </p>
 
                     <Sparkline
-                      data={dailySeries(filteredAlerts, 7, k.match)}
+                      data={dailySeries(filteredAlerts, sparkDays, k.match)}
                       className={cn(
                         "mt-1 h-7 w-full",
                         k.up ? "text-accent" : "text-destructive"
@@ -3102,7 +3140,7 @@ export function DashboardView({
                     </p>
 
                     <Sparkline
-                      data={dailySeries(filteredAlerts, 7, k.match)}
+                      data={dailySeries(filteredAlerts, sparkDays, k.match)}
                       className={cn(
                         "mt-1 h-7 w-full",
                         k.up ? "text-accent" : "text-destructive"
@@ -3490,11 +3528,27 @@ export function DashboardView({
             />
           </div>
         ) : (
-          <PriorityPills
-            sector={filterSector}
-            ids={selectedSectorPriorities}
-            label={tx("Vos priorités", "Your priorities")}
-          />
+          selectedSectorPriorities.length > 0 && filterSector !== "all" ? (
+            <div>
+              <PriorityHeading
+                count={selectedSectorPriorities.length}
+                total={priorityCount(filterSector, businessType)}
+              />
+
+              <PriorityTrack
+                sector={filterSector}
+                rows={priorityRows(
+                  selectedSectorPriorities,
+                  filteredAlerts,
+                  alertsLoaded && !zeroUnknown
+                )}
+                selected={otherPick}
+                loaded={alertsLoaded}
+                zeroUnknown={zeroUnknown}
+                onPick={(id) => setOtherPick((p) => (p === id ? null : id))}
+              />
+            </div>
+          ) : null
         )
       )}
 
@@ -3598,7 +3652,7 @@ export function DashboardView({
                 </p>
 
                 <Sparkline
-                  data={dailySeries(filteredAlerts, 7, k.match)}
+                  data={dailySeries(filteredAlerts, sparkDays, k.match)}
                   className={cn(
                     "mt-auto h-9 w-full",
                     // Lime on the lime tile would vanish: that tile draws its good line in ink.
@@ -3619,7 +3673,7 @@ export function DashboardView({
           <div className="flex items-center justify-between">
             <div>
               <h3 className="font-heading text-lg font-bold">
-                {chartTitle}
+                {chartHeading}
               </h3>
 
               <p className="text-sm text-muted-foreground">
@@ -3639,11 +3693,11 @@ export function DashboardView({
               onMetric={setChartMetric}
               valueState={chartValue}
               range={chartRange}
-              onRange={setChartRange}
+              onRange={setChartRangePick}
               onReset={() => {
                 setChartPick(null)
                 setChartMetric("count")
-                setChartRange(7)
+                setChartRangePick(null)
               }}
               isDefault={chartIsDefault}
             />
@@ -3668,7 +3722,7 @@ export function DashboardView({
                 ? `${approx ? "≈ " : ""}${formatAmount(value, chartValue.symbol, tx)}`
                 : String(value)
             }
-            summary={`${chartTitle}: ${tx(
+            summary={`${chartHeading}: ${tx(
               `${chartRange} derniers jours`,
               `last ${chartRange} days`
             )}`}
@@ -4116,14 +4170,6 @@ export function DashboardView({
                           )}
                         >
                           {alert.message}
-
-                          <WholesalerAdvice
-                            variant="line"
-                            tone={isSelected ? "dark" : "light"}
-                            alertKey={alert.alert_key}
-                            params={alert.params}
-                            className={cn("mt-1 whitespace-normal", isSelected ? "text-background/90" : "text-foreground/80")}
-                          />
                         </td>
 
                         <td

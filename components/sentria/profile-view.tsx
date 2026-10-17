@@ -1,5 +1,6 @@
 "use client"
 
+import { useSiteVersion } from "@/lib/sites"
 import { UsernameCard } from "./username-card"
 import {
   Activity as ActivityIcon,
@@ -125,7 +126,10 @@ export function ProfileView({
     }
   }, [])
 
-  // Refetched on a language switch: /alerts rebuilds messages (B-11).
+  // Refetched on a language switch: /alerts rebuilds messages (B-11), and on
+  // a change of site (F-SITESCOPE).
+  const shownSite = useSiteVersion()
+
   useEffect(() => {
     apiFetch(`${API_BASE}/alerts?lang=${lang}`)
       .then((r) => readList<LogisticsAlert>(r, "alerts"))
@@ -140,7 +144,7 @@ export function ProfileView({
         setAlertsError("network")
       })
       .finally(() => setLoaded(true))
-  }, [lang, attempt])
+  }, [lang, attempt, shownSite])
 
   /* Only the account's own signals (B-09): alerts of the sectors it
      selected and, in the sector of its configured activity, of that

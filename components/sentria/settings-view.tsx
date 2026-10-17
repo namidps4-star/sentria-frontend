@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Globe, Bell, Moon, Check, Building2, Mail } from "@/lib/icons"
+import { LegalDialog } from "./legal-dialog"
+import type { LegalDocId } from "@/lib/legal"
 import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import { readTheme, resolvedTheme, writeTheme } from "@/lib/theme"
@@ -227,6 +229,8 @@ export function SettingsView() {
      offered six languages, stored none of them, and no other screen
      read it. It is persisted now, and Ask SentrIA sends it. */
   const [lang, setLang] = useState("fr")
+  const [legalOpen, setLegalOpen] = useState(false)
+  const [legalDoc, setLegalDoc] = useState<LegalDocId>("privacy")
 
   const [countryCode, setCountryCode] = useState("")
 
@@ -471,6 +475,33 @@ export function SettingsView() {
             )
           })}
         </div>
+
+        <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border pt-4 text-xs text-muted-foreground">
+          <span className="font-semibold uppercase tracking-[0.14em]">{tx("Légal", "Legal")}</span>
+          <button
+            type="button"
+            data-testid="settings-privacy"
+            onClick={() => {
+              setLegalDoc("privacy")
+              setLegalOpen(true)
+            }}
+            className="underline underline-offset-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {tx("Confidentialité", "Privacy")}
+          </button>
+          <button
+            type="button"
+            data-testid="settings-terms"
+            onClick={() => {
+              setLegalDoc("terms")
+              setLegalOpen(true)
+            }}
+            className="underline underline-offset-2 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {tx("Conditions d'utilisation", "Terms of use")}
+          </button>
+        </div>
+        <LegalDialog open={legalOpen} doc={legalDoc} onClose={() => setLegalOpen(false)} />
       </section>
 
       {/* --------------------------------------------------------- RIGHT */}

@@ -69,6 +69,8 @@ export function adviceLines(
   let message: ReactNode = null
   let fallback: ReactNode = null
   let late = false
+  /** The folded version: a few words, for a card that shows it closed. */
+  let short = ""
 
   if (advice.kind === "order") {
     const { pick, fallback: next } = advice
@@ -82,6 +84,7 @@ export function adviceLines(
       `Commandez chez ${name(pick)} ${timing}. Livraison ${day}.`,
       `Order from ${name(pick)} ${timing}. It arrives ${day}.`
     )
+    short = tx(`Commander : ${name(pick)}, ${day}`, `Order: ${name(pick)}, ${day}`)
 
     fallback = next ? (
       <>
@@ -111,6 +114,9 @@ export function adviceLines(
     )
   } else if (advice.kind === "late") {
     late = true
+    short = advice.fastest
+      ? tx("Aucun grossiste à temps", "No wholesaler in time")
+      : tx("Aucune livraison réglée", "No delivery day set")
     const f = advice.fastest
     message = f
       ? tx(
@@ -126,5 +132,5 @@ export function adviceLines(
     ) : null
   }
 
-  return { message, fallback, late, name }
+  return { message, fallback, late, name, short }
 }

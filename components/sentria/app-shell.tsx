@@ -1,5 +1,6 @@
 "use client"
 
+import { useSiteVersion } from "@/lib/sites"
 import { useState, useEffect, useMemo, useRef } from "react"
 
 import { inAccountScope, readSectors } from "@/lib/activities"
@@ -112,6 +113,9 @@ export function AppShell({
   const t = useT()
 
   const [view, setView] = useState<ViewKey>("dashboard")
+  // The site shown (F-SITESCOPE): a change of site starts every page again,
+  // so each one reads that site's own settings and data.
+  const shownSite = useSiteVersion()
   // SentrIA staff (read at sign-in). Only shows the page: the API checks
   // the flag itself on every admin call.
   const [isAdmin, setIsAdmin] = useState(false)
@@ -356,10 +360,11 @@ export function AppShell({
               notificationsUnknown={bellUnknown}
               onNotificationsOpen={markNotificationsSeen}
               onOpenTracking={() => setView("tracking")}
+              onOpenSites={() => setView("sites")}
             />
           </div>
 
-          <main className="flex-1 overflow-y-auto p-4 lg:p-8">
+          <main key={shownSite ?? "no-site"} className="flex-1 overflow-y-auto p-4 lg:p-8">
             {view === "dashboard" && <DashboardView search={search} onNavigate={setView} />}
             {view === "tracking" && <TrackingView />}
             {view === "calendar" && <CalendarView />}

@@ -1,14 +1,15 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Search, Bell, Menu, ChevronDown, X, User, ArrowRight } from "@/lib/icons"
+import { Search, Bell, Menu, X, ArrowRight } from "@/lib/icons"
 
-import { formatInCompanyZone, initialsOf, useCompanyIdentity } from "@/lib/company"
+import { formatInCompanyZone } from "@/lib/company"
 import { useT, useTx } from "@/lib/i18n"
 import { sectorLabel } from "@/lib/priorities"
 import { usePresence } from "@/lib/use-presence"
 import { cn } from "@/lib/utils"
 
+import { AccountMenu } from "./account-menu"
 import { WorkspaceContext } from "./workspace-context"
 
 /** One critical alert waiting in the bell: a task nobody has marked
@@ -36,6 +37,7 @@ export function Topbar({
   notificationsUnknown = false,
   onNotificationsOpen,
   onOpenTracking,
+  onOpenSites,
 }: {
   title: string
   subtitle: string
@@ -56,6 +58,8 @@ export function Topbar({
   /** Called when the list opens: what it shows is now read. */
   onNotificationsOpen?: () => void
   onOpenTracking?: () => void
+  /** The company menu's sites open the Sites page. */
+  onOpenSites?: () => void
 }) {
   const t = useT()
   const tx = useTx()
@@ -97,12 +101,6 @@ export function Topbar({
   }
 
   const hasUnread = unreadCount > 0
-
-  /* This button used to read "Jean K.", a person nobody had entered, on
-     every page of the product. The account it stands for is the company
-     from onboarding, so that is what it names, and it says nothing at
-     all when there is no name rather than inventing one. */
-  const { name: companyName } = useCompanyIdentity()
 
   return (
     <header className="sticky top-0 z-30 flex items-center gap-4 border-b border-border bg-canvas/80 px-4 py-3.5 backdrop-blur-md lg:px-8">
@@ -258,35 +256,7 @@ export function Topbar({
       )}
       </div>
 
-      <button
-        type="button"
-        aria-label={
-          companyName
-            ? t("topbar.account.of", { name: companyName })
-            : t("topbar.account")
-        }
-        aria-haspopup="menu"
-        className={"flex items-center gap-2 rounded-xl border border-border bg-card py-1.5 pl-1.5 pr-2.5 transition-colors hover:bg-muted" + FOCUS_RING}
-      >
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-foreground text-xs font-bold text-background">
-          {companyName ? (
-            initialsOf(companyName)
-          ) : (
-            <User className="h-3.5 w-3.5" aria-hidden="true" />
-          )}
-        </span>
-
-        {companyName && (
-          <span className="hidden max-w-[12rem] truncate text-sm font-medium sm:block">
-            {companyName}
-          </span>
-        )}
-
-        <ChevronDown
-          className="hidden h-4 w-4 text-muted-foreground sm:block"
-          aria-hidden="true"
-        />
-      </button>
+      <AccountMenu onOpenSites={onOpenSites} />
     </header>
   )
 }  

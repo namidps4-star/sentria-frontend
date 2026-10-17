@@ -19,7 +19,7 @@ const api = p => p.route(/onrender\.com\//, r => r.fulfill({ status: 200, conten
     await p.fill('#auth-name', 'Afi'); await p.fill('#auth-company', 'Clinique Sud'); await p.fill('#auth-email', 'afi@clinique.bj'); await p.fill('#auth-password', 'longenough1');
     return { p, log };
   };
-  const submit = async p => { await p.getByRole('button', { name: /Create my account/ }).click(); await p.waitForTimeout(900); };
+  const submit = async p => { await p.locator('#auth-terms').check(); await p.getByRole('button', { name: /Create my account/ }).click(); await p.waitForTimeout(900); };
   const signups = log => log.filter(l => l.path === '/auth/v1/signup');
 
   console.log('== sign-up: live check');

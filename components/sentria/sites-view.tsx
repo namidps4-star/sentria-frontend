@@ -17,7 +17,7 @@ import {
   HeartPulse,
   MapPin,
   Plus,
-  Settings2,
+  Store,
   Ship,
   Truck,
   Upload,
@@ -28,11 +28,23 @@ import {
   Zap,
   type LucideIcon,
 } from "@/lib/icons"
+import { SectorBadge } from "./sector-badge"
+import { takeAddSiteHint } from "@/lib/active-site"
+import { API_BASE } from "@/lib/api"
+import { normalizeOpsType } from "@/lib/activities"
+import { accountCurrencyParam } from "@/lib/locale"
+import { toApiSector } from "@/lib/sector"
+import { runUpload } from "@/lib/upload"
+import { setUploadPanel } from "@/lib/upload-panel"
+import { uploadProblemMessage } from "@/lib/upload-problem"
+import { addSite, chooseSite, claimSite, deleteSite, editSite, useSites, type ClaimResult, type StoredSite } from "@/lib/sites"
 import { usePresence } from "@/lib/use-presence"
 import { useShake } from "@/lib/use-shake"
 import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import { PLAN_NAMES, PLAN_UPDATED_EVENT, maxSitesFor, readAccountPlan, type PlanId } from "@/lib/plans"
+import { AddSiteWizard, type WizardResult } from "./add-site-wizard"
+import { CsvTemplateLink } from "./csv-template-link"
 import { StatusTag, type TagTone } from "./status-tag"
 import type { ViewKey } from "./types"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
@@ -44,17 +56,21 @@ type Sector =
   | "transportation"
   | "logistics"
   | "energy"
+  | "commerce"
 
 type SiteStatus = "connected" | "warning" | "offline"
 
 /** When the last sync happened. A marker, not a sentence: storing
  *  "À l'instant" in state meant a site created in French still said it
  *  after the operator switched the interface to English. */
-type Freshness = "none" | "now"
+/** "none", "now" (a source synced, no date known) or the ISO date of the newest alert. */
+type Freshness = string
 
 type DataSource = {
-  type: "csv" | "api" | "iot"
+  type: "csv" | "api" | "erp" | "iot"
   name: Localized
+  /** Chosen when the site was set up. */
+  wanted: boolean
   connected: boolean
   lastSync?: Freshness
 }
@@ -92,16 +108,57 @@ const SECTORS: {
   },
   { key: "logistics", label: localized("Logistique", "Logistics"), icon: Ship },
   { key: "energy", label: localized("Énergie", "Energy"), icon: Zap },
+  { key: "commerce", label: localized("Commerce", "Retail"), icon: Store },
 ]
 
-/*
- * No fake operational data.
- * If no sites exist, the UI starts with a real empty state.
- *
- * You can later replace this with:
- * GET /sites
- */
-const INITIAL_SITES: Site[] = []
+const SOURCE_NAMES: Record<DataSource["type"], Localized> = {
+  csv: localized("Import CSV", "CSV import"),
+  api: localized("API", "API"),
+  erp: localized("ERP", "ERP"),
+  iot: localized("Capteurs IoT", "IoT sensors"),
+}
+
+/** Health out of 100, from the site's own open alerts: each critical costs 20
+ *  points, each warning 5. Only given when alerts have reached the site. */
+function healthOf(stats: { critical: number; warnings: number }): number {
+  return Math.max(0, Math.min(100, 100 - stats.critical * 20 - stats.warnings * 5))
+}
+
+/** Data that reached the site makes it connected, or "attention" once the
+ *  newest alert is over 30 days old. A site with none keeps its stored status. */
+function statusOf(stored: StoredSite): Site["status"] {
+  const last = stored.stats?.last ? new Date(stored.stats.last).getTime() : NaN
+
+  if (Number.isNaN(last)) return stored.status
+
+  return Date.now() - last > 30 * 86_400_000 ? "warning" : "connected"
+}
+
+/** A stored site as the page shows it. The figures come from the site's own
+ *  alerts (lib/sites.ts); a site none have reached shows none. */
+function fromStored(stored: StoredSite): Site {
+  const stats = stored.stats
+
+  return {
+    id: stored.id,
+    name: stored.name,
+    location: stored.location || "",
+    sector: stored.sector,
+    status: statusOf(stored),
+    assets: stats?.assets ?? 0,
+    critical: stats?.critical ?? 0,
+    warnings: stats?.warnings ?? 0,
+    lastData: stats?.last ?? (stored.synced ? "now" : "none"),
+    health: stats ? healthOf(stats) : 0,
+    sources: stored.sources.map((source) => ({
+      type: source.type,
+      name: SOURCE_NAMES[source.type],
+      wanted: source.wanted,
+      connected: source.connected,
+      lastSync: source.synced ? "now" : "none",
+    })),
+  }
+}
 
 const STATUS_META = {
   connected: {
@@ -129,9 +186,17 @@ const STATUS_META = {
 
 /** The words for a Freshness marker. */
 function freshnessLabel(value: Freshness, tx: Tx): string {
-  return value === "now"
-    ? tx("À l'instant", "Just now")
-    : tx("Aucune donnée", "No data")
+  if (value === "none") return tx("Aucune donnée", "No data")
+  if (value === "now") return tx("À l'instant", "Just now")
+
+  const hours = Math.floor((Date.now() - new Date(value).getTime()) / 3_600_000)
+
+  if (!Number.isFinite(hours) || hours < 1) return tx("À l'instant", "Just now")
+  if (hours < 24) return tx(`Il y a ${hours} h`, `${hours} h ago`)
+
+  const days = Math.floor(hours / 24)
+
+  return tx(`Il y a ${days} j`, `${days} d ago`)
 }
 
 function getSector(sector: Sector) {
@@ -224,9 +289,38 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
   /** Resolve a module-level pair. */
   const px = (text: Localized | undefined) => resolve(text, tx)
 
-  const [sites, setSites] = useState<Site[]>(
-    INITIAL_SITES
+  // The sites are the account's, held by lib/sites.ts: in the API when it
+  // has them, else in the account profile.
+  const held = useSites()
+  const sites = useMemo(
+    () =>
+      held.sites.map((stored) => {
+        const site = fromStored(stored)
+
+        return { ...site, location: site.location || tx("Localisation à définir", "Location to be set") }
+      }),
+    [held.sites, tx]
   )
+  const [siteError, setSiteError] = useState<string | null>(null)
+  const [claimNote, setClaimNote] = useState<string | null>(null)
+
+  const SITE_ERRORS: Record<string, string> = {
+    site_limit: tx("Ce compte a atteint le nombre maximal de sites.", "This account has reached the most sites it can hold."),
+    sites_unavailable: tx("Les sites ne sont pas encore activés. Réessayez plus tard.", "Sites are not switched on yet. Try again later."),
+    site_name_required: tx("Un site doit avoir un nom.", "A site needs a name."),
+    plan_sectors: tx("Votre offre couvre un seul secteur. Plusieurs secteurs : offre Entreprise.", "Your plan covers one sector. Several sectors: Entreprise plan."),
+    plan_departments: tx("Votre offre couvre un seul département. Plusieurs départements liés : offre Business.", "Your plan covers one department. Several linked departments: Business plan."),
+    plan_combo: tx("Ces départements ne vont pas ensemble. Toute combinaison : offre Entreprise.", "These departments don't run together. Any combination: Entreprise plan."),
+  }
+  const claimProblem = (result: ClaimResult) =>
+    "problem" in result && result.problem === "outdated"
+      ? tx(
+          "Le serveur n'a pas encore cette mise à jour. Elle arrive avec la prochaine mise en ligne du backend.",
+          "The server does not have this update yet. It arrives with the next backend deploy."
+        )
+      : tx("Impossible pour l'instant. Réessayez.", "Not possible right now. Try again.")
+  const siteErrorText = (code: string) =>
+    SITE_ERRORS[code] ?? tx("Le site n'a pas pu être enregistré. Réessayez.", "The site could not be saved. Try again.")
 
   const [activeSiteId, setActiveSiteId] =
     useState<string | null>(null)
@@ -272,6 +366,9 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
     [sites, activeSiteId]
   )
 
+  const ordered = [...sites].sort((a, b) => Number(b.id === held.activeId) - Number(a.id === held.activeId))
+  const shownStored = held.sites.find((site) => site.id === held.activeId)
+  const shownSite = sites.find((site) => site.id === held.activeId) ?? null
   const connectedCount = sites.filter((site) => site.status === "connected").length
   const criticalCount = sites.reduce((total, site) => total + site.critical, 0)
 
@@ -283,7 +380,23 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
     else setShowAddSite(true)
   }
 
-  function createSite() {
+  // The top-bar menu's "Add a site" opens this page on the wizard.
+  const hintTaken = useRef(false)
+
+  useEffect(() => {
+    if (!held.ready || hintTaken.current) return
+
+    hintTaken.current = true
+
+    if (takeAddSiteHint()) {
+      // The plan state is read in an effect too: read it here, not from state.
+      if (sites.length >= maxSitesFor(readAccountPlan().effective)) setShowUpgrade(true)
+      else setShowAddSite(true)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [held.ready])
+
+  async function createSite() {
     if (atSiteCap) return
 
     if (!newSiteName.trim()) {
@@ -293,40 +406,19 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
       return
     }
 
-    const site: Site = {
-      id: `site-${Date.now()}`,
+    const made = await addSite({
       name: newSiteName.trim(),
-      location:
-        newSiteLocation.trim() ||
-        tx("Localisation à définir", "Location to be set"),
+      location: newSiteLocation.trim(),
       sector: newSiteSector,
-      status: "offline",
-      assets: 0,
-      critical: 0,
-      warnings: 0,
-      lastData: "none",
-      health: 0,
-      sources: [
-        {
-          type: "csv",
-          name: localized("Import CSV", "CSV import"),
-          connected: false,
-        },
-        {
-          type: "api",
-          name: localized("API", "API"),
-          connected: false,
-        },
-        {
-          type: "iot",
-          name: localized("Capteurs IoT", "IoT sensors"),
-          connected: false,
-        },
-      ],
+    })
+
+    if (!made.ok) {
+      setSiteError(siteErrorText(made.code))
+      return
     }
 
-    setSites((current) => [...current, site])
-    setActiveSiteId(site.id)
+    setSiteError(null)
+    if (made.id) setActiveSiteId(made.id)
     setShowAddSite(false)
     setNameInvalid(false)
 
@@ -335,31 +427,103 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
     setNewSiteSector("industry")
   }
 
-  function addSource(
-    siteId: string,
-    sourceType: "csv" | "api" | "iot"
-  ) {
-    setSites((current) =>
-      current.map((site) =>
-        site.id === siteId
-          ? {
-              ...site,
-              sources: site.sources.map(
-                (source) =>
-                  source.type === sourceType
-                    ? {
-                        ...source,
-                        connected: true,
-                        lastSync: "now",
-                      }
-                    : source
-              ),
-              status: "connected",
-              lastData: "now",
-            }
-          : site
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  // "Add a site" through the onboarding's choices (the API holds the sites).
+  const [wizardBusy, setWizardBusy] = useState(false)
+  const [wizardError, setWizardError] = useState<string | null>(null)
+
+  async function createFromWizard(result: WizardResult) {
+    setWizardBusy(true)
+    setWizardError(null)
+
+    const made = await addSite({
+      name: result.name,
+      location: result.location,
+      sector: result.sector as StoredSite["sector"],
+      departments: result.departments,
+      priorities: result.priorities,
+      sources: result.sources,
+      configured: true,
+    })
+
+    setWizardBusy(false)
+
+    if (!made.ok) {
+      setWizardError(siteErrorText(made.code))
+      return
+    }
+
+    // The new site opens on its own dashboard, with its own settings.
+    if (made.id) chooseSite(made.id)
+    setShowAddSite(false)
+    onNavigate?.("dashboard")
+  }
+
+  async function removeSite(siteId: string) {
+    const gone = await deleteSite(siteId)
+
+    if (!gone.ok) {
+      setSiteError(siteErrorText(gone.code))
+      setConfirmDelete(false)
+      return
+    }
+
+    setSiteError(null)
+    setActiveSiteId(null)
+    setConfirmDelete(false)
+  }
+
+  // A CSV for this site (F-SITESCOPE): the file goes to the site named, not
+  // to whichever one the top bar shows. The import panel (drawn by the app
+  // shell) shows its progress and the API's verdict on the columns.
+  const csvInput = useRef<HTMLInputElement>(null)
+  const [importing, setImporting] = useState(false)
+
+  async function importCsv(file: File, site: Site) {
+    const department = held.sites.find((s) => s.id === site.id)?.departments[0]
+    const ops = site.sector === "logistics" ? normalizeOpsType(department) : undefined
+
+    setImporting(true)
+    setSiteError(null)
+    setUploadPanel({ open: true, busy: true, title: site.name, state: { phase: "idle" } })
+
+    try {
+      const result = await runUpload(
+        `${API_BASE}/upload?sector=${toApiSector(site.sector)}&lang=${tx("fr", "en")}&site_id=${encodeURIComponent(site.id)}` +
+          (ops ? `&ops_type=${ops}` : "") +
+          (department ? `&business_type=${encodeURIComponent(department)}` : "") +
+          accountCurrencyParam(),
+        file,
+        (state) => setUploadPanel({ state }),
+        (problem) =>
+          uploadProblemMessage(problem, tx) ??
+          tx("Ce fichier ne correspond pas à ce site.", "This file doesn't match this site."),
+        tx(
+          "L'API SentrIA n'a pas répondu. Réessayez dans un instant.",
+          "The SentrIA API did not answer. Try again in a moment."
+        )
       )
-    )
+
+      setUploadPanel({ busy: false })
+
+      if (result.phase === "done") {
+        const stored = held.sites.find((s) => s.id === site.id)
+
+        if (stored) {
+          await editSite(site.id, {
+            sources: stored.sources.map((source) =>
+              source.type === "csv" ? { ...source, wanted: true, connected: true, synced: true } : source
+            ),
+            status: "connected",
+          })
+        }
+      }
+    } finally {
+      setImporting(false)
+      setUploadPanel({ busy: false })
+      if (csvInput.current) csvInput.current.value = ""
+    }
   }
 
   /*
@@ -373,6 +537,12 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
 
     return (
       <div className="space-y-6">
+        {siteError && (
+          <p role="alert" data-testid="site-error" className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+            {siteError}
+          </p>
+        )}
+
         {/* HEADER */}
         <div
           className="squircle flex flex-col gap-4 rounded-3xl bg-[var(--ink)] p-6 text-white md:flex-row md:items-center md:justify-between md:p-8"
@@ -380,7 +550,10 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
         >
           <div>
             <button
-              onClick={() => setActiveSiteId(null)}
+              onClick={() => {
+                setActiveSiteId(null)
+                setConfirmDelete(false)
+              }}
               className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-white/70 transition-colors hover:text-white"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -421,12 +594,112 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
             </div>
           </div>
 
-          <button
-            className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-[#141414] transition-opacity hover:opacity-90"
-          >
-            <Settings2 className="h-4 w-4" />
-            {tx("Configurer le site", "Configure this site")}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              data-testid="site-open-dashboard"
+              onClick={() => {
+                chooseSite(activeSite.id, held.sites.find((s) => s.id === activeSite.id)?.departments[0] ?? null)
+                onNavigate?.("dashboard")
+              }}
+              className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-[#141414] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              {tx("Ouvrir le tableau de bord", "Go to dashboard")}
+            </button>
+
+            {held.mode === "server" && (
+              <button
+                type="button"
+                data-testid="site-claim"
+                onClick={async () => {
+                  const result = await claimSite(activeSite.id)
+                  const moved = "moved" in result ? result.moved : null
+
+                  setClaimNote(
+                    moved === null
+                      ? claimProblem(result)
+                      : moved === 0
+                        ? tx("Rien à ramener : toutes vos données de ce secteur sont déjà ici.", "Nothing to bring: all your data for this sector is already here.")
+                        : tx(`${moved} alerte(s) ramenée(s) dans ce site.`, `${moved} alert(s) brought into this site.`)
+                  )
+                }}
+                className="inline-flex items-center gap-2 rounded-full border border-white/30 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+              >
+                <Database className="h-4 w-4" aria-hidden="true" />
+                {tx("Ramener mes anciennes données ici", "Bring my earlier data here")}
+              </button>
+            )}
+
+            {held.mode === "server" &&
+              held.sites
+                .filter((s) => s.id !== activeSite.id && s.sector === activeSite.sector && (s.stats?.alerts ?? 0) > 0)
+                .map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    data-testid="site-claim-from"
+                    onClick={async () => {
+                      const result = await claimSite(activeSite.id, s.id)
+                      const moved = "moved" in result ? result.moved : null
+
+                      setClaimNote(
+                        moved === null
+                          ? claimProblem(result)
+                          : tx(`${moved} alerte(s) déplacée(s) de ${s.name} vers ce site.`, `${moved} alert(s) moved from ${s.name} to this site.`)
+                      )
+                    }}
+                    className="inline-flex items-center gap-2 rounded-full border border-white/30 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                  >
+                    <Database className="h-4 w-4" aria-hidden="true" />
+                    {tx(`Déplacer les ${s.stats?.alerts} alertes de ${s.name} ici`, `Move ${s.name}'s ${s.stats?.alerts} alerts here`)}
+                  </button>
+                ))}
+
+            {claimNote && (
+              <p data-testid="site-claim-note" role="status" className="basis-full text-xs text-white/70">
+                {claimNote}
+              </p>
+            )}
+
+            {confirmDelete ? (
+              <>
+                <button
+                  data-testid="site-delete-confirm"
+                  onClick={() => removeSite(activeSite.id)}
+                  className="inline-flex items-center gap-2 rounded-full bg-destructive px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                >
+                  <X className="h-4 w-4" />
+                  {tx("Oui, supprimer", "Yes, delete")}
+                </button>
+
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="rounded-full border border-white/30 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                >
+                  {tx("Annuler", "Cancel")}
+                </button>
+
+                {held.mode === "server" && (
+                  <p data-testid="site-delete-warning" className="basis-full text-xs text-white/70">
+                    {tx(
+                      "Les alertes de ce site sont supprimées avec lui.",
+                      "This site's alerts are deleted with it."
+                    )}
+                  </p>
+                )}
+              </>
+            ) : (
+              <button
+                data-testid="site-delete"
+                onClick={() => setConfirmDelete(true)}
+                className="inline-flex items-center gap-2 rounded-full border border-white/30 px-4 py-2.5 text-sm font-semibold text-[#ff9a9a] transition-colors hover:bg-white/10"
+              >
+                <X className="h-4 w-4" />
+                {tx("Supprimer le site", "Delete site")}
+              </button>
+            )}
+          </div>
         </div>
 
         {/* TABS */}
@@ -679,7 +952,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                     <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted">
                       {source.type === "iot" ? (
                         <Wifi className="h-4 w-4" />
-                      ) : source.type === "api" ? (
+                      ) : source.type === "api" || source.type === "erp" ? (
                         <Database className="h-4 w-4" />
                       ) : (
                         <Upload className="h-4 w-4" />
@@ -710,29 +983,66 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                     </div>
                   </div>
 
-                  {source.connected ? (
+                  {source.connected && source.type === "csv" ? (
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/20 px-2.5 py-1 text-xs font-semibold">
+                        <CheckCircle2 className="h-3 w-3" />
+                        {tx("Actif", "Active")}
+                      </span>
+                      <button
+                        data-testid="site-import-csv"
+                        disabled={importing}
+                        onClick={() => csvInput.current?.click()}
+                        className="rounded-full border border-border px-3 py-1.5 text-xs font-semibold disabled:opacity-60"
+                      >
+                        {tx("Importer un autre CSV", "Import another CSV")}
+                      </button>
+                    </div>
+                  ) : source.connected ? (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/20 px-2.5 py-1 text-xs font-semibold">
                       <CheckCircle2 className="h-3 w-3" />
                       {tx("Actif", "Active")}
                     </span>
-                  ) : (
+                  ) : source.type === "csv" ? (
                     <button
-                      onClick={() =>
-                        addSource(
-                          activeSite.id,
-                          source.type
-                        )
-                      }
-                      className="rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background"
+                      data-testid="site-import-csv"
+                      disabled={importing}
+                      onClick={() => csvInput.current?.click()}
+                      className="rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background disabled:opacity-60"
                     >
-                      {tx("Connecter", "Connect")}
+                      {tx("Importer un CSV", "Import a CSV")}
                     </button>
+                  ) : (
+                    // Nothing connects by itself yet: the choice is kept, and
+                    // the page does not claim a live link.
+                    <span
+                      data-testid="source-not-live"
+                      className="rounded-full border border-border px-2.5 py-1 text-xs font-semibold text-muted-foreground"
+                    >
+                      {source.wanted
+                        ? tx("Choisi · pas encore actif", "Chosen · not live yet")
+                        : tx("Pas encore actif", "Not live yet")}
+                    </span>
                   )}
                 </div>
               ))}
             </div>
           </div>
         </div>
+
+        <input
+          ref={csvInput}
+          type="file"
+          accept=".csv"
+          className="sr-only"
+          data-testid="site-csv-input"
+          aria-label={tx("Importer un fichier CSV pour ce site", "Import a CSV file for this site")}
+          onChange={(e) => {
+            const file = e.target.files?.[0]
+
+            if (file && activeSite) void importCsv(file, activeSite)
+          }}
+        />
 
         {/* SITE DATA */}
         <div className="squircle rounded-3xl border border-border bg-card p-6" style={{ borderRadius: 34 }}>
@@ -777,25 +1087,19 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                 )}
               </p>
 
+              <div className="mt-4">
+                <CsvTemplateLink sector={activeSite.sector} className="text-muted-foreground hover:text-foreground" />
+              </div>
+
               <div className="mt-5 flex flex-wrap justify-center gap-2">
                 <button
-                  onClick={() =>
-                    addSource(activeSite.id, "csv")
-                  }
-                  className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground"
+                  data-testid="site-import-csv-empty"
+                  disabled={importing}
+                  onClick={() => csvInput.current?.click()}
+                  className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground disabled:opacity-60"
                 >
                   <Upload className="h-4 w-4" />
                   {tx("Importer CSV", "Import CSV")}
-                </button>
-
-                <button
-                  onClick={() =>
-                    addSource(activeSite.id, "iot")
-                  }
-                  className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-semibold"
-                >
-                  <Wifi className="h-4 w-4" />
-                  {tx("Connecter IoT", "Connect IoT")}
                 </button>
               </div>
             </div>
@@ -842,8 +1146,18 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
    * SITES LIST
    */
 
+  if (!held.ready) {
+    return <div aria-busy="true" className="h-64 animate-pulse rounded-3xl bg-muted" />
+  }
+
   return (
     <div className="space-y-6">
+      {siteError && (
+        <p role="alert" data-testid="site-error" className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+          {siteError}
+        </p>
+      )}
+
       {/* The Ask SentrIA layout: lime card and the site list on the left,
           the sites in the grey panel, the totals in the black card. */}
       <div className="grid gap-4 lg:grid-cols-[250px_minmax(0,1fr)] xl:grid-cols-[250px_minmax(0,1fr)_290px]">
@@ -870,9 +1184,28 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
               </button>
             </div>
 
-            <p className="mt-5 font-heading text-2xl font-semibold leading-tight tracking-tight">
-              {tx("Vos opérations, site par site.", "Your operations, site by site.")}
-            </p>
+            {shownSite ? (
+              <div className="mt-5" data-testid="site-active-card">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#141414]/65">
+                  {tx("Site actif", "Active site")}
+                </p>
+                <p className="mt-1 truncate font-heading text-2xl font-semibold leading-tight tracking-tight">
+                  {shownSite.name}
+                </p>
+                <p className="mt-1 flex items-center gap-2 text-xs font-medium text-[#141414]/75">
+                  <SectorBadge sector={shownSite.sector} size="sm" />
+                  <span className="truncate">
+                    {px(getSector(shownSite.sector).label)}
+                    {shownStored && shownStored.departments.length > 0 &&
+                      ` · ${shownStored.departments.length} ${tx(shownStored.departments.length > 1 ? "départements" : "département", shownStored.departments.length > 1 ? "departments" : "department")}`}
+                  </span>
+                </p>
+              </div>
+            ) : (
+              <p className="mt-5 font-heading text-2xl font-semibold leading-tight tracking-tight">
+                {tx("Vos opérations, site par site.", "Your operations, site by site.")}
+              </p>
+            )}
 
             <div className="mt-4">
               <div
@@ -915,16 +1248,20 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
               </p>
             ) : (
               <ul className="mt-4 flex flex-col gap-2">
-                {sites.map((site) => (
+                {ordered.map((site) => (
                   <li key={site.id}>
                     <button
                       type="button"
                       onClick={() => setActiveSiteId(site.id)}
-                      className="w-full rounded-2xl bg-muted px-4 py-3 text-left transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      aria-current={site.id === held.activeId ? "true" : undefined}
+                      className={cn(
+                        "w-full rounded-2xl bg-muted px-4 py-3 text-left transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        site.id === held.activeId && "ring-2 ring-inset ring-green-500"
+                      )}
                     >
                       <span className="flex items-center justify-between gap-2">
                         <span className="truncate text-sm font-semibold">{site.name}</span>
-                        <span className={cn("h-2 w-2 shrink-0 rounded-full", STATUS_META[site.status].dot)} aria-hidden="true" />
+                        <span className={cn("h-2 w-2 shrink-0 rounded-full", site.id === held.activeId ? "bg-green-500" : STATUS_META[site.status].dot)} aria-hidden="true" />
                       </span>
                       <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">{site.location}</span>
                     </button>
@@ -968,7 +1305,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
             </div>
           ) : (
             <div className="mt-5 grid grid-cols-1 gap-3 2xl:grid-cols-2">
-              {sites.map((site) => {
+              {ordered.map((site) => {
                 const sector = getSector(site.sector)
                 const SectorIcon = sector.icon
                 const status = STATUS_META[site.status]
@@ -978,7 +1315,11 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                     key={site.id}
                     type="button"
                     onClick={() => setActiveSiteId(site.id)}
-                    className="group rounded-[22px] bg-card p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    data-active={site.id === held.activeId ? "" : undefined}
+                    className={cn(
+                      "group rounded-[22px] bg-card p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      site.id === held.activeId && "ring-2 ring-inset ring-green-500"
+                    )}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex min-w-0 items-center gap-3">
@@ -1005,6 +1346,15 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                       <StatusTag tone="neutral" size="xs" icon={false}>
                         {px(sector.label)}
                       </StatusTag>
+                      {site.id === held.activeId && (
+                        <span
+                          data-testid="site-active-tag"
+                          className="inline-flex items-center gap-1 rounded-full bg-brand px-2 py-0.5 text-[11px] font-semibold text-[#141414]"
+                        >
+                          <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+                          {tx("Site actif", "Active site")}
+                        </span>
+                      )}
                     </div>
 
                     <div className="mt-4 grid grid-cols-3 gap-2">
@@ -1063,17 +1413,38 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
 
           <div className="rounded-[28px] bg-card p-5 shadow-sm">
             <p className="font-heading text-xl font-semibold tracking-tight">{tx("Sources de données", "Data sources")}</p>
+            {shownSite && <p className="mt-0.5 truncate text-xs text-muted-foreground">{shownSite.name}</p>}
             <ul className="mt-3 flex flex-col gap-2">
-              {[
-                { icon: Upload, label: tx("Import CSV", "CSV import") },
-                { icon: Database, label: tx("API", "API") },
-                { icon: Wifi, label: tx("Capteurs IoT", "IoT sensors") },
-              ].map((row) => (
-                <li key={row.label} className="flex items-center gap-3 rounded-2xl bg-muted px-4 py-3 text-sm font-medium">
-                  <row.icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                  {row.label}
+              {shownSite ? (
+                shownSite.sources.map((source) => {
+                  const Icon =
+                    source.type === "iot" ? Wifi : source.type === "csv" ? Upload : Database
+
+                  return (
+                    <li
+                      key={source.type}
+                      data-testid="site-source-row"
+                      className="flex items-center gap-3 rounded-2xl bg-muted px-4 py-3 text-sm font-medium"
+                    >
+                      <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                      <span className="min-w-0 flex-1 truncate">{px(source.name)}</span>
+                      {source.connected ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-brand px-2 py-0.5 text-[11px] font-semibold text-[#141414]">
+                          {tx("Actif", "Active")}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-muted-foreground">
+                          {source.wanted ? tx("Pas encore actif", "Not live yet") : tx("Non connecté", "Not connected")}
+                        </span>
+                      )}
+                    </li>
+                  )
+                })
+              ) : (
+                <li className="rounded-2xl bg-muted px-4 py-3 text-xs text-muted-foreground">
+                  {tx("Aucun site actif.", "No active site.")}
                 </li>
-              ))}
+              )}
             </ul>
             <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
               {tx("Chaque site se connecte à une ou plusieurs sources.", "Each site connects to one or more sources.")}
@@ -1157,8 +1528,23 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
         </div>
       )}
 
+      {/* ADD SITE: the onboarding's choices when the API holds the sites */}
+      {showAddSite && held.mode === "server" && (
+        <AddSiteWizard
+          plan={plan}
+          heldSectors={held.sites.map((s) => s.sector)}
+          busy={wizardBusy}
+          error={wizardError}
+          onCancel={() => {
+            setShowAddSite(false)
+            setWizardError(null)
+          }}
+          onCreate={createFromWizard}
+        />
+      )}
+
       {/* ADD SITE MODAL */}
-      {showAddSite && (
+      {showAddSite && held.mode !== "server" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-xl rounded-3xl border border-border bg-card p-6 shadow-2xl">
             <div className="flex items-start justify-between">

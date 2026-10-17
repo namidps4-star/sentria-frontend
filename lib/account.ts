@@ -1,5 +1,6 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js"
 
+import { ACTIVE_DEPARTMENT_KEY, ACTIVE_SITE_KEY, SITES_RESET_EVENT } from "@/lib/active-site"
 import { ADMIN_KEY, PLAN_KEY, PLAN_UPDATED_EVENT, TRIAL_KEY, isPlanId } from "@/lib/plans"
 
 /** The account (S-3 step 1).
@@ -33,6 +34,12 @@ export const ACCOUNT_KEYS = [
   "sentria_actions_log",
   // The wholesalers the pharmacy orders from (lib/wholesalers.ts).
   "sentria_wholesalers",
+  // The sites the company runs (lib/sites.ts).
+  "sentria_sites",
+  // "1" once the onboarding's setup became a site (lib/sites.ts).
+  "sentria_main_site_done",
+  // The account's own sector and department settings, kept while a site shows its own (lib/site-config.ts).
+  "sentria_base_config",
   // "on" when the weekly email is wanted (Settings; read by the API's
   // POST /reports/weekly/send).
   "sentria_weekly_report",
@@ -51,6 +58,9 @@ const LOCAL_ONLY_USER_KEYS = [
   TRIAL_KEY,
   ADMIN_KEY,
   "sentria_account_dirty",
+  // The site this browser shows (lib/active-site.ts).
+  ACTIVE_SITE_KEY,
+  ACTIVE_DEPARTMENT_KEY,
 ]
 
 /** Whose values localStorage holds. */
@@ -96,6 +106,9 @@ export function clearLocalAccount() {
   for (const key of [...ACCOUNT_KEYS, ...LOCAL_ONLY_USER_KEYS]) {
     if (!KEPT_AFTER_SIGN_OUT.has(key)) localStorage.removeItem(key)
   }
+
+  // The sites held in memory belong to the person who left.
+  window.dispatchEvent(new Event(SITES_RESET_EVENT))
 
   localStorage.removeItem(ACCOUNT_OWNER_KEY)
 }

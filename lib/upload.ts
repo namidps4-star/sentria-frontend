@@ -1,3 +1,4 @@
+import { withActiveSite } from "./api"
 import { supabase } from "./supabase"
 import { uploadTeach, type UploadTeach } from "./upload-problem"
 
@@ -45,7 +46,7 @@ export async function uploadWithProgress(
 
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
-    xhr.open("POST", url)
+    xhr.open("POST", withActiveSite(url))
     if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`)
 
     xhr.upload.onprogress = (event) => {
