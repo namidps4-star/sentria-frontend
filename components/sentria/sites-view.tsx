@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
-  Activity,
   AlertTriangle,
   ArrowLeft,
   ArrowUpRight,
@@ -11,7 +10,6 @@ import {
   ChevronRight,
   CircleDot,
   Cog,
-  Cpu,
   Database,
   Factory,
   HeartPulse,
@@ -274,14 +272,6 @@ function HealthScore({ value, measured = true }: { value: number; measured?: boo
     </div>
   )
 }
-
-/** The tiles on a site: the dashboard's skins (white, lime, black, white), squircle corners. */
-const SITE_KPI_SKIN = [
-  "tags-light border border-border bg-white text-[#141414] [--muted-foreground:rgb(20_20_20/0.7)]",
-  "tags-light bg-brand text-[#141414] [--muted-foreground:rgb(20_20_20/0.7)]",
-  "bg-[var(--ink)] text-white [--muted-foreground:rgb(255_255_255/0.7)]",
-  "tags-light border border-border bg-white text-[#141414] [--muted-foreground:rgb(20_20_20/0.7)]",
-] as const
 
 /** The cards on the list of sites: lime for the active one, then white and black. */
 const SITE_CARD_SKIN = {
@@ -732,88 +722,124 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
           ))}
         </div>
 
-        {/* KPIS */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div
-            className={cn("squircle rounded-3xl p-5", SITE_KPI_SKIN[0])}
-            style={{ borderRadius: 34 }}
-          >
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Activity className="h-4 w-4" />
-              {tx("Santé du site", "Site health")}
+        {/* KPIS: a tall lime health tile with a ring, and three tiles beside it */}
+        {(() => {
+          const measured = activeSite.assets > 0
+          const share = (n: number) => (measured ? Math.min(100, Math.round((n / activeSite.assets) * 100)) : 0)
+          const healthLabel = !measured
+            ? tx("Non mesuré", "Not measured")
+            : activeSite.health >= 80
+              ? tx("Opérationnel", "Operational")
+              : activeSite.health >= 50
+                ? tx("À surveiller", "Worth watching")
+                : tx("Action requise", "Action required")
+
+          return (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.15fr_1fr_1fr]">
+              <div
+                className="tags-light squircle flex flex-col justify-between rounded-3xl bg-brand p-6 text-[#141414] [--muted-foreground:rgb(20_20_20/0.7)] lg:row-span-2"
+                style={{ borderRadius: 34 }}
+              >
+                <div>
+                  <StatusTag tone="success" size="xs" icon={false}>
+                    {tx("Santé du site", "Site health")}
+                  </StatusTag>
+                </div>
+
+                <div className="my-6 flex items-center gap-5">
+                  <div className="relative h-[132px] w-[132px] shrink-0">
+                    <svg viewBox="0 0 36 36" className="h-[132px] w-[132px] -rotate-90" aria-hidden="true">
+                      <circle cx="18" cy="18" r="15.9155" fill="none" stroke="currentColor" strokeWidth="3.2" className="opacity-15" />
+                      {/* Nothing measured, nothing drawn: a zero-length arc with a round cap still leaves a dot. */}
+                      {measured && (
+                        <path
+                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3.2"
+                          strokeDasharray={`${activeSite.health}, 100`}
+                          strokeLinecap="round"
+                        />
+                      )}
+                    </svg>
+                    <span className="absolute inset-0 flex items-center justify-center font-heading text-[40px] font-medium tracking-tight">
+                      {measured ? activeSite.health : "—"}
+                    </span>
+                  </div>
+
+                  <div>
+                    <p className="text-lg font-bold">{healthLabel}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {tx("Dernière donnée :", "Last data:")} {freshnessLabel(activeSite.lastData, tx)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <span className="rounded-full bg-white/60 px-3 py-1.5 text-xs font-semibold">
+                    {activeSite.sources.filter((source) => source.connected).length} / {activeSite.sources.length} {tx("sources", "sources")}
+                  </span>
+                </div>
+              </div>
+
+              <div
+                className="tags-light squircle rounded-3xl border border-border bg-white p-5 text-[#141414] [--muted-foreground:rgb(20_20_20/0.7)]"
+                style={{ borderRadius: 34 }}
+              >
+                <div>
+                  <StatusTag tone="info" size="xs" icon={false}>
+                    {tx("Actifs surveillés", "Assets monitored")}
+                  </StatusTag>
+                </div>
+                <p className="mt-4 font-heading text-5xl font-medium leading-none tracking-tight tabular-nums">{activeSite.assets}</p>
+                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[#141414]/10" aria-hidden="true">
+                  <div className="h-full rounded-full bg-[#7ca31a]" style={{ width: measured ? "100%" : "0%" }} />
+                </div>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {tx("Machines, équipements ou actifs", "Machines, equipment or other assets")}
+                </p>
+              </div>
+
+              <div
+                className="tags-light squircle rounded-3xl bg-[var(--ink)] p-5 text-white [--muted-foreground:rgb(255_255_255/0.7)]"
+                style={{ borderRadius: 34 }}
+              >
+                <div>
+                  <StatusTag tone="danger" size="xs" icon={false}>
+                    {tx("Alertes critiques", "Critical alerts")}
+                  </StatusTag>
+                </div>
+                <p className="mt-4 font-heading text-5xl font-medium leading-none tracking-tight tabular-nums">
+                  {measured ? activeSite.critical : "—"}
+                </p>
+                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/15" aria-hidden="true">
+                  <div className="h-full rounded-full bg-[#ff6b72]" style={{ width: `${share(activeSite.critical)}%` }} />
+                </div>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {tx("Nécessitent une action immédiate", "Need action right away")}
+                </p>
+              </div>
+
+              <div
+                className="tags-light squircle rounded-3xl border border-border bg-white p-5 text-[#141414] [--muted-foreground:rgb(20_20_20/0.7)] lg:col-span-2"
+                style={{ borderRadius: 34 }}
+              >
+                <div>
+                  <StatusTag tone="warning" size="xs" icon={false}>
+                    {tx("Warnings", "Warnings")}
+                  </StatusTag>
+                </div>
+                <p className="mt-4 font-heading text-5xl font-medium leading-none tracking-tight tabular-nums">
+                  {measured ? activeSite.warnings : "—"}
+                </p>
+                <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-[#141414]/10" aria-hidden="true">
+                  <div className="h-full rounded-full bg-[#f0a500]" style={{ width: `${share(activeSite.warnings)}%` }} />
+                </div>
+                <p className="mt-3 text-xs text-muted-foreground">{tx("À surveiller", "Worth watching")}</p>
+              </div>
             </div>
-
-            <div className="mt-4">
-              <HealthScore value={activeSite.health} measured={activeSite.assets > 0} />
-            </div>
-          </div>
-
-          <div
-            className={cn("squircle rounded-3xl p-5", SITE_KPI_SKIN[1])}
-            style={{ borderRadius: 34 }}
-          >
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Cpu className="h-4 w-4" />
-              {tx("Actifs surveillés", "Assets monitored")}
-            </div>
-
-            <p className="mt-3 font-heading text-3xl font-bold">
-              {activeSite.assets}
-            </p>
-
-            <p className="mt-1 text-xs text-muted-foreground">
-              {tx(
-                "Machines, équipements ou actifs",
-                "Machines, equipment or other assets"
-              )}
-            </p>
-          </div>
-
-          <div
-            className={cn("squircle rounded-3xl p-5", SITE_KPI_SKIN[2])}
-            style={{ borderRadius: 34 }}
-          >
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <AlertTriangle className="h-4 w-4" />
-              {tx("Alertes critiques", "Critical alerts")}
-            </div>
-
-            <p
-              className={cn(
-                "mt-3 font-heading text-3xl font-bold",
-                activeSite.critical > 0 &&
-                  "text-destructive"
-              )}
-            >
-              {activeSite.assets > 0 ? activeSite.critical : "—"}
-            </p>
-
-            <p className="mt-1 text-xs text-muted-foreground">
-              {tx(
-                "Nécessitent une action immédiate",
-                "Need action right away"
-              )}
-            </p>
-          </div>
-
-          <div
-            className={cn("squircle rounded-3xl p-5", SITE_KPI_SKIN[3])}
-            style={{ borderRadius: 34 }}
-          >
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CircleDot className="h-4 w-4" />
-              {tx("Warnings", "Warnings")}
-            </div>
-
-            <p className="mt-3 font-heading text-3xl font-bold">
-              {activeSite.assets > 0 ? activeSite.warnings : "—"}
-            </p>
-
-            <p className="mt-1 text-xs text-muted-foreground">
-              {tx("À surveiller", "Worth watching")}
-            </p>
-          </div>
-        </div>
+          )
+        })()}
 
         {/* ATTENTION / DATA SOURCES */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
