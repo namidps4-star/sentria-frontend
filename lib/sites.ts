@@ -408,9 +408,12 @@ export async function deleteSite(id: string): Promise<SiteResult> {
 }
 
 /** Brings the company's earlier alerts of this site's sector into the site
- *  (server mode only). Returns how many moved, or null when it could not. */
-export async function claimSite(id: string, from?: string): Promise<number | null> {
-  if (state.mode !== "server") return null
+ *  (server mode only). `moved` is how many came; `problem` says why not:
+ *  "outdated" when the server does not have this route yet, "failed" else. */
+export type ClaimResult = { moved: number } | { problem: "outdated" | "failed" }
+
+export async function claimSite(id: string, from?: string): Promise<ClaimResult> {
+  if (state.mode !== "server") return { problem: "failed" }
 
   try {
     const res = await api(`/sites/${encodeURIComponent(id)}/claim`, {
@@ -419,16 +422,17 @@ export async function claimSite(id: string, from?: string): Promise<number | nul
       body: JSON.stringify(from ? { from } : {}),
     })
 
-    if (!res.ok) return null
+    if (res.status === 404 || res.status === 405) return { problem: "outdated" }
+    if (!res.ok) return { problem: "failed" }
 
     const body = (await res.json()) as { moved?: number }
 
     await refreshSites()
     window.dispatchEvent(new Event(SITES_CHANGED_EVENT))
 
-    return typeof body.moved === "number" ? body.moved : 0
+    return { moved: typeof body.moved === "number" ? body.moved : 0 }
   } catch {
-    return null
+    return { problem: "failed" }
   }
 }
 

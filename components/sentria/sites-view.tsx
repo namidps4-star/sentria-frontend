@@ -37,7 +37,7 @@ import { toApiSector } from "@/lib/sector"
 import { runUpload } from "@/lib/upload"
 import { setUploadPanel } from "@/lib/upload-panel"
 import { uploadProblemMessage } from "@/lib/upload-problem"
-import { addSite, chooseSite, claimSite, deleteSite, editSite, useSites, type StoredSite } from "@/lib/sites"
+import { addSite, chooseSite, claimSite, deleteSite, editSite, useSites, type ClaimResult, type StoredSite } from "@/lib/sites"
 import { usePresence } from "@/lib/use-presence"
 import { useShake } from "@/lib/use-shake"
 import { enterAt } from "@/lib/motion"
@@ -304,6 +304,13 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
     plan_departments: tx("Votre offre couvre un seul département. Plusieurs départements liés : offre Business.", "Your plan covers one department. Several linked departments: Business plan."),
     plan_combo: tx("Ces départements ne vont pas ensemble. Toute combinaison : offre Entreprise.", "These departments don't run together. Any combination: Entreprise plan."),
   }
+  const claimProblem = (result: ClaimResult) =>
+    "problem" in result && result.problem === "outdated"
+      ? tx(
+          "Le serveur n'a pas encore cette mise à jour. Elle arrive avec la prochaine mise en ligne du backend.",
+          "The server does not have this update yet. It arrives with the next backend deploy."
+        )
+      : tx("Impossible pour l'instant. Réessayez.", "Not possible right now. Try again.")
   const siteErrorText = (code: string) =>
     SITE_ERRORS[code] ?? tx("Le site n'a pas pu être enregistré. Réessayez.", "The site could not be saved. Try again.")
 
@@ -598,11 +605,12 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                 type="button"
                 data-testid="site-claim"
                 onClick={async () => {
-                  const moved = await claimSite(activeSite.id)
+                  const result = await claimSite(activeSite.id)
+                  const moved = "moved" in result ? result.moved : null
 
                   setClaimNote(
                     moved === null
-                      ? tx("Impossible pour l'instant. Réessayez.", "Not possible right now. Try again.")
+                      ? claimProblem(result)
                       : moved === 0
                         ? tx("Rien à ramener : toutes vos données de ce secteur sont déjà ici.", "Nothing to bring: all your data for this sector is already here.")
                         : tx(`${moved} alerte(s) ramenée(s) dans ce site.`, `${moved} alert(s) brought into this site.`)
@@ -624,11 +632,12 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                     type="button"
                     data-testid="site-claim-from"
                     onClick={async () => {
-                      const moved = await claimSite(activeSite.id, s.id)
+                      const result = await claimSite(activeSite.id, s.id)
+                      const moved = "moved" in result ? result.moved : null
 
                       setClaimNote(
                         moved === null
-                          ? tx("Impossible pour l'instant. Réessayez.", "Not possible right now. Try again.")
+                          ? claimProblem(result)
                           : tx(`${moved} alerte(s) déplacée(s) de ${s.name} vers ce site.`, `${moved} alert(s) moved from ${s.name} to this site.`)
                       )
                     }}

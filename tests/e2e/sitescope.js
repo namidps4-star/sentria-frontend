@@ -32,7 +32,7 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
         return json({ sites: api.sites.map(s => { const mine = api.alerts.filter(a => a.site_id === s.id); return { ...s, alerts: mine.length, stats: mine.length ? { alerts: mine.length, critical: mine.filter(a => a.severity === 'CRITICAL').length, warnings: mine.filter(a => a.severity !== 'CRITICAL').length, assets: new Set(mine.map(a => a.equipment)).size, last: NOW } : null }; }), persisted: true, max_sites: 50 });
       }
       if (path === '/sites' && m === 'POST') { const b = JSON.parse(req.postData()); if (api.refuse) return json({ success: false, error_code: api.refuse, message: 'no', needs: 'entreprise' }, 403); const s = mkSite('s' + (api.sites.length + 1), b.name, b.location || ''); s.sources = b.sources || srcs(); s.sector = b.sector || 'health'; s.departments = b.departments || []; s.priorities = b.priorities || []; s.configured = b.configured === true; api.body = b; api.sites.push(s); api.log.push('POST /sites ' + b.name); return json(s, 201); }
-      if (/^\/sites\/[^/]+\/claim$/.test(path) && m === 'POST') { api.log.push('CLAIM ' + path.split('/')[2]); api.claimBody = req.postData(); return json({ success: true, moved: 2 }); }
+      if (/^\/sites\/[^/]+\/claim$/.test(path) && m === 'POST') { if (api.claimMissing) return json({ detail: 'Not Found' }, 404); api.log.push('CLAIM ' + path.split('/')[2]); api.claimBody = req.postData(); return json({ success: true, moved: 2 }); }
       const one = path.match(/^\/sites\/(.+)$/);
       if (one && m === 'PATCH') { const s = api.sites.find(x => x.id === one[1]); Object.assign(s, JSON.parse(req.postData())); api.log.push('PATCH ' + one[1]); return json(s); }
       if (one && m === 'DELETE') { api.sites = api.sites.filter(x => x.id !== one[1]); api.alerts = api.alerts.filter(a => a.site_id !== one[1]); api.log.push('DELETE ' + one[1]); return json({ success: true, alerts_deleted: 0 }); }
@@ -232,6 +232,9 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
     pass(await from.count() === 1 && /Lyon plant/.test(await from.innerText()) && /2 alerts/.test(await from.innerText()), 'a button offers to move the other site\'s alerts: ' + (await from.allInnerTexts()).join('|'));
     await from.click(); await p.waitForTimeout(700);
     pass(/"from":"s1"/.test(api.claimBody || '') && /moved from Lyon plant/.test(await p.getByTestId('site-claim-note').innerText()), 'it names that site to the API and says so: ' + (api.claimBody || ''));
+    api.claimMissing = true;
+    await p.getByTestId('site-claim').click(); await p.waitForTimeout(700);
+    pass(/does not have this update yet/.test(await p.getByTestId('site-claim-note').innerText()), 'an old server (no claim route) is named in the note, not left silent: ' + await p.getByTestId('site-claim-note').innerText());
     await ctx.close(); }
 
   console.log('== a CSV for a site');
