@@ -270,7 +270,7 @@ const reply = (status, body, json) => ({ ok: status >= 200 && status < 300, stat
   // ----------------------------------------------- industry and logistics overviews
   console.log('== industry overview');
   {
-    const open2 = async o => { const x = await open({ ls: LS_INDUSTRY, alertRows: IND_ROWS, ...o }); const ind = x.p.getByRole('button', { name: /^Industry/ }).first(); if (await x.p.getByTestId('priority-track').count() === 0 && await ind.count()) { await ind.click(); await x.p.waitForTimeout(800); } return x; };
+    const open2 = async o => { const x = await open({ ls: LS_INDUSTRY, alertRows: IND_ROWS, ...o }); const ind = x.p.getByRole('button', { name: /^Industry/ }).first(); if (await x.p.locator('main h2', { hasText: /overview of your/i }).count() === 0 && await ind.count()) { await ind.click(); await x.p.waitForTimeout(800); } return x; };
     let x = await open2({ alerts: 'answerError' });
     let body = await text(x.p);
     pass(await notices(x.p).count() === 1, 'failed read: the notice');
@@ -310,27 +310,27 @@ const reply = (status, body, json) => ({ ok: status >= 200 && status < 300, stat
 
   console.log('== logistics overview');
   {
-    const open2 = async o => { const x = await open({ ls: LS_LOGISTICS, alertRows: LOG_ROWS, ...o }); const log = x.p.getByRole('button', { name: /^Logistics/ }).first(); if (await x.p.getByTestId('priority-bento').count() === 0 && await log.count()) { await log.click(); await x.p.waitForTimeout(800); } return x; };
+    const open2 = async o => { const x = await open({ ls: LS_LOGISTICS, alertRows: LOG_ROWS, ...o }); const log = x.p.getByRole('button', { name: /^Logistics/ }).first(); if (await x.p.locator('main h2', { hasText: /overview of your/i }).count() === 0 && await log.count()) { await log.click(); await x.p.waitForTimeout(800); } return x; };
     let x = await open2({ alerts: 'answerError' });
     let body = await text(x.p);
     pass(await notices(x.p).count() === 1 && await dashes(x.p).count() === 4, 'failed read: the notice and four dashes');
     pass(!/signals · \d+ critical/.test(body), 'no signal count in the header');
-    const bento = await x.p.getByTestId('priority-bento').innerText();
-    pass(!/nothing blocked|queues? flagged|cost signals?|early warnings?|assets? to act on|under strain|critical signals?/.test(bento), 'no tile says "nothing blocked" over a read that failed');
+    const bento = (await x.p.getByTestId('priority-track').locator('button').evaluateAll(els => els.map(e => e.getAttribute('aria-label')))).join(' | ');
+    pass(!/all clear|critical|to watch/.test(bento), 'no pill says "all clear" over a read that failed: ' + bento.slice(0, 80));
     await x.p.screenshot({ path: 'notmeasured-logistics-light.png' });
     noPageErrors(x.p, 'logistics');
     await x.ctx.close();
 
     x = await open2({ alertRows: [], freshness: stamp('logistics', 1, 'port') });
-    const empty = await x.p.getByTestId('priority-bento').innerText();
-    pass(!/nothing blocked|queues? flagged|early warnings?/.test(empty), 'an account with no alerts yet: no "nothing blocked", the tiles explain themselves');
+    const empty = (await x.p.getByTestId('priority-track').locator('button').evaluateAll(els => els.map(e => e.getAttribute('aria-label')))).join(' | ');
+    pass(!/all clear|critical|to watch/.test(empty), 'an account with no alerts yet: no "all clear", no numbers: ' + empty.slice(0, 80));
     pass(await x.p.locator('[data-freshness]').count() === 0, 'recent data: no "updated N days ago" line on the logistics overview either');
     await x.ctx.close();
 
     x = await open2({ alertRows: LOG_ROWS, freshness: stamp('logistics', 12, 'port') });
-    const tiles = await x.p.getByTestId('priority-bento').locator(':scope > button').evaluateAll(els => els.map(e => e.innerText.replace(/\s+/g, ' ')));
-    pass(/1 critical signal/.test(tiles[0]), `old data: the critical signal that happened stays (${tiles[0].slice(0, 60)})`);
-    pass(!/0 cost signals|0 early warnings|0 assets|0 resources/.test(tiles.join(' ')), 'and no tile counts a zero as good news');
+    const tiles = await x.p.getByTestId('priority-track').locator('button').evaluateAll(els => els.map(e => e.getAttribute('aria-label') || ''));
+    pass(/, 1, 1 critical/.test(tiles[0]), `old data: the critical signal that happened stays (${tiles[0].slice(0, 60)})`);
+    pass(!/all clear/.test(tiles.join(' ')), 'and no pill counts a zero as good news');
     await x.ctx.close();
   }
 

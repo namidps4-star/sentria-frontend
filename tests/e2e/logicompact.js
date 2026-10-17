@@ -23,18 +23,13 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   for (const theme of ['light', 'dark']) {
     console.log(`== overview tiles + department tabs (${theme})`);
     const p = await open(1440, theme);
-    const bento = p.getByTestId('priority-bento');
-    const tiles = bento.locator(':scope > button');
-    pass(await tiles.count() === 5, 'five priority tiles');
-    const [lead, t2] = [await tiles.nth(0).boundingBox(), await tiles.nth(1).boundingBox()];
-    pass(lead.width > t2.width * 1.8 && lead.height > t2.height * 1.8, 'the first priority leads as a 2×2 tile');
-    const th = await tiles.evaluateAll(els => els.slice(1).map(e => e.getBoundingClientRect().height));
-    pass(Math.max(...th) <= 170, 'the other tiles are compact: ' + th.map(Math.round).join(','));
-    const txt = async n => (await tiles.nth(n).innerText()).replace(/\s+/g, ' ');
-    pass(/ 4 critical signals /.test(await txt(0)), 'lead tile shows a live number: 4 critical signals');
-    pass(/ 2 queues flagged/.test(await txt(1)) && / 0 cost signals/.test(await txt(2)) && / 4 early warnings/.test(await txt(3)) && / 8 assets to act on/.test(await txt(4)), 'each tile counts from the alerts: 2 queues, 0 cost, 4 early warnings, 8 assets');
-    const bb = await bento.boundingBox(), right = await tiles.nth(4).boundingBox();
-    pass(Math.abs((right.y + right.height) - (lead.y + lead.height)) <= 3 && right.x + right.width <= bb.x + bb.width + 1, 'the grid closes with no hole');
+    const track = p.getByTestId('priority-track');
+    const tiles = track.locator('button');
+    pass(await tiles.count() === 5 && await p.getByTestId('priority-bento').count() === 0, 'five priority pills in the capsule widget, no tiles');
+    const nums = (await tiles.evaluateAll(els => els.map(e => e.getAttribute('aria-label') || ''))).map(l => Number((l.match(/, (\d+),/) || [])[1]));
+    pass(nums.join() === '4,2,0,4,8', 'each pill counts from the alerts: 4 blockages, 2 queues, 0 cost, 4 early warnings, 8 assets (' + nums.join() + ')');
+    const tw = await track.boundingBox();
+    pass(tw && tw.x >= 0 && tw.x + tw.width <= 1441, 'the widget stays inside the page');
     const tabs = p.getByRole('tablist', { name: 'Your departments' });
     pass(await tabs.count() === 1 && await tabs.getByRole('tab', { name: /Port & containers/ }).getAttribute('aria-selected') === 'true', 'logistics has the department tab bar, port selected');
     const adds = p.getByRole('group', { name: 'Add a department' }).getByRole('button');
@@ -48,7 +43,7 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
       pass(JSON.parse(await p.evaluate(() => localStorage.getItem('sentria_ops_types'))).join() === 'port', 'and back to the port in one click');
     }
     console.log(`== blockages (${theme})`);
-    await go(p, 'Avoid blockages');
+    await p.getByTestId('priority-track').getByRole('button', { name: /^Blockages/ }).click(); await p.waitForTimeout(1000); await p.evaluate(() => document.querySelector('main').scrollTo(0, 0));
     const fig = p.getByTestId('flow-figure');
     const title = p.locator('main h2').filter({ hasText: /^Berth$/ }).first();
     const fb = await fig.boundingBox(), tb = await title.boundingBox();
@@ -69,7 +64,7 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
     await p.screenshot({ path: `logi-blockages-${theme}.png`, fullPage: false });
 
     console.log(`== recommendations board (${theme})`);
-    await p.getByRole('button', { name: /^Recommendations$/ }).first().click(); await p.waitForTimeout(1000);
+    await p.getByTestId('priority-track').getByRole('button', { name: /^Recommendations/ }).click(); await p.waitForTimeout(1000);
     const board = p.locator('#priorities-board');
     const cards = board.locator('article');
     const n = await cards.count();
@@ -108,10 +103,10 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
 
   console.log('== phone');
   const q = await open(390, 'light');
-  await go(q, 'Avoid blockages');
+  await q.getByTestId('priority-track').getByRole('button', { name: /^Blockages/ }).click(); await q.waitForTimeout(1000); await q.evaluate(() => document.querySelector('main').scrollTo(0, 0));
   pass(await q.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'blockages: no sideways scroll');
   await q.screenshot({ path: 'logi-blockages-390.png' });
-  await q.getByRole('button', { name: /^Recommendations$/ }).first().click(); await q.waitForTimeout(900);
+  await q.getByTestId('priority-track').getByRole('button', { name: /^Recommendations/ }).click(); await q.waitForTimeout(900);
   await q.locator('#priorities-board').getByRole('button', { name: 'List' }).click(); await q.waitForTimeout(300);
   pass(await q.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'list: no sideways scroll');
   await q.locator('#priorities-board').scrollIntoViewIfNeeded(); await q.screenshot({ path: 'logi-list-390.png' });

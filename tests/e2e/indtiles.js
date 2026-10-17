@@ -13,7 +13,7 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
     await p.route(/onrender\.com\//, r => r.fulfill({ status: 200, contentType: 'application/json', body: /\/alerts/.test(r.request().url()) ? JSON.stringify(rows) : '{"recommendations":[],"assignments":[],"contractors":[]}' }));
     await p.addInitScript(ls => { if (!sessionStorage.x) { sessionStorage.x = 1; localStorage.clear(); Object.entries(ls).forEach(([k, v]) => localStorage.setItem(k, v)); } }, LS);
     await signedIn(p, 'u', 'a@b.c', { plan: 'business' }); await p.goto(APP_URL); await p.waitForTimeout(2000);
-    const ind = p.getByRole('button', { name: /^Industry/ }).first(); if (await p.getByTestId('priority-track').count() === 0 && await ind.count()) { await ind.click(); await p.waitForTimeout(800); }
+    const ind = p.getByRole('button', { name: /^Industry/ }).first(); if (await p.locator('main h2', { hasText: /overview of your/i }).count() === 0 && await ind.count()) { await ind.click(); await p.waitForTimeout(800); }
     return p; };
 
   console.log('== with data');
