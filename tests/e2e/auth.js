@@ -111,12 +111,12 @@ const signIn = async (p, email, pw) => { await p.fill('#auth-email', email); awa
     await p.getByRole('button', { name: /Create my account/ }).click(); await p.waitForTimeout(400);
     pass(/at least 8 characters/.test(await text(p)) && !log.some(l => l.path === '/auth/v1/signup'), 'short password refused locally');
     await p.screenshot({ path: 'auth-signup-1440.png' });
-    await p.fill('#auth-password', 'longenough1'); await p.getByRole('button', { name: /Create my account/ }).click(); await p.waitForTimeout(1000);
+    await p.fill('#auth-password', 'longenough1'); await p.locator('#auth-terms').check(); await p.getByRole('button', { name: /Create my account/ }).click(); await p.waitForTimeout(1000);
     const su = log.find(l => l.path === '/auth/v1/signup');
     pass(su && su.body.data.company_name === 'Clinique Sud' && su.body.data.full_name === 'Afi' && su.body.data.username === 'afi_sud', 'name + username + company sent as metadata');
     pass(/Open the email sent to afi@clinique\.bj/.test(await text(p)), 'check-your-email notice');
     await p.getByRole('button', { name: 'Create one' }).click();
-    await p.fill('#auth-name', 'A'); await p.fill('#auth-username', 'ama2'); await p.fill('#auth-company', 'B'); await p.fill('#auth-email', 'ama@pharma.bj'); await p.fill('#auth-password', 'longenough1');
+    await p.fill('#auth-name', 'A'); await p.fill('#auth-username', 'ama2'); await p.fill('#auth-company', 'B'); await p.fill('#auth-email', 'ama@pharma.bj'); await p.fill('#auth-password', 'longenough1'); await p.locator('#auth-terms').check();
     await p.getByRole('button', { name: /Create my account/ }).click(); await p.waitForTimeout(800);
     const existing = await text(p);
     pass(!/already exists|already registered|déjà un compte/i.test(existing) && /Open the email sent to ama@pharma\.bj and click the link to continue/.test(existing), 'existing email: the same neutral notice as a new one (S-4: no account enumeration)');

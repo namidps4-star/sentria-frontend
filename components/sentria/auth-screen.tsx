@@ -20,6 +20,8 @@ import { cn } from "@/lib/utils"
 import { useShake } from "@/lib/use-shake"
 
 import { SectorShowcase } from "./sector-showcase"
+import { LegalDialog } from "./legal-dialog"
+import { LEGAL_VERSION, type LegalDocId } from "@/lib/legal"
 
 type Mode = "sign-in" | "sign-up" | "forgot" | "reset"
 
@@ -152,6 +154,13 @@ export function AuthScreen({
   const { ui } = useLocale()
 
   const [mode, setMode] = useState<Mode>(initialMode)
+  const [accepted, setAccepted] = useState(false)
+  const [legalOpen, setLegalOpen] = useState(false)
+  const [legalDoc, setLegalDoc] = useState<LegalDocId>("privacy")
+  const openLegal = (doc: LegalDocId) => {
+    setLegalDoc(doc)
+    setLegalOpen(true)
+  }
   const [name, setName] = useState("")
   const [username, setUsername] = useState("")
   const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>("empty")
@@ -235,6 +244,11 @@ export function AuthScreen({
       return
     }
 
+    if (mode === "sign-up" && !accepted) {
+      setError(tx("Acceptez les conditions et la politique de confidentialité pour créer un compte.", "Accept the terms and the privacy policy to create an account."))
+      return
+    }
+
     setBusy(true)
 
     try {
@@ -265,6 +279,8 @@ export function AuthScreen({
               company_name: company.trim(),
               username: wanted,
               language: ui === "en" ? "en" : "fr",
+              terms_version: LEGAL_VERSION,
+              terms_accepted_at: new Date().toISOString(),
             },
           },
         })
@@ -624,6 +640,30 @@ export function AuthScreen({
                 </p>
               )}
 
+              {mode === "sign-up" && (
+                <label className="flex items-start gap-2.5 px-1 text-xs leading-relaxed text-muted-foreground">
+                  <input
+                    id="auth-terms"
+                    type="checkbox"
+                    data-testid="auth-terms"
+                    checked={accepted}
+                    onChange={(e) => setAccepted(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--ink)]"
+                  />
+                  <span>
+                    {tx("J'accepte les", "I accept the")}{" "}
+                    <button type="button" data-testid="auth-terms-link" onClick={() => openLegal("terms")} className="font-semibold text-foreground underline underline-offset-2 hover:no-underline">
+                      {tx("conditions d'utilisation", "terms of use")}
+                    </button>{" "}
+                    {tx("et la", "and the")}{" "}
+                    <button type="button" data-testid="auth-privacy-link" onClick={() => openLegal("privacy")} className="font-semibold text-foreground underline underline-offset-2 hover:no-underline">
+                      {tx("politique de confidentialité", "privacy policy")}
+                    </button>
+                    .
+                  </span>
+                </label>
+              )}
+
               <button
                 type="submit"
                 disabled={busy}
@@ -658,6 +698,17 @@ export function AuthScreen({
           )}
         </section>
 
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          <button type="button" data-testid="auth-footer-privacy" onClick={() => openLegal("privacy")} className="underline underline-offset-2 hover:text-foreground">
+            {tx("Confidentialité", "Privacy")}
+          </button>
+          {" · "}
+          <button type="button" data-testid="auth-footer-terms" onClick={() => openLegal("terms")} className="underline underline-offset-2 hover:text-foreground">
+            {tx("Conditions", "Terms")}
+          </button>
+        </p>
+
+        <LegalDialog open={legalOpen} doc={legalDoc} onClose={() => setLegalOpen(false)} />
       </main>
     </div>
   )
