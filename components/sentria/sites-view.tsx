@@ -210,6 +210,14 @@ function HealthScore({ value, measured = true }: { value: number; measured?: boo
   )
 }
 
+/** The tiles on a site: the dashboard's skins (white, lime, black, white), squircle corners. */
+const SITE_KPI_SKIN = [
+  "tags-light border border-border bg-white text-[#141414] [--muted-foreground:rgb(20_20_20/0.7)]",
+  "tags-light bg-brand text-[#141414] [--muted-foreground:rgb(20_20_20/0.7)]",
+  "bg-[var(--ink)] text-white [--muted-foreground:rgb(255_255_255/0.7)]",
+  "tags-light border border-border bg-white text-[#141414] [--muted-foreground:rgb(20_20_20/0.7)]",
+] as const
+
 export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void } = {}) {
   const tx = useTx()
 
@@ -366,18 +374,21 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
     return (
       <div className="space-y-6">
         {/* HEADER */}
-        <div className="flex flex-col gap-4 rounded-3xl border border-border bg-card p-6 md:flex-row md:items-center md:justify-between">
+        <div
+          className="squircle flex flex-col gap-4 rounded-3xl bg-[var(--ink)] p-6 text-white md:flex-row md:items-center md:justify-between md:p-8"
+          style={{ borderRadius: 40 }}
+        >
           <div>
             <button
               onClick={() => setActiveSiteId(null)}
-              className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground transition-colors hover:text-foreground"
+              className="mb-4 inline-flex items-center gap-2 text-sm font-semibold text-white/70 transition-colors hover:text-white"
             >
               <ArrowLeft className="h-4 w-4" />
               {tx("Tous les sites", "All sites")}
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand text-[#141414]">
                 <SectorIcon className="h-6 w-6" />
               </div>
 
@@ -388,10 +399,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                   </h2>
 
                   <span
-                    className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold",
-                      status.className
-                    )}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-[#141414]"
                   >
                     <span
                       className={cn(
@@ -403,7 +411,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                   </span>
                 </div>
 
-                <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+                <p className="mt-1 flex items-center gap-1.5 text-sm text-white/70">
                   <MapPin className="h-3.5 w-3.5" />
                   {activeSite.location}
                   <span>·</span>
@@ -414,7 +422,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
           </div>
 
           <button
-            className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-muted"
+            className="inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2.5 text-sm font-semibold text-[#141414] transition-opacity hover:opacity-90"
           >
             <Settings2 className="h-4 w-4" />
             {tx("Configurer le site", "Configure this site")}
@@ -446,7 +454,10 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
 
         {/* KPIS */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-3xl border border-border bg-card p-5">
+          <div
+            className={cn("squircle rounded-3xl p-5", SITE_KPI_SKIN[0])}
+            style={{ borderRadius: 34 }}
+          >
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Activity className="h-4 w-4" />
               {tx("Santé du site", "Site health")}
@@ -457,7 +468,10 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
             </div>
           </div>
 
-          <div className="rounded-3xl border border-border bg-card p-5">
+          <div
+            className={cn("squircle rounded-3xl p-5", SITE_KPI_SKIN[1])}
+            style={{ borderRadius: 34 }}
+          >
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Cpu className="h-4 w-4" />
               {tx("Actifs surveillés", "Assets monitored")}
@@ -475,7 +489,10 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
             </p>
           </div>
 
-          <div className="rounded-3xl border border-border bg-card p-5">
+          <div
+            className={cn("squircle rounded-3xl p-5", SITE_KPI_SKIN[2])}
+            style={{ borderRadius: 34 }}
+          >
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <AlertTriangle className="h-4 w-4" />
               {tx("Alertes critiques", "Critical alerts")}
@@ -499,7 +516,10 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
             </p>
           </div>
 
-          <div className="rounded-3xl border border-border bg-card p-5">
+          <div
+            className={cn("squircle rounded-3xl p-5", SITE_KPI_SKIN[3])}
+            style={{ borderRadius: 34 }}
+          >
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <CircleDot className="h-4 w-4" />
               {tx("Warnings", "Warnings")}
@@ -517,7 +537,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
 
         {/* ATTENTION / DATA SOURCES */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <div className="rounded-3xl border border-border bg-card p-6">
+          <div className="squircle rounded-3xl border border-border bg-card p-6" style={{ borderRadius: 34 }}>
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-heading text-lg font-bold">
@@ -631,7 +651,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
             )}
           </div>
 
-          <div className="rounded-3xl border border-border bg-card p-6">
+          <div className="squircle rounded-3xl border border-border bg-card p-6" style={{ borderRadius: 34 }}>
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-heading text-lg font-bold">
@@ -715,7 +735,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
         </div>
 
         {/* SITE DATA */}
-        <div className="rounded-3xl border border-border bg-card p-6">
+        <div className="squircle rounded-3xl border border-border bg-card p-6" style={{ borderRadius: 34 }}>
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h3 className="font-heading text-lg font-bold">
