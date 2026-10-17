@@ -283,6 +283,13 @@ const SITE_KPI_SKIN = [
   "tags-light border border-border bg-white text-[#141414] [--muted-foreground:rgb(20_20_20/0.7)]",
 ] as const
 
+/** The cards on the list of sites: lime for the active one, then white and black. */
+const SITE_CARD_SKIN = {
+  lime: "tags-light bg-brand text-[#141414] [--muted-foreground:rgb(20_20_20/0.7)]",
+  white: "tags-light border border-border bg-white text-[#141414] [--muted-foreground:rgb(20_20_20/0.7)]",
+  ink: "bg-[var(--ink)] text-white [--muted-foreground:rgb(255_255_255/0.7)]",
+} as const
+
 export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void } = {}) {
   const tx = useTx()
 
@@ -1305,10 +1312,15 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
             </div>
           ) : (
             <div className="mt-5 grid grid-cols-1 gap-3 2xl:grid-cols-2">
-              {ordered.map((site) => {
+              {ordered.map((site, index) => {
                 const sector = getSector(site.sector)
                 const SectorIcon = sector.icon
                 const status = STATUS_META[site.status]
+                // Our cards: the active site is lime (the first one when none is active), the others alternate white and black.
+                const isLime = site.id === held.activeId || (held.activeId == null && index === 0)
+                const skin = isLime ? "lime" : index % 2 === 1 ? "white" : "ink"
+                const dark = skin === "ink"
+                const chip = skin === "lime" ? "bg-white/60" : dark ? "bg-white/10" : "bg-muted"
 
                 return (
                   <button
@@ -1316,14 +1328,16 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                     type="button"
                     onClick={() => setActiveSiteId(site.id)}
                     data-active={site.id === held.activeId ? "" : undefined}
+                    style={{ borderRadius: 34 }}
                     className={cn(
-                      "group rounded-[22px] bg-card p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      "group squircle rounded-[22px] p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      SITE_CARD_SKIN[skin],
                       site.id === held.activeId && "ring-2 ring-inset ring-green-500"
                     )}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex min-w-0 items-center gap-3">
-                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted">
+                        <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-full", chip)}>
                           <SectorIcon className="h-5 w-5" aria-hidden="true" />
                         </span>
                         <span className="min-w-0">
@@ -1334,7 +1348,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                           </span>
                         </span>
                       </div>
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted transition-transform group-hover:translate-x-0.5">
+                      <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-transform group-hover:translate-x-0.5", chip)}>
                         <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
                       </span>
                     </div>
@@ -1363,9 +1377,9 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                         { label: tx("Warnings", "Warnings"), value: site.assets > 0 ? site.warnings : "—", hot: false },
                         { label: tx("Critiques", "Critical"), value: site.assets > 0 ? site.critical : "—", hot: site.critical > 0 },
                       ].map((cell) => (
-                        <div key={cell.label} className="rounded-2xl bg-muted p-3">
+                        <div key={cell.label} className={cn("rounded-2xl p-3", chip)}>
                           <p className="text-[11px] text-muted-foreground">{cell.label}</p>
-                          <p className={cn("mt-1 font-heading text-xl font-bold", cell.hot && "text-destructive")}>{cell.value}</p>
+                          <p className={cn("mt-1 font-heading text-xl font-bold", cell.hot && (dark ? "text-[#ff9a9a]" : "text-destructive"))}>{cell.value}</p>
                         </div>
                       ))}
                     </div>

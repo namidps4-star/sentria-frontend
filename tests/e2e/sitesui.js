@@ -55,6 +55,28 @@ const json = (r, body) => r.fulfill({ status: 200, contentType: 'application/jso
     pass(!info.overflow, 'nothing scrolls sideways');
     pass(errs.length === 0, 'no page errors ' + errs.join('|'));
     await p.screenshot({ path: path.join(SHOTS, `sitesui-${name}.png`), fullPage: vw < 768 });
+
+    // The list of sites: three cards, each in the app's UI (lime for the active one, then white and black).
+    for (const extra of ['Atlantis North', 'Atlantis South']) {
+      await p.getByRole('button', { name: 'All sites' }).click(); await p.waitForTimeout(400);
+      await p.getByRole('button', { name: 'Add a site' }).locator('visible=true').first().click(); await p.waitForTimeout(300);
+      await p.getByPlaceholder('e.g. Lyon plant').fill(extra);
+      await p.getByRole('button', { name: 'Create the site' }).click(); await p.waitForTimeout(800);
+    }
+    await p.getByRole('button', { name: 'All sites' }).click(); await p.waitForTimeout(800);
+    const list = await p.evaluate(() => {
+      const cv = document.createElement('canvas'); cv.width = cv.height = 1;
+      const c2 = cv.getContext('2d', { willReadFrequently: true });
+      const toRgb = col => { c2.clearRect(0, 0, 1, 1); c2.fillStyle = '#000'; c2.fillStyle = col; c2.fillRect(0, 0, 1, 1); const d = c2.getImageData(0, 0, 1, 1).data; return [d[0], d[1], d[2]]; };
+      const cards = [...document.querySelectorAll('main button.group')];
+      return { n: cards.length, bgs: cards.map(c => toRgb(getComputedStyle(c).backgroundColor)), radii: cards.map(c => parseFloat(getComputedStyle(c).borderTopLeftRadius)), squircle: cards.every(c => c.classList.contains('squircle')) };
+    });
+    pass(list.n === 3, `three site cards (${list.n})`);
+    pass(list.squircle && list.radii.every(r => r >= 30), 'all squircle with a big corner: ' + list.radii.join(', '));
+    pass(list.bgs.some(([r, g, b]) => g > 200 && b < 110), 'the active card is lime');
+    pass(list.bgs.some(c => c.every(v => v < 60)), 'one card is black');
+    pass(list.bgs.some(c => c.every(v => v > 230)), 'one card is white');
+    await p.screenshot({ path: path.join(SHOTS, `sitesui-list-${name}.png`), fullPage: vw < 768 });
     await ctx.close();
   }
   await browser.close();
