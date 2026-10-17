@@ -279,12 +279,12 @@ const node = (animations, parent = null, sub = []) => ({ parentElement: parent, 
     await p.addInitScript({ content: `(${sampler.toString()})()` });
     await signedIn(p, 'u', 'a@b.c', { plan: 'entreprise' }); await p.goto(APP_URL); await p.waitForTimeout(1800);
     const b = p.getByRole('button', { name: pill }).first();
-    if (await p.getByTestId('priority-bento').count() === 0 && await p.getByTestId('priority-track').count() === 0 && await b.count()) { await b.click().catch(() => {}); await p.waitForTimeout(800); }
+    if (await p.getByTestId('priority-bento').count() === 0 && await p.locator('main h2', { hasText: /overview of your/i }).count() === 0 && await b.count()) { await b.click().catch(() => {}); await p.waitForTimeout(800); }
     await nav(p, 'Tracking'); await p.waitForTimeout(900);
     await p.evaluate(() => { window.__ev.length = 0; window.__count.clear(); });
     await nav(p, 'Dashboard'); await p.waitForTimeout(2500);
     const s = await p.evaluate(summarise); const started = s.blocks.filter(x => x.start !== null);
-    pass(started.length >= (name === 'industry' ? 5 : 6) && started.every(x => x.starts === 1), `${name}: ${started.length} blocks rise, each once (places ${started.map(x => x.at).join(', ')})`);
+    pass(started.length >= (['industry', 'logistics'].includes(name) ? 5 : 6) && started.every(x => x.starts === 1), `${name}: ${started.length} blocks rise, each once (places ${started.map(x => x.at).join(', ')})`);
     pass(started.every((x, i) => i === 0 || x.at >= started[i - 1].at), `${name}: top to bottom`);
     pass(s.counts.length >= 4 && s.counts.every(c => c.block !== null && c.start >= c.block - SKEW), `${name}: the numbers (${s.counts.length}) count with their block`);
     pass(s.marks.filter(m => m.what === 'spark').length >= 4, `${name}: the tight strip's four lines draw`);

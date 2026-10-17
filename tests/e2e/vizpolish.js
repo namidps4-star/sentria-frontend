@@ -47,7 +47,7 @@ async function settle(p, layout) {
   const btn = typeof L.pill === 'string' ? new RegExp('^' + L.pill + '\\s*\\d*$') : L.pill;
   const b = p.getByRole('button', { name: btn }).first();
   if (layout === 'generic' && await b.count()) { await b.click().catch(() => {}); await p.waitForTimeout(500); }
-  else if (layout !== 'generic' && await p.getByTestId('priority-bento').count() === 0 && await b.count()) { await b.click().catch(() => {}); await p.waitForTimeout(600); }
+  else if (layout !== 'generic' && await p.getByTestId('priority-bento').count() === 0 && await p.locator('main h2', { hasText: /overview of your/i }).count() === 0 && await b.count()) { await b.click().catch(() => {}); await p.waitForTimeout(600); }
 }
 const skels = p => p.locator('[data-kpi-skeleton]');
 

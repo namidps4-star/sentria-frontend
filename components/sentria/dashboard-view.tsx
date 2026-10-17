@@ -82,10 +82,7 @@ import {
 import { API_BASE as API, apiFetch } from "@/lib/api"
 import { toApiSector, withOurSector } from "@/lib/sector"
 import {
-  PriorityCards,
-  type PriorityStat,
   PriorityHeading,
-  PriorityPills,
   priorityCount,
 } from "./priority-nav"
 import { featurePriorityIds, orderPriorities, prioritiesFor, priorityLabel } from "@/lib/priorities"
@@ -2075,6 +2072,50 @@ export function DashboardView({
     (periodPreset !== "all" ? 1 : 0) +
     (alertSearch.trim() ? 1 : 0)
 
+  /** The logistics priorities as the capsule widget's rows, counted the way the overview tiles were. */
+  function logisticsTrackRows(): PriorityRow[] {
+    const mine = logisticsViewAlerts
+
+    // No figures before any data: an empty account is not "all clear".
+    if (mine.length === 0) {
+      return selectedLogisticsPriorities.map((id): PriorityRow => ({ id, count: null, critical: 0, top: undefined, items: [] }))
+    }
+
+    const keyHas = (a: Alert, words: string[]) => words.some((w) => (a.alert_key ?? "").toLowerCase().includes(w))
+    const own = (id: string): Alert[] | null => {
+      switch (id) {
+        case "blockages":
+          return mine.filter((a) => a.severity === "CRITICAL")
+        case "wait":
+          return mine.filter((a) => keyHas(a, ["wait", "queue", "service", "dwell"]))
+        case "cost":
+          return mine.filter((a) => keyHas(a, ["fuel", "cost", "overrun", "detention", "demurrage"]))
+        case "anticipate":
+          return mine.filter((a) => a.severity === "WARNING")
+        case "recommend":
+          return Array.from(new Map(mine.filter((a) => a.equipment).map((a) => [a.equipment, a])).values())
+        case "resources":
+          return mine.filter((a) => keyHas(a, ["capacity", "resource", "staff", "space"]))
+        default:
+          return null
+      }
+    }
+
+    return selectedLogisticsPriorities.map((id): PriorityRow => {
+      const items = own(id)
+
+      if (!items) return { id, count: null, critical: 0, top: undefined, items: [] }
+
+      return {
+        id,
+        count: items.length,
+        critical: items.filter((a) => a.severity === "CRITICAL").length,
+        top: items.find((a) => a.severity === "CRITICAL") ?? items[0],
+        items,
+      }
+    })
+  }
+
   /** The industry priorities as the capsule widget's rows: each counts what its own screen shows. */
   function industryTrackRows(): PriorityRow[] {
     const mine = alerts.filter((a) => a.sector === "industry").filter(matchesActivity)
@@ -2618,12 +2659,6 @@ export function DashboardView({
     alertsError !== null
       ? tx("Non mesuré : les alertes n'ont pas été chargées", "Not measured: the alerts did not load")
       : tx("Non mesuré : pas de données récentes", "Not measured: no recent data")
-  // A tile that counts zero is not "all clear" when that zero is not a
-  // reading: it falls back to what the priority is, with no number.
-  const measuredStats = (stats: Record<string, PriorityStat>) =>
-    Object.fromEntries(
-      Object.entries(stats).filter(([, stat]) => !notMeasured(stat.value))
-    )
   // Nothing came back and nothing was held: a view would only say "none".
   const nothingLoaded = alertsError !== null && alerts.length === 0
 
@@ -3009,31 +3044,7 @@ export function DashboardView({
           : []
 
     if (logisticsPriority === null) {
-      /* One live number per priority tile, each saying what it counts.
-         Counted from this activity's alerts only. */
-      const keyHas = (a: Alert, words: string[]) =>
-        words.some((w) => (a.alert_key ?? "").toLowerCase().includes(w))
       const critical = logisticsViewAlerts.filter((a) => a.severity === "CRITICAL").length
-      const waits = logisticsViewAlerts.filter((a) => keyHas(a, ["wait", "queue", "service", "dwell"])).length
-      const costs = logisticsViewAlerts.filter((a) => keyHas(a, ["fuel", "cost", "overrun", "detention", "demurrage"])).length
-      const early = logisticsViewAlerts.filter((a) => a.severity === "WARNING").length
-      const assets = new Set(logisticsViewAlerts.map((a) => a.equipment).filter(Boolean)).size
-      const capacity = logisticsViewAlerts.filter((a) => keyHas(a, ["capacity", "resource", "staff", "space"])).length
-      // [one, many] in each language.
-      const say = (n: number, fr: [string, string], en: [string, string]) =>
-        tx(n > 1 ? fr[1] : fr[0], n === 1 ? en[0] : en[1])
-      /* No numbers before any data (an empty account is not "all clear"),
-         and no zero that is not a reading. */
-      const logisticsStats: Record<string, PriorityStat> | undefined = logisticsViewAlerts.length === 0 ? undefined : measuredStats({
-        blockages: critical > 0
-          ? { value: String(critical), label: say(critical, ["signal critique", "signaux critiques"], ["critical signal", "critical signals"]), tone: "risk" }
-          : { value: "0", label: tx("rien de bloqué", "nothing blocked"), tone: "good" },
-        wait: { value: String(waits), label: say(waits, ["file signalée", "files signalées"], ["queue flagged", "queues flagged"]), tone: waits > 0 ? "watch" : "good" },
-        cost: { value: String(costs), label: say(costs, ["signal de coût", "signaux de coût"], ["cost signal", "cost signals"]), tone: costs > 0 ? "watch" : "good" },
-        anticipate: { value: String(early), label: say(early, ["alerte préventive", "alertes préventives"], ["early warning", "early warnings"]), tone: early > 0 ? "watch" : "good" },
-        recommend: { value: String(assets), label: say(assets, ["équipement à traiter", "équipements à traiter"], ["asset to act on", "assets to act on"]), tone: assets > 0 ? "risk" : "good" },
-        resources: { value: String(capacity), label: say(capacity, ["ressource sous tension", "ressources sous tension"], ["resource under strain", "resources under strain"]), tone: capacity > 0 ? "watch" : "good" },
-      })
 
       return (
         <div key="logistics" className="space-y-6">
@@ -3089,19 +3100,22 @@ export function DashboardView({
               />
             </div>
 
-            <PriorityCards
-              sector="logistics"
-              ids={selectedLogisticsPriorities}
-              stats={logisticsStats}
-              enterFrom={2.2}
-              onOpen={(id) =>
-                openLogisticsPriority(id as LogisticsPriority)
-              }
-              emptyLabel={tx(
-                "Aucune priorité logistique n'a été sélectionnée.",
-                "No logistics priority has been selected."
-              )}
-            />
+            {selectedLogisticsPriorities.length === 0 ? (
+              <p className="rounded-2xl bg-muted px-4 py-3 text-sm text-muted-foreground">
+                {tx("Aucune priorité logistique n'a été sélectionnée.", "No logistics priority has been selected.")}
+              </p>
+            ) : (
+              <div className="t-enter" style={enterAt(2.2)}>
+                <PriorityTrack
+                  sector="logistics"
+                  rows={logisticsTrackRows()}
+                  selected={logisticsPriority}
+                  loaded={alertsLoaded}
+                  zeroUnknown={zeroUnknown}
+                  onPick={(id) => openLogisticsPriority(id as LogisticsPriority)}
+                />
+              </div>
+            )}
           </div>
 
           {/* The strip rises as one (its cells are the card colour on a border
@@ -3185,11 +3199,13 @@ export function DashboardView({
           </button>
         </div>
 
-        <PriorityPills
+        <PriorityTrack
           sector="logistics"
-          ids={selectedLogisticsPriorities}
-          activeId={logisticsPriority}
-          onOpen={(id) => openLogisticsPriority(id as LogisticsPriority)}
+          rows={logisticsTrackRows()}
+          selected={logisticsPriority}
+          loaded={alertsLoaded}
+          zeroUnknown={zeroUnknown}
+          onPick={(id) => openLogisticsPriority(id as LogisticsPriority)}
         />
 
         {normalizedOpsType &&
@@ -3493,14 +3509,19 @@ export function DashboardView({
       {filterSector === "all" ? (
         <>
           {activeSectors.includes("logistics") && (
-            <PriorityPills
-              sector="logistics"
-              ids={selectedLogisticsPriorities}
-              label={tx("Priorités logistique", "Logistics priorities")}
-              onOpen={(id) =>
-                openLogisticsPriority(id as LogisticsPriority)
-              }
-            />
+            <div>
+              <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                {tx("Priorités logistique", "Logistics priorities")}
+              </p>
+              <PriorityTrack
+                sector="logistics"
+                rows={logisticsTrackRows()}
+                selected={null}
+                loaded={alertsLoaded}
+                zeroUnknown={zeroUnknown}
+                onPick={(id) => openLogisticsPriority(id as LogisticsPriority)}
+              />
+            </div>
           )}
 
           {activeSectors.includes("industry") && (
