@@ -63,7 +63,7 @@ import { Skeleton } from "./skeleton"
 import { AlertIcon } from "./alert-icon"
 import { PriorityTrack } from "./priority-track"
 import { priorityRows } from "@/lib/priority-counts"
-import { HEALTH_PRIORITY_CATEGORY, healthCategoryOf, healthRows } from "@/lib/health-priorities"
+import { HEALTH_PRIORITY_CATEGORY, healthCategoryOf, healthRows, type PriorityRow } from "@/lib/health-priorities"
 import { enterAt } from "@/lib/motion"
 import { announceAlertsUpdated } from "@/lib/alerts-event"
 import { useSites, useSiteVersion } from "@/lib/sites"
@@ -2075,6 +2075,28 @@ export function DashboardView({
     (periodPreset !== "all" ? 1 : 0) +
     (alertSearch.trim() ? 1 : 0)
 
+  /** The industry priorities as the capsule widget's rows: each counts what its own screen shows. */
+  function industryTrackRows(): PriorityRow[] {
+    const mine = alerts.filter((a) => a.sector === "industry").filter(matchesActivity)
+
+    // No figures before any data: an empty account is not "all clear".
+    if (mine.length === 0) {
+      return selectedIndustryPriorities.map((id): PriorityRow => ({ id, count: null, critical: 0, top: undefined, items: [] }))
+    }
+
+    return selectedIndustryPriorities.map((id): PriorityRow => {
+      const own = industryPriorityAlerts(id, mine)
+
+      return {
+        id,
+        count: own.length,
+        critical: own.filter((a) => a.severity === "CRITICAL").length,
+        top: own.find((a) => a.severity === "CRITICAL") ?? own[0],
+        items: own,
+      }
+    })
+  }
+
   function pickHealthPriority(id: string) {
     const next = healthPick === id ? null : id
     setHealthPick(next)
@@ -2727,25 +2749,6 @@ export function DashboardView({
 
     if (industryPriority === null) {
       const industryCritical = industryAlerts.filter((a) => a.severity === "CRITICAL").length
-      /* Each tile counts what its screen shows (the view's own filter).
-         No numbers before any data: an empty account is not "all clear". */
-      const industryStats: Record<string, PriorityStat> | undefined =
-        industryAlerts.length === 0
-          ? undefined
-          : measuredStats(Object.fromEntries(
-              selectedIndustryPriorities.map((id) => {
-                const own = industryPriorityAlerts(id, industryAlerts)
-                const crit = own.filter((a) => a.severity === "CRITICAL").length
-                const stat: PriorityStat =
-                  crit > 0
-                    ? { value: String(crit), label: tx(crit > 1 ? "alertes critiques" : "alerte critique", crit === 1 ? "critical alert" : "critical alerts"), tone: "risk" }
-                    : own.length > 0
-                      ? { value: String(own.length), label: tx(own.length > 1 ? "alertes à suivre" : "alerte à suivre", own.length === 1 ? "alert to watch" : "alerts to watch"), tone: "watch" }
-                      : { value: "0", label: tx("rien à signaler", "all clear"), tone: "good" }
-                return [id, stat]
-              })
-            ))
-
       return (
         <div key="industry" className="space-y-6">
           {importPortal}
@@ -2800,19 +2803,22 @@ export function DashboardView({
               />
             </div>
 
-            <PriorityCards
-              sector="industry"
-              ids={selectedIndustryPriorities}
-              stats={industryStats}
-              enterFrom={2.2}
-              onOpen={(id) =>
-                openIndustryPriority(id as IndustryPriority)
-              }
-              emptyLabel={tx(
-                "Aucune priorité industrielle n'a été sélectionnée.",
-                "No industry priority has been selected."
-              )}
-            />
+            {selectedIndustryPriorities.length === 0 ? (
+              <p className="rounded-2xl bg-muted px-4 py-3 text-sm text-muted-foreground">
+                {tx("Aucune priorité industrielle n'a été sélectionnée.", "No industry priority has been selected.")}
+              </p>
+            ) : (
+              <div className="t-enter" style={enterAt(2.2)}>
+                <PriorityTrack
+                  sector="industry"
+                  rows={industryTrackRows()}
+                  selected={industryPriority}
+                  loaded={alertsLoaded}
+                  zeroUnknown={zeroUnknown}
+                  onPick={(id) => openIndustryPriority(id as IndustryPriority)}
+                />
+              </div>
+            )}
           </div>
 
           {alertsLoaded && industryAlerts.length === 0 && !zeroUnknown ? (
@@ -2919,11 +2925,13 @@ export function DashboardView({
           </button>
         </div>
 
-        <PriorityPills
+        <PriorityTrack
           sector="industry"
-          ids={selectedIndustryPriorities}
-          activeId={industryPriority}
-          onOpen={(id) => openIndustryPriority(id as IndustryPriority)}
+          rows={industryTrackRows()}
+          selected={industryPriority}
+          loaded={alertsLoaded}
+          zeroUnknown={zeroUnknown}
+          onPick={(id) => openIndustryPriority(id as IndustryPriority)}
         />
 
         {nothingLoaded ? null : industryPriority === "machines" ? (
@@ -3496,14 +3504,19 @@ export function DashboardView({
           )}
 
           {activeSectors.includes("industry") && (
-            <PriorityPills
-              sector="industry"
-              ids={selectedIndustryPriorities}
-              label={tx("Priorités industrie", "Industry priorities")}
-              onOpen={(id) =>
-                openIndustryPriority(id as IndustryPriority)
-              }
-            />
+            <div>
+              <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                {tx("Priorités industrie", "Industry priorities")}
+              </p>
+              <PriorityTrack
+                sector="industry"
+                rows={industryTrackRows()}
+                selected={null}
+                loaded={alertsLoaded}
+                zeroUnknown={zeroUnknown}
+                onPick={(id) => openIndustryPriority(id as IndustryPriority)}
+              />
+            </div>
           )}
         </>
       ) : (

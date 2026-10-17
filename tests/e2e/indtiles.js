@@ -1,4 +1,4 @@
-// Industry overview: a header line, and tiles that count what each priority's screen shows. No numbers before any data.
+// Industry overview: a header line, and the priorities as the dark capsule widget (the same one Health has). Each pill counts what its screen shows. No numbers before any data.
 const { LAUNCH, APP_URL } = require('./env');
 const { chromium } = require('playwright'); const { signedIn } = require('./auth-mock');
 let fails = 0; const pass = (ok, l) => { fails += !ok; console.log(`   ${ok ? 'PASS' : 'FAIL'} ${l}`); };
@@ -13,19 +13,17 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
     await p.route(/onrender\.com\//, r => r.fulfill({ status: 200, contentType: 'application/json', body: /\/alerts/.test(r.request().url()) ? JSON.stringify(rows) : '{"recommendations":[],"assignments":[],"contractors":[]}' }));
     await p.addInitScript(ls => { if (!sessionStorage.x) { sessionStorage.x = 1; localStorage.clear(); Object.entries(ls).forEach(([k, v]) => localStorage.setItem(k, v)); } }, LS);
     await signedIn(p, 'u', 'a@b.c', { plan: 'business' }); await p.goto(APP_URL); await p.waitForTimeout(2000);
-    const ind = p.getByRole('button', { name: /^Industry/ }).first(); if (await p.getByTestId('priority-bento').count() === 0 && await ind.count()) { await ind.click(); await p.waitForTimeout(800); }
+    const ind = p.getByRole('button', { name: /^Industry/ }).first(); if (await p.getByTestId('priority-track').count() === 0 && await ind.count()) { await ind.click(); await p.waitForTimeout(800); }
     return p; };
 
   console.log('== with data');
   let p = await open(data);
-  const bento = p.getByTestId('priority-bento'); const tiles = bento.locator(':scope > button');
-  pass(await tiles.count() === 4, 'four tiles (a factory\'s priorities)');
-  const txt = async n => (await tiles.nth(n).innerText()).replace(/\s+/g, ' ');
-  const want = [/ 1 critical alert /, / 1 critical alert/, / 0 all clear/, / 0 all clear/];
-  for (let i = 0; i < 4; i++) pass(want[i].test(await txt(i)), `tile ${i + 1}: ${(await txt(i)).slice(0, 70)}`);
-  const bx = await tiles.evaluateAll(els => els.map(e => e.getBoundingClientRect()).map(r => [r.x, r.y, r.right, r.bottom]));
-  const bb = await bento.boundingBox();
-  pass(Math.abs(bx[3][2] - (bb.x + bb.width)) < 2 && Math.abs(bx[3][3] - bx[0][3]) <= 3, 'with 4 priorities the last tile widens and the grid closes with no hole');
+  const track = p.getByTestId('priority-track'); const tiles = track.locator('button');
+  pass(await track.count() === 1 && await tiles.count() === 4, 'the capsule widget with four pills (a factory\'s priorities)');
+  pass(await p.getByTestId('priority-bento').count() === 0, 'the old tiles are gone');
+  const lab = async n => (await tiles.nth(n).getAttribute('aria-label')) || '';
+  const want = [/, 1, 1 critical/, /, 2, 1 critical/, /, 0, all clear/, /, 0, all clear/];
+  for (let i = 0; i < 4; i++) pass(want[i].test(await lab(i)), `pill ${i + 1}: ${(await lab(i)).slice(0, 70)}`);
   pass(/4 signals · 2 critical/.test(await p.locator('main').innerText()), 'header chip: 4 signals · 2 critical');
   pass(await p.locator('main .bg-sidebar h2', { hasText: 'overview of your production' }).count() === 0, 'no big black banner');
   // The tile and its screen count the same alerts.
@@ -38,9 +36,9 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
 
   console.log('== no data yet');
   p = await open([]);
-  const t0 = await p.getByTestId('priority-bento').innerText();
-  pass(!/all clear|critical alert|to watch/.test(t0), 'no numbers before any data (an empty account is not "all clear")');
-  pass(/Flags the machine|wear|limit/i.test(t0) || (await p.getByTestId('priority-bento').locator(':scope > button').count()) === 4, 'tiles explain themselves instead');
+  const t0 = (await p.getByTestId('priority-track').locator('button').evaluateAll(els => els.map(e => e.getAttribute('aria-label')))).join(' | ');
+  pass(!/all clear|critical|to watch/.test(t0), 'no numbers before any data (an empty account is not "all clear"): ' + t0.slice(0, 90));
+  pass((await p.getByTestId('priority-track').locator('button').count()) === 4, 'the four pills are still there');
   pass(p._errs.length === 0, 'no page errors ' + p._errs.join('|'));
   await p.close();
 
