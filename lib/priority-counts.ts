@@ -10,6 +10,11 @@ import type { HealthAlert, PriorityRow } from "./health-priorities"
 const SKIP = new Set(["and", "the", "de", "du", "des", "et"])
 
 export function priorityRows(ids: string[], alerts: HealthAlert[], rank: boolean): PriorityRow[] {
+  // No alerts at all: no figures, so an empty account does not read "all clear".
+  if (alerts.length === 0) {
+    return ids.map((id): PriorityRow => ({ id, count: null, critical: 0, top: undefined, items: [] }))
+  }
+
   const rows = ids.map((id): PriorityRow => {
     const words = id.toLowerCase().split(/[-_]/).filter((w) => w.length > 2 && !SKIP.has(w))
     const items = alerts.filter((a) => {

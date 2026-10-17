@@ -1192,6 +1192,20 @@ export function DashboardView({
     setSelectedSectorPriorities(getSavedPriorities(filterSector, businessType))
   }, [filterSector, businessType])
 
+  // The other sectors' saved priorities, for the all-sectors view.
+  const [otherPriorities, setOtherPriorities] = useState<Record<string, string[]>>({})
+
+  useEffect(() => {
+    const next: Record<string, string[]> = {}
+
+    for (const sector of activeSectors) {
+      if (sector === "logistics" || sector === "industry") continue
+      next[sector] = getSavedPriorities(sector, businessType)
+    }
+
+    setOtherPriorities(next)
+  }, [activeSectors, businessType])
+
   useEffect(() => {
     const options = uploadActivitiesFor(uploadSector)
 
@@ -3539,6 +3553,35 @@ export function DashboardView({
               />
             </div>
           )}
+
+          {activeSectors
+            .filter((sector) => sector !== "logistics" && sector !== "industry" && (otherPriorities[sector]?.length ?? 0) > 0)
+            .map((sector) => {
+              const ids = otherPriorities[sector]
+              const mine = alerts.filter((a) => a.sector === sector).filter(matchesActivity)
+              const rank = alertsLoaded && !zeroUnknown
+
+              return (
+                <div key={sector}>
+                  <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    {sectorName(sector)} · {tx("priorités", "priorities")}
+                  </p>
+                  <PriorityTrack
+                    sector={sector}
+                    rows={sector === "health" ? healthRows(ids, mine, rank) : priorityRows(ids, mine, rank)}
+                    selected={null}
+                    loaded={alertsLoaded}
+                    zeroUnknown={zeroUnknown}
+                    onPick={() => {
+                      setLogisticsPriority(null)
+                      setIndustryPriority(null)
+                      setFilterSector(sector)
+                      localStorage.setItem("sentria_sector", sector)
+                    }}
+                  />
+                </div>
+              )
+            })}
         </>
       ) : (
         filterSector === "health" && selectedSectorPriorities.length > 0 ? (
