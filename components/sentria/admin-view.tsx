@@ -198,7 +198,7 @@ export function AdminView() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[860px] text-left text-sm">
-              <thead className="text-xs uppercase tracking-wide text-muted-foreground">
+              <thead className="table-head text-xs uppercase tracking-wide">
                 <tr className="border-b border-border">
                   <th className="px-5 py-3 font-semibold">{tx("Entreprise", "Company")}</th>
                   <th className="px-3 py-3 font-semibold">{tx("Activité", "Activity")}</th>

@@ -4114,7 +4114,7 @@ export function DashboardView({
           <div className="min-w-0 overflow-hidden rounded-3xl border border-border">
             <div className="max-h-[600px] overflow-x-auto overflow-y-auto">
               <table className="w-full border-separate border-spacing-0 text-sm">
-                <thead className="sticky top-0 z-10 bg-card">
+                <thead className="table-head sticky top-0 z-10">
                   <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">
                     <th className="border-b border-border px-4 py-3 font-medium">
                       {tx("Actif", "Asset")}

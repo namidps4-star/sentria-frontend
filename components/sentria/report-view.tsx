@@ -527,7 +527,7 @@ function AlertsTable({ alerts }: { alerts: AlertRow[] }) {
 
       <div className="overflow-x-auto border-t border-border">
         <table className="w-full border-collapse text-sm">
-          <thead>
+          <thead className="table-head">
             <tr className="border-b border-border text-left">
               <th className="whitespace-nowrap px-5 py-2.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {tx("Horodatage", "Timestamp")}
