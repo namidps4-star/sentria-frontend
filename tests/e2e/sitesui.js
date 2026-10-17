@@ -36,7 +36,7 @@ const json = (r, body) => r.fulfill({ status: 200, contentType: 'application/jso
       const c2 = cv.getContext('2d', { willReadFrequently: true });
       const toRgb = col => { c2.clearRect(0, 0, 1, 1); c2.fillStyle = '#000'; c2.fillStyle = col; c2.fillRect(0, 0, 1, 1); const d = c2.getImageData(0, 0, 1, 1).data; return `rgb(${d[0]}, ${d[1]}, ${d[2]})`; };
       const tiles = [...document.querySelectorAll('main .rounded-3xl.p-5.squircle, .rounded-3xl.p-5.squircle')];
-      const configure = [...document.querySelectorAll('button')].find(b => /Configure this site/.test(b.textContent));
+      const configure = document.querySelector('[data-testid="site-open-dashboard"]');
       return {
         banner: !!banner, bannerBg: banner && toRgb(cs(banner).backgroundColor), bannerRadius: banner && parseFloat(cs(banner).borderTopLeftRadius),
         tiles: tiles.length, tileBgs: tiles.map(t => toRgb(cs(t).backgroundColor)),
@@ -51,7 +51,7 @@ const json = (r, body) => r.fulfill({ status: 200, contentType: 'application/jso
     pass(info.tiles === 4, `four squircle tiles (${info.tiles})`);
     pass(info.tileBgs.some(c => { const [r, g, b] = rgb(c); return g > 200 && r > 150 && b < 110; }), 'one tile is lime: ' + info.tileBgs.join(' '));
     pass(info.tileBgs.some(c => rgb(c).every(v => v < 60)), 'one tile is black');
-    pass(info.configureBg && (() => { const [r, g, b] = rgb(info.configureBg); return g > 200 && b < 110; })(), 'the main button is lime: ' + info.configureBg);
+    pass(info.configureBg && (() => { const [r, g, b] = rgb(info.configureBg); return g > 200 && b < 110; })(), 'the main button (Go to dashboard) is lime: ' + info.configureBg);
     pass(!info.overflow, 'nothing scrolls sideways');
     pass(errs.length === 0, 'no page errors ' + errs.join('|'));
     await p.screenshot({ path: path.join(SHOTS, `sitesui-${name}.png`), fullPage: vw < 768 });
