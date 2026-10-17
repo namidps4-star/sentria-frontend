@@ -76,6 +76,16 @@ const json = (r, body) => r.fulfill({ status: 200, contentType: 'application/jso
     pass(list.bgs.some(([r, g, b]) => g > 200 && b < 110), 'the active card is lime');
     pass(list.bgs.some(c => c.every(v => v < 60)), 'one card is black');
     pass(list.bgs.some(c => c.every(v => v > 230)), 'one card is white');
+    const stats = await p.evaluate(() => {
+      const cards = [...document.querySelectorAll('main button.group')];
+      return cards.map(c => {
+        const cells = [...c.querySelectorAll('[data-site-stat]')];
+        return { n: cells.length, keys: cells.map(x => x.dataset.siteStat).join(','), squircle: cells.every(x => x.classList.contains('squircle')), radius: cells.map(x => parseFloat(getComputedStyle(x).borderTopLeftRadius)), bars: cells.every(x => x.querySelector('[aria-hidden="true"] > div')), tags: cells.every(x => x.querySelector('span')) };
+      });
+    });
+    pass(stats.every(c => c.n === 3 && c.keys === 'assets,warnings,critical'), 'each card has the Assets, Warnings and Critical cells');
+    pass(stats.every(c => c.squircle && c.radius.every(r => r >= 24)), 'the cells are squircles with a big corner');
+    pass(stats.every(c => c.bars && c.tags), 'each cell has its tag and its bar');
     await p.screenshot({ path: path.join(SHOTS, `sitesui-list-${name}.png`), fullPage: vw < 768 });
     await ctx.close();
   }

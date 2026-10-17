@@ -1371,15 +1371,39 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                       )}
                     </div>
 
-                    <div className="mt-4 grid grid-cols-3 gap-2">
+                    <div className="mt-4 grid grid-cols-3 gap-2.5">
                       {[
-                        { label: tx("Actifs", "Assets"), value: site.assets, hot: false },
-                        { label: tx("Warnings", "Warnings"), value: site.assets > 0 ? site.warnings : "—", hot: false },
-                        { label: tx("Critiques", "Critical"), value: site.assets > 0 ? site.critical : "—", hot: site.critical > 0 },
+                        { key: "assets", label: tx("Actifs", "Assets"), value: site.assets, tone: "info" as TagTone, fill: "bg-[#7ca31a]", share: site.assets > 0 ? 100 : 0 },
+                        {
+                          key: "warnings",
+                          label: tx("Warnings", "Warnings"),
+                          value: site.assets > 0 ? site.warnings : "—",
+                          tone: "warning" as TagTone,
+                          fill: "bg-[#f0a500]",
+                          share: site.assets > 0 ? Math.min(100, Math.round((site.warnings / site.assets) * 100)) : 0,
+                        },
+                        {
+                          key: "critical",
+                          label: tx("Critiques", "Critical"),
+                          value: site.assets > 0 ? site.critical : "—",
+                          tone: "danger" as TagTone,
+                          fill: "bg-[#e5484d]",
+                          share: site.assets > 0 ? Math.min(100, Math.round((site.critical / site.assets) * 100)) : 0,
+                        },
                       ].map((cell) => (
-                        <div key={cell.label} className={cn("rounded-2xl p-3", chip)}>
-                          <p className="text-[11px] text-muted-foreground">{cell.label}</p>
-                          <p className={cn("mt-1 font-heading text-xl font-bold", cell.hot && (dark ? "text-[#ff9a9a]" : "text-destructive"))}>{cell.value}</p>
+                        <div
+                          key={cell.key}
+                          data-site-stat={cell.key}
+                          style={{ borderRadius: 26 }}
+                          className={cn("tags-light squircle p-3.5", skin === "lime" ? "bg-white text-[#141414]" : dark ? "bg-white/10 text-white" : "bg-muted")}
+                        >
+                          <StatusTag tone={cell.tone} size="xs" icon={false}>
+                            {cell.label}
+                          </StatusTag>
+                          <p className="mt-3 font-heading text-4xl font-medium leading-none tracking-tight tabular-nums">{cell.value}</p>
+                          <div className={cn("mt-3 h-1.5 overflow-hidden rounded-full", dark ? "bg-white/15" : "bg-[#141414]/10")} aria-hidden="true">
+                            <div className={cn("h-full rounded-full", cell.fill)} style={{ width: `${cell.share}%` }} />
+                          </div>
                         </div>
                       ))}
                     </div>
