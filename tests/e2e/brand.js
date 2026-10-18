@@ -13,7 +13,7 @@ const pass = (ok, l) => { fails += !ok; console.log(`   ${ok ? 'PASS' : 'FAIL'} 
 
 console.log('== no `dark:` classes in the views (source)');
 const SRC = path.join(__dirname, '..', '..', 'components', 'sentria');
-for (const f of ['sites-view', 'ask-view', 'settings-view', 'pricing-view', 'profile-view', 'report-view', 'sidebar', 'admin-view', 'admin-thresholds', 'sector-showcase', 'auth-screen', 'dashboard-view']) {
+for (const f of ['sites-view', 'ask-view', 'settings-view', 'pricing-view', 'profile-view', 'report-view', 'sidebar', 'admin-view', 'admin-thresholds', 'admin-guard', 'sector-showcase', 'auth-screen', 'dashboard-view']) {
   const code = fs.readFileSync(path.join(SRC, f + '.tsx'), 'utf8');
   const hits = code.match(/\bdark:[a-z[!-][^\s"'`]*/g) || [];
   pass(hits.length === 0, `${f}.tsx: no dark: utility ${hits.slice(0, 3).join(' ')}`);
@@ -133,8 +133,9 @@ const GREEN = 'rgb(15, 46, 31)'; // --brand-deep
       if (theme === 'dark') await p.screenshot({ path: 'brand-health-dark.png' });
       await ctx.close(); }
     { const { p, ctx } = await openDash(INDUSTRY, theme, scheme);
-      const tile = await bgOf(p, () => { const t = [...document.querySelectorAll('button')].find(b => /^\s*Motors/.test(b.innerText) && b.className.includes('bg-deep-card')); return getComputedStyle(t).backgroundColor; });
-      pass((tile === GREEN) === green, `${label}: a "Your priorities" tile is ${green ? 'the deep green' : 'not green'} (got ${tile})`);
+      // The priorities are one black capsule now (PriorityTrack), the same in every theme: it replaced the deep-green tiles.
+      const track = await bgOf(p, () => { const t = document.querySelector('[data-testid="priority-track"]'); return t ? getComputedStyle(t.firstElementChild || t).backgroundColor : ''; });
+      pass(track !== '' && track !== GREEN, `${label}: the "Your priorities" capsule is there and is not the deep green (got ${track})`);
       const hero = await bgOf(p, () => { const t = [...document.querySelectorAll('button')].find(b => /Production machines/.test(b.innerText)); return getComputedStyle(t).backgroundColor !== getComputedStyle(document.body).backgroundColor; });
       pass(hero, `${label}: the lime first-priority tile is still there`);
       if (theme === 'dark') await p.screenshot({ path: 'brand-industry-dark.png' });

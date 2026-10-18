@@ -30,6 +30,7 @@ const ACCOUNTS = [{ user_id: 'u-1', email: 'ama@pharma.bj', name: 'Ama Mensah', 
     await p.route(/onrender\.com\//, r => {
       const u = new URL(r.request().url()); const req = r.request();
       if (u.pathname === '/admin/accounts') return json(r, { accounts: ACCOUNTS });
+      if (u.pathname === '/admin/guard') return json(r, { enabled: true, forced_off: false, persisted: true, log: [] });
       if (u.pathname === '/admin/thresholds') return getFails ? json(r, { detail: { error_code: 'x', message: 'Database unreachable' } }, 503) : json(r, { thresholds: items, persisted });
       if (u.pathname.startsWith('/admin/thresholds/')) {
         const key = decodeURIComponent(u.pathname.split('/').pop()); const body = JSON.parse(req.postData());

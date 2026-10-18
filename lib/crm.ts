@@ -515,6 +515,10 @@ export function textContractor(
 }
 
 const SMS_ERRORS: Record<string, Localized> = {
+  agent_paused: localized(
+    "Les envois automatiques sont en pause. Réessayez plus tard.",
+    "Automatic sending is paused. Try again later."
+  ),
   sms_capped: localized(
     "La limite quotidienne de SMS de votre entreprise est atteinte.",
     "Your company's daily text limit is reached."

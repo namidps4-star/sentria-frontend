@@ -11,6 +11,7 @@ import { sectorLabel } from "@/lib/priorities"
 import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
+import { AdminGuard } from "./admin-guard"
 import { AdminThresholds } from "./admin-thresholds"
 import { StatusTag } from "./status-tag"
 
@@ -314,6 +315,8 @@ export function AdminView() {
           </div>
         )}
       </div>
+
+      <AdminGuard />
 
       <AdminThresholds />
 
