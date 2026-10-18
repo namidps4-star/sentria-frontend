@@ -134,6 +134,8 @@ import { rankForDispatch } from "@/lib/dispatch"
 import { CostTap } from "./cost-tap"
 import { DispatchPanel } from "./dispatch-panel"
 import { WholesalerAdvice } from "./wholesaler-advice"
+import { SupplierActions } from "./supplier-actions"
+import { supplierFromParams, type Supplier } from "@/lib/supplier"
 import { SectorTag } from "./sector-tag"
 
 const SECTORS: { key: string; label: Localized }[] = [
@@ -173,6 +175,8 @@ type Recommendation = {
   alert_key?: string | null
   /** The key the API tracks this under (P-RECAPI). Absent from an API that has not been redeployed. */
   task_key?: string | null
+  /** Who to order from, when the upload named one (F-SUPPLIER). */
+  supplier?: Supplier | null
   business_type?: string | null
   recommended_action: string
   action_category: string
@@ -2591,6 +2595,28 @@ export function DashboardView({
           {/* Machines (Industry): two optional columns that let SentrIA work
               out what an hour of stop costs. Health needs none: its
               cold-chain alerts already carry the stock value. */}
+          {/* Stock (Health, Retail): three optional columns that name who to
+              order from, so the alert can say it and offer Call, Text, Email. */}
+          {(uploadSector === "health" || uploadSector === "commerce") && (
+            <div data-supplier-columns="" className="mt-4 rounded-2xl border border-border bg-muted/40 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {tx("Facultatif · pour savoir chez qui commander", "Optional · to know who to order from")}
+              </p>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                <code className="rounded-md bg-card px-1.5 py-0.5 font-mono text-[11px] text-foreground">supplier</code>{" "}
+                <code className="rounded-md bg-card px-1.5 py-0.5 font-mono text-[11px] text-foreground">supplier_phone</code>{" "}
+                <code className="rounded-md bg-card px-1.5 py-0.5 font-mono text-[11px] text-foreground">supplier_email</code>{" "}
+                {tx("le nom, le téléphone (format +229…) et l'e-mail du fournisseur", "the supplier's name, phone (as +229…) and email")}
+              </p>
+              <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
+                {tx(
+                  "L'alerte de stock dit alors chez qui commander et propose Appeler, SMS et E-mail. Sans ces colonnes, rien ne change.",
+                  "The stock alert then says who to order from and offers Call, Text and Email. Without these columns nothing changes."
+                )}
+              </p>
+            </div>
+          )}
+
           {uploadSector === "industry" && (
             <div data-cost-columns="" className="mt-4 rounded-2xl border border-border bg-muted/40 p-4">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -4395,6 +4421,8 @@ export function DashboardView({
                 </p>
               </div>
 
+              <SupplierActions supplier={supplierFromParams(expandedAlert.params)} tone="dark" className="mt-3" />
+
               <WholesalerAdvice
                 alertKey={expandedAlert.alert_key}
                 params={expandedAlert.params}
@@ -4748,6 +4776,11 @@ export function DashboardView({
                 <p className="mt-2 text-base font-semibold leading-7 text-foreground">
                   {selectedRecommendation.recommended_action}
                 </p>
+
+                <SupplierActions
+                  supplier={selectedRecommendation.supplier ?? supplierFromParams(popupAlertFor(selectedRecommendation)?.params)}
+                  className="mt-3"
+                />
               </div>
 
               <WholesalerAdvice

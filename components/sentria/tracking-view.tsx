@@ -25,6 +25,8 @@ type ApiRecommendation = {
   alert_key?: string | null
   /** From the API (P-RECAPI). Absent from an API that has not been redeployed. */
   task_key?: string | null
+  /** Who to order from, when the upload named one (F-SUPPLIER). */
+  supplier?: { name: string; phone?: string | null; email?: string | null } | null
   recommended_action: string
   action_category: string
   reasoning?: string | null

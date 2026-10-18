@@ -1,5 +1,7 @@
 "use client"
 
+import { SupplierActions } from "./supplier-actions"
+import type { Supplier } from "@/lib/supplier"
 import { AskHeader } from "./ask-header"
 import { DispatchPanel } from "./dispatch-panel"
 import { TaskTextButton } from "./task-text-button"
@@ -64,6 +66,8 @@ type Recommendation = {
   alert_key?: string | null
   recommended_action: string
   action_category: string
+  /** Who to order from, when the upload named one (F-SUPPLIER). */
+  supplier?: Supplier | null
   /* Set only by deriveRecommendations, which knows the chain. The
      backend endpoint cannot produce these, so every one is optional and
      the card renders what it has. */
@@ -804,6 +808,7 @@ function DetailDialog({
               {tx("Action recommandée", "Recommended action")}
             </p>
             <p className="text-sm leading-6">{rec.recommended_action}</p>
+            <SupplierActions supplier={rec.supplier} className="mt-2" />
           </div>
 
           {rec.message && (

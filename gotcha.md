@@ -246,3 +246,8 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Reality:** `lib/analytics.ts` does nothing without `NEXT_PUBLIC_POSTHOG_KEY`, and even with it loads and sends nothing until the person accepts the banner (`analytics-consent.tsx`; Settings, "Your data", takes it back). Events are a small typed list with no free text. No autocapture, no identify, no replay unless `NEXT_PUBLIC_POSTHOG_REPLAY=1`, and then all text and inputs are masked. The host defaults to the EU region.
 **Risk:** An autocapture or identify call, or an event with a name, email or file name in it, sends personal or business data before anyone agreed.
 **Rule:** Add events only to the `AnalyticsEvent` type. PostHog drops events from automated browsers (`navigator.webdriver`), so `tests/e2e/analytics.js` hides that flag. The keyed half of that suite needs its own build (`NEXT_PUBLIC_POSTHOG_KEY=phc_testkey NEXT_PUBLIC_POSTHOG_HOST=https://ph.test`, then `E2E_ANALYTICS_KEY=1`); in the normal build it checks the inert half.
+
+## Supplier on stock alerts (F-SUPPLIER)
+**Problem:** Stock alerts can name who to order from, and the contact is third-party data from the customer's file.
+**Reality:** Optional upload columns `supplier`, `supplier_phone`, `supplier_email` reach the alert as the params `order_from`, `order_phone`, `order_email`, and the API puts `supplier` on each recommendation. Call and Text are plain `tel:` and `sms:` links, so nothing goes through the SMS Guard and nothing is charged.
+**Rule:** Read the supplier only through `lib/supplier.ts`. It keeps a phone only as E.164 and an email only in a safe shape, so a bad cell never becomes a link.
