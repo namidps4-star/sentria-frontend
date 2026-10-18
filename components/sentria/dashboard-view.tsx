@@ -171,6 +171,8 @@ type Recommendation = {
   message: string
   risk_score?: number | null
   alert_key?: string | null
+  /** The key the API tracks this under (P-RECAPI). Absent from an API that has not been redeployed. */
+  task_key?: string | null
   business_type?: string | null
   recommended_action: string
   action_category: string

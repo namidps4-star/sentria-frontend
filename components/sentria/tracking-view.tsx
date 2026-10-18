@@ -23,6 +23,8 @@ type ApiRecommendation = {
   message: string
   risk_score?: number | null
   alert_key?: string | null
+  /** From the API (P-RECAPI). Absent from an API that has not been redeployed. */
+  task_key?: string | null
   recommended_action: string
   action_category: string
   reasoning?: string | null

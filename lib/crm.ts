@@ -74,7 +74,13 @@ export function taskKeyFor(rec: {
   equipment: string
   alert_key?: string | null
   id: string
+  /** The key the API puts on every recommendation (P-RECAPI). It wins: the
+   *  server builds it from the same parts, so the two never disagree. An
+   *  older API leaves it out and the key is built here as before. */
+  task_key?: string | null
 }): string {
+  if (rec.task_key) return rec.task_key
+
   return `${rec.equipment}-${rec.alert_key ?? rec.id}`
 }
 
