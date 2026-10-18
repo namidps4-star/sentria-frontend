@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Loader2, RefreshCw, Search, ShieldCheck } from "@/lib/icons"
+import { Eye, Loader2, RefreshCw, Search, ShieldCheck } from "@/lib/icons"
 
 import { activityLabel } from "@/lib/activities"
 import { API_BASE, apiFetch } from "@/lib/api"
@@ -9,6 +9,7 @@ import { useTx } from "@/lib/i18n"
 import { PLAN_NAMES, PLAN_ORDER, trialDaysLeft, type PlanId } from "@/lib/plans"
 import { sectorLabel } from "@/lib/priorities"
 import { enterAt } from "@/lib/motion"
+import { setViewAs } from "@/lib/view-as"
 import { cn } from "@/lib/utils"
 
 import { AdminGuard } from "./admin-guard"
@@ -39,8 +40,8 @@ type AdminAccount = {
 /** SentrIA staff only (accounts.is_admin, migrations/005_admin.sql).
  *
  *  Every account with its plan, trial and usage; plans and trials are
- *  changed here instead of in SQL. Account details and counts only: the
- *  companies' own data stays theirs. The API checks the admin flag on
+ *  changed here instead of in SQL. Account details and counts here. "View"
+ *  opens one company's dashboard read only (S-3). The API checks the admin flag on
  *  every call, so this page opens nothing by itself. */
 export function AdminView() {
   const tx = useTx()
@@ -239,6 +240,20 @@ export function AdminView() {
                             ? account.email ? ` · ${account.email}` : ""
                             : account.email ?? "—"}
                         </p>
+                        {account.company_id && (
+                          <button
+                            type="button"
+                            data-testid="view-as"
+                            onClick={() => {
+                              setViewAs({ company_id: account.company_id, name: account.company_name || account.email || "" })
+                              window.location.assign("/")
+                            }}
+                            className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-xs font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          >
+                            <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                            {tx("Voir (lecture seule)", "View (read only)")}
+                          </button>
+                        )}
                       </td>
                       <td className="px-3 py-3">
                         {account.sector ? (

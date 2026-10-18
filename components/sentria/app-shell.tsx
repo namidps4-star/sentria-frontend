@@ -13,6 +13,7 @@ import { useT, useTx, type MessageKey } from "@/lib/i18n"
 import { withOurSector } from "@/lib/sector"
 import { DocumentLanguage } from "./document-language"
 import { Sidebar } from "./sidebar"
+import { ViewAsBanner } from "./view-as-banner"
 import type { ViewKey } from "./types"
 import { Topbar, type Notification } from "./topbar"
 import { DashboardView } from "./dashboard-view"
@@ -357,6 +358,7 @@ export function AppShell({
         ].join(" ")}
       >
         <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[28px] border border-border bg-canvas shadow-lg">
+          <ViewAsBanner />
           <div className="shrink-0">
             <Topbar
               title={t(META[view].title)}

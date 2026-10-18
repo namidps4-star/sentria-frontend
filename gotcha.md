@@ -251,3 +251,8 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Problem:** Stock alerts can name who to order from, and the contact is third-party data from the customer's file.
 **Reality:** Optional upload columns `supplier`, `supplier_phone`, `supplier_email` reach the alert as the params `order_from`, `order_phone`, `order_email`, and the API puts `supplier` on each recommendation. Call and Text are plain `tel:` and `sms:` links, so nothing goes through the SMS Guard and nothing is charged.
 **Rule:** Read the supplier only through `lib/supplier.ts`. It keeps a phone only as E.164 and an email only in a safe shape, so a bad cell never becomes a link.
+
+## View as company (S-3)
+**Problem:** Staff need to see what a customer sees, without a way to change it.
+**Reality:** The Admin page's View button stores the company in sessionStorage (`lib/view-as.ts`); `apiFetch` sends it as `X-View-As`. The API honours it only for staff, only on GET, and answers as that company with its plan and no staff powers. Writes, `/account/export` and `/admin` answer 403 while viewing. The dashboard still reads the staff member's own local settings (sector, sites list), so a company's other sectors may be hidden until the view is widened.
+**Rule:** Never send `X-View-As` from anything but `apiFetch`. Anything that writes must still work for the real owner of the data only.

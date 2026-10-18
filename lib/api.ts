@@ -1,4 +1,5 @@
 import { activeSiteId } from "./active-site"
+import { readViewAs } from "@/lib/view-as"
 import { supabase } from "./supabase"
 
 /**
@@ -87,6 +88,11 @@ export async function apiFetch(
   } catch (error) {
     console.error("[SentrIA] No session token for the API call:", error)
   }
+
+  // Staff looking at one company (S-3). Never set for a company user: the API refuses it.
+  const viewing = typeof window === "undefined" ? null : readViewAs()
+
+  if (viewing) headers.set("X-View-As", viewing.company_id)
 
   const [url, options] = forActiveSite(input, init)
 
