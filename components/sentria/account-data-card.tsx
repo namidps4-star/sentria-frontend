@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 
+import { analyticsConfigured, CONSENT_EVENT, readConsent, setConsent } from "@/lib/analytics"
 import { API_BASE, apiFetch } from "@/lib/api"
 import { useTx } from "@/lib/i18n"
 import { supabase } from "@/lib/supabase"
@@ -22,6 +23,18 @@ export function AccountDataCard() {
   const [typed, setTyped] = useState("")
   const [error, setError] = useState<string | null>(null)
   const dialog = usePresence(confirming, "--modal-close-dur")
+  const [measuring, setMeasuring] = useState(false)
+
+  // The answer to the usage-statistics question (F-ANALYTICS), kept in step
+  // with the banner so a change made there shows here.
+  useEffect(() => {
+    const sync = () => setMeasuring(readConsent() === "granted")
+
+    sync()
+    window.addEventListener(CONSENT_EVENT, sync)
+
+    return () => window.removeEventListener(CONSENT_EVENT, sync)
+  }, [])
 
   useEffect(() => {
     if (!confirming) return
@@ -103,6 +116,27 @@ export function AccountDataCard() {
           "Download everything SentrIA keeps on your account, or delete the account."
         )}
       </p>
+
+      {analyticsConfigured() && (
+        <label className="mt-3 flex cursor-pointer items-start gap-2.5 text-xs">
+          <input
+            type="checkbox"
+            data-testid="analytics-toggle"
+            checked={measuring}
+            onChange={(event) => setConsent(event.target.checked ? "granted" : "denied")}
+            className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--ink)]"
+          />
+          <span>
+            <span className="font-semibold">{tx("Statistiques d'usage", "Usage statistics")}</span>
+            <span className="block text-muted-foreground">
+              {tx(
+                "Compter les écrans ouverts et les étapes terminées, sans nom ni contenu de fichier.",
+                "Count the screens opened and the steps finished, with no names or file contents."
+              )}
+            </span>
+          </span>
+        </label>
+      )}
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button

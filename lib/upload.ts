@@ -1,3 +1,4 @@
+import { track } from "./analytics"
 import { withActiveSite } from "./api"
 import { supabase } from "./supabase"
 import { uploadTeach, type UploadTeach } from "./upload-problem"
@@ -122,6 +123,11 @@ export async function runUpload(
   } catch (error) {
     console.error("[SentrIA] upload failed:", error)
     final = { phase: "failed", fileName, message: networkError }
+  }
+
+  // Only the outcome is counted: never the file, its name or what was in it.
+  if (final.phase === "done" || final.phase === "refused" || final.phase === "failed") {
+    track({ name: "upload_result", result: final.phase })
   }
 
   set(final)

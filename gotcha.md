@@ -240,3 +240,9 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Problem:** `shadcn` looks like a runtime library.
 **Reality:** It is the component CLI. Only `app/globals.css` imports its stylesheet, at build time. Under `dependencies` it pulled about 25 high and one critical advisory into the production audit.
 **Rule:** Keep it in `devDependencies`. The CI security gate (`.github/workflows/security.yml`) fails only on critical advisories in production dependencies; high ones that come with `next` itself are listed, not blocking.
+
+## Product analytics is off until a key is set, and asks first
+**Problem:** PostHog looks like a snippet to drop into the layout.
+**Reality:** `lib/analytics.ts` does nothing without `NEXT_PUBLIC_POSTHOG_KEY`, and even with it loads and sends nothing until the person accepts the banner (`analytics-consent.tsx`; Settings, "Your data", takes it back). Events are a small typed list with no free text. No autocapture, no identify, no replay unless `NEXT_PUBLIC_POSTHOG_REPLAY=1`, and then all text and inputs are masked. The host defaults to the EU region.
+**Risk:** An autocapture or identify call, or an event with a name, email or file name in it, sends personal or business data before anyone agreed.
+**Rule:** Add events only to the `AnalyticsEvent` type. PostHog drops events from automated browsers (`navigator.webdriver`), so `tests/e2e/analytics.js` hides that flag. The keyed half of that suite needs its own build (`NEXT_PUBLIC_POSTHOG_KEY=phc_testkey NEXT_PUBLIC_POSTHOG_HOST=https://ph.test`, then `E2E_ANALYTICS_KEY=1`); in the normal build it checks the inert half.

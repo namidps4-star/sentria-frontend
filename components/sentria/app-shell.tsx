@@ -29,6 +29,8 @@ import { WholesalersView } from "./wholesalers-view"
 import { TrackingView } from "./tracking-view"
 import { AdminView } from "./admin-view"
 import { UploadPanelHost } from "./upload-panel-host"
+import { AnalyticsConsent } from "./analytics-consent"
+import { track } from "@/lib/analytics"
 import { readAccountPlan } from "@/lib/plans"
 
 /** What the bell reads of an alert row. */
@@ -113,6 +115,7 @@ export function AppShell({
   const t = useT()
 
   const [view, setView] = useState<ViewKey>("dashboard")
+  useEffect(() => track({ name: "view_opened", view }), [view])
   // The site shown (F-SITESCOPE): a change of site starts every page again,
   // so each one reads that site's own settings and data.
   const shownSite = useSiteVersion()
@@ -317,9 +320,16 @@ export function AppShell({
           language is known. Renders nothing. */}
       <DocumentLanguage />
       <UploadPanelHost />
+      <AnalyticsConsent />
 
       {showOnboarding && (
-        <OnboardingView name={name} onComplete={() => setShowOnboarding(false)} />
+        <OnboardingView
+          name={name}
+          onComplete={() => {
+            track({ name: "onboarding_done" })
+            setShowOnboarding(false)
+          }}
+        />
       )}
 
       <Sidebar

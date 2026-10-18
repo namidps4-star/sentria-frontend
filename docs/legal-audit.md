@@ -16,6 +16,7 @@ Date: 2026-10-18. Scope: Africa (Benin first, then the rest of West Africa and t
 | Questions to Ask and the company data sent with them | Google Gemini | The company, possibly personal data inside |
 | Errors and traces | Sentry (`traces_sample_rate=1.0`) | Technical, may carry ids |
 | Page views | Vercel Analytics | Visitors |
+| Screens opened, onboarding steps, import results (only after a yes, no names or file content) | PostHog, EU region by default, off until a key is set | Users who accepted |
 | Browser storage | 39 `localStorage` keys (settings, language, sector, theme) | The user |
 
 ## 2. Outside services (processors)
@@ -29,6 +30,7 @@ Date: 2026-10-18. Scope: Africa (Benin first, then the rest of West Africa and t
 | Google Gemini | AI answers | US | UNVERIFIED, and whether the paid API tier excludes training on the data is UNVERIFIED |
 | Resend | Email | US | UNVERIFIED |
 | Sentry | Error tracking | UNVERIFIED | UNVERIFIED |
+| PostHog | Usage statistics, after consent (F-ANALYTICS) | EU by default | UNVERIFIED |
 
 Fonts come from `next/font`, which serves them from our own host at runtime. No Google Fonts request from the browser.
 
@@ -47,7 +49,7 @@ Severity: **High** blocks a launch in the named region. **Medium** fix before sc
 | R7 | No named EU representative or data protection officer decision | EU | High if EU customers are targeted | Counsel decides. Needed for EU launch only |
 | R8 | No breach process (who is told, within how long) | EU, Africa | Medium | Write a one-page runbook. EU rule is 72 hours to the authority |
 | R9 | Backup retention unknown. The privacy text says "to be confirmed" | EU, Africa | Medium | Read Supabase backup settings, write the real period into the privacy text |
-| R10 | Vercel Analytics and Sentry run without a consent step. Vercel Analytics is cookieless. EU rules on cookieless analytics vary by country | EU | Medium | Counsel decides. Easy fix: a consent banner that holds both |
+| R10 | Vercel Analytics and Sentry run without a consent step. Vercel Analytics is cookieless. EU rules on cookieless analytics vary by country. PostHog (F-ANALYTICS) now asks first, so only these two remain | EU | Medium | Counsel decides. The new banner can hold them too |
 | R11 | Sentry traces at 100 percent may capture personal data in URLs or payloads | EU, Africa | Medium | Lower the rate, scrub payloads, confirm `send_default_pii` stays off |
 | R12 | Account deletion does not reach backups, Twilio logs, or Gemini logs | EU, Africa | Medium | Say so in the privacy text. Ask vendors for their deletion path |
 | R13 | A company with several accounts: deleting the last account deletes company data, deleting one keeps it. Behaviour is in the privacy text but not in the terms | All | Low | Add a line to the terms |

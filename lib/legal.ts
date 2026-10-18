@@ -7,7 +7,7 @@
  * NEXT_PUBLIC_LEGAL_EMAIL setting on Vercel. Without it the pages point to
  * Help & feedback in the app. */
 
-export const LEGAL_VERSION = "2026-10-17"
+export const LEGAL_VERSION = "2026-10-18"
 
 export const LEGAL_COMPANY = "Sentria"
 
@@ -69,8 +69,8 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalSection[]> = {
       title: ["Qui reçoit vos données", "Who receives your data"],
       body: [
         [
-          "Nous travaillons avec des prestataires qui traitent des données pour nous : Supabase (connexion et base de données), Vercel (hébergement du site et mesure d'audience), Render (hébergement de l'API), Twilio (SMS), Resend (emails) et Google (IA Gemini).",
-          "We work with providers that handle data for us: Supabase (sign-in and database), Vercel (site hosting and audience measurement), Render (API hosting), Twilio (texts), Resend (email) and Google (Gemini AI).",
+          "Nous travaillons avec des prestataires qui traitent des données pour nous : Supabase (connexion et base de données), Vercel (hébergement du site et mesure d'audience), Render (hébergement de l'API), Twilio (SMS), Resend (emails), Google (IA Gemini) et PostHog (statistiques d'usage, seulement si vous les acceptez).",
+          "We work with providers that handle data for us: Supabase (sign-in and database), Vercel (site hosting and audience measurement), Render (API hosting), Twilio (texts), Resend (email), Google (Gemini AI) and PostHog (usage statistics, only if you accept them).",
         ],
         [
           "Quand vous utilisez les recommandations ou Demandez à SentrIA, le texte de vos alertes et de vos questions est envoyé à Google pour produire la réponse. N'y mettez pas de données que vous ne voulez pas partager.",
@@ -88,6 +88,15 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalSection[]> = {
         [
           "SentrIA garde votre session et vos réglages dans le stockage de votre navigateur. Nous ne posons pas de cookies publicitaires.",
           "SentrIA keeps your session and settings in your browser storage. We do not set advertising cookies.",
+        ],
+      ],
+    },
+    {
+      title: ["Statistiques d'usage", "Usage statistics"],
+      body: [
+        [
+          "Si vous acceptez, nous comptons les écrans ouverts, les étapes d'accueil terminées et le résultat des imports de fichiers, sans nom, sans e-mail et sans contenu de fichier. Rien n'est mesuré avant votre accord. Vous pouvez le retirer à tout moment dans Paramètres. Les données sont traitées par PostHog, par défaut dans l'Union européenne.",
+          "If you accept, we count the screens opened, the welcome steps finished and the result of file imports, with no name, no email and no file content. Nothing is measured before you agree. You can withdraw at any time in Settings. The data is processed by PostHog, in the European Union by default.",
         ],
       ],
     },

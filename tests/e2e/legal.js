@@ -40,7 +40,7 @@ const ROOT = path.join(__dirname, '..', '..');
     await p.getByTestId('auth-terms').check();
     await p.getByRole('button', { name: /Create my account/ }).click(); await p.waitForTimeout(900);
     const su = log.find(l => l.path === '/auth/v1/signup');
-    pass(su && su.body.data.terms_version === '2026-10-17' && !Number.isNaN(Date.parse(su.body.data.terms_accepted_at)), 'ticked: sent with the version and the time: ' + (su && su.body.data.terms_version));
+    pass(su && su.body.data.terms_version === '2026-10-18' && !Number.isNaN(Date.parse(su.body.data.terms_accepted_at)), 'ticked: sent with the version and the time: ' + (su && su.body.data.terms_version));
     await ctx.close(); }
 
   console.log('== the dialog');

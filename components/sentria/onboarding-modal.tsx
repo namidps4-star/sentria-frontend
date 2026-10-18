@@ -76,6 +76,7 @@ import {
 } from "@/lib/logistics-signals"
 import { STAGE_ICONS } from "./flow-track"
 import { StepSlide } from "./step-slide"
+import { track } from "@/lib/analytics"
 
 type StepKey = "country" | "company" | "sector" | "subType" | "equipment" | "sources"
 
@@ -661,6 +662,7 @@ export function OnboardingView({
   }, [])
 
   const [step, setStep] = useState(1)
+  useEffect(() => track({ name: "onboarding_step", step }), [step])
   // Which way the last move went, so the next step enters from that side.
   const [direction, setDirection] = useState<"forward" | "back">("forward")
   const [sector, setSector] = useState<Sector | null>(null)
