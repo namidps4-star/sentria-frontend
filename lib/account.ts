@@ -1,6 +1,7 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js"
 
 import { ACTIVE_DEPARTMENT_KEY, ACTIVE_SITE_KEY, SITES_RESET_EVENT } from "@/lib/active-site"
+import { ROLE_KEY } from "@/lib/role"
 import { ADMIN_KEY, PLAN_KEY, PLAN_UPDATED_EVENT, TRIAL_KEY, isPlanId } from "@/lib/plans"
 
 /** The account (S-3 step 1).
@@ -57,6 +58,7 @@ const LOCAL_ONLY_USER_KEYS = [
   PLAN_KEY,
   TRIAL_KEY,
   ADMIN_KEY,
+  ROLE_KEY,
   "sentria_account_dirty",
   // The site this browser shows (lib/active-site.ts).
   ACTIVE_SITE_KEY,
@@ -149,13 +151,15 @@ export async function loadAccount(
     trial_ends_at?: unknown
     is_admin?: unknown
     username?: unknown
+    role?: unknown
   }
 
   const readRow = async (): Promise<{ data: Row | null; error: { message?: string } | null }> => {
     const missingColumn = (error: { message?: string } | null) =>
-      Boolean(error && /username|is_admin|plan|trial_ends_at/.test(error.message ?? ""))
+      Boolean(error && /username|is_admin|plan|trial_ends_at|role/.test(error.message ?? ""))
 
     const tiers = [
+      "profile, plan, trial_ends_at, is_admin, username, role",
       "profile, plan, trial_ends_at, is_admin, username",
       "profile, plan, trial_ends_at, is_admin",
       "profile, plan, trial_ends_at",
@@ -234,6 +238,10 @@ export async function loadAccount(
   // call, so editing this in the browser opens nothing.
   if (row.is_admin === true) localStorage.setItem(ADMIN_KEY, "true")
   else localStorage.removeItem(ADMIN_KEY)
+
+  // Hides the owner's controls from an employee. The API refuses them anyway.
+  if (row.role === "employee") localStorage.setItem(ROLE_KEY, "employee")
+  else localStorage.removeItem(ROLE_KEY)
 
   if (typeof row.trial_ends_at === "string") {
     localStorage.setItem(TRIAL_KEY, row.trial_ends_at)

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { analyticsConfigured, CONSENT_EVENT, readConsent, setConsent } from "@/lib/analytics"
 import { API_BASE, apiFetch } from "@/lib/api"
 import { useTx } from "@/lib/i18n"
+import { useIsEmployee } from "@/lib/role"
 import { supabase } from "@/lib/supabase"
 import { usePresence } from "@/lib/use-presence"
 import { cn } from "@/lib/utils"
@@ -17,6 +18,7 @@ const WORD = "DELETE"
 
 export function AccountDataCard() {
   const tx = useTx()
+  const employee = useIsEmployee()
   const [busy, setBusy] = useState<"export" | "delete" | null>(null)
   const [note, setNote] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
@@ -138,6 +140,7 @@ export function AccountDataCard() {
         </label>
       )}
 
+      {!employee && (
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <button
           type="button"
@@ -158,6 +161,7 @@ export function AccountDataCard() {
           {tx("Supprimer mon compte", "Delete my account")}
         </button>
       </div>
+      )}
 
       <p role="status" data-testid="account-note" className="mt-2 min-h-4 text-xs text-muted-foreground">
         {note}

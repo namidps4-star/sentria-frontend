@@ -1,6 +1,7 @@
 "use client"
 
 import { useSiteVersion } from "@/lib/sites"
+import { useIsEmployee } from "@/lib/role"
 import { useState, useEffect, useMemo, useRef } from "react"
 
 import { inAccountScope, readSectors } from "@/lib/activities"
@@ -122,6 +123,7 @@ export function AppShell({
   const shownSite = useSiteVersion()
   // SentrIA staff (read at sign-in). Only shows the page: the API checks
   // the flag itself on every admin call.
+  const employee = useIsEmployee()
   const [isAdmin, setIsAdmin] = useState(false)
   useEffect(() => setIsAdmin(readAccountPlan().isAdmin), [])
   const [open, setOpen] = useState(false)
@@ -380,7 +382,7 @@ export function AppShell({
             {view === "dashboard" && <DashboardView search={search} onNavigate={setView} />}
             {view === "tracking" && <TrackingView />}
             {view === "calendar" && <CalendarView />}
-            {view === "sites" && <SitesView onNavigate={setView} />}
+            {view === "sites" && !employee && <SitesView onNavigate={setView} />}
             {view === "ask" && (
               <AskView name={name} email={email} openCritical={bellAlerts} onNavigate={setView} />
             )}

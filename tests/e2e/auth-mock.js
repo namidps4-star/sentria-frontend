@@ -59,7 +59,7 @@ async function mockSupabase(page, db, opts = {}) {
       if (method === 'GET') {
         if (opts.profileFromPage) {
           const profile = await page.evaluate(() => { const o = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith('sentria_') && k !== 'sentria_account_owner') o[k] = localStorage.getItem(k); } return o; });
-          return json(r, 200, [{ profile, plan: opts.plan || 'entreprise', trial_ends_at: opts.trialEndsAt || null, is_admin: !!opts.isAdmin, ...(opts.username !== undefined ? { username: opts.username } : {}) }]);
+          return json(r, 200, [{ profile, plan: opts.plan || 'entreprise', trial_ends_at: opts.trialEndsAt || null, is_admin: !!opts.isAdmin, ...(opts.role ? { role: opts.role } : {}), ...(opts.username !== undefined ? { username: opts.username } : {}) }]);
         }
         const a = db.accounts[uid];
         return json(r, 200, a ? [{ profile: a.profile, plan: a.plan || 'decouverte', trial_ends_at: a.trial_ends_at || null, ...(a.username !== undefined ? { username: a.username } : {}) }] : []);

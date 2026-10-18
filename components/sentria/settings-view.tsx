@@ -29,6 +29,7 @@ import {
 import { useTx } from "@/lib/i18n"
 import { useShake } from "@/lib/use-shake"
 import { CostStarterCard } from "./cost-starter-card"
+import { TeamCard } from "./team-card"
 
 /* This screen carries its own catalogue, in six languages, and it is the
    only place in the app where Spanish, Portuguese, Arabic and Kiswahili
@@ -502,6 +503,7 @@ export function SettingsView() {
             {tx("Conditions d'utilisation", "Terms of use")}
           </button>
         </div>
+        <TeamCard />
         <AccountDataCard />
         <LegalDialog open={legalOpen} doc={legalDoc} onClose={() => setLegalOpen(false)} />
       </section>

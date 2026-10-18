@@ -6,6 +6,7 @@ import { requestAddSiteOnOpen } from "@/lib/active-site"
 import { activityLabel } from "@/lib/activities"
 import { initialsOf, useCompanyIdentity } from "@/lib/company"
 import { useT, useTx } from "@/lib/i18n"
+import { useIsEmployee } from "@/lib/role"
 import { chooseSite, useSites, type StoredSite } from "@/lib/sites"
 import { usePresence } from "@/lib/use-presence"
 import { cn } from "@/lib/utils"
@@ -29,6 +30,7 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
   const tx = useTx()
   const { name: companyName } = useCompanyIdentity()
   const { ready, mode, sites, activeId, activeDepartment } = useSites()
+  const employee = useIsEmployee()
 
   const server = mode === "server"
   const active = server ? (sites.find((site) => site.id === activeId) ?? null) : null
@@ -116,7 +118,8 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
     </>
   )
 
-  if (!ready) {
+  // An employee works on one site: the company, the site, no menu.
+  if (!ready || employee) {
     return (
       <div role="group" aria-label={label} className="flex items-center gap-2 rounded-xl border border-border bg-card py-1.5 pl-1.5 pr-2.5">
         {face}

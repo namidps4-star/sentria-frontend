@@ -256,3 +256,8 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Problem:** Staff need to see what a customer sees, without a way to change it.
 **Reality:** The Admin page's View button stores the company in sessionStorage (`lib/view-as.ts`); `apiFetch` sends it as `X-View-As`. The API honours it only for staff, only on GET, and answers as that company with its plan and no staff powers. Writes, `/account/export` and `/admin` answer 403 while viewing. The dashboard still reads the staff member's own local settings (sector, sites list), so a company's other sectors may be hidden until the view is widened.
 **Rule:** Never send `X-View-As` from anything but `apiFetch`. Anything that writes must still work for the real owner of the data only.
+
+## Employees in the app (F-TEAMROLES)
+**Problem:** An employee must not get the site switcher or the owner's controls, and a hidden button is not a lock.
+**Reality:** `accounts.role` is read at sign-in into `sentria_role` (`lib/role.ts`, `useIsEmployee`). For an employee the account menu is a plain label, the Sites page and its sidebar entry are gone, and Settings has no Team card, export or delete. The Team card (`team-card.tsx`) lets the boss invite one person to one site by email. The API enforces all of it (`owner_only`, `site_unknown`), so this only hides what would fail. An employee still sees company-wide contractors and tasks, and the dashboard's department tabs are the account's own settings.
+**Rule:** Hide owner-only UI with `useIsEmployee()`, and put the real check in the API first.

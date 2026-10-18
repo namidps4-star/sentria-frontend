@@ -1,5 +1,6 @@
 "use client"
 
+import { useIsEmployee } from "@/lib/role"
 import { SITES_CHANGED_EVENT } from "@/lib/active-site"
 import { useCallback, useEffect, useRef, useState } from "react"
 
@@ -232,9 +233,12 @@ export function Sidebar({
     return () => window.removeEventListener(SITES_CHANGED_EVENT, reread)
   }, [])
 
+  const employee = useIsEmployee()
+
   const shown: typeof sections = sections.map((section) => ({
     ...section,
-    items: section.items.filter((item) => !item.sector || sectors.includes(item.sector) || item.id === active),
+    // An employee works on the one site the boss gave them: no Sites page.
+    items: section.items.filter((item) => !(employee && item.id === "sites") && (!item.sector || sectors.includes(item.sector) || item.id === active)),
   }))
 
   const visibleSections: typeof sections = isAdmin
@@ -331,8 +335,9 @@ export function Sidebar({
             <button
               type="button"
               data-testid="sidebar-active-site"
+              disabled={employee}
               onClick={() => onNavigate("sites")}
-              className={"mx-3 mb-1 flex shrink-0 items-center gap-2.5 rounded-full bg-white/10 px-3 py-2 text-left text-sm font-semibold text-sidebar-foreground transition hover:bg-white/15" + SIDEBAR_FOCUS}
+              className={"mx-3 mb-1 flex shrink-0 items-center gap-2.5 rounded-full bg-white/10 px-3 py-2 text-left text-sm font-semibold text-sidebar-foreground transition hover:bg-white/15 disabled:cursor-default disabled:hover:bg-white/10" + SIDEBAR_FOCUS}
             >
               <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-green-500 ring-2 ring-green-500/30" aria-hidden="true" />
               <span className="min-w-0 truncate">{shownSite.name}</span>
