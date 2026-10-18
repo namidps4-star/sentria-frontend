@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Globe, Bell, Moon, Check, Building2, Mail } from "@/lib/icons"
 import { LegalDialog } from "./legal-dialog"
+import { AccountDataCard } from "./account-data-card"
 import type { LegalDocId } from "@/lib/legal"
 import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
@@ -501,6 +502,7 @@ export function SettingsView() {
             {tx("Conditions d'utilisation", "Terms of use")}
           </button>
         </div>
+        <AccountDataCard />
         <LegalDialog open={legalOpen} doc={legalDoc} onClose={() => setLegalOpen(false)} />
       </section>
 
