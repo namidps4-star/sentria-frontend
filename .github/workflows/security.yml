@@ -1,0 +1,19 @@
+name: security
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "23 5 * * 1"
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - name: Known vulnerabilities in dependencies (critical fails the run)
+        run: pnpm audit --prod --audit-level critical
+      - name: High findings (listed, do not fail the run)
+        run: pnpm audit --prod --audit-level high
+        continue-on-error: true
