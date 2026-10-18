@@ -99,6 +99,7 @@ const ROOT = path.join(__dirname, '..', '..');
     await p.keyboard.press('Escape'); await p.waitForTimeout(400);
     await p.getByTestId('settings-privacy').click(); await p.waitForTimeout(500);
     pass(/Privacy/.test(await p.getByTestId('legal-dialog').locator('h2').innerText()), 'and one to the privacy page');
+    pass(/Export my data/.test(await p.getByTestId('legal-dialog').innerText()) && /Delete my account/.test(await p.getByTestId('legal-dialog').innerText()), 'the rights section says where to export and delete');
     pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
     await ctx.close(); }
 

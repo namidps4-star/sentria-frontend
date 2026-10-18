@@ -107,6 +107,10 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalSection[]> = {
           "Vous pouvez demander l'accès à vos données, leur correction, leur export ou leur suppression, en nous écrivant (voir Contact).",
           "You can ask for access to your data, to correct it, to export it or to delete it, by writing to us (see Contact).",
         ],
+        [
+          "Dans l'application, Paramètres, section « Vos données » : « Exporter mes données » télécharge un fichier avec tout ce que nous gardons sur votre compte, et « Supprimer mon compte » efface votre connexion et les données de l'entreprise. Si d'autres comptes partagent l'entreprise, seul le vôtre est supprimé.",
+          "In the app, Settings, \"Your data\" section: \"Export my data\" downloads a file with everything we keep on your account, and \"Delete my account\" erases your login and the company's data. If other accounts share the company, only yours is deleted.",
+        ],
       ],
     },
     {
