@@ -56,13 +56,24 @@ function forActiveSite(input: string, init: RequestInit): [string, RequestInit] 
       return [withActiveSite(input), init]
     }
 
-    if (/\/ask$/.test(url.pathname) && typeof init.body === "string") {
+    // A new contractor or a task is filed under the site shown (F-TEAMROLES), so an
+    // employee of that site sees it. Reads and edits are cut by the API itself.
+    const filed =
+      (init.method === "POST" && /\/contractors$/.test(url.pathname)) ||
+      (init.method === "PUT" && /\/assignments$/.test(url.pathname))
+
+    if (/\/ask$/.test(url.pathname) || filed) {
+      if (typeof init.body !== "string") return [input, init]
+
       const body = JSON.parse(init.body)
 
       if (body && typeof body === "object" && !Array.isArray(body) && !("site_id" in body)) {
         return [input, { ...init, body: JSON.stringify({ ...body, site_id: site }) }]
       }
+
+      return [input, init]
     }
+
   } catch {
     /* not a URL or not JSON: sent as it is */
   }

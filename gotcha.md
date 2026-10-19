@@ -261,3 +261,8 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Problem:** An employee must not get the site switcher or the owner's controls, and a hidden button is not a lock.
 **Reality:** `accounts.role` is read at sign-in into `sentria_role` (`lib/role.ts`, `useIsEmployee`). For an employee the account menu is a plain label, the Sites page and its sidebar entry are gone, and Settings has no Team card, export or delete. The Team card (`team-card.tsx`) lets the boss invite one person to one site by email. The API enforces all of it (`owner_only`, `site_unknown`), so this only hides what would fail. An employee still sees company-wide contractors and tasks, and the dashboard's department tabs are the account's own settings.
 **Rule:** Hide owner-only UI with `useIsEmployee()`, and put the real check in the API first.
+
+## New contractors and tasks carry the site shown (F-TEAMROLES step 2)
+**Problem:** An employee sees only their site's contractors and tasks, so a row the boss creates with no site is invisible to them.
+**Reality:** `forActiveSite` in `lib/api.ts` adds `site_id` to `POST /contractors` and `PUT /assignments` when a site is shown. The API checks it against the company's sites. Reads and edits are cut by the API, not the app.
+**Rule:** Do not add `site_id` to other calls here: the API decides what an employee may read.

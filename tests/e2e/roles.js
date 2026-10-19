@@ -17,9 +17,13 @@ const TEAM = [
 
 (async () => {
   const browser = await chromium.launch(LAUNCH);
-  const open = async ({ people = TEAM, lang = 'en', vw = 1440 } = {}) => {
+  const open = async ({ people = TEAM, lang = 'en', vw = 1440, site = null } = {}) => {
     const ctx = await browser.newContext({ viewport: { width: vw, height: 1000 }, locale: lang === 'fr' ? 'fr-FR' : 'en-US' });
     const p = await ctx.newPage(); p._errors = []; p.on('pageerror', e => p._errors.push(e.message)); p._created = [];
+    if (site) {
+      const srcs = ['csv', 'api', 'erp', 'iot'].map(type => ({ type, wanted: false, connected: false, synced: false }));
+      await p.route(/\/sites$/, r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ sites: [{ id: site, name: 'Cotonou', location: '', sector: 'logistics', status: 'offline', sources: srcs, created_at: new Date().toISOString(), departments: [], priorities: [], configured: false, alerts: 0, stats: null }], persisted: true, max_sites: 50 }) }));
+    }
     await p.route(/\/alerts(\?|$)/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
     await p.route(/\/recommendations/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '{"recommendations":[]}' }));
     await p.route(/\/assignments/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '{"assignments":[]}' }));
@@ -27,7 +31,7 @@ const TEAM = [
       if (r.request().method() === 'POST') { const b = JSON.parse(r.request().postData()); p._created.push(b); return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ contractor: { ...P('new', b.name, b.role ?? null) } }) }); }
       r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ contractors: people }) });
     });
-    await p.addInitScript(l => { const s = { sentria_onboarded: '1', sentria_sector: 'logistics', sentria_sectors: '["logistics"]', sentria_language: l, sentria_company_name: 'Acme' }; for (const k in s) localStorage.setItem(k, k === 'sentria_sectors' ? '["logistics"]' : s[k]); }, lang);
+    await p.addInitScript(({ l, site }) => { const s = { sentria_onboarded: '1', sentria_sector: 'logistics', sentria_sectors: '["logistics"]', sentria_language: l, sentria_company_name: 'Acme' }; for (const k in s) localStorage.setItem(k, k === 'sentria_sectors' ? '["logistics"]' : s[k]); if (site) localStorage.setItem('sentria_active_site', site); }, { l: lang, site });
     await signedIn(p); await p.goto(APP_URL, { waitUntil: 'networkidle' });
     if (vw < 1024) { await p.getByRole('button', { name: /menu/i }).first().click(); await p.waitForTimeout(300); }
     await p.getByRole('button', { name: lang === 'fr' ? /^Intervenants$/ : /^Field team$/ }).first().click(); await p.waitForTimeout(1200);
@@ -58,6 +62,18 @@ const TEAM = [
     await p.getByPlaceholder(/Crane operator/).fill('Rigger');
     await p.getByRole('button', { name: /^(Add|Save|Create)/ }).last().click(); await p.waitForTimeout(700);
     pass(p._created.length === 1 && p._created[0].role === 'Rigger', `a role nobody used before is saved as typed (${JSON.stringify(p._created[0])})`);
+    await ctx.close(); }
+
+  console.log('== filed under the site shown (F-TEAMROLES)');
+  { const { p, ctx } = await open({ site: 's1' });
+    await p.locator('input[autocomplete="name"]').fill('New Person').catch(() => {});
+    await p.getByRole('button', { name: /^(Add|Save|Create)/ }).last().click(); await p.waitForTimeout(700);
+    pass(p._created.length === 1 && p._created[0].site_id === 's1', `a new contractor carries the site shown (${JSON.stringify(p._created[0])})`);
+    await ctx.close(); }
+  { const { p, ctx } = await open();
+    await p.locator('input[autocomplete="name"]').fill('New Person').catch(() => {});
+    await p.getByRole('button', { name: /^(Add|Save|Create)/ }).last().click(); await p.waitForTimeout(700);
+    pass(p._created.length === 1 && !('site_id' in p._created[0]), 'with no site shown it carries none');
     await ctx.close(); }
 
   console.log('== French');
