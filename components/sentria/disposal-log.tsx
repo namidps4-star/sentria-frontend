@@ -88,7 +88,7 @@ export function DisposalLog() {
   const average = rows.length ? rows.reduce((sum, r) => sum + r.value, 0) / rows.length : 0
 
   return (
-    <section data-testid="disposal-log" className="squircle rounded-[32px] bg-[var(--ink)] p-2 text-white" style={{ borderRadius: 32 }}>
+    <section data-testid="disposal-log" data-tour="disposal" className="squircle rounded-[32px] bg-[var(--ink)] p-2 text-white" style={{ borderRadius: 32 }}>
       {log === null || !log.persisted ? (
         <div className="p-5">
           <h3 className="font-heading text-lg font-bold">{tx("Journal des pertes", "Disposal log")}</h3>
@@ -240,6 +240,7 @@ export function DisposalLog() {
             </ul>
 
             <form
+              data-tour="disposal-form"
               className="mt-3 grid gap-2 rounded-[22px] bg-[#1f1f1d] p-3 sm:grid-cols-4"
               onSubmit={async (event) => {
                 event.preventDefault()

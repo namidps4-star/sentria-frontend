@@ -50,7 +50,7 @@ export function PriorityTrack({
   const openId = selected ?? rows[0]?.id
 
   return (
-    <div className="flex justify-center" data-testid="priority-track">
+    <div className="flex justify-center" data-testid="priority-track" data-tour="priorities" data-sector={sector}>
       {/* No justify-center in here: centred content in a scroll row cuts off
           its own start on a narrow screen. */}
       <div className="flex w-fit max-w-full items-center gap-2 overflow-x-auto rounded-full bg-[var(--ink)] p-2 [scrollbar-width:none]">

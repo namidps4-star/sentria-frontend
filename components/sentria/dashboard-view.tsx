@@ -2379,6 +2379,7 @@ export function DashboardView({
             onClick={() => setImportOpen((open) => !open)}
             aria-expanded={importOpen}
             aria-controls="import-panel"
+            data-tour="import"
             aria-label={tx("Importer des données", "Import data")}
             title={tx("Importer un CSV", "Import a CSV")}
             className={cn(
@@ -2935,6 +2936,7 @@ export function DashboardView({
              colour ground, so a cell fading on its own would flash that
              ground); the numbers inside count and the lines draw. */
           <div
+            data-tour="kpis"
             className="t-enter grid grid-cols-2 gap-px overflow-hidden rounded-[22px] bg-border shadow-sm xl:grid-cols-4"
             style={enterAt(5)}
           >
@@ -3175,6 +3177,7 @@ export function DashboardView({
               colour ground, so a cell fading on its own would flash that
               ground); the numbers inside count and the lines draw. */}
           <div
+            data-tour="kpis"
             className="t-enter grid grid-cols-2 gap-px overflow-hidden rounded-[22px] bg-border shadow-sm xl:grid-cols-4"
             style={enterAt(5)}
           >
@@ -3678,7 +3681,7 @@ export function DashboardView({
         )}
 
       {hasNoDataForSector ? (
-        <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
+        <div data-tour="empty" className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
             <Upload className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
           </div>
@@ -3722,7 +3725,7 @@ export function DashboardView({
         {tx("Contexte général", "General context")}
       </p>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div data-tour="kpis" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {kpis.map((k, index) => (
           <div
             key={k.id}
@@ -3783,6 +3786,7 @@ export function DashboardView({
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div
+          data-tour="trend"
           className="t-enter flex flex-col rounded-3xl border border-border bg-card p-6 lg:col-span-2"
           style={enterAt(5)}
         >
@@ -3855,6 +3859,7 @@ export function DashboardView({
             cards: its colours are validated on that surface. */}
         <div
           data-breakdown-card=""
+          data-tour="breakdown"
           className="t-enter flex flex-col rounded-3xl bg-sidebar p-6 text-sidebar-foreground"
           style={enterAt(5.5)}
         >
@@ -3985,6 +3990,7 @@ export function DashboardView({
 
       <div
         id="alerts-table"
+        data-tour="alerts"
         className="t-enter rounded-3xl border border-border bg-card"
         style={enterAt(7.5)}
       >

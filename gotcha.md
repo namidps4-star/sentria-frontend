@@ -292,3 +292,8 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Reality:** The API writes those two sentences in the `lang` the request names (default French). The list read reloads when the language changes, but the one-alert read in `dashboard-view.tsx` was kept by alert name only, and a French answer still in flight could land after the switch.
 **Rule:** A client-side copy of a server-written sentence stores the `lang` it was asked in, is used only while that matches the current language, and an in-flight guard is keyed by item and language. `tests/e2e/recolang.js` covers both the finished and the late read.
 
+## Robo's tour points at `data-nav` and `data-tour`, and drops what is not on screen
+**Problem:** The tour (`components/sentria/guide-buddy.tsx`) rings a menu item or a dashboard block and says what it is for. Renaming or moving one silently leaves a step pointing at nothing, and a new account has no cards, trend or breakdown at all.
+**Reality:** Menu items carry `data-nav="<view>"`, dashboard blocks carry `data-tour="kpis|trend|breakdown|alerts|import"` (`dashboard-view.tsx`). A step whose target is not on screen is dropped; the data-dependent dashboard steps (`needsData`) collapse into one "what you will see after an import" step. The deeper chapter reads the account's own columns from `lib/csv-columns.ts`, so a new department there is explained without touching the tour.
+**Rule:** Move a block and keep its `data-tour`. A new block worth explaining gets a step in `lib/guide-steps.ts` and an attribute. `tests/e2e/guide.js` walks both chapters with and without data.
+
