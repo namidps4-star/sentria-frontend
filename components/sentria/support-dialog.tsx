@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { AlertTriangle, CheckCircle2, Loader2, Play, Send, X } from "@/lib/icons"
+import { AlertTriangle, CheckCircle2, Loader2, MessageSquare, Play, Send, Sparkles, X } from "@/lib/icons"
 
 import { useTx, type Tx } from "@/lib/i18n"
 import { useLocale } from "@/lib/locale"
@@ -54,6 +54,9 @@ const KIND_LABEL: Record<SupportKind, [string, string]> = {
   idea: ["Idée", "Idea"],
   question: ["Question", "Question"],
 }
+
+const KIND_ICON = { bug: AlertTriangle, idea: Sparkles, question: MessageSquare }
+const KIND_TONE: Record<SupportKind, string> = { bug: "danger", idea: "warning", question: "info" }
 
 const KIND_HINT: Record<SupportKind, [string, string]> = {
   bug: ["Que s'est-il passé, et qu'attendiez-vous ?", "What happened, and what did you expect?"],
@@ -198,13 +201,14 @@ function SupportBody({
         aria-modal="true"
         aria-labelledby="support-title"
         data-support=""
+        style={{ borderRadius: 32 }}
         className={cn(
-          "max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-3xl border border-border bg-card p-5 shadow-2xl t-modal sm:p-6",
+          "max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto squircle rounded-[32px] border border-border bg-card p-2 shadow-2xl t-modal",
           className
         )}
       >
         {sent ? (
-          <div data-support-done="" role="status" className="flex flex-col items-start gap-3">
+          <div data-support-done="" role="status" className="flex flex-col items-start gap-3 p-4">
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-brand-foreground">
               <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
             </span>
@@ -241,38 +245,47 @@ function SupportBody({
               void send()
             }}
           >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 id="support-title" className="font-heading text-lg font-bold text-foreground">
-                  {tx("Comment pouvons-nous aider ?", "How can we help?")}
-                </h3>
+            <div className="squircle rounded-[26px] bg-brand p-4 text-brand-foreground" style={{ borderRadius: 26 }}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--ink)] text-white">
+                    <MessageSquare className="h-5 w-5" aria-hidden="true" />
+                  </span>
 
-                <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                  {tx(
-                    "Un bug, une idée ou une question. Le message part directement à l'équipe.",
-                    "A bug, an idea or a question. It goes straight to the team."
-                  )}
-                </p>
+                  <div>
+                    <h3 id="support-title" className="font-heading text-lg font-bold">
+                      {tx("Comment pouvons-nous aider ?", "How can we help?")}
+                    </h3>
+
+                    <p className="mt-0.5 text-sm leading-5 opacity-80">
+                      {tx(
+                        "Un bug, une idée ou une question. Le message part directement à l'équipe.",
+                        "A bug, an idea or a question. It goes straight to the team."
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={sending}
+                  aria-label={tx("Fermer", "Close")}
+                  className="-mr-1 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed"
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </button>
               </div>
-
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={sending}
-                aria-label={tx("Fermer", "Close")}
-                className="-mr-1 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed"
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
             </div>
 
+            <div className="px-3 pb-3 pt-3">
             {onStartTour && (
               <button
                 type="button"
                 onClick={onStartTour}
                 disabled={sending}
                 data-tour-open=""
-                className="mt-3 inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-2 rounded-full bg-[var(--ink)] px-3.5 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed"
               >
                 <Play className="h-3.5 w-3.5" aria-hidden="true" />
                 {tx("Visite guidée", "Take the tour")}
@@ -282,10 +295,12 @@ function SupportBody({
             <div
               role="radiogroup"
               aria-label={tx("Type de message", "Type of message")}
-              className="mt-4 flex flex-wrap gap-2"
+              className="mt-3 grid grid-cols-3 gap-2"
             >
               {SUPPORT_KINDS.map((value) => {
                 const chosen = kind === value
+                const Icon = KIND_ICON[value]
+                const tone = KIND_TONE[value]
 
                 return (
                   <button
@@ -295,13 +310,13 @@ function SupportBody({
                     aria-checked={chosen}
                     data-support-kind={value}
                     onClick={() => setKind(value)}
+                    style={chosen ? { background: `var(--tag-${tone}-bg)`, borderColor: `var(--tag-${tone}-fg)`, color: `var(--tag-${tone}-fg)` } : undefined}
                     className={cn(
-                      "rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      chosen
-                        ? "border-transparent bg-foreground text-background"
-                        : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                      "flex flex-col items-center gap-1.5 rounded-2xl border px-2 py-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      chosen ? "" : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                   >
+                    <Icon className="h-5 w-5" aria-hidden="true" />
                     {tx(...KIND_LABEL[value])}
                   </button>
                 )
@@ -324,7 +339,7 @@ function SupportBody({
                 setMessage(event.target.value)
                 if (problem) setProblem("")
               }}
-              className="mt-1.5 block w-full resize-none rounded-2xl border border-border bg-background px-4 py-3 text-sm leading-6 text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="mt-1.5 block w-full resize-none rounded-2xl border border-border bg-muted px-4 py-3 text-sm leading-6 text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             />
 
             <div className="mt-1.5 flex items-start justify-between gap-3 text-[11px] leading-4 text-muted-foreground">
@@ -375,6 +390,7 @@ function SupportBody({
                 )}
                 {sending ? tx("Envoi…", "Sending…") : tx("Envoyer", "Send")}
               </button>
+            </div>
             </div>
           </form>
         )}
