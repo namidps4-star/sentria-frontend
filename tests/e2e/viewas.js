@@ -17,7 +17,7 @@ const ACCOUNTS = [
   const browser = await chromium.launch(LAUNCH);
   const open = async ({ admin = true, lang = 'en', theme = 'light', vw = 1440, viewing = null } = {}) => {
     const ctx = await browser.newContext({ viewport: { width: vw, height: 900 }, locale: lang === 'fr' ? 'fr-FR' : 'en-US' });
-    const p = await ctx.newPage(); p._errors = []; p._headers = []; p.on('pageerror', e => p._errors.push(e.message));
+    const p = await ctx.newPage(); p._errors = []; p._headers = []; p._saves = []; p.on('request', q => { if (q.method() === 'PATCH' && /\/rest\/v1\/accounts/.test(q.url())) p._saves.push(q.url()); }); p.on('pageerror', e => p._errors.push(e.message));
     await p.route(/onrender\.com\//, r => {
       const u = new URL(r.request().url());
       if (u.pathname !== '/admin/accounts') p._headers.push(r.request().headers()['x-view-as'] || null);
@@ -57,6 +57,18 @@ const ACCOUNTS = [
     p._headers.length = 0; await p.reload(); await p.waitForTimeout(1800);
     pass(!p._headers.some(Boolean), 'and the header is gone');
     pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
+    await ctx.close(); }
+
+  console.log('== a view never saves into the staff account');
+  { const { p, ctx } = await open();
+    await p.evaluate(() => localStorage.setItem('sentria_company_name', 'Acme edited')); await p.waitForTimeout(4500);
+    pass(p._saves.length >= 1, 'outside a view a change is saved to the account (control)');
+    await adminPage(p);
+    await p.getByTestId('view-as').first().click(); await p.waitForTimeout(2500);
+    pass(await p.evaluate(() => localStorage.getItem('sentria_account_owner')) !== null, 'the account is read again from the server when a view starts');
+    const before = p._saves.length;
+    await p.evaluate(() => localStorage.setItem('sentria_sectors', '["industry"]')); await p.waitForTimeout(5000);
+    pass(p._saves.length === before, 'while viewing, a change in this browser is not saved to the account');
     await ctx.close(); }
 
   console.log('== every companys sites');

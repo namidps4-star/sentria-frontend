@@ -2,6 +2,7 @@ import type { SupabaseClient, User } from "@supabase/supabase-js"
 
 import { ACTIVE_DEPARTMENT_KEY, ACTIVE_SITE_KEY, SITES_RESET_EVENT } from "@/lib/active-site"
 import { ROLE_KEY } from "@/lib/role"
+import { readViewAs } from "@/lib/view-as"
 import { ADMIN_KEY, PLAN_KEY, PLAN_UPDATED_EVENT, TRIAL_KEY, isPlanId } from "@/lib/plans"
 
 /** The account (S-3 step 1).
@@ -270,6 +271,11 @@ export function syncAccount(client: SupabaseClient, userId: string) {
   const send = (): Promise<void> => {
     if (inFlight) return inFlight
     if (localStorage.getItem(ACCOUNT_OWNER_KEY) !== userId) return Promise.resolve()
+
+    // Staff looking at a company (lib/view-as.ts): the screen may show that
+    // company's site settings, which must never be saved into the staff
+    // member's own account.
+    if (readViewAs()) return Promise.resolve()
 
     const profile = readProfile()
     const snapshot = JSON.stringify(profile)

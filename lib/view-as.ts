@@ -25,6 +25,12 @@ export function readViewAs(): ViewAs | null {
 
 export function setViewAs(target: ViewAs | null) {
   try {
+    // Starting or ending a view: the next load reads the account's own saved
+    // settings again, not whatever the other company's sites left in this
+    // browser (lib/site-config.ts writes a site's sector over the account's).
+    window.localStorage.removeItem("sentria_account_owner")
+    window.localStorage.removeItem("sentria_base_config")
+
     if (target) window.sessionStorage.setItem(KEY, JSON.stringify(target))
     else window.sessionStorage.removeItem(KEY)
   } catch {

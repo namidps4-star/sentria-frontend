@@ -266,3 +266,8 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Problem:** An employee sees only their site's contractors and tasks, so a row the boss creates with no site is invisible to them.
 **Reality:** `forActiveSite` in `lib/api.ts` adds `site_id` to `POST /contractors` and `PUT /assignments` when a site is shown. The API checks it against the company's sites. Reads and edits are cut by the API, not the app.
 **Rule:** Do not add `site_id` to other calls here: the API decides what an employee may read.
+
+## A view never saves, and a site's settings can overwrite the account's sectors (S-3-VIEWAS)
+**Problem:** Showing a configured site writes that site's sector over the account's own `sentria_sectors` in localStorage (`lib/site-config.ts`, the account's originals kept in `sentria_base_config`). The account sync then saves whatever localStorage holds. Staff viewing another company's sites could therefore write that company's sector into their own account.
+**Reality:** While a view is active, `syncAccount` saves nothing (`readViewAs()`), and starting or ending a view drops `sentria_account_owner` and `sentria_base_config` so the next load reads the account's own saved profile again.
+**Rule:** Anything that can show another account's settings must not reach `syncAccount`. If an owner's sectors look shorter than they were, check `profile->'sentria_base_config'` first: it holds the originals.
