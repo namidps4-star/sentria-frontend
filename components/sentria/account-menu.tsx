@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { ChevronDown, MapPin, Plus, User } from "@/lib/icons"
+import { ChevronDown, ChevronRight, MapPin, Plus, User } from "@/lib/icons"
 import { requestAddSiteOnOpen } from "@/lib/active-site"
 import { activityLabel } from "@/lib/activities"
 import { initialsOf, useCompanyIdentity } from "@/lib/company"
@@ -40,11 +40,18 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
 
     return found ? tx(found.label.fr, found.label.en) : id
   }
+  const departmentsCount = (n: number) => tx(`${n} département${n > 1 ? "s" : ""}`, `${n} department${n > 1 ? "s" : ""}`)
   const departmentName = (sector: string, id: string) => activityLabel(sector, id, tx) ?? id
 
   const [open, setOpen] = useState(false)
+  // The sector opened into its own card (one at a time); it closes with the menu.
+  const [expanded, setExpanded] = useState<string | null>(null)
   const menu = usePresence(open, "--dropdown-close-dur")
   const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) setExpanded(null)
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -152,77 +159,181 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
           aria-label={tx("Mes sites", "My sites")}
           data-testid="account-menu"
           data-origin="top-right"
-          className={cn("absolute right-0 top-full z-40 mt-2 w-[26rem] max-w-[calc(100vw-2rem)] rounded-3xl border border-border bg-card p-2.5 shadow-xl t-dropdown", menu.className)}
+          className={cn("absolute right-0 top-full z-40 mt-2 w-[26rem] max-w-[calc(100vw-2rem)] squircle rounded-3xl border border-border bg-card p-2.5 shadow-xl t-dropdown", menu.className)}
         >
           {sites.length === 0 ? (
             <p className="px-3 py-3 text-sm text-muted-foreground">{tx("Aucun site pour l'instant.", "No sites yet.")}</p>
           ) : (
-            <div className="max-h-[min(30rem,70vh)] overflow-y-auto px-0.5">
-              {groups.map((group) => (
-                <section key={group.sector} aria-label={sectorLabel(group.sector)}>
-                  <h4 className="flex items-center gap-2 px-3 pb-1.5 pt-3 text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted-foreground">
-                    <SectorBadge sector={group.sector} size="sm" />
-                    <span data-testid="account-menu-sector">{sectorLabel(group.sector)}</span>
-                  </h4>
+            <div className="max-h-[min(30rem,70vh)] space-y-2 overflow-y-auto px-0.5">
+              {(() => {
+                // The active site sits on top in lime; the rest follow as cards. One sector label carries the
+                // test id for each industry, whichever card shows it first.
+                const seenSector = new Set<string>()
+                const sectorTid = (sector: string) => (seenSector.has(sector) ? undefined : (seenSector.add(sector), "account-menu-sector"))
+                const others = sites.filter((site) => site.id !== active?.id)
+                const count = (site: StoredSite, onLime = false) => (
+                  <span
+                    data-testid="account-menu-count"
+                    className={cn(
+                      "min-w-[1.9rem] shrink-0 rounded-full px-2.5 py-0.5 text-center text-xs font-bold tabular-nums",
+                      (site.alerts ?? 0) > 0
+                        ? "bg-[var(--tag-danger-bg)] text-[var(--tag-danger-fg)]"
+                        : onLime
+                          ? "bg-white/70 text-[#141414]/70"
+                          : "bg-muted text-muted-foreground"
+                    )}
+                  >
+                    {site.alerts ?? 0}
+                  </span>
+                )
+                const chipsFor = (site: StoredSite, isCurrent: boolean) => {
+                  if (!(server && site.configured && site.departments.length > 0)) return null
 
-                  <ul>
-                    {group.sites.map((site) => {
-                      const current = server && site.id === activeId
-                      const chips = server && site.configured && site.departments.length > 0
+                  return (
+                    <div data-testid="account-menu-departments" className="mt-2.5 flex flex-wrap gap-1.5">
+                      {site.departments.map((department) => {
+                        const picked = isCurrent && (activeDepartment ?? site.departments[0]) === department
+
+                        return (
+                          <button
+                            key={department}
+                            type="button"
+                            role="menuitemradio"
+                            aria-checked={picked}
+                            data-testid="account-menu-department-item"
+                            data-department={department}
+                            onClick={() => pick(site, department)}
+                            className={cn(
+                              "min-h-8 rounded-full border px-3 py-1 text-[12.5px] font-semibold transition-colors" + FOCUS_RING,
+                              picked ? "border-foreground bg-foreground text-background" : "border-border bg-card hover:bg-muted"
+                            )}
+                          >
+                            {departmentName(site.sector, department)}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )
+                }
+                const siteButton = (site: StoredSite, isCurrent: boolean, sub?: React.ReactNode) => (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    data-testid="account-menu-site"
+                    data-active={isCurrent ? "" : undefined}
+                    aria-current={isCurrent ? "true" : undefined}
+                    onClick={() => pick(site, null)}
+                    className={"flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left" + FOCUS_RING}
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15.5px] font-bold">{site.name}</span>
+                      {sub ?? (site.location && <span className="block truncate text-xs opacity-65">{site.location}</span>)}
+                    </span>
+                    {count(site, isCurrent)}
+                  </button>
+                )
+
+                return (
+                  <>
+                    {active && (
+                      <div className="squircle rounded-[28px] bg-brand p-4 text-brand-foreground" style={{ borderRadius: 28 }}>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-bold uppercase tracking-[0.1em] opacity-70">{tx("Site actif", "Active site")}</span>
+                          <span className="ml-auto flex items-center gap-1.5 text-xs font-semibold">
+                            <span data-testid={sectorTid(active.sector)}>{sectorLabel(active.sector)}</span>
+                            <SectorBadge sector={active.sector} size="sm" className="rounded-full" />
+                          </span>
+                        </div>
+                        <div className="mt-2 flex items-center">{siteButton(active, true)}</div>
+                        {chipsFor(active, true)}
+                      </div>
+                    )}
+
+                    {others.length > 0 && (
+                      <p className="px-2 pb-0.5 pt-2 text-[11px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                        {active ? tx("Autres sites", "Other sites") : tx("Mes sites", "My sites")}
+                      </p>
+                    )}
+
+                    {others.map((site, index) => {
+                      const sectorSites = others.filter((other) => other.sector === site.sector)
+
+                      if (expanded === site.sector) {
+                        // The whole industry opens as one card, at the place of its first site.
+                        if (others.findIndex((other) => other.sector === site.sector) !== index) return null
+
+                        return (
+                          <section
+                            key={`sector-${site.sector}`}
+                            aria-label={sectorLabel(site.sector)}
+                            className="squircle rounded-[28px] bg-muted p-1.5"
+                            style={{ borderRadius: 28 }}
+                          >
+                            <div className="flex items-center gap-2.5 px-2.5 pb-2 pt-2">
+                              <SectorBadge sector={site.sector} size="md" className="rounded-full" />
+                              <h4 data-testid={sectorTid(site.sector)} className="font-heading text-[15px] font-semibold">
+                                {sectorLabel(site.sector)}
+                              </h4>
+                              <span className="ml-auto text-xs text-muted-foreground">
+                                {tx(`${sectorSites.length} site${sectorSites.length > 1 ? "s" : ""}`, `${sectorSites.length} site${sectorSites.length > 1 ? "s" : ""}`)}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setExpanded(null)}
+                                aria-expanded="true"
+                                aria-label={tx(`Refermer ${sectorLabel(site.sector)}`, `Close ${sectorLabel(site.sector)}`)}
+                                data-testid="account-menu-sector-toggle"
+                                className={"flex h-8 w-8 items-center justify-center rounded-full bg-card" + FOCUS_RING}
+                              >
+                                <ChevronDown className="h-4 w-4 rotate-180" aria-hidden="true" />
+                              </button>
+                            </div>
+
+                            <ul className="space-y-1.5">
+                              {sectorSites.map((one) => (
+                                <li key={one.id} className="squircle rounded-[22px] bg-card p-3" style={{ borderRadius: 22 }}>
+                                  <div className="flex items-center">{siteButton(one, false)}</div>
+                                  {chipsFor(one, false)}
+                                </li>
+                              ))}
+                            </ul>
+                          </section>
+                        )
+                      }
 
                       return (
-                        <li key={site.id} className={cn("rounded-2xl p-3", current && "bg-accent/20 ring-[1.5px] ring-inset ring-foreground")}>
+                        <div
+                          key={site.id}
+                          className="squircle flex items-center gap-2 rounded-[24px] border border-border bg-card p-3"
+                          style={{ borderRadius: 24 }}
+                        >
+                          <SectorBadge sector={site.sector} size="md" className="rounded-full" />
+                          <div className="flex min-w-0 flex-1 items-center">
+                            {siteButton(
+                              site,
+                              false,
+                              <span className="block truncate text-xs opacity-65">
+                                <span data-testid={sectorTid(site.sector)}>{sectorLabel(site.sector)}</span>
+                                {site.departments.length > 0 && ` · ${departmentsCount(site.departments.length)}`}
+                              </span>
+                            )}
+                          </div>
                           <button
                             type="button"
-                            role="menuitem"
-                            data-testid="account-menu-site"
-                            data-active={current ? "" : undefined}
-                            aria-current={current ? "true" : undefined}
-                            onClick={() => pick(site, null)}
-                            className={"flex w-full items-center gap-2 rounded-lg text-left" + FOCUS_RING}
+                            onClick={() => setExpanded(site.sector)}
+                            aria-expanded="false"
+                            aria-label={tx(`Ouvrir ${sectorLabel(site.sector)}`, `Open ${sectorLabel(site.sector)}`)}
+                            data-testid="account-menu-sector-toggle"
+                            className={"flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted" + FOCUS_RING}
                           >
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-[15px] font-semibold">{site.name}</span>
-                              {site.location && <span className="block truncate text-xs text-muted-foreground">{site.location}</span>}
-                            </span>
-                            <span data-testid="account-menu-count" className="shrink-0 rounded-full bg-muted px-2.5 py-0.5 text-xs font-bold tabular-nums text-muted-foreground">
-                              {site.alerts ?? 0}
-                            </span>
+                            <ChevronRight className="h-4 w-4" aria-hidden="true" />
                           </button>
-
-                          {chips && (
-                            <div data-testid="account-menu-departments" className="mt-2.5 flex flex-wrap gap-1.5">
-                              {site.departments.map((department) => {
-                                const picked = current && (activeDepartment ?? site.departments[0]) === department
-
-                                return (
-                                  <button
-                                    key={department}
-                                    type="button"
-                                    role="menuitemradio"
-                                    aria-checked={picked}
-                                    data-testid="account-menu-department-item"
-                                    data-department={department}
-                                    onClick={() => pick(site, department)}
-                                    className={cn(
-                                      "min-h-8 rounded-full border px-3 py-1 text-[12.5px] font-semibold transition-colors" + FOCUS_RING,
-                                      picked
-                                        ? "border-foreground bg-foreground text-background"
-                                        : "border-border bg-card hover:bg-muted"
-                                    )}
-                                  >
-                                    {departmentName(site.sector, department)}
-                                  </button>
-                                )
-                              })}
-                            </div>
-                          )}
-                        </li>
+                        </div>
                       )
                     })}
-                  </ul>
-                </section>
-              ))}
+                  </>
+                )
+              })()}
             </div>
           )}
 
