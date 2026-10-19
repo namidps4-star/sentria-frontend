@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Search, Bell, Menu, X, ArrowRight, TriangleAlert } from "@/lib/icons"
+import { Search, Bell, Menu, X, ArrowRight } from "@/lib/icons"
 
 import { formatInCompanyZone } from "@/lib/company"
 import { useT, useTx } from "@/lib/i18n"
@@ -24,6 +24,32 @@ export type Notification = {
 
 const FOCUS_RING =
   " focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+
+/** Sector tag colours: pastel tokens, neutral for a sector with none. */
+function sectorTag(sector: string): string {
+  if (sector === "health") return "bg-[var(--tag-success-bg)] text-[var(--tag-success-fg)]"
+  if (sector === "industry") return "bg-[var(--tag-warning-bg)] text-[var(--tag-warning-fg)]"
+  if (sector === "logistics") return "bg-[var(--tag-info-bg)] text-[var(--tag-info-fg)]"
+  return "bg-[var(--tag-neutral-bg)] text-[var(--tag-neutral-fg)]"
+}
+
+/** "12 min ago" for a recent alert, a date once it is older than two days. */
+function agoLabel(date: string, tx: (fr: string, en: string) => string): string {
+  const at = Date.parse(date)
+
+  if (!Number.isFinite(at)) return ""
+
+  const min = Math.max(0, Math.round((Date.now() - at) / 60000))
+
+  if (min < 60) return tx(`il y a ${Math.max(1, min)} min`, `${Math.max(1, min)} min ago`)
+
+  const h = Math.round(min / 60)
+
+  if (h < 24) return tx(`il y a ${h} h`, `${h} h ago`)
+  if (h < 48) return tx("Hier", "Yesterday")
+
+  return formatInCompanyZone(date, tx)
+}
 
 export function Topbar({
   title,
@@ -200,41 +226,42 @@ export function Topbar({
           role="dialog"
           aria-label={tx("Alertes critiques", "Critical alerts")}
           data-origin="top-right"
-          className={cn("absolute right-0 top-full z-40 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] max-sm:fixed max-sm:inset-x-4 max-sm:w-auto max-sm:max-w-none squircle rounded-[26px] border border-border bg-card p-2 shadow-xl t-dropdown", bell.className)}
+          className={cn("absolute right-0 top-full z-40 mt-2 w-[23rem] max-w-[calc(100vw-2rem)] max-sm:fixed max-sm:inset-x-4 max-sm:w-auto max-sm:max-w-none squircle rounded-[30px] border border-border bg-card p-2.5 shadow-xl t-dropdown", bell.className)}
         >
-          <div className="squircle flex items-center gap-3 rounded-[20px] bg-foreground px-4 py-3.5 text-background">
-            <span data-bell-count="" className="font-heading text-3xl font-bold leading-none text-accent">
-              {notifications.length}
-            </span>
-            <span className="text-sm font-semibold leading-tight">
-              {notifications.length === 1
-                ? tx("chose demande votre action", "thing needs your action")
-                : tx("choses demandent votre action", "things need your action")}
-            </span>
-          </div>
-
-          {sectorCounts.length > 1 && (
-            <div className="flex flex-wrap gap-1.5 px-1.5 pb-1 pt-2.5">
-              {[["", notifications.length] as const, ...sectorCounts].map(([id, count]) => (
-                <button
-                  key={id || "all"}
-                  type="button"
-                  data-bell-chip={id || "all"}
-                  aria-pressed={bellSector === id}
-                  onClick={() => setBellSector(id)}
-                  className={cn(
-                    "rounded-full border px-3 py-1 text-xs font-bold transition-colors",
-                    bellSector === id
-                      ? "border-accent bg-accent text-accent-foreground"
-                      : "border-border bg-muted text-foreground hover:bg-muted/70"
-                  )}
-                >
-                  {id ? sectorLabel(id, tx) : tx("Tout", "All")}
-                  <span className="ml-1.5 opacity-70">{count}</span>
-                </button>
-              ))}
+          <div className="squircle rounded-[22px] bg-accent px-[18px] pb-4 pt-[18px] text-accent-foreground">
+            <div className="flex items-center gap-3">
+              <span data-bell-count="" className="font-heading text-[38px] font-bold leading-none">
+                {notifications.length}
+              </span>
+              <span className="text-sm font-bold leading-tight">
+                {notifications.length === 1
+                  ? tx("alerte critique à traiter", "critical alert to handle")
+                  : tx("alertes critiques à traiter", "critical alerts to handle")}
+              </span>
             </div>
-          )}
+
+            {sectorCounts.length > 1 && (
+              <div className="mt-3.5 flex flex-wrap gap-1.5">
+                {[["", notifications.length] as const, ...sectorCounts].map(([id, count]) => (
+                  <button
+                    key={id || "all"}
+                    type="button"
+                    data-bell-chip={id || "all"}
+                    aria-pressed={bellSector === id}
+                    onClick={() => setBellSector(id)}
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs font-bold transition-colors",
+                      bellSector === id
+                        ? "bg-accent-foreground text-accent"
+                        : "bg-accent-foreground/10 hover:bg-accent-foreground/20"
+                    )}
+                  >
+                    {id ? sectorLabel(id, tx) : tx("Tout", "All")} {count}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {notificationsUnknown && (
             <p
@@ -258,26 +285,34 @@ export function Topbar({
               </p>
             )
           ) : (
-            <ul className="mt-1 max-h-80 overflow-y-auto">
+            <ul className="mt-2 flex max-h-80 flex-col gap-2 overflow-y-auto">
               {shown.slice(0, 8).map((n) => (
                 <li key={n.key}>
                   <button
                     type="button"
                     onClick={openTracking}
-                    className="flex w-full items-start gap-3 rounded-2xl p-2.5 text-left transition-colors hover:bg-muted"
+                    className={"flex w-full items-center gap-3 rounded-[20px] bg-muted px-4 py-3.5 text-left transition-colors hover:bg-muted/70" + FOCUS_RING}
                   >
-                    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--tag-danger-bg)] text-[var(--tag-danger-fg)]">
-                      <TriangleAlert className="h-[18px] w-[18px]" aria-hidden="true" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="line-clamp-2 block text-[15px] font-semibold leading-snug">
+                    <span className="flex min-w-0 flex-1 flex-col gap-2">
+                      <span className="flex flex-wrap items-center gap-1.5">
+                        <span className="rounded-full bg-[var(--tag-danger-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--tag-danger-fg)]">
+                          {tx("Critique", "Critical")}
+                        </span>
+                        {n.sector && (
+                          <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-bold", sectorTag(n.sector))}>
+                            {sectorLabel(n.sector, tx)}
+                          </span>
+                        )}
+                        <span className="ml-1 text-xs font-semibold text-muted-foreground">
+                          {agoLabel(n.date, tx)}
+                        </span>
+                      </span>
+                      <span className="line-clamp-2 text-base font-bold leading-snug">
                         {n.message || n.equipment}
                       </span>
-                      <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">
-                        {n.message ? `${n.equipment} · ` : ""}
-                        {n.sector ? `${sectorLabel(n.sector, tx)} · ` : ""}
-                        {formatInCompanyZone(n.date, tx)}
-                      </span>
+                    </span>
+                    <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-card" aria-hidden="true">
+                      <ArrowRight className="h-4 w-4" />
                     </span>
                   </button>
                 </li>
@@ -288,10 +323,9 @@ export function Topbar({
           <button
             type="button"
             onClick={openTracking}
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl px-3 pb-1.5 pt-2.5 text-[13px] font-bold transition-opacity hover:opacity-70"
+            className={"mt-2 flex w-full items-center justify-center rounded-full border border-border px-3 py-3 text-sm font-bold transition-colors hover:bg-muted" + FOCUS_RING}
           >
             {tx("Tout voir dans le suivi", "See all in tracking")}
-            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
         </div>
       )}

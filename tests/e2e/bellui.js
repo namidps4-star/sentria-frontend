@@ -40,9 +40,11 @@ const LS = { sentria_sector: 'health', sentria_sectors: '["industry","health"]',
   console.log('== desktop, light');
   let x = await open();
   pass((await x.dlg.locator('[data-bell-count]').innerText()).trim() === '3', 'header counts 3');
-  pass(/things need your action/.test(await x.dlg.innerText()), 'plain header sentence');
+  pass(/critical alerts to handle/.test(await x.dlg.innerText()), 'header sentence');
   pass(await x.dlg.locator('li').count() === 3, 'one row per alert');
   pass(/Fridge 2 is too hot/.test(await x.dlg.innerText()), 'the row says the problem first');
+  pass(/12 min ago/.test(await x.dlg.innerText()) && !/\d{2}\/\d{2}\/\d{4}/.test(await x.dlg.locator('li').first().innerText()), 'a recent alert reads "12 min ago", not a date');
+  pass(await x.dlg.locator('li').first().getByText('Critical', { exact: true }).count() === 1, 'each row carries a Critical tag');
   pass(await x.dlg.locator('[data-bell-chip]').count() === 3, 'chips: All, Health, Industry');
   await x.dlg.locator('[data-bell-chip="health"]').click();
   pass(await x.dlg.locator('li').count() === 2 && (await x.dlg.locator('[data-bell-count]').innerText()).trim() === '3', 'Health chip filters to 2 rows, total stays 3');
@@ -60,12 +62,12 @@ const LS = { sentria_sector: 'health', sentria_sectors: '["industry","health"]',
   console.log('== one sector only: no chips');
   x = await open({ rows: ROWS.slice(0, 2) });
   pass(await x.dlg.locator('[data-bell-chip]').count() === 0, 'a single sector shows no chips');
-  pass(/things need/.test(await x.dlg.innerText()), 'count 2 still plural');
+  pass(/critical alerts to handle/.test(await x.dlg.innerText()), 'count 2 plural');
   await x.ctx.close();
 
   console.log('== one alert: singular');
   x = await open({ rows: ROWS.slice(0, 1) });
-  pass(/thing needs your action/.test(await x.dlg.innerText()), 'singular sentence');
+  pass(/critical alert to handle/.test(await x.dlg.innerText()), 'singular sentence');
   await x.ctx.close();
 
   console.log('== dark');
