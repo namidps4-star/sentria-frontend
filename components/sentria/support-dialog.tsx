@@ -203,7 +203,7 @@ function SupportBody({
         data-support=""
         style={{ borderRadius: 32 }}
         className={cn(
-          "max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto squircle rounded-[32px] border border-border bg-card p-2 shadow-2xl t-modal",
+          "max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto sm:max-w-2xl squircle rounded-[32px] border border-border bg-card p-2 shadow-2xl t-modal",
           className
         )}
       >
@@ -240,62 +240,71 @@ function SupportBody({
           </div>
         ) : (
           <form
+            className="sm:grid sm:grid-cols-[15rem_1fr]"
             onSubmit={(event) => {
               event.preventDefault()
               void send()
             }}
           >
-            <div className="squircle rounded-[26px] bg-brand p-4 text-brand-foreground" style={{ borderRadius: 26 }}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--ink)] text-white">
-                    <MessageSquare className="h-5 w-5" aria-hidden="true" />
-                  </span>
+            <div className="squircle relative flex flex-col justify-between gap-4 rounded-[26px] bg-brand p-5 text-brand-foreground sm:min-h-[22rem]" style={{ borderRadius: 26 }}>
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={sending}
+                aria-label={tx("Fermer", "Close")}
+                className="absolute right-3 top-3 z-10 flex sm:hidden h-8 w-8 items-center justify-center rounded-full bg-[var(--ink)] text-white transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
 
-                  <div>
-                    <h3 id="support-title" className="font-heading text-lg font-bold">
-                      {tx("Comment pouvons-nous aider ?", "How can we help?")}
-                    </h3>
+              <div>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--ink)] px-3 py-1 text-xs font-semibold text-white">
+                  <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
+                  {tx("Aide et retours", "Help & feedback")}
+                </span>
 
-                    <p className="mt-0.5 text-sm leading-5 opacity-80">
-                      {tx(
-                        "Un bug, une idée ou une question. Le message part directement à l'équipe.",
-                        "A bug, an idea or a question. It goes straight to the team."
-                      )}
-                    </p>
-                  </div>
-                </div>
+                <h3 id="support-title" className="mt-3 font-heading text-2xl font-extrabold leading-tight">
+                  {tx("Comment pouvons-nous aider ?", "How can we help?")}
+                </h3>
 
-                <button
-                  type="button"
-                  onClick={onClose}
-                  disabled={sending}
-                  aria-label={tx("Fermer", "Close")}
-                  className="-mr-1 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed"
-                >
-                  <X className="h-4 w-4" aria-hidden="true" />
-                </button>
+                <p className="mt-2 text-sm leading-5 opacity-80">
+                  {tx(
+                    "Un bug, une idée ou une question. Le message part directement à l'équipe.",
+                    "A bug, an idea or a question. It goes straight to the team."
+                  )}
+                </p>
               </div>
-            </div>
 
-            <div className="px-3 pb-3 pt-3">
             {onStartTour && (
               <button
                 type="button"
                 onClick={onStartTour}
                 disabled={sending}
                 data-tour-open=""
-                className="inline-flex items-center gap-2 rounded-full bg-[var(--ink)] px-3.5 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-[#141414] transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed"
               >
                 <Play className="h-3.5 w-3.5" aria-hidden="true" />
                 {tx("Visite guidée", "Take the tour")}
               </button>
             )}
 
+            </div>
+
+            <div className="relative px-3 pb-3 pt-3 sm:pr-4 sm:pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={sending}
+                aria-label={tx("Fermer", "Close")}
+                className="absolute right-3 top-3 z-10 hidden sm:flex h-8 w-8 items-center justify-center rounded-full bg-[var(--ink)] text-white transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+
             <div
               role="radiogroup"
               aria-label={tx("Type de message", "Type of message")}
-              className="mt-3 grid grid-cols-3 gap-2"
+              className="grid grid-cols-3 gap-2 sm:pr-10"
             >
               {SUPPORT_KINDS.map((value) => {
                 const chosen = kind === value
