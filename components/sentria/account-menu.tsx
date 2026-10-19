@@ -98,7 +98,7 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
 
   const face = (
     <>
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold" style={{ background: "var(--tag-warning-fg)", color: "var(--tag-warning-bg)" }}>
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand text-xs font-bold text-brand-foreground">
         {companyName ? initialsOf(companyName) : <User className="h-3.5 w-3.5" aria-hidden="true" />}
       </span>
 
@@ -143,8 +143,7 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
         aria-haspopup="menu"
         aria-label={active ? `${label}, ${tx("site", "site")} ${active.name}` : label}
         data-testid="account-menu-button"
-        className={"flex items-center gap-2 rounded-xl border py-1.5 pl-1.5 pr-2.5 transition-opacity hover:opacity-80" + FOCUS_RING}
-        style={{ background: "var(--tag-warning-bg)", borderColor: "var(--tag-warning-bd)", color: "var(--tag-warning-fg)" }}
+        className={"flex items-center gap-2 rounded-xl border border-brand bg-brand/10 py-1.5 pl-1.5 pr-2.5 transition-colors hover:bg-brand/20" + FOCUS_RING}
       >
         {face}
 
