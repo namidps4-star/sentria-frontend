@@ -13,6 +13,7 @@ import {
   type SupportFailure,
   type SupportKind,
 } from "@/lib/support"
+import { PLAN_NAMES, readAccountPlan } from "@/lib/plans"
 import { usePresence } from "@/lib/use-presence"
 import { cn } from "@/lib/utils"
 
@@ -56,12 +57,31 @@ const KIND_LABEL: Record<SupportKind, [string, string]> = {
 }
 
 const KIND_ICON = { bug: AlertTriangle, idea: Sparkles, question: MessageSquare }
-const KIND_TONE: Record<SupportKind, string> = { bug: "danger", idea: "warning", question: "info" }
 
 const KIND_HINT: Record<SupportKind, [string, string]> = {
   bug: ["Que s'est-il passé, et qu'attendiez-vous ?", "What happened, and what did you expect?"],
   idea: ["Qu'aimeriez-vous pouvoir faire ?", "What would you like to be able to do?"],
   question: ["Que voulez-vous savoir ?", "What would you like to know?"],
+}
+
+/** What goes with the message, said back to the person: the company, the
+ *  plan and the page. The API reads the first two from the sign-in; this is
+ *  only the same facts shown, so a missing one is left out. */
+function attachedTags(pageLabel: string): string[] {
+  const tags: string[] = []
+
+  try {
+    const company = localStorage.getItem("sentria_company_name")?.trim()
+    if (company) tags.push(company)
+
+    tags.push(PLAN_NAMES[readAccountPlan().effective])
+  } catch {
+    /* no storage: the page alone */
+  }
+
+  tags.push(pageLabel)
+
+  return tags
 }
 
 /** "12 min", or "3 h" when it is long. */
@@ -157,6 +177,8 @@ function SupportBody({
 
   const trimmed = message.trim()
   const ready = trimmed.length >= SUPPORT_MIN_CHARS && !sending
+  const missing = message.length > 0 ? Math.max(0, SUPPORT_MIN_CHARS - trimmed.length) : 0
+  const tags = attachedTags(pageLabel)
   // A stray click on the backdrop must not lose a message that was not sent.
   const keepOpen = sending || (message.length > 0 && !sent)
 
@@ -203,7 +225,7 @@ function SupportBody({
         data-support=""
         style={{ borderRadius: 32 }}
         className={cn(
-          "max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto sm:max-w-2xl squircle rounded-[32px] border border-border bg-card p-2 shadow-2xl t-modal",
+          "max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto squircle rounded-[32px] border border-border bg-card p-2 shadow-2xl t-modal",
           className
         )}
       >
@@ -240,166 +262,177 @@ function SupportBody({
           </div>
         ) : (
           <form
-            className="sm:grid sm:grid-cols-[15rem_1fr]"
             onSubmit={(event) => {
               event.preventDefault()
               void send()
             }}
           >
-            <div className="squircle relative flex flex-col justify-between gap-4 rounded-[26px] bg-brand p-5 text-brand-foreground sm:min-h-[22rem]" style={{ borderRadius: 26 }}>
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={sending}
-                aria-label={tx("Fermer", "Close")}
-                className="absolute right-3 top-3 z-10 flex sm:hidden h-8 w-8 items-center justify-center rounded-full bg-[var(--ink)] text-white transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed"
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
-
-              <div>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--ink)] px-3 py-1 text-xs font-semibold text-white">
-                  <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
-                  {tx("Aide et retours", "Help & feedback")}
+            {/* The black header holds the title, the type switch and the tour. */}
+            <div className="squircle rounded-[26px] bg-[var(--ink)] p-4 text-white" style={{ borderRadius: 26 }}>
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand text-brand-foreground">
+                  <MessageSquare className="h-5 w-5" aria-hidden="true" />
                 </span>
 
-                <h3 id="support-title" className="mt-3 font-heading text-2xl font-extrabold leading-tight">
-                  {tx("Comment pouvons-nous aider ?", "How can we help?")}
-                </h3>
+                <div className="min-w-0 flex-1">
+                  <h3 id="support-title" className="font-heading text-lg font-bold leading-tight">
+                    {tx("Comment pouvons-nous aider ?", "How can we help?")}
+                  </h3>
 
-                <p className="mt-2 text-sm leading-5 opacity-80">
-                  {tx(
-                    "Un bug, une idée ou une question. Le message part directement à l'équipe.",
-                    "A bug, an idea or a question. It goes straight to the team."
-                  )}
-                </p>
+                  <p className="mt-0.5 text-[13px] leading-5 text-white/65">
+                    {tx(
+                      "Un bug, une idée ou une question. Le message part directement à l'équipe.",
+                      "A bug, an idea or a question. It goes straight to the team."
+                    )}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={sending}
+                  aria-label={tx("Fermer", "Close")}
+                  className="-mr-1 -mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-white/80 transition-colors hover:bg-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed"
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </button>
               </div>
 
-            {onStartTour && (
-              <button
-                type="button"
-                onClick={onStartTour}
-                disabled={sending}
-                data-tour-open=""
-                className="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-[#141414] transition-opacity hover:opacity-85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed"
+              <div
+                role="radiogroup"
+                aria-label={tx("Type de message", "Type of message")}
+                className="mt-4 grid grid-cols-3 gap-1 rounded-full bg-white/10 p-1"
               >
-                <Play className="h-3.5 w-3.5" aria-hidden="true" />
-                {tx("Visite guidée", "Take the tour")}
-              </button>
-            )}
+                {SUPPORT_KINDS.map((value) => {
+                  const chosen = kind === value
+                  const Icon = KIND_ICON[value]
 
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      role="radio"
+                      aria-checked={chosen}
+                      data-support-kind={value}
+                      onClick={() => setKind(value)}
+                      className={cn(
+                        "flex items-center justify-center gap-1.5 rounded-full px-2 py-2 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand",
+                        chosen ? "bg-brand text-brand-foreground" : "text-white/70 hover:bg-white/10 hover:text-white"
+                      )}
+                    >
+                      <Icon className="h-4 w-4" aria-hidden="true" />
+                      {tx(...KIND_LABEL[value])}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {onStartTour && (
+                <button
+                  type="button"
+                  onClick={onStartTour}
+                  disabled={sending}
+                  data-tour-open=""
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/20 px-3 py-1.5 text-xs font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed"
+                >
+                  <Play className="h-3.5 w-3.5" aria-hidden="true" />
+                  {tx("Visite guidée", "Take the tour")}
+                </button>
+              )}
             </div>
 
-            <div className="relative px-3 pb-3 pt-3 sm:pr-4 sm:pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={sending}
-                aria-label={tx("Fermer", "Close")}
-                className="absolute right-3 top-3 z-10 hidden sm:flex h-8 w-8 items-center justify-center rounded-full bg-[var(--ink)] text-white transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed"
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
+            <div className="px-2 pb-2 pt-4 sm:px-3">
+              <label htmlFor="support-message" className="sr-only">
+                {tx("Votre message", "Your message")}
+              </label>
 
-            <div
-              role="radiogroup"
-              aria-label={tx("Type de message", "Type of message")}
-              className="grid grid-cols-3 gap-2 sm:pr-10"
-            >
-              {SUPPORT_KINDS.map((value) => {
-                const chosen = kind === value
-                const Icon = KIND_ICON[value]
-                const tone = KIND_TONE[value]
+              <div className="relative">
+                <textarea
+                  id="support-message"
+                  autoFocus
+                  rows={5}
+                  value={message}
+                  maxLength={SUPPORT_MAX_CHARS}
+                  readOnly={sending}
+                  placeholder={tx(...KIND_HINT[kind])}
+                  onChange={(event) => {
+                    setMessage(event.target.value)
+                    if (problem) setProblem("")
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                      event.preventDefault()
+                      void send()
+                    }
+                  }}
+                  className="block w-full resize-none rounded-2xl border border-border bg-muted px-4 pb-8 pt-3 text-sm leading-6 text-foreground placeholder:text-muted-foreground focus-visible:border-brand focus-visible:outline-none focus-visible:ring-0"
+                />
 
-                return (
-                  <button
-                    key={value}
-                    type="button"
-                    role="radio"
-                    aria-checked={chosen}
-                    data-support-kind={value}
-                    onClick={() => setKind(value)}
-                    style={chosen ? { background: `var(--tag-${tone}-bg)`, borderColor: `var(--tag-${tone}-fg)`, color: `var(--tag-${tone}-fg)` } : undefined}
-                    className={cn(
-                      "flex flex-col items-center gap-1.5 rounded-2xl border px-2 py-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      chosen ? "" : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                    )}
-                  >
-                    <Icon className="h-5 w-5" aria-hidden="true" />
-                    {tx(...KIND_LABEL[value])}
-                  </button>
-                )
-              })}
-            </div>
+                <span
+                  data-support-count=""
+                  className="pointer-events-none absolute bottom-2.5 right-4 text-[11px] tabular-nums text-muted-foreground"
+                >
+                  {message.length}/{SUPPORT_MAX_CHARS}
+                </span>
+              </div>
 
-            <label htmlFor="support-message" className="mt-4 block text-xs font-semibold text-muted-foreground">
-              {tx("Votre message", "Your message")}
-            </label>
-
-            <textarea
-              id="support-message"
-              autoFocus
-              rows={5}
-              value={message}
-              maxLength={SUPPORT_MAX_CHARS}
-              readOnly={sending}
-              placeholder={tx(...KIND_HINT[kind])}
-              onChange={(event) => {
-                setMessage(event.target.value)
-                if (problem) setProblem("")
-              }}
-              className="mt-1.5 block w-full resize-none rounded-2xl border border-border bg-muted px-4 py-3 text-sm leading-6 text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-
-            <div className="mt-1.5 flex items-start justify-between gap-3 text-[11px] leading-4 text-muted-foreground">
-              <span>
-                {tx(
-                  `Nous joignons votre entreprise, votre offre et cette page (${pageLabel}) pour aller plus vite.`,
-                  `We attach your company, your plan and this page (${pageLabel}) so we can help faster.`
-                )}
-              </span>
-
-              <span data-support-count="" className="shrink-0 tabular-nums">
-                {message.length}/{SUPPORT_MAX_CHARS}
-              </span>
-            </div>
-
-            {problem && (
-              <p
-                role="alert"
-                data-support-problem=""
-                className="mt-3 flex items-start gap-2 rounded-2xl border border-destructive/30 bg-destructive/[0.06] px-4 py-3 text-xs leading-5 text-destructive"
-              >
-                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                {problem}
+              <p className="mt-1.5 min-h-4 text-[11px] leading-4 text-muted-foreground" aria-live="polite">
+                {missing > 0
+                  ? tx(`Encore ${missing} caractère${missing > 1 ? "s" : ""} pour pouvoir envoyer.`, `${missing} more character${missing > 1 ? "s" : ""} to send.`)
+                  : ""}
               </p>
-            )}
 
-            <div className="mt-5 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={sending}
-                data-support-cancel=""
-                className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed"
-              >
-                {tx("Annuler", "Cancel")}
-              </button>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground" data-support-attached="">
+                <span>{tx("Nous joignons :", "We attach:")}</span>
+                {tags.map((tag, index) => (
+                  <span key={`${tag}-${index}`} className="rounded-full bg-muted px-2.5 py-1 font-medium text-foreground/80">
+                    {tag}
+                  </span>
+                ))}
+              </div>
 
-              <button
-                type="submit"
-                disabled={!ready}
-                data-support-send=""
-                className="inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {sending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                ) : (
-                  <Send className="h-4 w-4" aria-hidden="true" />
-                )}
-                {sending ? tx("Envoi…", "Sending…") : tx("Envoyer", "Send")}
-              </button>
-            </div>
+              {problem && (
+                <p
+                  role="alert"
+                  data-support-problem=""
+                  className="mt-3 flex items-start gap-2 rounded-2xl border border-destructive/30 bg-destructive/[0.06] px-4 py-3 text-xs leading-5 text-destructive"
+                >
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  {problem}
+                </p>
+              )}
+
+              <div className="mt-4 flex items-center justify-between gap-2">
+                <span className="hidden text-[11px] text-muted-foreground sm:inline">
+                  {tx("Ctrl + Entrée pour envoyer", "Ctrl + Enter to send")}
+                </span>
+
+                <div className="ml-auto flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    disabled={sending}
+                    data-support-cancel=""
+                    className="rounded-full bg-muted px-4 py-2 text-sm font-semibold text-foreground/80 transition-colors hover:bg-muted/70 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed"
+                  >
+                    {tx("Annuler", "Cancel")}
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={!ready}
+                    data-support-send=""
+                    className="inline-flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {sending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Send className="h-4 w-4" aria-hidden="true" />
+                    )}
+                    {sending ? tx("Envoi…", "Sending…") : tx("Envoyer", "Send")}
+                  </button>
+                </div>
+              </div>
             </div>
           </form>
         )}

@@ -81,7 +81,9 @@ const EXPOSE = { 'access-control-expose-headers': 'Retry-After' };
     pass(await p.evaluate(() => document.activeElement?.id) === 'support-message', 'the cursor is already in the message box');
     pass(await sendBtn(p).isDisabled(), 'Send is off while the box is empty');
     pass((await p.locator('[data-support-count]').innerText()).trim() === '0/2000', 'the counter starts at 0/2000');
-    pass(/We attach your company, your plan and this page \(Dashboard\)/.test(await card(p).innerText()), 'it says what is attached, with this page named: Dashboard');
+    { const att = p.locator('[data-support-attached]'); const tags = (await att.innerText()).replace(/\s+/g, ' ');
+      pass(/^We attach:/.test(tags) && /Dashboard/.test(tags), 'it says what is attached, as tags, with this page named: ' + tags);
+      pass(/Acme/.test(tags) && /(Découverte|Pro|Business|Entreprise)/.test(tags), 'and the company and the plan: ' + tags); }
     pass(await box(p).getAttribute('maxlength') === '2000', 'the box stops at 2000 characters, the API limit');
     await p.screenshot({ path: 'support-light.png' });
 
@@ -149,7 +151,7 @@ const EXPOSE = { 'access-control-expose-headers': 'Retry-After' };
     console.log('== the page sent follows the view');
     await p.locator('aside nav button', { hasText: 'Tracking' }).first().click(); await p.waitForTimeout(900);
     await show(p);
-    pass(/this page \(Tracking\)/.test(await card(p).innerText()), 'the note names the page: Tracking');
+    pass(/Tracking/.test(await p.locator('[data-support-attached]').innerText()), 'the tags name the page: Tracking');
     await type(p, 'A question about tracking'); await go(p);
     pass(p._posts.at(-1)?.body.page === 'tracking', 'page: tracking');
     await p.locator('[data-support-close]').click(); await p.waitForTimeout(450);
@@ -272,7 +274,7 @@ const EXPOSE = { 'access-control-expose-headers': 'Retry-After' };
     pass(/Comment pouvons-nous aider \?/.test(t) && /Un bug, une idée ou une question\./.test(t), 'title and intro are in French');
     pass((await card(p).getByRole('radio').allInnerTexts()).join('|') === 'Problème|Idée|Question', 'the kinds: Problème, Idée, Question');
     pass(/Votre message/.test(t) && /Annuler/.test(t) && /Envoyer/.test(t), 'label and both buttons are in French');
-    pass(/Nous joignons votre entreprise, votre offre et cette page \(Dashboard\)/.test(t), 'the attachment note is in French');
+    pass(/Nous joignons :/.test(await p.locator('[data-support-attached]').innerText()), 'the attachment line is in French');
     pass(await box(p).getAttribute('placeholder') === "Que s'est-il passé, et qu'attendiez-vous ?", 'the hint is in French');
     await type(p, 'La courbe est vide'); await go(p);
     pass(p._posts[0]?.body.language === 'fr', 'language: fr');
@@ -333,6 +335,22 @@ const EXPOSE = { 'access-control-expose-headers': 'Retry-After' };
     pass(await p.locator('[data-support-done]').count() === 1, '390 px: sent');
     await p.locator('[data-support-close]').click(); await p.waitForTimeout(450);
     pass(await card(p).count() === 0 && p._errors.length === 0, '390 px: closes, no page errors ' + p._errors.join('|'));
+    await ctx.close(); }
+
+  console.log('== the black header, the short-message hint and Ctrl+Enter');
+  { const { p, ctx } = await open({ reply: OK });
+    await entry(p).click(); await p.waitForTimeout(500);
+    const head = await p.evaluate(() => { const form = document.querySelector('[data-support] form'); const h = form.firstElementChild; const c = getComputedStyle(h).backgroundColor; return { c, hasTitle: !!h.querySelector('#support-title'), hasKinds: !!h.querySelector('[role=radiogroup]'), hasTour: !!h.querySelector('[data-tour-open]') || true }; });
+    pass(/rgb\(20, 20, 20\)/.test(head.c) && head.hasTitle && head.hasKinds, 'the header is black and holds the title and the type switch: ' + head.c);
+    await p.locator('#support-message').fill('ab'); await p.waitForTimeout(150);
+    pass(/3 more characters to send/.test(await card(p).innerText()), 'a short message says how many more characters it needs');
+    pass(await sendBtn(p).isDisabled(), 'and Send stays off');
+    await p.locator('#support-message').fill('abcde'); await p.waitForTimeout(150);
+    pass(!/more character/.test(await card(p).innerText()) && !(await sendBtn(p).isDisabled()), 'five characters: the hint goes and Send is on');
+    await p.locator('#support-message').fill('Something is wrong with the fridge alerts'); await p.waitForTimeout(100);
+    await p.locator('#support-message').press('Control+Enter'); await p.waitForTimeout(700);
+    pass(p._posts.length === 1 && await p.locator('[data-support-done]').count() === 1, 'Ctrl+Enter sends it');
+    pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
     await ctx.close(); }
 
   await browser.close();
