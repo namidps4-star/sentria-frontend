@@ -200,12 +200,15 @@ export function GuideBuddy({ open, onClose }: { open: boolean; onClose: () => vo
 
   return (
     <div className="fixed inset-0 z-[80]" data-testid="guide-buddy" data-step={step.id} data-pose={step.pose}>
-      {/* No backdrop on pointing steps, so the ringed item stays clear and the page stays usable. */}
+      {/* Hello and goodbye dim the page behind the card. A pointing step dims it through the ring's
+          own shadow, so the item it points at stays lit; on a phone there is no ring, so the page
+          is dimmed here. Neither blocks a click, so the page stays usable. */}
       {centred && <div className="absolute inset-0 bg-black/35" onClick={finish} aria-hidden="true" />}
+      {narrow && <div className="pointer-events-none absolute inset-0 bg-black/30" aria-hidden="true" />}
 
       {target && (
         <div
-          className="pointer-events-none absolute rounded-xl ring-2 ring-[color:var(--brand)] ring-offset-2 ring-offset-transparent transition-all duration-300 ease-out"
+          className="pointer-events-none absolute rounded-xl shadow-[0_0_0_9999px_rgba(0,0,0,0.38)] ring-2 ring-[color:var(--brand)] ring-offset-2 ring-offset-transparent transition-all duration-300 ease-out"
           style={{ left: target.left - 2, top: target.top - 2, width: target.width + 4, height: target.height + 4 }}
           data-testid="guide-ring"
           aria-hidden="true"
