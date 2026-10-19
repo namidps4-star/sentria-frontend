@@ -134,10 +134,10 @@ export function DisposalLog() {
             </div>
           </div>
 
-          <div data-testid="disposal-stats" className="grid gap-2 px-3 pt-3 sm:grid-cols-[1.4fr_1fr_1fr]">
+          <div data-testid="disposal-stats" className="grid gap-2 px-3 pt-3 sm:grid-cols-[1.7fr_1fr]">
             <div className="rounded-2xl bg-[#1f1f1d] p-4">
               <p className="text-[11px] font-bold uppercase tracking-wider text-white/55">{tx("6 dernières semaines", "Last 6 weeks")}</p>
-              <div className="mt-2 flex h-20 items-end gap-2">
+              <div className="mt-2 flex h-16 items-end gap-2">
                 {perWeek.map((value, n) => (
                   <div key={weeks[n]} className="flex h-full flex-1 flex-col items-center justify-end gap-1" title={`${new Date(weeks[n]).toLocaleDateString(undefined, { day: "numeric", month: "short" })} · ${money(value)}`}>
                     <span className="text-[10px] font-semibold tabular-nums text-white/70">{value > 0 ? money(value) : ""}</span>
@@ -153,15 +153,21 @@ export function DisposalLog() {
                 ))}
               </div>
             </div>
-            <div className="rounded-2xl bg-[#1f1f1d] p-4">
+            <div className="grid gap-2 sm:grid-rows-2">
+            <div className="flex items-center justify-between gap-3 rounded-2xl bg-[#1f1f1d] px-4 py-3">
               <p className="text-[11px] font-bold uppercase tracking-wider text-white/55">{tx("Moyenne par perte", "Average per loss")}</p>
-              <p className="mt-1 text-2xl font-bold">{money(Math.round(average))}</p>
-              <p className="text-xs text-white/55">{tx(`${rows.length} entrées`, `${rows.length} entries`)}</p>
+              <div className="text-right">
+                <p className="text-2xl font-bold leading-none">{money(Math.round(average))}</p>
+                <p className="mt-1 text-xs text-white/55">{tx(`${rows.length} entrées`, `${rows.length} entries`)}</p>
+              </div>
             </div>
-            <div className="rounded-2xl bg-[#1f1f1d] p-4">
+            <div className="flex items-center justify-between gap-3 rounded-2xl bg-[#1f1f1d] px-4 py-3">
               <p className="text-[11px] font-bold uppercase tracking-wider text-white/55">{tx("Plus grosse perte", "Biggest loss")}</p>
-              <p className="mt-1 truncate text-2xl font-bold">{biggest ? money(biggest.value) : "–"}</p>
-              <p className="truncate text-xs text-white/55">{biggest?.product ?? ""}</p>
+              <div className="min-w-0 text-right">
+                <p className="text-2xl font-bold leading-none">{biggest ? money(biggest.value) : "–"}</p>
+                <p className="mt-1 truncate text-xs text-white/55">{biggest?.product ?? ""}</p>
+              </div>
+            </div>
             </div>
           </div>
 
