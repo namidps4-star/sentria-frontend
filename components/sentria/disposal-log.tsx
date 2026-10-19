@@ -31,6 +31,7 @@ export function DisposalLog() {
   const [log, setLog] = useState<Log | null | undefined>(undefined)
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState<string | null>(null)
+  const [only, setOnly] = useState<DisposalMethod | "all">("all")
   const blank = (): DisposalDraft => ({ product: "", batch: "", qty: "", value: "", method: "pit", disposed_on: today(), currency: currency.code })
   const [draft, setDraft] = useState<DisposalDraft>(blank)
 
@@ -109,20 +110,20 @@ export function DisposalLog() {
             </div>
 
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider opacity-65">{tx("Perdu · 30 jours", "Lost · 30 days")}</p>
+              <p className="text-xs font-bold uppercase tracking-wider opacity-65">{tx("Perdu · 30 jours", "Lost · 30 days")}</p>
               <p className="text-4xl font-extrabold">{money(log.summary.last_30_days_value)}</p>
-              <p className="mt-1 text-[11px] font-bold uppercase tracking-wider opacity-65">{tx("Perdu · total", "Lost · total")} {money(log.summary.total_value)}</p>
+              <p className="mt-1 text-xs font-bold uppercase tracking-wider opacity-65">{tx("Perdu · total", "Lost · total")} {money(log.summary.total_value)}</p>
             </div>
 
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider opacity-65">{tx("Part en fosse", "Share in pits")}</p>
+              <p className="text-xs font-bold uppercase tracking-wider opacity-65">{tx("Part en fosse", "Share in pits")}</p>
               <p className="text-4xl font-extrabold" data-testid="disposal-pit-share">{log.summary.pit_share} %</p>
               <div className="mt-1.5 flex h-3 overflow-hidden rounded-full bg-black/15" aria-hidden="true">
                 {byMethod.map((x) => (
                   <i key={x.m} style={{ width: `${(x.value / methodTotal) * 100}%`, background: METHOD_COLOR[x.m] }} />
                 ))}
               </div>
-              <div className="mt-1.5 flex flex-wrap gap-x-3 text-[11px] font-semibold">
+              <div className="mt-1.5 flex flex-wrap gap-x-3 text-xs font-semibold">
                 {byMethod.map((x) => (
                   <span key={x.m} className="inline-flex items-center gap-1">
                     <i className="h-2 w-2 rounded-full" style={{ background: METHOD_COLOR[x.m] }} />
@@ -133,30 +134,83 @@ export function DisposalLog() {
             </div>
           </div>
 
-          <div data-testid="disposal-stats" className="grid gap-2 px-3 pt-3 sm:grid-cols-[1.4fr_1fr_1fr]">
+          <div data-testid="disposal-stats" className="grid gap-2 px-3 pt-3 sm:grid-cols-[1.7fr_1fr]">
             <div className="rounded-2xl bg-[#1f1f1d] p-4">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-white/55">{tx("6 dernières semaines", "Last 6 weeks")}</p>
-              <div className="mt-2 flex h-16 items-end gap-2" aria-hidden="true">
+              <p className="text-xs font-bold uppercase tracking-wider text-white/55">{tx("6 dernières semaines", "Last 6 weeks")}</p>
+              <div
+                role="img"
+                aria-label={tx("Pertes par semaine : ", "Losses per week: ") + weeks.map((start, n) => `${new Date(start).toLocaleDateString(undefined, { day: "numeric", month: "short" })} ${money(perWeek[n])}`).join(", ")}
+                className="mt-2 flex h-16 items-end gap-2"
+              >
                 {perWeek.map((value, n) => (
-                  <div key={weeks[n]} className="flex-1 rounded-t-lg rounded-b-sm" style={{ height: `${Math.max(6, (value / peak) * 100)}%`, background: value === peak && value > 0 ? "var(--brand)" : "#3a3a37" }} />
+                  <div key={weeks[n]} className="flex h-full flex-1 flex-col items-center justify-end gap-1" title={`${new Date(weeks[n]).toLocaleDateString(undefined, { day: "numeric", month: "short" })} · ${money(value)}`}>
+                    <span className="text-xs font-semibold tabular-nums text-white/75">{value > 0 ? money(value) : ""}</span>
+                    <div className="w-full rounded-t-lg rounded-b-sm" style={{ height: `${Math.max(6, (value / peak) * 70)}%`, background: value === peak && value > 0 ? "var(--brand)" : "#3a3a37" }} />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-1 flex gap-2" aria-hidden="true">
+                {weeks.map((start) => (
+                  <span key={start} className="flex-1 text-center text-xs text-white/60">
+                    {new Date(start).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+                  </span>
                 ))}
               </div>
             </div>
-            <div className="rounded-2xl bg-[#1f1f1d] p-4">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-white/55">{tx("Moyenne par perte", "Average per loss")}</p>
-              <p className="mt-1 text-2xl font-bold">{money(Math.round(average))}</p>
-              <p className="text-xs text-white/55">{tx(`${rows.length} entrées`, `${rows.length} entries`)}</p>
+            <div className="grid gap-2 sm:grid-rows-2">
+            <div className="flex items-center justify-between gap-3 rounded-2xl bg-[#1f1f1d] px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-wider text-white/55">{tx("Moyenne par perte", "Average per loss")}</p>
+              <div className="text-right">
+                <p className="text-2xl font-bold leading-none">{money(Math.round(average))}</p>
+                <p className="mt-1 text-xs text-white/55">{tx(`${rows.length} entrées`, `${rows.length} entries`)}</p>
+              </div>
             </div>
-            <div className="rounded-2xl bg-[#1f1f1d] p-4">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-white/55">{tx("Plus grosse perte", "Biggest loss")}</p>
-              <p className="mt-1 truncate text-2xl font-bold">{biggest ? money(biggest.value) : "–"}</p>
-              <p className="truncate text-xs text-white/55">{biggest?.product ?? ""}</p>
+            <div className="flex items-center justify-between gap-3 rounded-2xl bg-[#1f1f1d] px-4 py-3">
+              <p className="text-xs font-bold uppercase tracking-wider text-white/55">{tx("Plus grosse perte", "Biggest loss")}</p>
+              <div className="min-w-0 text-right">
+                <p className="text-2xl font-bold leading-none">{biggest ? money(biggest.value) : "–"}</p>
+                <p className="mt-1 truncate text-xs text-white/55">{biggest?.product ?? ""}</p>
+              </div>
+            </div>
             </div>
           </div>
 
           <div className="px-3 pb-3 pt-3">
+            {rows.length === 0 && (
+              <p data-testid="disposal-empty" className="mb-3 rounded-2xl border border-dashed border-white/20 px-4 py-4 text-sm text-white/70">
+                {tx("Aucune perte notée. Ajoutez la première ci-dessous.", "No losses logged yet. Add the first one below.")}
+              </p>
+            )}
+
+            {log.summary.pit_share >= 50 && (
+              <p data-testid="disposal-advice" className="mb-3 rounded-2xl bg-brand/15 px-4 py-3 text-sm font-semibold text-brand">
+                {tx(
+                  `${log.summary.pit_share} % des pertes finissent en fosse. Rendre le stock périmé au fournisseur ou le donner peut en récupérer une partie.`,
+                  `${log.summary.pit_share} % of losses end in a pit. Returning expired stock to the supplier, or donating it, can recover part of the cost.`
+                )}
+              </p>
+            )}
+
+            <div className="mb-2 flex flex-wrap gap-1.5" role="group" aria-label={tx("Filtrer par méthode", "Filter by method")}>
+              {(["all", ...DISPOSAL_METHODS] as const).filter((m) => m === "all" || rows.some((r) => r.method === m)).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  data-testid={`disposal-filter-${m}`}
+                  aria-pressed={only === m}
+                  onClick={() => setOnly(m)}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    only === m ? "border-transparent bg-brand text-brand-foreground" : "border-white/15 text-white/70 hover:bg-white/10"
+                  )}
+                >
+                  {m === "all" ? tx("Tout", "All") : method[m]}
+                </button>
+              ))}
+            </div>
+
             <ul className="space-y-2" data-testid="disposal-list">
-              {log.disposals.slice(0, 8).map((row) => (
+              {log.disposals.filter((row) => only === "all" || row.method === only).slice(0, 8).map((row) => (
                 <li key={row.id} data-testid="disposal-row" className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl bg-[#1f1f1d] px-4 py-3 text-sm">
                   <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: METHOD_COLOR[row.method] ?? "#555" }} aria-hidden="true" />
                   <span className="w-full min-w-0 truncate font-semibold sm:w-auto sm:flex-1">
@@ -186,7 +240,7 @@ export function DisposalLog() {
             </ul>
 
             <form
-              className="mt-3 grid gap-2 rounded-[22px] bg-[#1f1f1d] p-3 sm:grid-cols-2"
+              className="mt-3 grid gap-2 rounded-[22px] bg-[#1f1f1d] p-3 sm:grid-cols-4"
               onSubmit={async (event) => {
                 event.preventDefault()
                 setBusy(true)
@@ -205,21 +259,33 @@ export function DisposalLog() {
                 setBusy(false)
               }}
             >
-              <input data-testid="disposal-product" required value={draft.product} onChange={(e) => setDraft({ ...draft, product: e.target.value })} placeholder={tx("Produit", "Product")} aria-label={tx("Produit", "Product")} className={input} />
-              <input value={draft.batch} onChange={(e) => setDraft({ ...draft, batch: e.target.value })} placeholder={tx("Lot (facultatif)", "Batch (optional)")} aria-label={tx("Lot", "Batch")} className={input} />
-              <input inputMode="decimal" value={draft.qty} onChange={(e) => setDraft({ ...draft, qty: e.target.value })} placeholder={tx("Quantité", "Quantity")} aria-label={tx("Quantité", "Quantity")} className={input} />
-              <input data-testid="disposal-value" inputMode="decimal" value={draft.value} onChange={(e) => setDraft({ ...draft, value: e.target.value })} placeholder={tx(`Valeur perdue (${currency.symbol})`, `Value lost (${currency.symbol})`)} aria-label={tx("Valeur perdue", "Value lost")} className={input} />
-              <select data-testid="disposal-method" value={draft.method} onChange={(e) => setDraft({ ...draft, method: e.target.value as DisposalMethod })} aria-label={tx("Comment", "How")} className={input}>
+              <label className="block sm:col-span-2 text-xs font-semibold text-white/70">{tx("Produit", "Product")}
+                <input data-testid="disposal-product" required value={draft.product} onChange={(e) => setDraft({ ...draft, product: e.target.value })} placeholder={tx("ex. Vaccin rage", "e.g. Rabies vaccine")} aria-label={tx("Produit", "Product")} className={cn(input, "mt-1")} />
+              </label>
+              <label className="block text-xs font-semibold text-white/70">{tx("Valeur perdue", "Value lost")}
+                <input data-testid="disposal-value" inputMode="decimal" value={draft.value} onChange={(e) => setDraft({ ...draft, value: e.target.value })} placeholder={currency.symbol} aria-label={tx("Valeur perdue", "Value lost")} className={cn(input, "mt-1")} />
+              </label>
+              <label className="block text-xs font-semibold text-white/70">{tx("Comment", "How")}
+                <select data-testid="disposal-method" value={draft.method} onChange={(e) => setDraft({ ...draft, method: e.target.value as DisposalMethod })} aria-label={tx("Comment", "How")} className={cn(input, "mt-1")}>
                 {DISPOSAL_METHODS.map((m) => (
                   <option key={m} value={m}>{method[m]}</option>
                 ))}
               </select>
-              <input type="date" max={today()} value={draft.disposed_on} onChange={(e) => setDraft({ ...draft, disposed_on: e.target.value })} aria-label={tx("Date", "Date")} className={cn(input, "[color-scheme:dark]")} />
+              </label>
+              <label className="block text-xs font-semibold text-white/70">{tx("Lot (facultatif)", "Batch (optional)")}
+                <input value={draft.batch} onChange={(e) => setDraft({ ...draft, batch: e.target.value })} placeholder={tx("ex. B7", "e.g. B7")} aria-label={tx("Lot", "Batch")} className={cn(input, "mt-1")} />
+              </label>
+              <label className="block text-xs font-semibold text-white/70">{tx("Quantité", "Quantity")}
+                <input inputMode="decimal" value={draft.qty} onChange={(e) => setDraft({ ...draft, qty: e.target.value })} placeholder="0" aria-label={tx("Quantité", "Quantity")} className={cn(input, "mt-1")} />
+              </label>
+              <label className="block text-xs font-semibold text-white/70">{tx("Date", "Date")}
+                <input type="date" max={today()} value={draft.disposed_on} onChange={(e) => setDraft({ ...draft, disposed_on: e.target.value })} aria-label={tx("Date", "Date")} className={cn(input, "mt-1 [color-scheme:dark]")} />
+              </label>
               <button
                 type="submit"
                 data-testid="disposal-add"
                 disabled={busy || !draft.product.trim()}
-                className="justify-self-start rounded-full bg-brand px-6 py-2.5 text-sm font-bold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+                className="self-end justify-self-start rounded-full bg-brand px-6 py-2.5 text-sm font-bold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
               >
                 {tx("Ajouter", "Add")}
               </button>
