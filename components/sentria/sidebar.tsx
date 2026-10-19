@@ -569,7 +569,7 @@ export function Sidebar({
         page={active}
         pageLabel={here ? t(here.label) : active}
         onClose={closeSupport}
-        onStartTour={onStartTour ? () => { closeSupport(); onStartTour() } : undefined}
+        onStartTour={onStartTour ? () => { closeSupport(); onClose(); onStartTour() } : undefined}
       />
 
       {signOutDialog.present && (

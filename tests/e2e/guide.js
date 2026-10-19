@@ -113,6 +113,7 @@ const json = (r, body, status = 200) => r.fulfill({ status, contentType: 'applic
       await next(p);
     }
     pass(seen.length === 8 && await p.locator('[data-testid="guide-ring"]').count() === 0, 'all eight steps, no ring, every card inside the screen');
+    pass(await p.locator('aside').first().evaluate(el => el.getBoundingClientRect().right <= 1) , 'the menu drawer is closed behind the tour');
     pass(!(await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), 'no sideways scroll');
     await ctx.close(); }
 
