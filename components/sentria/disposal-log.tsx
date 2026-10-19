@@ -240,7 +240,7 @@ export function DisposalLog() {
             </ul>
 
             <form
-              className="mt-3 grid gap-2 rounded-[22px] bg-[#1f1f1d] p-3 sm:grid-cols-2"
+              className="mt-3 grid gap-2 rounded-[22px] bg-[#1f1f1d] p-3 sm:grid-cols-4"
               onSubmit={async (event) => {
                 event.preventDefault()
                 setBusy(true)
@@ -259,14 +259,8 @@ export function DisposalLog() {
                 setBusy(false)
               }}
             >
-              <label className="block text-xs font-semibold text-white/70">{tx("Produit", "Product")}
+              <label className="block sm:col-span-2 text-xs font-semibold text-white/70">{tx("Produit", "Product")}
                 <input data-testid="disposal-product" required value={draft.product} onChange={(e) => setDraft({ ...draft, product: e.target.value })} placeholder={tx("ex. Vaccin rage", "e.g. Rabies vaccine")} aria-label={tx("Produit", "Product")} className={cn(input, "mt-1")} />
-              </label>
-              <label className="block text-xs font-semibold text-white/70">{tx("Lot (facultatif)", "Batch (optional)")}
-                <input value={draft.batch} onChange={(e) => setDraft({ ...draft, batch: e.target.value })} placeholder={tx("ex. B7", "e.g. B7")} aria-label={tx("Lot", "Batch")} className={cn(input, "mt-1")} />
-              </label>
-              <label className="block text-xs font-semibold text-white/70">{tx("Quantité", "Quantity")}
-                <input inputMode="decimal" value={draft.qty} onChange={(e) => setDraft({ ...draft, qty: e.target.value })} placeholder="0" aria-label={tx("Quantité", "Quantity")} className={cn(input, "mt-1")} />
               </label>
               <label className="block text-xs font-semibold text-white/70">{tx("Valeur perdue", "Value lost")}
                 <input data-testid="disposal-value" inputMode="decimal" value={draft.value} onChange={(e) => setDraft({ ...draft, value: e.target.value })} placeholder={currency.symbol} aria-label={tx("Valeur perdue", "Value lost")} className={cn(input, "mt-1")} />
@@ -277,6 +271,12 @@ export function DisposalLog() {
                   <option key={m} value={m}>{method[m]}</option>
                 ))}
               </select>
+              </label>
+              <label className="block text-xs font-semibold text-white/70">{tx("Lot (facultatif)", "Batch (optional)")}
+                <input value={draft.batch} onChange={(e) => setDraft({ ...draft, batch: e.target.value })} placeholder={tx("ex. B7", "e.g. B7")} aria-label={tx("Lot", "Batch")} className={cn(input, "mt-1")} />
+              </label>
+              <label className="block text-xs font-semibold text-white/70">{tx("Quantité", "Quantity")}
+                <input inputMode="decimal" value={draft.qty} onChange={(e) => setDraft({ ...draft, qty: e.target.value })} placeholder="0" aria-label={tx("Quantité", "Quantity")} className={cn(input, "mt-1")} />
               </label>
               <label className="block text-xs font-semibold text-white/70">{tx("Date", "Date")}
                 <input type="date" max={today()} value={draft.disposed_on} onChange={(e) => setDraft({ ...draft, disposed_on: e.target.value })} aria-label={tx("Date", "Date")} className={cn(input, "mt-1 [color-scheme:dark]")} />
