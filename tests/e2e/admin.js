@@ -42,9 +42,19 @@ const ACCOUNTS = [
     { const t2 = await p.evaluate(() => document.querySelector('main').innerText);
       pass(/Ferme Nord/.test(t2) && !/Pharmacie A/.test(t2), 'search "@kofi" finds the username'); }
     await p.locator('main input[type=search]').fill(''); await p.waitForTimeout(200);
-    pass(/Accounts\s*3/.test(t) && /On trial\s*1/.test(t) && /Paid plan\s*1/.test(t), 'counts: 3 accounts, 1 on trial, 1 paid');
+    pass(/Accounts\s*3/i.test(t) && /On trial\s*1/i.test(t) && /Paid plan\s*1/i.test(t), 'counts: 3 accounts, 1 on trial, 1 paid');
+    await p.getByTestId('admin-filter-trial').click(); await p.waitForTimeout(200);
+    pass(await p.locator('tbody tr').count() === 1 && /Pharmacie A/.test(await p.locator('tbody').innerText()), 'filter On trial: one account');
+    await p.getByTestId('admin-filter-paid').click(); await p.waitForTimeout(200);
+    pass(await p.locator('tbody tr').count() === 1 && /Ferme Nord/.test(await p.locator('tbody').innerText()), 'filter Paid: one account');
+    await p.getByTestId('admin-filter-setup').click(); await p.waitForTimeout(200);
+    pass(await p.locator('tbody tr').count() === 1 && /SentrIA/.test(await p.locator('tbody').innerText()), 'filter Not onboarded: one account');
+    await p.getByTestId('admin-filter-all').click(); await p.waitForTimeout(200);
+    pass(await p.locator('tbody tr').count() === 3, 'filter All: three accounts');
     pass(/7 days left/.test(t) && /Right now: Business/.test(t), 'trial days and effective plan shown');
-    await p.screenshot({ path: 'admin-1440.png' });
+    const shots = process.env.E2E_SHOTS || '.'; await p.screenshot({ path: shots + '/admin-light.png' });
+    await p.evaluate(() => { document.documentElement.classList.add('dark'); document.documentElement.classList.remove('light'); }); await p.waitForTimeout(300); await p.screenshot({ path: shots + '/admin-dark.png' });
+    await p.evaluate(() => { document.documentElement.classList.remove('dark'); document.documentElement.classList.add('light'); });
     await p.getByRole('combobox', { name: 'Plan for Ferme Nord' }).selectOption('business'); await p.waitForTimeout(500);
     const last = p._patches.at(-1);
     pass(last && last.id === 'u-2' && last.body.plan === 'business' && /^Bearer /.test(last.auth), 'plan change → PATCH /admin/accounts/u-2 {plan: business}, signed');
@@ -61,6 +71,7 @@ const ACCOUNTS = [
   { const p = await open(true, 390);
     await p.getByRole('button', { name: /menu/i }).first().click(); await p.waitForTimeout(300);
     await p.locator('aside nav button', { hasText: /^Admin$/ }).click(); await p.waitForTimeout(1000);
+    await p.screenshot({ path: (process.env.E2E_SHOTS || '.') + '/admin-phone.png' });
     pass(await p.evaluate(() => document.scrollingElement.scrollWidth <= innerWidth), 'phone: page itself never scrolls sideways (table scrolls in its card)');
     await p.close(); }
   await browser.close();

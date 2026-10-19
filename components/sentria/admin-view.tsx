@@ -15,7 +15,15 @@ import { cn } from "@/lib/utils"
 import { AdminGuard } from "./admin-guard"
 import { AdminSites } from "./admin-sites"
 import { AdminThresholds } from "./admin-thresholds"
-import { StatusTag } from "./status-tag"
+import { SectorBadge } from "./sector-badge"
+import { StatusTag, type TagTone } from "./status-tag"
+
+type Filter = "all" | "trial" | "paid" | "setup"
+
+const PLAN_TONE: Record<PlanId, TagTone> = { decouverte: "neutral", pro: "info", business: "brand", entreprise: "success" }
+
+const initialsOf = (a: { company_name: string; email: string | null }) =>
+  (a.company_name || a.email || "?").trim().slice(0, 2).toUpperCase()
 
 type AdminAccount = {
   user_id: string
@@ -50,6 +58,7 @@ export function AdminView() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [query, setQuery] = useState("")
+  const [filter, setFilter] = useState<Filter>("all")
   const [saving, setSaving] = useState<string | null>(null)
   const [notice, setNotice] = useState("")
 
@@ -122,25 +131,38 @@ export function AdminView() {
   const shown = useMemo(() => {
     // "@ama" finds the username ama_pharma.
     const q = query.trim().toLowerCase().replace(/^@/, "")
-    if (!q) return accounts
-    return accounts.filter((a) =>
+    const kept = accounts.filter((a) =>
+      filter === "trial" ? trialDaysLeft(a.trial_ends_at) > 0
+        : filter === "paid" ? a.plan !== "decouverte"
+        : filter === "setup" ? !a.onboarded
+        : true
+    )
+    if (!q) return kept
+    return kept.filter((a) =>
       [a.company_name, a.name, a.username, a.email, a.sector, a.department, a.plan]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q))
     )
-  }, [accounts, query])
+  }, [accounts, query, filter])
 
   const stats = useMemo(() => {
     const trialing = accounts.filter((a) => trialDaysLeft(a.trial_ends_at) > 0).length
     const paying = accounts.filter((a) => a.plan !== "decouverte").length
     const onboarded = accounts.filter((a) => a.onboarded).length
     return [
-      { label: tx("Comptes", "Accounts"), value: accounts.length },
-      { label: tx("En essai", "On trial"), value: trialing },
-      { label: tx("Offre payante", "Paid plan"), value: paying },
-      { label: tx("Onboarding fini", "Onboarded"), value: onboarded },
+      { label: tx("Comptes", "Accounts"), value: accounts.length, skin: "bg-brand text-brand-foreground" },
+      { label: tx("En essai", "On trial"), value: trialing, skin: "bg-[var(--ink)] text-white" },
+      { label: tx("Offre payante", "Paid plan"), value: paying, skin: "border border-border bg-card" },
+      { label: tx("Onboarding fini", "Onboarded"), value: onboarded, skin: "border border-border bg-card" },
     ]
   }, [accounts, tx])
+
+  const counts = useMemo(() => ({
+    all: accounts.length,
+    trial: accounts.filter((a) => trialDaysLeft(a.trial_ends_at) > 0).length,
+    paid: accounts.filter((a) => a.plan !== "decouverte").length,
+    setup: accounts.filter((a) => !a.onboarded).length,
+  }), [accounts])
 
   const dateFormat = tx("fr-FR", "en-GB")
 
@@ -148,14 +170,14 @@ export function AdminView() {
     <div className="flex flex-col gap-6">
       <div className="t-enter grid grid-cols-2 gap-4 lg:grid-cols-4" style={enterAt(0)}>
         {stats.map((stat) => (
-          <div key={stat.label} className="rounded-2xl border border-border bg-card p-5">
-            <p className="text-xs font-medium text-muted-foreground">{stat.label}</p>
-            <p className="mt-1 text-3xl font-bold tabular-nums">{loading ? "–" : stat.value}</p>
+          <div key={stat.label} className={cn("squircle rounded-[28px] p-5", stat.skin)} style={{ borderRadius: 28 }}>
+            <p className="text-xs font-semibold uppercase tracking-wider opacity-70">{stat.label}</p>
+            <p className="mt-2 text-4xl font-bold tabular-nums">{loading ? "–" : stat.value}</p>
           </div>
         ))}
       </div>
 
-      <div className="t-enter rounded-3xl border border-border bg-card" style={enterAt(1)}>
+      <div className="t-enter squircle overflow-hidden rounded-[28px] border border-border bg-card" style={{ ...enterAt(1), borderRadius: 28 }}>
         <div className="flex flex-col gap-3 border-b border-border p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5" aria-hidden="true" />
@@ -185,6 +207,29 @@ export function AdminView() {
           </div>
         </div>
 
+        <div className="flex flex-wrap gap-2 border-b border-border px-5 py-3" role="group" aria-label={tx("Filtrer les comptes", "Filter accounts")}>
+          {([
+            ["all", tx("Tous", "All")],
+            ["trial", tx("En essai", "On trial")],
+            ["paid", tx("Payants", "Paid")],
+            ["setup", tx("Onboarding à finir", "Not onboarded")],
+          ] as [Filter, string][]).map(([id, text]) => (
+            <button
+              key={id}
+              type="button"
+              data-testid={`admin-filter-${id}`}
+              aria-pressed={filter === id}
+              onClick={() => setFilter(id)}
+              className={cn(
+                "rounded-full border px-3 py-1 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                filter === id ? "border-transparent bg-[var(--ink)] text-white" : "border-border hover:bg-muted"
+              )}
+            >
+              {text} <span className="tabular-nums opacity-60">{counts[id]}</span>
+            </button>
+          ))}
+        </div>
+
         {notice && (
           <p role="status" className="border-b border-border px-5 py-2 text-sm">{notice}</p>
         )}
@@ -201,7 +246,7 @@ export function AdminView() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[860px] text-left text-sm">
-              <thead className="table-head text-xs uppercase tracking-wide">
+              <thead className="table-head bg-muted text-xs uppercase tracking-wide">
                 <tr className="border-b border-border">
                   <th className="px-5 py-3 font-semibold">{tx("Entreprise", "Company")}</th>
                   <th className="px-3 py-3 font-semibold">{tx("Activité", "Activity")}</th>
@@ -219,6 +264,11 @@ export function AdminView() {
                   return (
                     <tr key={account.user_id} className="border-b border-border last:border-0 align-top">
                       <td className="px-5 py-3">
+                        <div className="flex items-start gap-3">
+                        <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--ink)] text-xs font-bold text-white">
+                          {initialsOf(account)}
+                        </span>
+                        <div className="min-w-0">
                         <p className="font-semibold">
                           {account.company_name || tx("(sans nom)", "(no name)")}
                           {account.is_admin && (
@@ -255,20 +305,29 @@ export function AdminView() {
                             {tx("Voir (lecture seule)", "View (read only)")}
                           </button>
                         )}
+                        </div>
+                        </div>
                       </td>
                       <td className="px-3 py-3">
                         {account.sector ? (
-                          <>
-                            <p>{sectorLabel(account.sector, tx)}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {activityLabel(account.sector, account.department, tx) ?? account.department ?? "—"}
-                            </p>
-                          </>
+                          <div className="flex items-center gap-2.5">
+                            <SectorBadge sector={account.sector} />
+                            <div>
+                              <p className="font-medium">{sectorLabel(account.sector, tx)}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {activityLabel(account.sector, account.department, tx) ?? account.department ?? "—"}
+                              </p>
+                            </div>
+                          </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">{tx("Onboarding pas fini", "Not onboarded")}</span>
                         )}
                       </td>
                       <td className="px-3 py-3">
+                        <StatusTag tone={PLAN_TONE[account.effective_plan]} size="xs" className="mb-1.5">
+                          {PLAN_NAMES[account.effective_plan]}
+                        </StatusTag>
+                        <br />
                         <select
                           value={account.plan}
                           disabled={busy}
@@ -298,6 +357,11 @@ export function AdminView() {
                         ) : (
                           <p className="text-sm text-muted-foreground">—</p>
                         )}
+                        {days > 0 && (
+                          <div className="mt-1.5 h-1.5 w-24 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+                            <div className="h-full rounded-full bg-brand" style={{ width: `${Math.min(100, (days / 30) * 100)}%` }} />
+                          </div>
+                        )}
                         <div className="mt-1.5 flex gap-1.5">
                           <button
                             type="button"
@@ -319,7 +383,13 @@ export function AdminView() {
                           )}
                         </div>
                       </td>
-                      <td className="px-3 py-3 text-right tabular-nums">{account.alerts}</td>
+                      <td className="px-3 py-3 text-right tabular-nums">
+                        {account.alerts > 0 ? (
+                          <StatusTag tone="danger" size="xs">{account.alerts}</StatusTag>
+                        ) : (
+                          <span className="text-muted-foreground">0</span>
+                        )}
+                      </td>
                       <td className="px-5 py-3 text-muted-foreground">
                         {account.created_at ? new Date(account.created_at).toLocaleDateString(dateFormat) : "—"}
                       </td>
