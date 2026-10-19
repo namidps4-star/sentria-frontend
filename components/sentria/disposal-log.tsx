@@ -12,12 +12,15 @@ import {
   type DisposalMethod,
 } from "@/lib/disposals"
 import { useTx } from "@/lib/i18n"
+import { StatusTag, type TagTone } from "./status-tag"
 import { formatAmount, useLocale } from "@/lib/locale"
 
 /* The disposal log (H-VET step 2), on the Vet dashboard. One line each time
  * stock is thrown away; above it, what the log adds up to and how much went in
  * pits. The paper behind H-VET found 44 % of expired stock was thrown in pits:
  * the log makes that visible to the outlet itself. */
+
+const METHOD_TONE: Record<DisposalMethod, TagTone> = { pit: "danger", burn: "warning", return: "info", donation: "success", other: "neutral" }
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -57,10 +60,10 @@ export function DisposalLog() {
 
   const money = (value: number) => formatAmount(value, currency.symbol, tx)
   const input =
-    "w-full rounded-xl border border-border bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    "w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 
   return (
-    <section data-testid="disposal-log" className="rounded-3xl border border-border bg-card p-6">
+    <section data-testid="disposal-log" className="squircle rounded-[28px] border border-border bg-card p-6" style={{ borderRadius: 28 }}>
       <h3 className="font-heading text-lg font-bold">{tx("Journal des pertes", "Disposal log")}</h3>
       <p className="mt-1 text-xs text-muted-foreground">
         {tx(
@@ -76,28 +79,31 @@ export function DisposalLog() {
       ) : (
         <>
           <div className="mt-4 grid grid-cols-3 gap-2" data-testid="disposal-summary">
-            <div className="rounded-2xl bg-muted px-3 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{tx("Perdu · 30 jours", "Lost · 30 days")}</p>
-              <p className="text-lg font-bold">{money(log.summary.last_30_days_value)}</p>
+            <div className="squircle rounded-[22px] bg-brand px-4 py-3 text-brand-foreground" style={{ borderRadius: 22 }}>
+              <p className="text-[10px] font-semibold uppercase tracking-wide opacity-70">{tx("Perdu · 30 jours", "Lost · 30 days")}</p>
+              <p className="mt-1 text-xl font-bold">{money(log.summary.last_30_days_value)}</p>
             </div>
-            <div className="rounded-2xl bg-muted px-3 py-2">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{tx("Perdu · total", "Lost · total")}</p>
-              <p className="text-lg font-bold">{money(log.summary.total_value)}</p>
+            <div className="squircle rounded-[22px] bg-[var(--ink)] px-4 py-3 text-white" style={{ borderRadius: 22 }}>
+              <p className="text-[10px] font-semibold uppercase tracking-wide opacity-70">{tx("Perdu · total", "Lost · total")}</p>
+              <p className="mt-1 text-xl font-bold">{money(log.summary.total_value)}</p>
             </div>
-            <div className="rounded-2xl bg-muted px-3 py-2">
+            <div className="squircle rounded-[22px] border border-border bg-muted px-4 py-3" style={{ borderRadius: 22 }}>
               <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{tx("Part en fosse", "Share in pits")}</p>
-              <p className="text-lg font-bold" data-testid="disposal-pit-share">{log.summary.pit_share} %</p>
+              <p className="mt-1 text-xl font-bold" data-testid="disposal-pit-share">{log.summary.pit_share} %</p>
+              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-border" aria-hidden="true">
+                <div className="h-full rounded-full" style={{ width: `${Math.min(100, Math.max(0, log.summary.pit_share))}%`, background: "var(--tag-danger-fg)" }} />
+              </div>
             </div>
           </div>
 
-          <ul className="mt-4 divide-y divide-border" data-testid="disposal-list">
+          <ul className="mt-4 space-y-2" data-testid="disposal-list">
             {log.disposals.slice(0, 8).map((row) => (
-              <li key={row.id} data-testid="disposal-row" className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm">
+              <li key={row.id} data-testid="disposal-row" className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl border border-border bg-background px-4 py-2.5 text-sm">
                 <span className="w-full min-w-0 truncate font-semibold sm:w-auto sm:flex-1">
                   {row.product}
                   {row.batch ? <span className="font-normal text-muted-foreground"> · {tx("lot", "batch")} {row.batch}</span> : null}
                 </span>
-                <span className="text-xs text-muted-foreground">{method[row.method] ?? row.method}</span>
+                <StatusTag tone={METHOD_TONE[row.method] ?? "neutral"} size="xs">{method[row.method] ?? row.method}</StatusTag>
                 <span className="text-xs text-muted-foreground">{row.disposed_on}</span>
                 <span className="font-semibold">{money(row.value)}</span>
                 <button
@@ -120,7 +126,7 @@ export function DisposalLog() {
           </ul>
 
           <form
-            className="mt-4 grid gap-2 sm:grid-cols-2"
+            className="mt-4 grid gap-2 rounded-[22px] bg-muted p-3 sm:grid-cols-2"
             onSubmit={async (event) => {
               event.preventDefault()
               setBusy(true)
@@ -153,7 +159,7 @@ export function DisposalLog() {
               type="submit"
               data-testid="disposal-add"
               disabled={busy || !draft.product.trim()}
-              className="justify-self-start rounded-full bg-[var(--ink)] px-4 py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+              className="justify-self-start rounded-full bg-brand px-5 py-2 text-sm font-semibold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
             >
               {tx("Ajouter", "Add")}
             </button>
