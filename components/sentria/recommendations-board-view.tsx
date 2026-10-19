@@ -6,6 +6,7 @@ import { AskHeader } from "./ask-header"
 import { DispatchPanel } from "./dispatch-panel"
 import { TaskTextButton } from "./task-text-button"
 import { FieldLinkButton } from "./field-link-button"
+import { FieldReports } from "./field-reports"
 import { StatusTag, type TagTone } from "./status-tag"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
@@ -1024,6 +1025,8 @@ function DetailDialog({
                     )}
             </p>
           </fieldset>
+
+          <FieldReports taskKey={card.id} />
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>

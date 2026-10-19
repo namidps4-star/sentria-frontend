@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 
-import { answerField, fetchField, type FieldAnswer, type FieldFailure, type FieldView } from "@/lib/field-link"
+import { answerField, fetchField, sendFieldNote, sendFieldPhoto, shrinkPhoto, type FieldAnswer, type FieldFailure, type FieldView, type ReportFailure } from "@/lib/field-link"
 import { AlertTriangle, Check, Clock, Loader2 } from "@/lib/icons"
 import { cn } from "@/lib/utils"
 
@@ -17,9 +17,138 @@ type Phase =
   | { kind: "ready"; view: FieldView; busy: FieldAnswer | null; confirm: boolean; note: "ack" | null; error: FieldFailure | null }
   | { kind: "finished"; view: FieldView; how: "done" | "cannot" | "closed" }
 
+
+/* A note or a photo on the task. Shown while the task is open and after "done"
+ * (a photo of the finished job is the usual one). The API caps what one person
+ * can send; this only reflects it. */
+function FieldReport({ token, view, tx, sent: already, onSent }: { token: string; view: FieldView; tx: (fr: string, en: string) => string; sent: { notes: number; photos: number }; onSent: (kind: "notes" | "photos") => void }) {
+  const start = view.reports
+  // What the page has sent in this visit lives in the page, so it survives the switch to the "done" screen.
+  const notes = (start?.notes ?? 0) + already.notes
+  const photos = (start?.photos ?? 0) + already.photos
+  const [text, setText] = useState("")
+  const [busy, setBusy] = useState<"note" | "photo" | null>(null)
+  const [message, setMessage] = useState<{ tone: "ok" | "bad"; text: string } | null>(null)
+
+  if (!start || !start.available) {
+    return (
+      <p data-testid="field-report-unavailable" className="rounded-2xl bg-muted px-4 py-3 text-sm text-muted-foreground">
+        {tx("Les notes et les photos ne sont pas encore disponibles.", "Notes and photos are not available yet.")}
+      </p>
+    )
+  }
+
+  const failure = (reason: ReportFailure) =>
+    ({
+      limit: tx("Vous avez envoyé le maximum pour cette tâche.", "You have sent the most you can on this task."),
+      invalid: tx("Ça n'a pas marché. Réessayez.", "That did not work. Try again."),
+      too_big: tx("Cette photo est trop lourde. Reprenez-la.", "That photo is too big. Take it again."),
+      unavailable: tx("Les notes et les photos ne sont pas encore disponibles.", "Notes and photos are not available yet."),
+      link: tx("Ce lien n'est plus valable.", "This link is not valid any more."),
+      network: tx("Pas de connexion. Réessayez.", "No connection. Try again."),
+    })[reason]
+
+  const noteFull = notes >= start.max_notes
+  const photoFull = photos >= start.max_photos
+
+  return (
+    <section className="grid gap-3 rounded-3xl border border-border bg-card p-4" data-testid="field-report">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{tx("Ajouter une note ou une photo", "Add a note or a photo")}</p>
+
+      <textarea
+        data-testid="field-note"
+        value={text}
+        maxLength={300}
+        rows={2}
+        disabled={noteFull || busy !== null}
+        onChange={(event) => setText(event.target.value)}
+        placeholder={tx("Une note pour votre responsable", "A note for your manager")}
+        aria-label={tx("Note", "Note")}
+        className="w-full resize-none rounded-2xl border border-border bg-background px-3 py-2 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      />
+      <div className="grid grid-cols-2 gap-2.5">
+        <button
+          type="button"
+          data-testid="field-note-send"
+          disabled={!text.trim() || noteFull || busy !== null}
+          onClick={async () => {
+            setBusy("note")
+            setMessage(null)
+
+            const sent = await sendFieldNote(token, text.trim())
+
+            if (sent.ok) {
+              onSent("notes")
+              setText("")
+              setMessage({ tone: "ok", text: tx("Note envoyée.", "Note sent.") })
+            } else {
+              setMessage({ tone: "bad", text: failure(sent.failure) })
+            }
+
+            setBusy(null)
+          }}
+          className="min-h-12 rounded-full border-2 border-border px-4 text-sm font-extrabold disabled:opacity-50"
+        >
+          {busy === "note" ? "…" : tx("Envoyer la note", "Send note")}
+        </button>
+
+        <label
+          className={cn(
+            "flex min-h-12 cursor-pointer items-center justify-center rounded-full border-2 border-border px-4 text-sm font-extrabold focus-within:ring-2 focus-within:ring-ring",
+            (photoFull || busy !== null) && "pointer-events-none opacity-50"
+          )}
+        >
+          {busy === "photo" ? "…" : tx("Ajouter une photo", "Add a photo")}
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            data-testid="field-photo-input"
+            className="sr-only"
+            disabled={photoFull || busy !== null}
+            onChange={async (event) => {
+              const file = event.target.files?.[0]
+
+              event.target.value = ""
+
+              if (!file) return
+
+              setBusy("photo")
+              setMessage(null)
+
+              const small = await shrinkPhoto(file)
+              const sent = small ? await sendFieldPhoto(token, small) : ({ ok: false, failure: "invalid" } as const)
+
+              if (sent.ok) {
+                onSent("photos")
+                setMessage({ tone: "ok", text: tx("Photo envoyée.", "Photo sent.") })
+              } else {
+                setMessage({ tone: "bad", text: failure(sent.failure) })
+              }
+
+              setBusy(null)
+            }}
+          />
+        </label>
+      </div>
+
+      <p className="text-xs text-muted-foreground" data-testid="field-report-count">
+        {tx(`${notes} note sur ${start.max_notes} · ${photos} photo sur ${start.max_photos}`, `${notes} of ${start.max_notes} notes · ${photos} of ${start.max_photos} photos`)}
+      </p>
+      {message && (
+        <p role={message.tone === "bad" ? "alert" : "status"} data-testid="field-report-message" className={cn("text-sm font-semibold", message.tone === "bad" && "text-[var(--tag-danger-fg)]")}>
+          {message.text}
+        </p>
+      )}
+    </section>
+  )
+}
+
 export function FieldTaskPage({ token }: { token: string }) {
   const [phase, setPhase] = useState<Phase>({ kind: "loading" })
   const [phoneLang, setPhoneLang] = useState<"fr" | "en">("fr")
+  const [sent, setSent] = useState({ notes: 0, photos: 0 })
+  const onSent = (kind: "notes" | "photos") => setSent((current) => ({ ...current, [kind]: current[kind] + 1 }))
 
   useEffect(() => {
     setPhoneLang(navigator.language?.toLowerCase().startsWith("en") ? "en" : "fr")
@@ -120,6 +249,11 @@ export function FieldTaskPage({ token }: { token: string }) {
         </span>
         <h1 className="font-heading text-2xl font-bold">{tx(words[0], words[1])}</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">{tx(words[2], words[3])}</p>
+        {how === "done" && (
+          <div className="mt-8 w-full text-left">
+            <FieldReport token={token} view={view} tx={tx} sent={sent} onSent={onSent} />
+          </div>
+        )}
       </div>
     )
   }
@@ -178,6 +312,8 @@ export function FieldTaskPage({ token }: { token: string }) {
           {tx("Ça n'a pas marché. Réessayez.", "That did not work. Try again.")}
         </p>
       )}
+
+      {!confirm && <FieldReport token={token} view={view} tx={tx} sent={sent} onSent={onSent} />}
 
       <div className="mt-auto grid gap-2.5 pb-3">
         {confirm ? (
