@@ -27,6 +27,9 @@ Next.js 16 (App Router, Turbopack), React 19, Tailwind v4, Supabase Auth (`@supa
 ## Files not to edit by hand
 `lib/icons.tsx`, `lib/icon-data.ts` (generated), both lockfiles (use the tools).
 
+## Model and effort
+Before a task that looks heavy, say which model and effort it needs, so the founder can switch first. Routine work that copies an existing pattern (a new department, a screen like the others, a test suite) is Sonnet at medium effort. Opus at high effort is for security, permissions and money, a design with no existing pattern, and a bug two tries did not fix. Say it in one line, before starting.
+
 ## Reporting
 Terse: Done / Tested / Pushed / Your turn / Open questions / Next. Say plainly what was and wasn't verified.
 
