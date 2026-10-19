@@ -33,6 +33,10 @@ Before a task that looks heavy, say which model and effort it needs, so the foun
 ## Reporting
 Terse: Done / Tested / Pushed / Your turn / Open questions / Next. Say plainly what was and wasn't verified.
 
+Every report on an issue, an article, a prospect or a feature idea also gives, in chat:
+- **Solve score:** 0 to 100, how much of the issue SentrIA can solve (0 nothing, 100 fully). Give today's score and the score after the doable builds. Say it is an estimate and how sure it is. The score is never written into Notion.
+- **Verdict:** should we do it, and is it worth it, with the reasons. Say what depends on data we do not have.
+
 Layout: single line breaks merge into one block in the app, so space the parts out.
 - Bold label on its own line, the text on the next line, a blank line between parts.
 - Steps for the founder go in a numbered list under "Your turn", one step per line.
