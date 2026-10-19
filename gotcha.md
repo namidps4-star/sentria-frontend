@@ -276,3 +276,8 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Problem:** A log card on every dashboard would show a pharmacy a form it does not use.
 **Reality:** `DisposalLog` (`components/sentria/disposal-log.tsx`, `lib/disposals.ts`) renders in `dashboard-view.tsx` when the activity on screen is `veterinaire` and one sector is shown. It reads `GET /disposals` (the API cuts an employee to their site) and says "not available yet" when the API answers `persisted: false` (migration 022 not run).
 **Rule:** Keep department-only cards behind the activity check, like the department's KPI labels.
+
+## The field page is public and sends no account (F-CONTRACTOR)
+**Problem:** `/t/<token>` is opened by someone with no account, from a text. Anything that adds a session or an account header to its calls, or shows more than the task, breaks the promise that the token is the only credential.
+**Reality:** `app/t/[token]/page.tsx` renders `FieldTaskPage`, which calls the API with plain `fetch`, never `apiFetch` (that adds the Supabase session and `X-View-As`). The page is `noindex` with `referrer: no-referrer`, so the address never reaches another site. The boss makes the link from the task detail ("Copy field link", `FieldLinkButton`, `POST /assignments/field-link`); the page's language is the one the boss's app was in. It needs `FIELD_LINK_SECRET` on the API (Render); without it the button says field links are not switched on.
+**Rule:** Keep the page's calls free of sign-in. Show the field person nothing the API does not return from `GET /field/{token}`.

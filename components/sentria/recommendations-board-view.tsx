@@ -5,6 +5,7 @@ import type { Supplier } from "@/lib/supplier"
 import { AskHeader } from "./ask-header"
 import { DispatchPanel } from "./dispatch-panel"
 import { TaskTextButton } from "./task-text-button"
+import { FieldLinkButton } from "./field-link-button"
 import { StatusTag, type TagTone } from "./status-tag"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
@@ -990,9 +991,12 @@ function DetailDialog({
                     {/* A text about this task, for a person who is on it and
                         can be texted (F-SMS2). The task must be saved with
                         them first, which a tick does at once. */}
-                    {picked && person.sms_ready === true && (
+                    {picked && (
                       <div className={cn(picked && "bg-muted")}>
-                        <TaskTextButton taskKey={card.id} contractorId={person.id} name={person.name} />
+                        {person.sms_ready === true && (
+                          <TaskTextButton taskKey={card.id} contractorId={person.id} name={person.name} />
+                        )}
+                        <FieldLinkButton taskKey={card.id} contractorId={person.id} name={person.name} />
                       </div>
                     )}
                     </div>
