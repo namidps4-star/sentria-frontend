@@ -11,10 +11,11 @@ const UID = 'u-csv', EMAIL = 'a@b.c';
 
 (async () => {
   const browser = await chromium.launch(LAUNCH);
-  const open = async ({ sector = 'health', business = 'pharmacie', sectors, lang = 'en', vw = 1440, site = null } = {}) => {
+  const open = async ({ sector = 'health', business = 'pharmacie', sectors, lang = 'en', vw = 1440, site = null, serverSites = false } = {}) => {
     const ctx = await browser.newContext({ viewport: { width: vw, height: 900 }, locale: lang === 'fr' ? 'fr-FR' : 'en-US', acceptDownloads: true });
     const p = await ctx.newPage(); p._errors = []; p.on('pageerror', e => p._errors.push(e.message));
     await p.route(/onrender\.com\//, r => r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+    if (serverSites) await p.route(/\/sites$/, r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ sites: [], persisted: true, max_sites: 50 }) }));
     const profile = { sentria_onboarded: '1', sentria_sector: sector, sentria_sectors: JSON.stringify(sectors || [sector]), sentria_business_type: business, sentria_company_name: 'Acme', sentria_language: lang };
     if (site) profile.sentria_sites = JSON.stringify([site]);
     const db = { users: { [EMAIL]: { uid: UID, password: 'x' } }, accounts: { [UID]: { profile, plan: 'entreprise' } } };
@@ -38,6 +39,21 @@ const UID = 'u-csv', EMAIL = 'a@b.c';
     pass(f.name === 'sentria-veterinaire-template.csv', 'named for the department: ' + f.name);
     await p.getByTestId('csv-template').first().scrollIntoViewIfNeeded(); await p.screenshot({ path: 'vet-light.png' });
     pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
+    await ctx.close(); }
+
+  console.log('== its icon');
+  { const { p, ctx } = await open({ sector: 'health', business: 'pharmacie', sectors: ['health'], serverSites: true });
+    await p.getByRole('button', { name: /^Sites$/ }).first().click(); await p.waitForTimeout(600);
+    await p.getByRole('button', { name: 'Add a site' }).locator('visible=true').first().click(); await p.waitForTimeout(400);
+    await p.getByPlaceholder('e.g. Lyon plant').fill('Vet clinic');
+    await p.getByTestId('add-site-next').click(); await p.waitForTimeout(400);
+    await p.getByRole('button', { name: /^Health/ }).click(); await p.waitForTimeout(300);
+    await p.getByTestId('add-site-next').click(); await p.waitForTimeout(500);
+    const vet = p.getByRole('button', { name: /^Veterinary/ }), lab = p.getByRole('button', { name: /^Laboratory/ });
+    pass(await vet.count() === 1, 'the new-site wizard offers the Vet department');
+    const vetSvg = await vet.locator('svg').first().innerHTML().catch(() => ''), labSvg = await lab.locator('svg').first().innerHTML().catch(() => '');
+    pass(vetSvg.length > 50 && vetSvg !== labSvg, 'with its own paw icon, not the laboratory one');
+    await vet.scrollIntoViewIfNeeded(); await p.screenshot({ path: 'vet-icon-light.png' });
     await ctx.close(); }
 
   console.log('== its picture');

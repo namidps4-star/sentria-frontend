@@ -57,6 +57,7 @@ export const ICONS = {
   Globe: "solar:globe-linear",
   Globe2: "solar:earth-linear",
   HeartPulse: "solar:heart-pulse-linear",
+  PawPrint: "solar:paw-linear",
   Hourglass: "solar:hourglass-linear",
   Inbox: "solar:inbox-linear",
   Info: "solar:info-circle-linear",

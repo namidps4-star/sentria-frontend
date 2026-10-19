@@ -9,6 +9,7 @@ import {
   Gauge,
   HeartPulse,
   PackageSearch,
+  PawPrint,
   Radio,
   Recycle,
   ShoppingCart,
@@ -154,7 +155,7 @@ export const ACTIVITIES_BY_SECTOR: Record<Sector, Activity[]> = {
         "Médicaments vétérinaires, péremption et stock",
         "Veterinary drugs, expiry and stock"
       ),
-      icon: Activity,
+      icon: PawPrint,
       maturity: "early",
     },
   ],
