@@ -3,6 +3,7 @@
 import { CsvTemplateLink } from "./csv-template-link"
 import { DemotedTag, LossTag, SeverityTag, StatusTag, ValueTag } from "./status-tag"
 import { demotion, demotionSentence } from "@/lib/demotion"
+import { DisposalLog } from "./disposal-log"
 import { CountNumber } from "./count-number"
 import { RevealText } from "./reveal-text"
 import { SheetTabs } from "./sheet-tabs"
@@ -3970,6 +3971,8 @@ export function DashboardView({
       )}
         </>
       )}
+
+      {viewActivity === "veterinaire" && filterSector !== "all" && <DisposalLog />}
 
       <div
         id="alerts-table"

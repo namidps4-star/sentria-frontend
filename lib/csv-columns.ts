@@ -13,8 +13,9 @@ export const CSV_COLUMNS: Record<string, string[]> = {
     "reagent_name", "stock_qty", "unit_cost", "expiry_date",
   ],
   "veterinaire": [
-    "medicine_name", "batch_number", "stock_qty", "min_stock",
-    "sales_last_30_days", "unit_cost", "expiry_date", "fridge_temp",
+    "medicine_name", "category", "batch_number", "stock_qty",
+    "min_stock", "sales_last_30_days", "unit_cost", "expiry_date",
+    "fridge_temp",
   ],
   "clinique-hopital": [
     "item_name", "category", "stock_qty", "min_stock",

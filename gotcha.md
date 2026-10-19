@@ -271,3 +271,8 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Problem:** Showing a configured site writes that site's sector over the account's own `sentria_sectors` in localStorage (`lib/site-config.ts`, the account's originals kept in `sentria_base_config`). The account sync then saves whatever localStorage holds. Staff viewing another company's sites could therefore write that company's sector into their own account.
 **Reality:** While a view is active, `syncAccount` saves nothing (`readViewAs()`), and starting or ending a view drops `sentria_account_owner` and `sentria_base_config` so the next load reads the account's own saved profile again.
 **Rule:** Anything that can show another account's settings must not reach `syncAccount`. If an owner's sectors look shorter than they were, check `profile->'sentria_base_config'` first: it holds the originals.
+
+## The disposal log is on the Vet dashboard only (H-VET step 2)
+**Problem:** A log card on every dashboard would show a pharmacy a form it does not use.
+**Reality:** `DisposalLog` (`components/sentria/disposal-log.tsx`, `lib/disposals.ts`) renders in `dashboard-view.tsx` when the activity on screen is `veterinaire` and one sector is shown. It reads `GET /disposals` (the API cuts an employee to their site) and says "not available yet" when the API answers `persisted: false` (migration 022 not run).
+**Rule:** Keep department-only cards behind the activity check, like the department's KPI labels.

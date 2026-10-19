@@ -35,7 +35,7 @@ const UID = 'u-csv', EMAIL = 'a@b.c';
   { const { p, ctx } = await open({ sector: 'health', business: 'veterinaire' });
     await openImport(p);
     const f = await download(p);
-    pass(f.text === 'medicine_name,batch_number,stock_qty,min_stock,sales_last_30_days,unit_cost,expiry_date,fridge_temp\n', 'a vet outlet gets the batch and expiry columns: ' + JSON.stringify(f.text));
+    pass(f.text === 'medicine_name,category,batch_number,stock_qty,min_stock,sales_last_30_days,unit_cost,expiry_date,fridge_temp\n', 'a vet outlet gets the batch and expiry columns: ' + JSON.stringify(f.text));
     pass(f.name === 'sentria-veterinaire-template.csv', 'named for the department: ' + f.name);
     await p.getByTestId('csv-template').first().scrollIntoViewIfNeeded(); await p.screenshot({ path: 'vet-light.png' });
     pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
@@ -65,7 +65,7 @@ const UID = 'u-csv', EMAIL = 'a@b.c';
   { const { p, ctx } = await open({ sector: 'health', business: 'veterinaire', lang: 'fr', vw: 390 });
     await openImport(p, 'fr');
     const f = await download(p);
-    pass(f.text.startsWith('medicine_name,batch_number'), 'the same columns in French');
+    pass(f.text.startsWith('medicine_name,category,batch_number'), 'the same columns in French');
     pass(await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'no sideways scroll at 390 px');
     await p.screenshot({ path: 'vet-390-fr.png' });
     await ctx.close(); }
