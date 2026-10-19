@@ -22,6 +22,10 @@ const ACCOUNTS = [
       const u = new URL(r.request().url());
       if (u.pathname !== '/admin/accounts') p._headers.push(r.request().headers()['x-view-as'] || null);
       if (u.pathname === '/admin/accounts') return json(r, { accounts: ACCOUNTS });
+      if (u.pathname === '/sites') return json(r, { sites: [{ id: 's1', name: 'Cotonou', location: '', sector: 'health', status: 'offline', sources: ['csv', 'api', 'erp', 'iot'].map(type => ({ type, wanted: false, connected: false, synced: false })), created_at: new Date().toISOString(), departments: [], priorities: [], configured: false, alerts: 0, stats: null }], persisted: true, max_sites: 50 });
+      if (u.pathname === '/admin/sites') return json(r, { persisted: true, sites: [
+        { id: 's1', company_id: 'c1', company_name: 'Pharmacie A', name: 'Cotonou', location: 'Bénin', sector: 'health', status: 'offline', alerts: 12, critical: 2 },
+        { id: 's9', company_id: 'c2', company_name: 'Ferme Nord', name: 'Kumasi', location: '', sector: 'agriculture', status: 'connected', alerts: 0, critical: 0 }] });
       if (u.pathname === '/admin/thresholds') return json(r, { thresholds: [], persisted: true });
       if (u.pathname === '/admin/guard') return json(r, { enabled: true, forced_off: false, persisted: true, log: [] });
       return json(r, u.pathname === '/alerts' ? [] : { recommendations: [], assignments: [], contractors: [] });
@@ -53,6 +57,21 @@ const ACCOUNTS = [
     p._headers.length = 0; await p.reload(); await p.waitForTimeout(1800);
     pass(!p._headers.some(Boolean), 'and the header is gone');
     pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
+    await ctx.close(); }
+
+  console.log('== every companys sites');
+  { const { p, ctx } = await open();
+    await adminPage(p);
+    pass(await p.getByTestId('admin-site').count() === 2, 'the Admin page lists the sites of every company');
+    const t = await p.getByTestId('admin-sites').innerText();
+    pass(/Pharmacie A · Cotonou/.test(t) && /Ferme Nord · Kumasi/.test(t) && /12 alerts/.test(t) && /2 critical/.test(t), 'each row names the company, the site and its alerts');
+    await p.getByTestId('admin-sites').getByLabel('Search sites').fill('kumasi'); await p.waitForTimeout(200);
+    pass(await p.getByTestId('admin-site').count() === 1, 'the search narrows the list');
+    await p.getByTestId('admin-sites').getByLabel('Search sites').fill('');
+    await p.getByTestId('admin-site-view').first().click(); await p.waitForTimeout(2500);
+    const stored = JSON.parse(await p.evaluate(() => sessionStorage.getItem('sentria_view_as')));
+    pass(stored.company_id === 'c1' && await p.evaluate(() => localStorage.getItem('sentria_active_site')) === 's1', 'View opens that company on that site, read only');
+    pass(await p.getByTestId('view-as-banner').count() === 1, 'with the banner');
     await ctx.close(); }
 
   console.log('== a company user');

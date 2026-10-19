@@ -13,6 +13,7 @@ import { setViewAs } from "@/lib/view-as"
 import { cn } from "@/lib/utils"
 
 import { AdminGuard } from "./admin-guard"
+import { AdminSites } from "./admin-sites"
 import { AdminThresholds } from "./admin-thresholds"
 import { StatusTag } from "./status-tag"
 
@@ -330,6 +331,8 @@ export function AdminView() {
           </div>
         )}
       </div>
+
+      <AdminSites />
 
       <AdminGuard />
 
