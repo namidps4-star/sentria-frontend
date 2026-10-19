@@ -56,6 +56,9 @@ export type Contractor = {
   availability: Availability
   note: string | null
   active: boolean
+  /** The site this person works at (F-TEAMROLES). null: no site, so only the
+   *  boss sees them. Absent from an API that has not been redeployed. */
+  site_id?: string | null
   /** Counted from the assignments table, not stored on the contractor,
    *  so it cannot drift away from what the board shows. */
   open_assignments: number
@@ -297,6 +300,8 @@ export function updateContractor(
     email: string
     note: string
     availability: Availability
+    /** The boss files a person under a site; null takes them off every site. */
+    site_id: string | null
   }>
 ): Promise<CrmResult<Contractor>> {
   return call(

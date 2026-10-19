@@ -37,6 +37,8 @@ import { HandoverDialog } from "./handover-dialog"
 import { SmsDraftsCard } from "./sms-drafts-card"
 import { checkPhone, defaultPhoneCountry } from "@/lib/phone"
 import { roleSuggestions } from "@/lib/roles"
+import { useIsEmployee } from "@/lib/role"
+import { useSites } from "@/lib/sites"
 
 /* --------------------------------------------------------------------------
  * The people who can be sent out, and whether they are free.
@@ -116,6 +118,11 @@ export function ContractorsView({
   const [leavingOpen, setLeavingOpen] = useState(false)
 
   const [roleFilter, setRoleFilter] = useState<string | null>(null)
+  // The boss files each person under a site; an employee's list is already that site's.
+  const employee = useIsEmployee()
+  const { mode: sitesMode, sites: companySites } = useSites()
+  const canFile = !employee && sitesMode === "server" && companySites.length > 0
+
   const [availabilityFilter, setAvailabilityFilter] =
     useState<Availability | null>(null)
 
@@ -224,6 +231,19 @@ export function ContractorsView({
       setError(null)
     }
 
+    await reload()
+  }
+
+  async function moveToSite(contractor: Contractor, siteId: string) {
+    if (busy) return
+
+    setContractors((current) =>
+      current.map((person) => (person.id === contractor.id ? { ...person, site_id: siteId || null } : person))
+    )
+
+    const result = await updateContractor(contractor.id, { site_id: siteId || null })
+
+    setError(result.ok ? null : px(result.detail))
     await reload()
   }
 
@@ -750,6 +770,25 @@ export function ContractorsView({
                             })}
                           </div>
                         </div>
+
+                        {canFile && (
+                          <label className="mt-3 flex items-center gap-2 text-[10px] font-semibold text-muted-foreground">
+                            {tx("Site", "Site")}
+                            <select
+                              data-testid="contractor-site"
+                              value={person.site_id ?? ""}
+                              onChange={(event) => void moveToSite(person, event.target.value)}
+                              className="min-w-0 flex-1 rounded-full border border-border bg-card px-2.5 py-1 text-[11px] font-normal text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              <option value="">{tx("Aucun site", "No site")}</option>
+                              {companySites.map((site) => (
+                                <option key={site.id} value={site.id}>
+                                  {site.name}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        )}
 
                         {/* The disagreement worth seeing, stated rather
                             than left for the reader to spot. */}

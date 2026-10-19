@@ -19,7 +19,7 @@ const TEAM = [
   const browser = await chromium.launch(LAUNCH);
   const open = async ({ people = TEAM, lang = 'en', vw = 1440, site = null } = {}) => {
     const ctx = await browser.newContext({ viewport: { width: vw, height: 1000 }, locale: lang === 'fr' ? 'fr-FR' : 'en-US' });
-    const p = await ctx.newPage(); p._errors = []; p.on('pageerror', e => p._errors.push(e.message)); p._created = [];
+    const p = await ctx.newPage(); p._errors = []; p.on('pageerror', e => p._errors.push(e.message)); p._created = []; p._patched = [];
     if (site) {
       const srcs = ['csv', 'api', 'erp', 'iot'].map(type => ({ type, wanted: false, connected: false, synced: false }));
       await p.route(/\/sites$/, r => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ sites: [{ id: site, name: 'Cotonou', location: '', sector: 'logistics', status: 'offline', sources: srcs, created_at: new Date().toISOString(), departments: [], priorities: [], configured: false, alerts: 0, stats: null }], persisted: true, max_sites: 50 }) }));
@@ -28,6 +28,7 @@ const TEAM = [
     await p.route(/\/recommendations/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '{"recommendations":[]}' }));
     await p.route(/\/assignments/, r => r.fulfill({ status: 200, contentType: 'application/json', body: '{"assignments":[]}' }));
     await p.route(/\/contractors/, r => {
+      if (r.request().method() === 'PATCH') { p._patched.push({ url: r.request().url(), body: JSON.parse(r.request().postData()) }); return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ contractor: { ...P('c1', 'A', null) } }) }); }
       if (r.request().method() === 'POST') { const b = JSON.parse(r.request().postData()); p._created.push(b); return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ contractor: { ...P('new', b.name, b.role ?? null) } }) }); }
       r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ contractors: people }) });
     });
@@ -74,6 +75,17 @@ const TEAM = [
     await p.locator('input[autocomplete="name"]').fill('New Person').catch(() => {});
     await p.getByRole('button', { name: /^(Add|Save|Create)/ }).last().click(); await p.waitForTimeout(700);
     pass(p._created.length === 1 && !('site_id' in p._created[0]), 'with no site shown it carries none');
+    await ctx.close(); }
+
+  console.log('== the boss files a person under a site');
+  { const { p, ctx } = await open({ site: 's1', people: [{ ...P('c1', 'A', null), site_id: null }] });
+    const pick = p.getByTestId('contractor-site').first();
+    pass(await pick.count() === 1 && (await pick.inputValue()) === '', 'each card has a Site choice, set to No site');
+    await pick.selectOption('s1'); await p.waitForTimeout(500);
+    pass(p._patched.length === 1 && /\/contractors\/c1$/.test(p._patched[0].url) && p._patched[0].body.site_id === 's1', `choosing a site sends PATCH {site_id} (${JSON.stringify(p._patched[0] && p._patched[0].body)})`);
+    await ctx.close(); }
+  { const { p, ctx } = await open();
+    pass(await p.getByTestId('contractor-site').count() === 0, 'with no sites held by the API there is no Site choice');
     await ctx.close(); }
 
   console.log('== French');
