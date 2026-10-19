@@ -25,6 +25,13 @@ const PLAN_TONE: Record<PlanId, TagTone> = { decouverte: "neutral", pro: "info",
 const initialsOf = (a: { company_name: string; email: string | null }) =>
   (a.company_name || a.email || "?").trim().slice(0, 2).toUpperCase()
 
+/** The sectors an account runs, each with its activities. */
+function accountSectors(account: AdminAccount): { sector: string; departments: string[] }[] {
+  if (account.sectors && account.sectors.length > 0) return account.sectors
+
+  return account.sector ? [{ sector: account.sector, departments: account.department ? [account.department] : [] }] : []
+}
+
 type AdminAccount = {
   user_id: string
   email: string | null
@@ -36,6 +43,9 @@ type AdminAccount = {
   company_name: string
   sector: string | null
   department: string | null
+  /** Every sector the account runs with its activities (several on Entreprise).
+   *  Absent from an older API: the single sector and department stand in. */
+  sectors?: { sector: string; departments: string[] }[]
   country: string | null
   onboarded: boolean
   plan: PlanId
@@ -139,7 +149,7 @@ export function AdminView() {
     )
     if (!q) return kept
     return kept.filter((a) =>
-      [a.company_name, a.name, a.username, a.email, a.sector, a.department, a.plan]
+      [a.company_name, a.name, a.username, a.email, a.sector, a.department, a.plan, ...accountSectors(a).flatMap((e) => [e.sector, ...e.departments])]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(q))
     )
@@ -309,15 +319,21 @@ export function AdminView() {
                         </div>
                       </td>
                       <td className="px-3 py-3">
-                        {account.sector ? (
-                          <div className="flex items-center gap-2.5">
-                            <SectorBadge sector={account.sector} />
-                            <div>
-                              <p className="font-medium">{sectorLabel(account.sector, tx)}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {activityLabel(account.sector, account.department, tx) ?? account.department ?? "—"}
-                              </p>
-                            </div>
+                        {accountSectors(account).length > 0 ? (
+                          <div className="flex flex-col gap-2">
+                            {accountSectors(account).map((entry) => (
+                              <div key={entry.sector} className="flex items-center gap-2.5" data-testid="account-sector">
+                                <SectorBadge sector={entry.sector} size={accountSectors(account).length > 1 ? "sm" : "md"} />
+                                <div>
+                                  <p className="font-medium">{sectorLabel(entry.sector, tx)}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {entry.departments.length > 0
+                                      ? entry.departments.map((id) => activityLabel(entry.sector, id, tx) ?? id).join(", ")
+                                      : "—"}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         ) : (
                           <span className="text-xs text-muted-foreground">{tx("Onboarding pas fini", "Not onboarded")}</span>
