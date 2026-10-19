@@ -25,6 +25,32 @@ export type Notification = {
 const FOCUS_RING =
   " focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
 
+/** Sector tag colours: pastel tokens, neutral for a sector with none. */
+function sectorTag(sector: string): string {
+  if (sector === "health") return "bg-[var(--tag-success-bg)] text-[var(--tag-success-fg)]"
+  if (sector === "industry") return "bg-[var(--tag-warning-bg)] text-[var(--tag-warning-fg)]"
+  if (sector === "logistics") return "bg-[var(--tag-info-bg)] text-[var(--tag-info-fg)]"
+  return "bg-[var(--tag-neutral-bg)] text-[var(--tag-neutral-fg)]"
+}
+
+/** "12 min ago" for a recent alert, a date once it is older than two days. */
+function agoLabel(date: string, tx: (fr: string, en: string) => string): string {
+  const at = Date.parse(date)
+
+  if (!Number.isFinite(at)) return ""
+
+  const min = Math.max(0, Math.round((Date.now() - at) / 60000))
+
+  if (min < 60) return tx(`il y a ${Math.max(1, min)} min`, `${Math.max(1, min)} min ago`)
+
+  const h = Math.round(min / 60)
+
+  if (h < 24) return tx(`il y a ${h} h`, `${h} h ago`)
+  if (h < 48) return tx("Hier", "Yesterday")
+
+  return formatInCompanyZone(date, tx)
+}
+
 export function Topbar({
   title,
   subtitle,
@@ -65,6 +91,8 @@ export function Topbar({
   const tx = useTx()
 
   const [bellOpen, setBellOpen] = useState(false)
+  // Sector chip in the list: "" is all of them.
+  const [bellSector, setBellSector] = useState("")
   const bell = usePresence(bellOpen, "--dropdown-close-dur")
   const bellRef = useRef<HTMLDivElement>(null)
 
@@ -91,7 +119,10 @@ export function Topbar({
   }, [bellOpen])
 
   function toggleBell() {
-    if (!bellOpen) onNotificationsOpen?.()
+    if (!bellOpen) {
+      onNotificationsOpen?.()
+      setBellSector("")
+    }
     setBellOpen(!bellOpen)
   }
 
@@ -101,6 +132,11 @@ export function Topbar({
   }
 
   const hasUnread = unreadCount > 0
+
+  const sectorCounts = Array.from(
+    notifications.reduce((m, n) => (n.sector ? m.set(n.sector, (m.get(n.sector) ?? 0) + 1) : m), new Map<string, number>())
+  )
+  const shown = bellSector ? notifications.filter((n) => n.sector === bellSector) : notifications
 
   return (
     <header className="sticky top-0 z-30 flex items-center gap-4 border-b border-border bg-canvas/80 px-4 py-3.5 backdrop-blur-md lg:px-8">
@@ -190,11 +226,42 @@ export function Topbar({
           role="dialog"
           aria-label={tx("Alertes critiques", "Critical alerts")}
           data-origin="top-right"
-          className={cn("absolute right-0 top-full z-40 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-border bg-card p-2 shadow-xl t-dropdown", bell.className)}
+          className={cn("absolute right-0 top-full z-40 mt-2 w-[23rem] max-w-[calc(100vw-2rem)] max-sm:fixed max-sm:inset-x-4 max-sm:w-auto max-sm:max-w-none squircle rounded-[30px] border border-border bg-card p-2.5 shadow-xl t-dropdown", bell.className)}
         >
-          <p className="px-2 pb-1.5 pt-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            {tx("Alertes critiques à traiter", "Critical alerts to handle")}
-          </p>
+          <div className="squircle rounded-[22px] bg-accent px-[18px] pb-4 pt-[18px] text-accent-foreground">
+            <div className="flex items-center gap-3">
+              <span data-bell-count="" className="font-heading text-[38px] font-bold leading-none">
+                {notifications.length}
+              </span>
+              <span className="text-sm font-bold leading-tight">
+                {notifications.length === 1
+                  ? tx("alerte critique à traiter", "critical alert to handle")
+                  : tx("alertes critiques à traiter", "critical alerts to handle")}
+              </span>
+            </div>
+
+            {sectorCounts.length > 1 && (
+              <div className="mt-3.5 flex flex-wrap gap-1.5">
+                {[["", notifications.length] as const, ...sectorCounts].map(([id, count]) => (
+                  <button
+                    key={id || "all"}
+                    type="button"
+                    data-bell-chip={id || "all"}
+                    aria-pressed={bellSector === id}
+                    onClick={() => setBellSector(id)}
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs font-bold transition-colors",
+                      bellSector === id
+                        ? "bg-accent-foreground text-accent"
+                        : "bg-accent-foreground/10 hover:bg-accent-foreground/20"
+                    )}
+                  >
+                    {id ? sectorLabel(id, tx) : tx("Tout", "All")} {count}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
           {notificationsUnknown && (
             <p
@@ -218,25 +285,34 @@ export function Topbar({
               </p>
             )
           ) : (
-            <ul className="max-h-80 overflow-y-auto">
-              {notifications.slice(0, 8).map((n) => (
+            <ul className="mt-2 flex max-h-80 flex-col gap-2 overflow-y-auto">
+              {shown.slice(0, 8).map((n) => (
                 <li key={n.key}>
                   <button
                     type="button"
                     onClick={openTracking}
-                    className="w-full rounded-xl px-2 py-2 text-left transition-colors hover:bg-muted"
+                    className={"flex w-full items-center gap-3 rounded-[20px] bg-muted px-4 py-3.5 text-left transition-colors hover:bg-muted/70" + FOCUS_RING}
                   >
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="truncate text-sm font-semibold">
-                        {n.equipment}
+                    <span className="flex min-w-0 flex-1 flex-col gap-2">
+                      <span className="flex flex-wrap items-center gap-1.5">
+                        <span className="rounded-full bg-[var(--tag-danger-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--tag-danger-fg)]">
+                          {tx("Critique", "Critical")}
+                        </span>
+                        {n.sector && (
+                          <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-bold", sectorTag(n.sector))}>
+                            {sectorLabel(n.sector, tx)}
+                          </span>
+                        )}
+                        <span className="ml-1 text-xs font-semibold text-muted-foreground">
+                          {agoLabel(n.date, tx)}
+                        </span>
                       </span>
-                      <span className="shrink-0 text-[11px] text-muted-foreground">
-                        {formatInCompanyZone(n.date, tx)}
+                      <span className="line-clamp-2 text-base font-bold leading-snug">
+                        {n.message || n.equipment}
                       </span>
                     </span>
-                    <span className="mt-0.5 line-clamp-2 block text-xs text-muted-foreground">
-                      {n.sector ? `${sectorLabel(n.sector, tx)} · ` : ""}
-                      {n.message}
+                    <span className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-card" aria-hidden="true">
+                      <ArrowRight className="h-4 w-4" />
                     </span>
                   </button>
                 </li>
@@ -247,10 +323,9 @@ export function Topbar({
           <button
             type="button"
             onClick={openTracking}
-            className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-xl bg-foreground px-3 py-2 text-xs font-semibold text-background transition-opacity hover:opacity-90"
+            className={"mt-2 flex w-full items-center justify-center rounded-full border border-border px-3 py-3 text-sm font-bold transition-colors hover:bg-muted" + FOCUS_RING}
           >
-            {tx("Ouvrir le suivi", "Open tracking")}
-            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            {tx("Tout voir dans le suivi", "See all in tracking")}
           </button>
         </div>
       )}
