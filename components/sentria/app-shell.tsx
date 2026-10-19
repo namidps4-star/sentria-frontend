@@ -346,7 +346,15 @@ export function AppShell({
         />
       )}
 
-      <GuideBuddy open={showGuide} onClose={() => setShowGuide(false)} />
+      <GuideBuddy
+        open={showGuide}
+        onClose={() => setShowGuide(false)}
+        view={view}
+        onNavigate={(v) => {
+          setView(v)
+          setSearch("")
+        }}
+      />
 
       <Sidebar
         onStartTour={() => setShowGuide(true)}

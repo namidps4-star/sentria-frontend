@@ -3,13 +3,30 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 
 import { useTx } from "@/lib/i18n"
-import { GUIDE_DONE_KEY, GUIDE_NAME, guideSteps, type GuidePose } from "@/lib/guide-steps"
+import { activeDepartment } from "@/lib/active-site"
+import { activityLabel } from "@/lib/activities"
+import { columnsForUpload } from "@/lib/csv-columns"
+import {
+  GUIDE_DONE_KEY,
+  GUIDE_NAME,
+  deepSteps,
+  guideSteps,
+  previewStep,
+  type DeepContext,
+  type GuidePose,
+  type GuideStep,
+} from "@/lib/guide-steps"
+import type { ViewKey } from "./types"
 import { cn } from "@/lib/utils"
 
 /* --------------------------------------------------------------------------
  * The first-use tour (ONB-GUIDE): a small lime robot with a black screen face
  * walks down the sidebar, points at each item, and says in plain words what it
  * is for, with one example. Scripted, so no AI and no cost per use.
+ *
+ * "Go deeper" at the end opens a second chapter on the dashboard and on what
+ * to import: it points at the dashboard's own blocks (data-tour), and shows
+ * the columns the account's department asks for in its file.
  *
  * Pointing steps put the robot next to the item and ring the item in lime.
  * Hello and goodbye sit in the middle of the screen. Under 768 px the sidebar
@@ -102,25 +119,67 @@ export function RoboFigure({ pose, className, style }: { pose: GuidePose; classN
 }
 
 type Box = { left: number; top: number; width: number; height: number }
+type Chapter = "quick" | "deep"
 
 const CARD_W = 320
 const ROBO_W = 142
 const GAP = 12
 
-export function GuideBuddy({ open, onClose }: { open: boolean; onClose: () => void }) {
+/** Where a step points: a menu item or a dashboard block. */
+function selectorFor(step: GuideStep): string | null {
+  if (step.nav) return `aside [data-nav="${step.nav}"]`
+  if (step.anchor) return `[data-tour="${step.anchor}"]`
+
+  return null
+}
+
+/** What the deeper chapter says about this account's file. */
+function deepContext(tx: ReturnType<typeof useTx>): DeepContext {
+  try {
+    const sector = localStorage.getItem("sentria_sector")
+    const department = activeDepartment() ?? localStorage.getItem("sentria_business_type")
+
+    return {
+      columns: columnsForUpload(department, sector),
+      department: activityLabel(sector, department, tx),
+    }
+  } catch {
+    return { columns: [] }
+  }
+}
+
+export function GuideBuddy({
+  open,
+  onClose,
+  view,
+  onNavigate,
+}: {
+  open: boolean
+  onClose: () => void
+  /** The view on screen, and a way to open another: the deeper chapter starts on the dashboard. */
+  view: ViewKey
+  onNavigate: (view: ViewKey) => void
+}) {
   const tx = useTx()
+  const [chapter, setChapter] = useState<Chapter>("quick")
   const [index, setIndex] = useState(0)
   const [targets, setTargets] = useState<Record<string, Box | null>>({})
   const [narrow, setNarrow] = useState(false)
+  // False while the dashboard is still opening: no step is dropped for a block that is just not there yet.
+  const [settled, setSettled] = useState(true)
   const next = useRef<HTMLButtonElement>(null)
 
-  const all = useMemo(() => guideSteps(tx), [tx])
+  useEffect(() => {
+    if (!open) return
+    setChapter("quick")
+    setIndex(0)
+  }, [open])
 
-  // Wide screens drop a step whose menu item is not on screen. Narrow ones
-  // keep every step: nothing is pointed at, so nothing can be missing.
-  const steps = useMemo(
-    () => all.filter((s) => !s.nav || narrow || targets[s.nav] !== null),
-    [all, narrow, targets],
+  const all = useMemo(
+    () => (chapter === "deep" ? deepSteps(tx, deepContext(tx)) : guideSteps(tx)),
+    // The columns are read when the chapter opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tx, chapter, open],
   )
 
   const measure = useCallback(() => {
@@ -129,13 +188,45 @@ export function GuideBuddy({ open, onClose }: { open: boolean; onClose: () => vo
 
     const found: Record<string, Box | null> = {}
     for (const step of all) {
-      if (!step.nav) continue
-      const el = document.querySelector<HTMLElement>(`aside [data-nav="${step.nav}"]`)
+      const selector = selectorFor(step)
+      if (!selector) continue
+      const el = document.querySelector<HTMLElement>(selector)
       const r = el?.getBoundingClientRect()
-      found[step.nav] = r && r.width > 0 && r.height > 0 ? { left: r.left, top: r.top, width: r.width, height: r.height } : null
+      found[selector] = r && r.width > 0 && r.height > 0 ? { left: r.left, top: r.top, width: r.width, height: r.height } : null
     }
     setTargets(found)
   }, [all])
+
+  // A step whose target is not on screen is dropped: a menu item the person does not have (wide screens
+  // only, as the menu is a drawer on a phone), or a dashboard block that needs data. When data blocks go,
+  // one "what you will see after an import" step takes their place.
+  const steps = useMemo(() => {
+    if (!settled) return all
+
+    const out: GuideStep[] = []
+    let droppedData = false
+
+    for (const s of all) {
+      const selector = selectorFor(s)
+      const missing = selector !== null && targets[selector] === null
+
+      if (missing && s.nav && narrow) {
+        out.push(s)
+        continue
+      }
+
+      if (missing) {
+        if (s.needsData) droppedData = true
+        continue
+      }
+
+      out.push(s)
+    }
+
+    if (droppedData) out.splice(1, 0, previewStep(tx))
+
+    return out
+  }, [all, targets, narrow, settled, tx])
 
   useLayoutEffect(() => {
     if (!open) return
@@ -144,8 +235,22 @@ export function GuideBuddy({ open, onClose }: { open: boolean; onClose: () => vo
 
   useEffect(() => {
     if (!open) return
-    window.addEventListener("resize", measure)
-    return () => window.removeEventListener("resize", measure)
+
+    let frame = 0
+    const again = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(measure)
+    }
+
+    window.addEventListener("resize", again)
+    // The dashboard scrolls inside its own panel: follow it so the ring stays on its block.
+    window.addEventListener("scroll", again, true)
+
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener("resize", again)
+      window.removeEventListener("scroll", again, true)
+    }
   }, [open, measure])
 
   const finish = useCallback(() => {
@@ -155,6 +260,7 @@ export function GuideBuddy({ open, onClose }: { open: boolean; onClose: () => vo
       /* A blocked localStorage just lets the tour offer itself again. */
     }
     setIndex(0)
+    setChapter("quick")
     onClose()
   }, [onClose])
 
@@ -169,10 +275,48 @@ export function GuideBuddy({ open, onClose }: { open: boolean; onClose: () => vo
     [last, finish, steps.length],
   )
 
+  function goDeeper() {
+    setSettled(false)
+    setChapter("deep")
+    setIndex(0)
+  }
+
+  // On entering a step: open its view, bring its block into view, and measure again once the page has settled.
+  const stepId = step?.id
+  const stepView = step?.view
+  const stepSelector = step ? selectorFor(step) : null
+  const stepIsNav = !!step?.nav
+
+  useEffect(() => {
+    if (!open || !stepId) return
+
+    if (stepView && view !== stepView) {
+      setSettled(false)
+      onNavigate(stepView)
+    }
+
+    const timers = [0, 150, 500, 1000].map((ms) =>
+      setTimeout(() => {
+        if (ms === 150 && stepSelector && !stepIsNav) {
+          document
+            .querySelector(stepSelector)
+            ?.scrollIntoView({ block: window.matchMedia("(max-width: 767px)").matches ? "start" : "center", behavior: "smooth" })
+        }
+
+        measure()
+        if (ms === 1000) setSettled(true)
+      }, ms),
+    )
+
+    return () => timers.forEach(clearTimeout)
+    // `view` is read at entry only: leaving the view would otherwise restart the step.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, stepId, stepView, stepSelector, stepIsNav, chapter, measure])
+
   useEffect(() => {
     if (!open) return
     next.current?.focus()
-  }, [open, index])
+  }, [open, index, chapter])
 
   useEffect(() => {
     if (!open) return
@@ -189,22 +333,63 @@ export function GuideBuddy({ open, onClose }: { open: boolean; onClose: () => vo
 
   if (!open || !step) return null
 
-  const target = step.nav && !narrow ? targets[step.nav] : null
-  const centred = !target && !narrow
-
-  // The robot stands to the right of the item, arm out to the left. The card
-  // follows it, kept inside the screen.
+  const vw = typeof window === "undefined" ? 1280 : window.innerWidth
   const vh = typeof window === "undefined" ? 800 : window.innerHeight
-  const roboLeft = target ? target.left + target.width + GAP : 0
-  const roboTop = target ? Math.max(12, Math.min(vh - 250, target.top + target.height / 2 - ROBO_W * 0.6)) : 0
+  const selector = selectorFor(step)
+  const target = selector && !(step.nav && narrow) ? targets[selector] ?? null : null
+
+  // Where the robot and its card stand:
+  //  side    - to the right of a menu item, arm out to the left
+  //  left    - to the left of a small block on the right edge (the import button), arm out to the right
+  //  float   - top or bottom of the screen, on the side with more room, for a big block
+  //  centre  - hello, goodbye and the explaining steps that point at nothing
+  //  sheet   - the bottom of a phone screen
+  const small = !!target && target.width < 220 && target.height < 120
+  const placement =
+    narrow ? "sheet" : !target ? "centre" : step.nav ? "side" : small && target.left > vw * 0.55 ? "left" : "float"
+  const centred = placement === "centre"
+
+  let place: React.CSSProperties | undefined
+
+  if (target && placement === "side") {
+    place = {
+      left: target.left + target.width + GAP,
+      top: Math.max(12, Math.min(vh - 250, target.top + target.height / 2 - ROBO_W * 0.6)),
+    }
+  } else if (target && placement === "left") {
+    place = {
+      right: vw - (target.left - GAP),
+      top: Math.max(12, Math.min(vh - 250, target.top + target.height / 2 - ROBO_W * 0.6)),
+    }
+  } else if (target && placement === "float") {
+    const room = { top: target.top, bottom: vh - (target.top + target.height) }
+    place = {
+      left: "50%",
+      transform: "translateX(-50%)",
+      ...(room.top > room.bottom ? { top: 16 } : { bottom: 16 }),
+    }
+  }
+
+  const cornerGlow = { filter: "drop-shadow(0 0 12px var(--robo-glow))" }
+  const roboClass = cn(
+    "shrink-0 text-black animate-[robo-pop_0.45s_cubic-bezier(0.2,1.4,0.4,1)]",
+    centred ? "-mb-6 h-40 w-[134px]" : narrow ? "-mb-6 h-28 w-[94px]" : "h-[170px] w-[142px]",
+  )
 
   return (
-    <div className="fixed inset-0 z-[80]" data-testid="guide-buddy" data-step={step.id} data-pose={step.pose}>
+    <div
+      className="fixed inset-0 z-[80]"
+      data-testid="guide-buddy"
+      data-step={step.id}
+      data-pose={step.pose}
+      data-chapter={chapter}
+      data-placement={placement}
+    >
       {/* Hello and goodbye dim the page behind the card. A pointing step dims it through the ring's
-          own shadow, so the item it points at stays lit; on a phone there is no ring, so the page
+          own shadow, so the block it points at stays lit; on a phone with nothing to ring, the page
           is dimmed here. Neither blocks a click, so the page stays usable. */}
       {centred && <div className="absolute inset-0 bg-black/35" onClick={finish} aria-hidden="true" />}
-      {narrow && <div className="pointer-events-none absolute inset-0 bg-black/30" aria-hidden="true" />}
+      {narrow && !target && <div className="pointer-events-none absolute inset-0 bg-black/30" aria-hidden="true" />}
 
       {target && (
         <div
@@ -222,17 +407,18 @@ export function GuideBuddy({ open, onClose }: { open: boolean; onClose: () => vo
           "absolute flex items-start gap-2 transition-all duration-500 ease-out",
           centred && "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex-col items-center",
           narrow && "inset-x-3 bottom-3 flex-col items-center",
+          placement === "left" && "flex-row-reverse",
         )}
-        style={target ? { left: roboLeft, top: roboTop } : undefined}
+        style={place}
       >
-        <RoboFigure
-          pose={step.pose}
-          className={cn(
-            "shrink-0 text-black animate-[robo-pop_0.45s_cubic-bezier(0.2,1.4,0.4,1)]",
-            centred ? "-mb-6 h-40 w-[134px]" : narrow ? "-mb-6 h-28 w-[94px]" : "h-[170px] w-[142px]",
-          )}
-          style={{ filter: "drop-shadow(0 0 12px var(--robo-glow))" }}
-        />
+        {placement === "left" ? (
+          // Mirrored on a wrapper, so the pop animation on the robot itself keeps its own transform.
+          <span className="shrink-0" style={{ transform: "scaleX(-1)" }}>
+            <RoboFigure pose={step.pose} className={roboClass} style={cornerGlow} />
+          </span>
+        ) : (
+          <RoboFigure pose={step.pose} className={roboClass} style={cornerGlow} />
+        )}
 
         <div
           className="squircle shrink-0 rounded-[22px] border border-border bg-card p-4 text-card-foreground shadow-xl"
@@ -241,7 +427,29 @@ export function GuideBuddy({ open, onClose }: { open: boolean; onClose: () => vo
         >
           <div className="text-sm font-semibold">{step.title}</div>
           <p className="mt-1 text-[13px] leading-snug text-card-foreground/85">{step.body}</p>
+
+          {step.chips && (
+            <div className="mt-2 flex flex-wrap gap-1" data-testid="guide-chips">
+              {step.chips.map((column) => (
+                <code key={column} className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground/85">
+                  {column}
+                </code>
+              ))}
+            </div>
+          )}
+
           {step.example && <p className="mt-1.5 text-xs leading-snug text-muted-foreground">{step.example}</p>}
+
+          {last && chapter === "quick" && (
+            <button
+              type="button"
+              onClick={goDeeper}
+              data-testid="guide-deeper"
+              className="mt-3 w-full rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {tx("Aller plus loin : le tableau de bord et les données", "Go deeper: the dashboard and your data")}
+            </button>
+          )}
 
           <div className="mt-3 flex items-center justify-between gap-3">
             <button
