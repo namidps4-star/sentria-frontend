@@ -183,7 +183,7 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
                           : "bg-muted text-muted-foreground"
                     )}
                   >
-                    {site.alerts ?? 0}
+                    {site.alerts ?? "–"}
                   </span>
                 )
                 const chipsFor = (site: StoredSite, isCurrent: boolean) => {
