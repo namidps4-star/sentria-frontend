@@ -11,6 +11,7 @@ Next.js 16 (App Router, Turbopack), React 19, Tailwind v4, Supabase Auth (`@supa
 - Light, dark and 390 px must all look right.
 - Theme tokens, never `dark:`.
 - New big surfaces get the squircle corner: add the `squircle` class next to a large `rounded-[...]`. Only the sidebar has it so far (64px). Small controls stay plain round.
+- A chantier in Notion holds only things to do: what to build, the data it needs, the tests, what it depends on, and the acceptance check. Evidence, survey figures, sources, market notes and scores go in chat or on the prospect page, not in the chantier.
 - The owner's email address never goes into code.
 - Secrets never go in the repo: `scripts/check_secrets.py` runs as a pre-commit hook (turn it on once per clone: `git config core.hooksPath .githooks`) and in GitHub Actions. A deliberately fake line can carry `secret-scan: allow`.
 
@@ -33,6 +34,10 @@ Before a task that looks heavy, say which model and effort it needs, so the foun
 ## Reporting
 Terse: Done / Tested / Pushed / Your turn / Open questions / Next. Say plainly what was and wasn't verified.
 
+Every report on an issue, an article, a prospect or a feature idea also gives, in chat:
+- **Solve score:** 0 to 100, how much of the issue SentrIA can solve (0 nothing, 100 fully). Give today's score and the score after the doable builds. Say it is an estimate and how sure it is. The score is never written into Notion.
+- **Verdict:** should we do it, and is it worth it, with the reasons. Say what depends on data we do not have.
+
 Layout: single line breaks merge into one block in the app, so space the parts out.
 - Bold label on its own line, the text on the next line, a blank line between parts.
 - Steps for the founder go in a numbered list under "Your turn", one step per line.
@@ -53,5 +58,6 @@ All green. Real email not tried.
 ## Writing
 - Talk to the founder in caveman style, built for ADHD: answer first, short lines, small words, one thing at a time, five lines max unless asked for more, one question per message. Reports keep the Done / Tested / Pushed / Your turn / Open questions / Next order, each part a line or two. Load the `caveman` skill (full level) at the start of every session: `/home/user/sentria-frontend/.claude/skills/caveman/SKILL.md`.
 - All prose you write (replies, commit messages, code comments, test labels, docs, UI copy) follows the `humanizer` skill's surface pass: no em dashes, no hype words, no "not X, it's Y", no cheerful openers or closers. Skip its "add personality" advice and the `structural-humanizer` pass for code and test output. Run `copy_scan.py` on UI copy and commit messages before you commit.
+- Every outreach email carries one or two interesting facts from a source we checked, with a link, to catch the reader's attention, and says how SentrIA can help with their issue. Say what exists today. Never present a planned feature as built, and never claim customers we do not have.
 - The skills are third-party and stay out of the repo, like the transitions skill. If `~/.claude/skills/humanizer` is missing (fresh container): `git clone https://github.com/NulightJens/humanizer-stack ~/humanizer-stack && git -C ~/humanizer-stack checkout 13f5c023189d428ffba726c75886ca1fd0dcba65 && ~/humanizer-stack/install.sh --copy`. The pin is the commit that was read before installing; read the diff before moving it.
 - Chisle (token saver, third-party plugin) stays out of the repo too. If `claude plugin list` does not show `chisle` (fresh container): `git clone https://github.com/JayPokale/Chisle ~/chisle && git -C ~/chisle checkout 52c954b909706e5d1ae5689530e1c4eb7047b9f5 && claude plugin marketplace add ~/chisle && claude plugin install chisle@chisle`. Auto mode blocks this (untrusted code): ask the founder to switch the mode box to Accept edits, then approve each command. It starts with the next session. It trims tool output over 8000 characters (the full text goes to `~/.claude/chisle-spill/`) and adds terse-prose and short-code rules. This file and `caveman` win when they differ (arrows, tests, screenshots). The pin is the commit that was read before installing; read the diff before moving it.
