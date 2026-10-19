@@ -46,6 +46,11 @@ const summarize = rows => {
     pass(await p.getByTestId('disposal-row').count() === 2 && /Rabies vaccine · batch B7/.test(await p.getByTestId('disposal-row').first().innerText()), 'it lists the entries with their batch');
     const t = await p.getByTestId('disposal-summary').innerText();
     pass(/150/.test(t) && /66\.7 %/.test(t), 'it adds up: 150 lost, 66.7 % in pits: ' + t.replace(/\s+/g, ' '));
+    pass(await p.getByTestId('disposal-advice').count() === 1 && /66\.7 % of losses end in a pit/.test(await p.getByTestId('disposal-advice').innerText()), 'advice line shows when pits are half or more');
+    await p.getByTestId('disposal-filter-burn').click(); await p.waitForTimeout(150);
+    pass(await p.getByTestId('disposal-row').count() === 1 && /Dewormer/.test(await p.getByTestId('disposal-row').first().innerText()), 'filter Burned shows only the burned entry');
+    await p.getByTestId('disposal-filter-all').click(); await p.waitForTimeout(150);
+    pass(await p.getByTestId('disposal-row').count() === 2, 'filter All shows both again');
     await p.getByTestId('disposal-product').fill('Antibiotic'); await p.getByTestId('disposal-value').fill('80');
     await p.getByTestId('disposal-method').selectOption('return'); await p.getByTestId('disposal-add').click(); await p.waitForTimeout(700);
     const sent = p._calls.find(c => c.m === 'POST');

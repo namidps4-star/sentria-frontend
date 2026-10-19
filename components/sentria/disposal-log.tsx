@@ -31,6 +31,7 @@ export function DisposalLog() {
   const [log, setLog] = useState<Log | null | undefined>(undefined)
   const [busy, setBusy] = useState(false)
   const [note, setNote] = useState<string | null>(null)
+  const [only, setOnly] = useState<DisposalMethod | "all">("all")
   const blank = (): DisposalDraft => ({ product: "", batch: "", qty: "", value: "", method: "pit", disposed_on: today(), currency: currency.code })
   const [draft, setDraft] = useState<DisposalDraft>(blank)
 
@@ -136,9 +137,19 @@ export function DisposalLog() {
           <div data-testid="disposal-stats" className="grid gap-2 px-3 pt-3 sm:grid-cols-[1.4fr_1fr_1fr]">
             <div className="rounded-2xl bg-[#1f1f1d] p-4">
               <p className="text-[11px] font-bold uppercase tracking-wider text-white/55">{tx("6 dernières semaines", "Last 6 weeks")}</p>
-              <div className="mt-2 flex h-16 items-end gap-2" aria-hidden="true">
+              <div className="mt-2 flex h-20 items-end gap-2">
                 {perWeek.map((value, n) => (
-                  <div key={weeks[n]} className="flex-1 rounded-t-lg rounded-b-sm" style={{ height: `${Math.max(6, (value / peak) * 100)}%`, background: value === peak && value > 0 ? "var(--brand)" : "#3a3a37" }} />
+                  <div key={weeks[n]} className="flex h-full flex-1 flex-col items-center justify-end gap-1" title={`${new Date(weeks[n]).toLocaleDateString(undefined, { day: "numeric", month: "short" })} · ${money(value)}`}>
+                    <span className="text-[10px] font-semibold tabular-nums text-white/70">{value > 0 ? money(value) : ""}</span>
+                    <div className="w-full rounded-t-lg rounded-b-sm" style={{ height: `${Math.max(6, (value / peak) * 70)}%`, background: value === peak && value > 0 ? "var(--brand)" : "#3a3a37" }} />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-1 flex gap-2" aria-hidden="true">
+                {weeks.map((start) => (
+                  <span key={start} className="flex-1 text-center text-[10px] text-white/45">
+                    {new Date(start).toLocaleDateString(undefined, { day: "numeric", month: "short" })}
+                  </span>
                 ))}
               </div>
             </div>
@@ -155,8 +166,35 @@ export function DisposalLog() {
           </div>
 
           <div className="px-3 pb-3 pt-3">
+            {log.summary.pit_share >= 50 && (
+              <p data-testid="disposal-advice" className="mb-3 rounded-2xl bg-brand/15 px-4 py-3 text-sm font-semibold text-brand">
+                {tx(
+                  `${log.summary.pit_share} % des pertes finissent en fosse. Rendre le stock périmé au fournisseur ou le donner peut en récupérer une partie.`,
+                  `${log.summary.pit_share} % of losses end in a pit. Returning expired stock to the supplier, or donating it, can recover part of the cost.`
+                )}
+              </p>
+            )}
+
+            <div className="mb-2 flex flex-wrap gap-1.5" role="group" aria-label={tx("Filtrer par méthode", "Filter by method")}>
+              {(["all", ...DISPOSAL_METHODS] as const).filter((m) => m === "all" || rows.some((r) => r.method === m)).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  data-testid={`disposal-filter-${m}`}
+                  aria-pressed={only === m}
+                  onClick={() => setOnly(m)}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    only === m ? "border-transparent bg-brand text-brand-foreground" : "border-white/15 text-white/70 hover:bg-white/10"
+                  )}
+                >
+                  {m === "all" ? tx("Tout", "All") : method[m]}
+                </button>
+              ))}
+            </div>
+
             <ul className="space-y-2" data-testid="disposal-list">
-              {log.disposals.slice(0, 8).map((row) => (
+              {log.disposals.filter((row) => only === "all" || row.method === only).slice(0, 8).map((row) => (
                 <li key={row.id} data-testid="disposal-row" className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl bg-[#1f1f1d] px-4 py-3 text-sm">
                   <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: METHOD_COLOR[row.method] ?? "#555" }} aria-hidden="true" />
                   <span className="w-full min-w-0 truncate font-semibold sm:w-auto sm:flex-1">
