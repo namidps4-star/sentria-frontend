@@ -286,3 +286,9 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Problem:** A phone photo is several megabytes, and a stored photo must never be reachable without a sign-in.
 **Reality:** The field page shrinks a photo to a JPEG of at most 1600 px on the phone (`shrinkPhoto`) before sending it as a file upload; the API re-encodes it again and caps each person at 5 notes and 3 photos. What the page sent in a visit is kept in the page, so the counts survive the switch to the "done" screen. The boss reads them in the task detail (`FieldReports`): notes as text, photos fetched signed in as blobs (an `<img src>` cannot carry the sign-in), nothing shown until something has arrived.
 **Rule:** Fetch photos only through `fetchFieldPhoto` (signed in). Never put a photo's address where a signed-out person could load it.
+
+## A cached read of server sentences must carry its language
+**Problem:** After switching to English, an opened alert still showed its Recommendation and Why in French while its message was English.
+**Reality:** The API writes those two sentences in the `lang` the request names (default French). The list read reloads when the language changes, but the one-alert read in `dashboard-view.tsx` was kept by alert name only, and a French answer still in flight could land after the switch.
+**Rule:** A client-side copy of a server-written sentence stores the `lang` it was asked in, is used only while that matches the current language, and an in-flight guard is keyed by item and language. `tests/e2e/recolang.js` covers both the finished and the late read.
+
