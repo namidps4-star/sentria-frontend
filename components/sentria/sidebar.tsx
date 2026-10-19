@@ -515,14 +515,14 @@ export function Sidebar({
                 title={collapsed ? tx("Aide et retours", "Help & feedback") : undefined}
                 data-support-open=""
                 className={[
-                  "mb-1 flex h-10 w-full items-center rounded-xl bg-accent/15 [@media(max-height:700px)]:h-8 text-accent transition hover:bg-accent/25",
+                  "mb-0.5 flex h-10 w-full items-center rounded-xl [@media(max-height:700px)]:h-8 text-sidebar-foreground/65 transition hover:bg-accent/10 hover:text-accent",
                   collapsed ? "justify-center" : "gap-3 px-3 text-left",
                   SIDEBAR_FOCUS,
                 ].join(" ")}
               >
                 <MessageSquare className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} aria-hidden="true" />
                 {!collapsed && (
-                  <span className="text-sm font-semibold">{tx("Aide et retours", "Help & feedback")}</span>
+                  <span className="text-sm font-medium">{tx("Aide et retours", "Help & feedback")}</span>
                 )}
               </button>
 
