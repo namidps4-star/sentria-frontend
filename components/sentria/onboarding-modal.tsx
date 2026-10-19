@@ -218,8 +218,7 @@ const ACTIVITY_IMAGES: Record<string, string> = {
   // Health
   "pharmacie": "/pharmacie.png",
   "laboratoire": "/laboratoire.png",
-  // No picture of its own yet: the pharmacy's.
-  "veterinaire": "/pharmacie.png",
+  "veterinaire": "/veterinaire.png",
   "clinique-hopital": "/clinique-hopital.png",
   "grossiste-pharma": "/grossiste-pharma.png",
 

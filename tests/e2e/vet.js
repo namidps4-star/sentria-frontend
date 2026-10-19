@@ -40,6 +40,11 @@ const UID = 'u-csv', EMAIL = 'a@b.c';
     pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
     await ctx.close(); }
 
+  console.log('== its picture');
+  { const ctx = await browser.newContext(); const r = await ctx.request.get(APP_URL.replace(/\/$/, '') + '/veterinaire.png');
+    pass(r.status() === 200 && /image\/png/.test(r.headers()['content-type'] || '') && (await r.body()).length > 1000, 'the Vet picture is served as a PNG');
+    await ctx.close(); }
+
   console.log('== French, dark, phone');
   { const { p, ctx } = await open({ sector: 'health', business: 'veterinaire', lang: 'fr', vw: 390 });
     await openImport(p, 'fr');
