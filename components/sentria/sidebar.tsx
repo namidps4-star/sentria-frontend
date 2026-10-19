@@ -62,6 +62,8 @@ interface SidebarProps {
   onSignOut?: () => void
   /** SentrIA staff: adds the Admin page. */
   isAdmin?: boolean
+  /** Opens the first-use tour again (ONB-GUIDE), from the Help dialog. */
+  onStartTour?: () => void
 }
 
 type SidebarItem = {
@@ -168,6 +170,7 @@ export function Sidebar({
   username,
   onSignOut,
   isAdmin = false,
+  onStartTour,
 }: SidebarProps) {
   const t = useT()
   const held = useSites()
@@ -381,6 +384,7 @@ export function Sidebar({
                       <button
                         key={item.id}
                         type="button"
+                        data-nav={item.id}
                         onClick={() => {
                           onNavigate(item.id)
                           onClose()
@@ -565,6 +569,7 @@ export function Sidebar({
         page={active}
         pageLabel={here ? t(here.label) : active}
         onClose={closeSupport}
+        onStartTour={onStartTour ? () => { closeSupport(); onStartTour() } : undefined}
       />
 
       {signOutDialog.present && (

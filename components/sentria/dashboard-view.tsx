@@ -1321,8 +1321,11 @@ export function DashboardView({
     null
   )
 
+  // The language it was fetched in travels with it: its action and its
+  // "why" are sentences, so a copy fetched in French must not stay on
+  // screen once the person has switched to English.
   const [fetchedRecommendation, setFetchedRecommendation] =
-    useState<Recommendation | null>(null)
+    useState<{ rec: Recommendation; lang: string } | null>(null)
   const [fetchingRecommendationFor, setFetchingRecommendationFor] =
     useState<string | null>(null)
 
@@ -2204,34 +2207,40 @@ export function DashboardView({
       recommendations.find(
         (r) => r.equipment === expandedAlert.equipment
       ) ??
-      (fetchedRecommendation?.equipment === expandedAlert.equipment
-        ? fetchedRecommendation
+      (fetchedRecommendation?.rec.equipment === expandedAlert.equipment &&
+      fetchedRecommendation.lang === recommendationsLang
+        ? fetchedRecommendation.rec
         : null))
     : null
 
   useEffect(() => {
     if (!expandedAlert || expandedRecommendation) return
-    if (fetchingRecommendationFor === expandedAlert.equipment) return
+    // One read per alert and language: a French read still in flight must
+    // not stop the English one that a language switch asks for.
+    const askedLang = recommendationsLang
+    const readKey = `${expandedAlert.equipment}|${askedLang}`
 
-    setFetchingRecommendationFor(expandedAlert.equipment)
+    if (fetchingRecommendationFor === readKey) return
+
+    setFetchingRecommendationFor(readKey)
 
     apiFetch(
       `${API}/recommendations?equipment=${encodeURIComponent(
         expandedAlert.equipment
-      )}&limit=1&lang=${tx("fr", "en")}`
+      )}&limit=1&lang=${askedLang}`
     )
       .then((r) => readList<Recommendation>(r, "recommendations"))
       .then((answer) => {
         // A read that failed leaves the panel at "N/A", which is true.
         const found = answer.ok ? answer.rows[0] : null
-        if (found) setFetchedRecommendation(found)
+        if (found) setFetchedRecommendation({ rec: found, lang: askedLang })
       })
       .catch((err) => {
         console.error("Failed to fetch this alert's recommendation:", err)
       })
       .finally(() => setFetchingRecommendationFor(null))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expandedAlert?.equipment, expandedRecommendation])
+  }, [expandedAlert?.equipment, expandedRecommendation, recommendationsLang])
 
   const meta =
     filterSector === "logistics" && opsType

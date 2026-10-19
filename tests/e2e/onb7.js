@@ -58,6 +58,7 @@ const text = p => p.evaluate(() => document.body.innerText);
   await next();
   pass(/Step 6 of 6/.test(await text(p)), 'step 6: data (last)');
   await p.getByRole('button', { name: /Open my dashboard/ }).click(); await p.waitForTimeout(1500);
+  pass(await p.locator('[data-testid="guide-buddy"]').count() === 1, 'first setup: Robo\'s tour opens by itself');
   const ls = await p.evaluate(() => ({ tz: localStorage.getItem('sentria_timezone'), c: localStorage.getItem('sentria_country'), cur: localStorage.getItem('sentria_currency'), lang: localStorage.getItem('sentria_language'), done: localStorage.getItem('sentria_onboarded') }));
   pass(ls.done === 'true' && ls.tz === 'cet' && ls.c === 'CI' && ls.cur === 'XOF' && ls.lang === 'en', 'saved: country CI, currency XOF, time zone CET, language en ' + JSON.stringify(ls));
   pass(errors.length === 0, 'no page errors ' + errors.join('|'));

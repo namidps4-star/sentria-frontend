@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { AlertTriangle, CheckCircle2, Loader2, Send, X } from "@/lib/icons"
+import { AlertTriangle, CheckCircle2, Loader2, Play, Send, X } from "@/lib/icons"
 
 import { useTx, type Tx } from "@/lib/i18n"
 import { useLocale } from "@/lib/locale"
@@ -31,6 +31,7 @@ export function SupportDialog({
   page,
   pageLabel,
   onClose,
+  onStartTour,
 }: {
   open: boolean
   /** The view the person is on, as the app names it ("dashboard"). */
@@ -38,12 +39,14 @@ export function SupportDialog({
   /** The same view in the person's language, said back to them. */
   pageLabel: string
   onClose: () => void
+  /** Offers the first-use tour again (ONB-GUIDE); no button when absent. */
+  onStartTour?: () => void
 }) {
   const dialog = usePresence(open, "--modal-close-dur")
 
   if (!dialog.present) return null
 
-  return <SupportBody page={page} pageLabel={pageLabel} className={dialog.className} onClose={onClose} />
+  return <SupportBody page={page} pageLabel={pageLabel} className={dialog.className} onClose={onClose} onStartTour={onStartTour} />
 }
 
 const KIND_LABEL: Record<SupportKind, [string, string]> = {
@@ -122,11 +125,13 @@ function SupportBody({
   pageLabel,
   className,
   onClose,
+  onStartTour,
 }: {
   page: string
   pageLabel: string
   className: string
   onClose: () => void
+  onStartTour?: () => void
 }) {
   const tx = useTx()
   const { ui } = useLocale()
@@ -260,6 +265,19 @@ function SupportBody({
                 <X className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
+
+            {onStartTour && (
+              <button
+                type="button"
+                onClick={onStartTour}
+                disabled={sending}
+                data-tour-open=""
+                className="mt-3 inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed"
+              >
+                <Play className="h-3.5 w-3.5" aria-hidden="true" />
+                {tx("Visite guidée", "Take the tour")}
+              </button>
+            )}
 
             <div
               role="radiogroup"
