@@ -84,7 +84,7 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_sector: 
   pass(await bar.getByRole('tab').count() === 1 && await bar.getByRole('tab', { name: /Clinic/ }).getAttribute('aria-selected') === 'true', 'a hospital alone: the bar shows its one tab');
   const adds = q.getByRole('group', { name: 'Add a department' }).getByRole('button');
   const addNames = await adds.evaluateAll(els => els.map(e => e.getAttribute('aria-label')));
-  pass(addNames.length === 2 && addNames.some(n => /Add Pharmacy/.test(n)) && addNames.some(n => /Add Laboratory/.test(n)) && !addNames.some(n => /wholesal/i.test(n)), 'offers its own pharmacy and lab, not the wholesaler: ' + addNames.join(', '));
+  pass(addNames.length === 3 && addNames.some(n => /Add Pharmacy/.test(n)) && addNames.some(n => /Add Laboratory/.test(n)) && addNames.some(n => /Add Veterinary/.test(n)) && !addNames.some(n => /wholesal/i.test(n)), 'offers its own pharmacy, lab and vet, not the wholesaler: ' + addNames.join(', '));
   await adds.filter({ hasText: 'Laboratory' }).click(); await q.waitForTimeout(600);
   pass(await bar.getByRole('tab').count() === 2 && await bar.getByRole('tab', { name: /Laboratory/ }).getAttribute('aria-selected') === 'true', 'Business: "+ Laboratory" adds the lab as a tab and switches to it');
   pass(JSON.parse(await q.evaluate(() => localStorage.getItem('sentria_departments'))).health.join(',') === 'clinique-hopital,laboratoire', 'saved with the account\'s departments');

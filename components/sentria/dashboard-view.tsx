@@ -237,6 +237,7 @@ const BUSINESS_TYPE_LABELS: Record<string, Localized> = {
     "Grossiste-répartiteur pharmaceutique", "Pharmaceutical wholesaler"),
   "clinique-hopital": localized("Clinique / Hôpital", "Clinic / Hospital"),
   "laboratoire": localized("Laboratoire", "Laboratory"),
+  "veterinaire": localized("Vétérinaire", "Veterinary"),
   "exploitation-agricole": localized("Exploitation agricole", "Farm"),
   "cooperative-agricole": localized(
     "Coopérative agricole", "Agricultural cooperative"),

@@ -59,7 +59,7 @@ export function trialDaysLeft(trialEndsAt: string | null, now = Date.now()): num
 export const DEPARTMENT_GROUPS: Partial<Record<Sector, string[][]>> = {
   // A hospital has its own pharmacy and lab. A pharma wholesaler sells
   // to them: a separate business.
-  health: [["clinique-hopital", "pharmacie", "laboratoire"]],
+  health: [["clinique-hopital", "pharmacie", "laboratoire", "veterinaire"]],
   // Cooperatives and large farms store their own harvest; the farms are
   // the coop's members, not the coop.
   agriculture: [

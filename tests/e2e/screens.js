@@ -149,7 +149,7 @@ const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y
     const panel = p.locator('#import-panel'); const t = await panel.innerText();
     pass(/1 · SECTOR/i.test(t) && /2 · WHICH DEPARTMENT IS THIS FILE FOR\?/i.test(t) && /3 · THE FILE/i.test(t), 'three numbered steps: sector, department, file');
     const choices = panel.getByRole('group', { name: /Which department/ }).getByRole('button');
-    pass(await choices.count() === 3, 'one choice per department (3)');
+    pass(await choices.count() === 4, 'one choice per department (4)');
     const boxes = await choices.evaluateAll(els => els.map(e => { const r = e.getBoundingClientRect(); return { h: r.height, fs: parseFloat(getComputedStyle(e.querySelector('span span')).fontSize) }; }));
     pass(boxes.every(b => b.h >= 44 && b.fs >= 14), 'big enough to read and tap: ' + JSON.stringify(boxes));
     const dep = await choices.first().boundingBox(), file = await panel.locator('label:has(input[type=file])').boundingBox();

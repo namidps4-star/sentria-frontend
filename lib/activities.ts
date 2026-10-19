@@ -144,6 +144,19 @@ export const ACTIVITIES_BY_SECTOR: Record<Sector, Activity[]> = {
       icon: Activity,
       maturity: "early",
     },
+    {
+      id: "veterinaire",
+      label: localized(
+        "Vétérinaire",
+        "Veterinary"
+      ),
+      description: localized(
+        "Médicaments vétérinaires, péremption et stock",
+        "Veterinary drugs, expiry and stock"
+      ),
+      icon: Activity,
+      maturity: "early",
+    },
   ],
 
   agriculture: [
@@ -459,6 +472,7 @@ const KEY_PREFIXES_BY_ACTIVITY: Record<string, string[]> = {
   pharmacie: ["health.", "supplier."],
   "clinique-hopital": ["health.", "hospital.", "supplier."],
   laboratoire: ["lab.", "supplier."],
+  veterinaire: ["health.", "supplier."],
   "grossiste-pharma": ["wholesaler.", "supplier."],
 }
 
