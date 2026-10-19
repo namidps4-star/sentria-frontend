@@ -34,6 +34,8 @@ import { UploadPanelHost } from "./upload-panel-host"
 import { AnalyticsConsent } from "./analytics-consent"
 import { track } from "@/lib/analytics"
 import { readAccountPlan } from "@/lib/plans"
+import { GuideBuddy } from "./guide-buddy"
+import { GUIDE_DONE_KEY } from "@/lib/guide-steps"
 
 /** What the bell reads of an alert row. */
 type BellAlert = {
@@ -129,6 +131,7 @@ export function AppShell({
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [showGuide, setShowGuide] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
 
   // The bell (B-22): critical alerts of the account's sectors and
@@ -331,11 +334,22 @@ export function AppShell({
           onComplete={() => {
             track({ name: "onboarding_done" })
             setShowOnboarding(false)
+
+            // The tour opens by itself once, right after the first setup.
+            // Accounts that already finished setup never get it unasked.
+            try {
+              if (!localStorage.getItem(GUIDE_DONE_KEY)) setShowGuide(true)
+            } catch {
+              /* No storage: skip the automatic tour; the menu still offers it. */
+            }
           }}
         />
       )}
 
+      <GuideBuddy open={showGuide} onClose={() => setShowGuide(false)} />
+
       <Sidebar
+        onStartTour={() => setShowGuide(true)}
         active={view}
         onNavigate={(v) => {
           setView(v)

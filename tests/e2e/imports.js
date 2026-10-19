@@ -95,6 +95,7 @@ const panelText = p => p.evaluate(() => document.querySelector('[role=dialog][ar
     pass(p._uploads.map(u => u.bt).join(',') === 'pharmacie,laboratoire,laboratoire', 'each file sent for its own department');
     await p.screenshot({ path: 'onb-imports.png', fullPage: true });
     await p.getByRole('button', { name: /Open my dashboard/ }).click(); await p.waitForTimeout(1500);
+    await p.getByTestId('guide-card').getByRole('button', { name: 'Skip tour' }).click(); await p.waitForTimeout(300); // Robo's tour opens after first setup
     const tabs = p.getByRole('tablist', { name: 'Your departments' });
     pass(await tabs.count() === 1 && await tabs.getByRole('tab').count() === 2, 'dashboard: a tab per department');
     await tabs.getByRole('tab', { name: 'Laboratory' }).click(); await p.waitForTimeout(400);
