@@ -12,18 +12,30 @@ const now = new Date().toISOString();
 const dayAgo = d => new Date(Date.now() - d * 86400000).toISOString();
 const ALERTS = [['Doliprane', 'health.stock.critical_low', 'CRITICAL', 0], ['Amoxicilline', 'health.stock.low', 'WARNING', 1], ['Insuline', 'health.cold_chain.broken', 'CRITICAL', 1], ['Aspirine', 'health.expiry.warning', 'WARNING', 2], ['Vaccin', 'health.cold_chain.broken', 'CRITICAL', 3], ['Sirop', 'health.stock.low', 'WARNING', 5]]
   .map(([eq, key, severity, d], i) => ({ id: 'a' + i, equipment: eq, sector: 'health', business_type: 'pharmacie', severity, date: dayAgo(d), alert_key: key, message: 'MSG ' + eq, risk_score: 60, params: [] }));
+const day = n => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+const DISPOSALS = [{ id: 'd1', product: 'Rabies vaccine', batch: 'B7', qty: 20, value: 100, currency: 'EUR', method: 'pit', disposed_on: day(2), note: '' }, { id: 'd2', product: 'Dewormer', batch: '', qty: 5, value: 50, currency: 'EUR', method: 'burn', disposed_on: day(5), note: '' }];
+const LA = (id, eq, key, sev, h) => ({ id: 'l' + id, equipment: eq, sector: 'logistics', business_type: 'port-conteneurs', severity: sev, date: new Date(Date.now() - h * 36e5).toISOString(), alert_key: key, message: 'MSG ' + eq, risk_score: 60, params: [] });
+const LOGI = [LA(1, 'GRUE-02', 'logistics.cycles.critical', 'CRITICAL', 2), LA(2, 'QUAI-3', 'logistics.wait.critical', 'CRITICAL', 1), LA(3, 'CONT-88', 'logistics.temperature.critical', 'CRITICAL', 3), LA(4, 'GRUE-05', 'logistics.cycles.warning', 'WARNING', 5), LA(5, 'QUAI-1', 'logistics.wait.warning', 'WARNING', 6)];
+const PROFILES = {
+  pharmacy: { sentria_sector: 'health', sentria_sectors: '["health"]', sentria_business_type: 'pharmacie' },
+  vet: { sentria_sector: 'health', sentria_sectors: '["health"]', sentria_business_type: 'veterinaire' },
+  logistics: { sentria_sector: 'logistics', sentria_sectors: '["logistics"]', sentria_business_type: 'port-conteneurs', sentria_ops_types: '["port"]', sentria_ops_type: 'port', sentria_departments: '{"logistics":["port-conteneurs"]}', sentria_equipment: '["blockages","wait","cost","anticipate","recommend"]' },
+};
 const RECS = ALERTS.map(a => ({ ...a, recommended_action: 'ACT ' + a.equipment, action_category: 'stock', confidence: 0.8 }));
 
 (async () => {
   const browser = await chromium.launch(LAUNCH);
-  const open = async ({ lang = 'en', theme = 'light', vw = 1440, vh = 900, done = false, data = false } = {}) => {
+  const open = async ({ lang = 'en', theme = 'light', vw = 1440, vh = 900, done = false, data = false, profile = 'pharmacy' } = {}) => {
     const ctx = await browser.newContext({ viewport: { width: vw, height: vh }, locale: lang === 'fr' ? 'fr-FR' : 'en-US' });
     const p = await ctx.newPage(); p._errors = []; p.on('pageerror', e => p._errors.push(e.message));
-    await p.route(/onrender\.com\//, r => { const path = new URL(r.request().url()).pathname; return json(r, path === '/alerts' ? (data ? ALERTS : []) : path === '/recommendations' ? { recommendations: data ? RECS : [] } : { recommendations: [], assignments: [], contractors: [] }); });
+    await p.route(/onrender\.com\//, r => { const path = new URL(r.request().url()).pathname; const mine = profile === 'logistics' ? LOGI : ALERTS;
+      if (path === '/disposals') return json(r, { disposals: DISPOSALS, summary: { count: 2, total_value: 150, last_30_days_value: 150, pit_share: 66.7, by_method: {} }, methods: ['pit', 'burn', 'return', 'donation', 'other'], persisted: true });
+      return json(r, path === '/alerts' ? (data ? mine : []) : path === '/recommendations' ? { recommendations: data && profile !== 'logistics' ? RECS : [] } : { recommendations: [], assignments: [], contractors: [] }); });
     await p.addInitScript(ls => { if (!sessionStorage.x) { sessionStorage.x = 1; localStorage.clear(); for (const [k, v] of Object.entries(ls)) localStorage.setItem(k, v); } },
-      { sentria_onboarded: 'true', sentria_sector: 'health', sentria_sectors: '["health"]', sentria_business_type: 'pharmacie', sentria_language: lang, sentria_theme: theme, ...(done ? { sentria_guide_done: '1' } : {}) });
+      { sentria_onboarded: 'true', ...PROFILES[profile], sentria_language: lang, sentria_theme: theme, ...(done ? { sentria_guide_done: '1' } : {}) });
     await signedIn(p, 'u-me', 'boss@sentria.app', { plan: 'decouverte', isAdmin: false });
     await p.goto(APP_URL); await p.waitForTimeout(1800);
+    if (profile === 'logistics') { const log = p.getByRole('button', { name: /^Logistics/ }).first(); if (await log.count()) { await log.click(); await p.waitForTimeout(800); } }
     return { p, ctx };
   };
   const tour = p => p.locator('[data-testid="guide-buddy"]');
@@ -172,7 +184,7 @@ const RECS = ALERTS.map(a => ({ ...a, recommended_action: 'ACT ' + a.equipment, 
       }
       await next(p); await p.waitForTimeout(500);
     }
-    pass(seen.join(',') === 'deep-hello,deep-kpis,deep-trend,deep-breakdown,deep-alerts,deep-import,deep-after,deep-done', 'eight steps with data: ' + seen.join(','));
+    pass(seen.join(',') === 'deep-hello,deep-kpis,deep-trend,deep-breakdown,deep-alerts,deep-departments,deep-import,deep-after,deep-done', 'nine steps with data: ' + seen.join(','));
     pass(await tour(p).count() === 0 && await p.evaluate(() => localStorage.getItem('sentria_guide_done')) === '1', 'Done closes it and remembers');
     pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
     await ctx.close(); }
@@ -181,14 +193,14 @@ const RECS = ALERTS.map(a => ({ ...a, recommended_action: 'ACT ' + a.equipment, 
   { const { p, ctx } = await open({ data: false });
     await startTour(p); await goDeeper(p);
     const seen = await walk(p, { 'deep-preview': 'guide-deep-preview.png' });
-    pass(seen.join(',') === 'deep-hello,deep-preview,deep-alerts,deep-import,deep-after,deep-done', 'six steps, no pointing at cards that are not there: ' + seen.join(','));
+    pass(seen.join(',') === 'deep-hello,deep-preview,deep-alerts,deep-departments,deep-import,deep-after,deep-done', 'seven steps, no pointing at cards that are not there: ' + seen.join(','));
     pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
     await ctx.close(); }
 
   console.log('== go deeper, French on dark');
   { const { p, ctx } = await open({ lang: 'fr', theme: 'dark', data: true });
     await startTour(p); await goDeeper(p);
-    for (let i = 0; i < 5; i++) await next(p);
+    for (let i = 0; i < 6; i++) await next(p);
     const t = await tour(p).innerText();
     pass(await tour(p).getAttribute('data-step') === 'deep-import' && /Importer vos données/.test(t) && /medicine_name/.test(t), 'French import step with the columns');
     await p.screenshot({ path: 'guide-deep-fr-dark.png' });
@@ -206,8 +218,62 @@ const RECS = ALERTS.map(a => ({ ...a, recommended_action: 'ACT ' + a.equipment, 
       if (id === 'deep-import') await p.screenshot({ path: 'guide-deep-390.png' });
       await next(p); await p.waitForTimeout(500);
     }
-    pass(seen.length === 8, 'all eight steps, every card inside the screen: ' + seen.join(','));
+    pass(seen.length === 9, 'all nine steps, every card inside the screen: ' + seen.join(','));
     pass(!(await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)), 'no sideways scroll');
+    await ctx.close(); }
+
+  console.log('== go deeper: a Vet account, the Disposal log');
+  { const { p, ctx } = await open({ data: true, profile: 'vet' });
+    await startTour(p); await goDeeper(p);
+    const seen = [];
+    for (let i = 0; i < 14; i++) {
+      if (!(await tour(p).count())) break;
+      const id = await tour(p).getAttribute('data-step'); seen.push(id);
+      if (id === 'deep-disposal') {
+        const ring = await p.getByTestId('guide-ring').boundingBox(); const d = await p.getByTestId('disposal-log').boundingBox();
+        pass(Math.abs(ring.x - d.x) < 8 && Math.abs(ring.width - d.width) < 12, 'disposal log: the ring sits on the log');
+        pass(/Disposal log/.test(await tour(p).innerText()) && /66\.7|pit/.test(await tour(p).innerText()), 'it explains the log and the pit share');
+        await p.screenshot({ path: 'guide-deep-disposal.png' });
+      }
+      if (id === 'deep-disposal-form') {
+        const chips = await p.getByTestId('guide-chips').locator('code').allInnerTexts();
+        pass(chips.join('|') === 'Product|Value lost|How|Batch (optional)|Quantity|Date', 'the form step lists what to enter: ' + chips.join('|'));
+        const ring = await p.getByTestId('guide-ring').boundingBox(); const f = await p.locator('[data-tour="disposal-form"]').boundingBox();
+        pass(Math.abs(ring.y - f.y) < 8, 'and rings the form');
+        await p.screenshot({ path: 'guide-deep-disposal-form.png' });
+      }
+      await next(p); await p.waitForTimeout(500);
+    }
+    pass(seen.includes('deep-disposal') && seen.indexOf('deep-disposal-form') === seen.indexOf('deep-disposal') + 1 && seen.indexOf('deep-disposal') < seen.indexOf('deep-alerts'), 'the two Vet steps come between the breakdown and the alerts table: ' + seen.join(','));
+    pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
+    await ctx.close(); }
+  { const { p, ctx } = await open({ data: true, profile: 'pharmacy' });
+    await startTour(p); await goDeeper(p);
+    const seen = await walk(p);
+    pass(!seen.includes('deep-disposal') && !seen.includes('deep-disposal-form') && !seen.includes('deep-priorities'), 'a Pharmacy account gets neither the disposal log nor the logistics priorities');
+    await ctx.close(); }
+
+  console.log('== go deeper: a Logistics account has more');
+  { const { p, ctx } = await open({ data: true, profile: 'logistics' });
+    await startTour(p); await goDeeper(p);
+    const seen = [];
+    for (let i = 0; i < 14; i++) {
+      if (!(await tour(p).count())) break;
+      const id = await tour(p).getAttribute('data-step'); seen.push(id);
+      if (id === 'deep-priorities') {
+        const lines = await p.getByTestId('guide-bullets').locator('li').allInnerTexts();
+        pass(lines.length === 6 && lines.some(l => /^Blockages: Spot the equipment/.test(l)) && lines.some(l => /^Resources: /.test(l)) && lines.every(l => /^[^:]+: .{20,}/.test(l)), 'priorities: one line per priority, named and explained: ' + lines.join(' // '));
+        const ring = await p.getByTestId('guide-ring').boundingBox(); const t = await p.getByTestId('priority-track').boundingBox();
+        pass(Math.abs(ring.y - t.y) < 10, 'priorities: the bar is ringed');
+        await p.screenshot({ path: 'guide-deep-logistics.png' });
+      }
+      if (id === 'deep-departments') { pass(/port and containers or warehouse and handling/.test(await tour(p).innerText()), 'departments: says Logistics has several'); await p.screenshot({ path: 'guide-deep-departments.png' }); }
+      await next(p); await p.waitForTimeout(500);
+    }
+    pass(seen[1] === 'deep-priorities', 'the priorities step comes right after hello: ' + seen.join(','));
+    pass(!seen.includes('deep-trend') && !seen.includes('deep-breakdown') && !seen.includes('deep-preview'), 'no trend or breakdown step, and no "after an import" preview, in the logistics layout');
+    pass(seen.includes('deep-import') && seen.includes('deep-departments'), 'it still ends on departments and import');
+    pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
     await ctx.close(); }
 
   await browser.close();

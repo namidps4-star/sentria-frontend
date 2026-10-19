@@ -3681,7 +3681,7 @@ export function DashboardView({
         )}
 
       {hasNoDataForSector ? (
-        <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
+        <div data-tour="empty" className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-muted">
             <Upload className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
           </div>

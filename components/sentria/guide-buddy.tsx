@@ -128,7 +128,7 @@ const GAP = 12
 /** Where a step points: a menu item or a dashboard block. */
 function selectorFor(step: GuideStep): string | null {
   if (step.nav) return `aside [data-nav="${step.nav}"]`
-  if (step.anchor) return `[data-tour="${step.anchor}"]`
+  if (step.anchor) return `[data-tour="${step.anchor}"]${step.anchorSector ? `[data-sector="${step.anchorSector}"]` : ""}`
 
   return null
 }
@@ -138,10 +138,22 @@ function deepContext(tx: ReturnType<typeof useTx>): DeepContext {
   try {
     const sector = localStorage.getItem("sentria_sector")
     const department = activeDepartment() ?? localStorage.getItem("sentria_business_type")
+    let sectors: string[] = []
+
+    try {
+      const saved = JSON.parse(localStorage.getItem("sentria_sectors") || "null")
+      if (Array.isArray(saved)) sectors = saved.filter((s): s is string => typeof s === "string")
+    } catch {
+      /* the single sector below stands in */
+    }
+
+    if (sector && !sectors.includes(sector)) sectors.push(sector)
 
     return {
       columns: columnsForUpload(department, sector),
       department: activityLabel(sector, department, tx),
+      sectors,
+      departmentId: department,
     }
   } catch {
     return { columns: [] }
@@ -165,6 +177,8 @@ export function GuideBuddy({
   const [index, setIndex] = useState(0)
   const [targets, setTargets] = useState<Record<string, Box | null>>({})
   const [narrow, setNarrow] = useState(false)
+  // The dashboard is on its "no data yet" screen (data-tour="empty").
+  const [empty, setEmpty] = useState(false)
   // False while the dashboard is still opening: no step is dropped for a block that is just not there yet.
   const [settled, setSettled] = useState(true)
   const next = useRef<HTMLButtonElement>(null)
@@ -185,6 +199,7 @@ export function GuideBuddy({
   const measure = useCallback(() => {
     const isNarrow = window.matchMedia("(max-width: 767px)").matches
     setNarrow(isNarrow)
+    setEmpty(!!document.querySelector('[data-tour="empty"]'))
 
     const found: Record<string, Box | null> = {}
     for (const step of all) {
@@ -198,8 +213,9 @@ export function GuideBuddy({
   }, [all])
 
   // A step whose target is not on screen is dropped: a menu item the person does not have (wide screens
-  // only, as the menu is a drawer on a phone), or a dashboard block that needs data. When data blocks go,
-  // one "what you will see after an import" step takes their place.
+  // only, as the menu is a drawer on a phone), or a dashboard block that is not in this sector's layout.
+  // When the data blocks are missing because the account has no data yet, one "what you will see after an
+  // import" step takes their place; a layout that simply has other blocks (logistics) gets no such step.
   const steps = useMemo(() => {
     if (!settled) return all
 
@@ -223,10 +239,10 @@ export function GuideBuddy({
       out.push(s)
     }
 
-    if (droppedData) out.splice(1, 0, previewStep(tx))
+    if (droppedData && empty) out.splice(1, 0, previewStep(tx))
 
     return out
-  }, [all, targets, narrow, settled, tx])
+  }, [all, targets, narrow, settled, empty, tx])
 
   useLayoutEffect(() => {
     if (!open) return
@@ -436,6 +452,22 @@ export function GuideBuddy({
                 </code>
               ))}
             </div>
+          )}
+
+          {step.bullets && (
+            <ul className="mt-2 space-y-1" data-testid="guide-bullets">
+              {step.bullets.map((line) => {
+                const cut = line.indexOf(" : ") > -1 ? line.indexOf(" : ") : line.indexOf(": ")
+                const name = cut > 0 ? line.slice(0, cut) : ""
+
+                return (
+                  <li key={line} className="text-xs leading-snug text-card-foreground/85">
+                    {name && <span className="font-semibold text-foreground">{name}{tx(" : ", ": ")}</span>}
+                    {name ? line.slice(cut).replace(/^ ?: ?/, "") : line}
+                  </li>
+                )
+              })}
+            </ul>
           )}
 
           {step.example && <p className="mt-1.5 text-xs leading-snug text-muted-foreground">{step.example}</p>}

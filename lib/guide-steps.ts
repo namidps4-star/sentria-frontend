@@ -1,5 +1,6 @@
 import type { Tx } from "@/lib/i18n"
 import type { ViewKey } from "@/components/sentria/types"
+import { priorityDescription, priorityLabel, prioritiesFor } from "@/lib/priorities"
 
 /* The first-use tour (ONB-GUIDE). Scripted: no AI, no per-use cost. A step's
  * title is the menu item's own name, so the person finds the same word on screen.
@@ -12,7 +13,9 @@ import type { ViewKey } from "@/components/sentria/types"
  * The quick tour is the sidebar, one minute. "Go deeper" opens a second
  * chapter on the dashboard itself and on what to import: its steps point at a
  * dashboard block (data-tour="<name>") and carry the columns the person's own
- * department needs in its file. */
+ * department needs in its file. Some blocks exist for one sector only (the
+ * logistics priorities, the vet disposal log): such a step is simply dropped
+ * where its block is not on screen. */
 
 /** One name, one place: the trademark check on "Robo" is still to do. */
 export const GUIDE_NAME = "Robo"
@@ -33,10 +36,14 @@ export type GuideStep = {
   example?: string
   /** A dashboard block to point at (data-tour), when it is not a menu item. */
   anchor?: string
+  /** Only the block of this sector (its data-sector): the same block type exists for several. */
+  anchorSector?: string
   /** The view this step is about: the tour opens it first. */
   view?: ViewKey
   /** Shown as small tags under the text (the columns of a file). */
   chips?: string[]
+  /** Shown as a short list under the text, "Name: what it does" each. */
+  bullets?: string[]
   /** The block only exists once data is in. Without it the step is dropped
    *  and one "after your first import" step stands in for all of them. */
   needsData?: boolean
@@ -155,10 +162,16 @@ export type DeepContext = {
   columns: string[]
   /** The department's name in the person's language, when known. */
   department?: string
+  /** The sectors the account runs and its department id, to word the steps that depend on them.
+   *  The sector the page is showing is not read from here: the dashboard clears its saved sector while
+   *  the logistics overview is open. */
+  sectors?: string[]
+  departmentId?: string | null
 }
 
 export function deepSteps(tx: Tx, context: DeepContext): GuideStep[] {
-  const { columns, department } = context
+  const { columns, department, sectors, departmentId } = context
+  const logistics = !!sectors?.includes("logistics")
 
   return [
     {
@@ -172,18 +185,32 @@ export function deepSteps(tx: Tx, context: DeepContext): GuideStep[] {
       ),
     },
     {
+      id: "deep-priorities",
+      pose: "point",
+      anchor: "priorities",
+      anchorSector: "logistics",
+      title: tx("Vos priorités", "Your priorities"),
+      body: tx(
+        "Chaque bouton de cette barre noire est une question à laquelle SentrIA répond pour votre logistique, avec le nombre de signaux trouvés. Cliquez-en un pour ouvrir sa vue. La barre montre celles choisies à l'installation.",
+        "Each button on this black bar is one question SentrIA answers about your logistics, with the number of signals it found. Click one to open its view. The bar shows the ones you chose at setup.",
+      ),
+      bullets: prioritiesFor("logistics", departmentId).map(
+        (item) => `${priorityLabel("logistics", item.id, tx)} : ${priorityDescription("logistics", item.id, tx)}`,
+      ),
+    },
+    {
       id: "deep-kpis",
       pose: "point",
       anchor: "kpis",
       needsData: true,
       title: tx("Les quatre cartes du haut", "The four cards at the top"),
       body: tx(
-        "Chaque carte compte une chose : les actifs en alerte, les alertes critiques, les avertissements et le total. Le petit trait montre les derniers jours et l'étiquette compare avec avant.",
-        "Each card counts one thing: assets in alert, critical alerts, warnings and the total. The small line shows the last days and the tag compares with before.",
+        "Chaque carte compte une chose pour votre activité. Le petit trait montre les derniers jours et l'étiquette compare avec avant.",
+        "Each card counts one thing for your activity. The small line shows the last days and the tag compares with before.",
       ),
       example: tx(
-        "Exemple : si la carte Critique monte, lisez d'abord le tableau des alertes.",
-        "Example: if the Critical card goes up, read the alerts table first.",
+        "Exemple : si la carte la plus grave monte, ouvrez les alertes derrière elle en premier.",
+        "Example: if the most serious card goes up, open the alerts behind it first.",
       ),
     },
     {
@@ -213,6 +240,38 @@ export function deepSteps(tx: Tx, context: DeepContext): GuideStep[] {
       ),
     },
     {
+      id: "deep-disposal",
+      pose: "point",
+      anchor: "disposal",
+      title: tx("Journal des pertes", "Disposal log"),
+      body: tx(
+        "Notez chaque fois que du stock est jeté : comment, et ce que cela coûte. SentrIA additionne pour vous : ce que vous avez perdu en 30 jours et au total, la part qui finit en fosse, les 6 dernières semaines, la perte moyenne et la plus grosse.",
+        "Write down every time stock is thrown away: how, and what it cost. SentrIA adds it up for you: what you lost in 30 days and in total, the share that ends in a pit, the last 6 weeks, the average loss and the biggest one.",
+      ),
+      example: tx(
+        "Exemple : quand plus de la moitié finit en fosse, il le dit et propose de rendre le stock périmé au fournisseur ou de le donner.",
+        "Example: when more than half ends in a pit, it says so and suggests returning expired stock to the supplier, or donating it.",
+      ),
+    },
+    {
+      id: "deep-disposal-form",
+      pose: "point",
+      anchor: "disposal-form",
+      title: tx("Noter une perte", "Log a loss"),
+      body: tx(
+        "Une ligne par perte, puis Ajouter. Le produit est obligatoire ; la quantité et la valeur doivent être des nombres ; la date ne peut pas être dans le futur. Pour « Comment » : fosse, brûlé, retourné au fournisseur, donné ou autre.",
+        "One line per loss, then Add. The product is required; the quantity and the value must be numbers; the date cannot be in the future. For \"How\": thrown in a pit, burned, returned to the supplier, donated or other.",
+      ),
+      chips: [
+        tx("Produit", "Product"),
+        tx("Valeur perdue", "Value lost"),
+        tx("Comment", "How"),
+        tx("Lot (facultatif)", "Batch (optional)"),
+        tx("Quantité", "Quantity"),
+        tx("Date", "Date"),
+      ],
+    },
+    {
       id: "deep-alerts",
       pose: "point",
       anchor: "alerts",
@@ -225,6 +284,21 @@ export function deepSteps(tx: Tx, context: DeepContext): GuideStep[] {
         "Exemple : ouvrez une ligne critique, lisez la recommandation, puis envoyez-la à quelqu'un depuis Suivi.",
         "Example: open a critical row, read the recommendation, then send it to someone from Tracking.",
       ),
+    },
+    {
+      id: "deep-departments",
+      pose: "point",
+      anchor: "departments",
+      title: tx("Vos départements", "Your departments"),
+      body: logistics
+        ? tx(
+            "Un onglet par département que vous gérez. Cliquez un onglet pour passer tout le tableau de bord dessus ; les onglets + en ajoutent un autre. Le nombre dépend de votre offre. La logistique en compte plusieurs, comme le port et conteneurs ou l'entrepôt et manutention.",
+            "One tab per department you run. Click a tab to switch the whole dashboard to it; the + tabs add another. How many you can have depends on your plan. Logistics has several, such as port and containers or warehouse and handling.",
+          )
+        : tx(
+            "Un onglet par département que vous gérez. Cliquez un onglet pour passer tout le tableau de bord dessus ; les onglets + en ajoutent un autre. Le nombre dépend de votre offre.",
+            "One tab per department you run. Click a tab to switch the whole dashboard to it; the + tabs add another. How many you can have depends on your plan.",
+          ),
     },
     {
       id: "deep-import",
