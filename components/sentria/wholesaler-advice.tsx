@@ -28,11 +28,14 @@ export function WholesalerAdvice({
   alertKey,
   params,
   onSetup,
+  department,
   tone = "dark",
   className,
 }: {
   alertKey?: string | null
   params: AlertParams
+  /** The alert's department (its business_type): its own wholesaler list. */
+  department?: string | null
   /** Opens the Wholesalers page. */
   onSetup?: () => void
   /** The card it sits in: "dark" is the black detail card, "light" a white one. */
@@ -47,9 +50,9 @@ export function WholesalerAdvice({
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
-    setList(readWholesalers())
+    setList(readWholesalers(department))
     setNow(nowOnAccountClock())
-  }, [alertKey])
+  }, [alertKey, department])
 
   const readings = useMemo(
     () => (list && now && stockDays !== null ? readLadder(list, now, stockDays) : []),

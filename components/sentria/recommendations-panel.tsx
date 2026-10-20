@@ -46,6 +46,8 @@ type Recommendation = {
   message: string
   risk_score?: number | null
   alert_key?: string | null
+  /** The department that raised it (the API sends it). */
+  business_type?: string | null
   recommended_action: string
   action_category: string
   /**
@@ -532,6 +534,7 @@ export function RecommendationsPanel({
               tone="light"
               alertKey={top.alert_key}
               params={paramsOf(top)}
+              department={top.business_type}
               className="mt-3"
             />
           </div>
@@ -680,6 +683,7 @@ export function RecommendationsPanel({
                       tone="light"
                       alertKey={rec.alert_key}
                       params={paramsOf(rec)}
+                      department={rec.business_type}
                       className="mt-2"
                     />
                   </div>

@@ -4445,6 +4445,7 @@ export function DashboardView({
               <WholesalerAdvice
                 alertKey={expandedAlert.alert_key}
                 params={expandedAlert.params}
+                department={expandedAlert.business_type}
                 onSetup={onNavigate ? () => onNavigate("wholesalers") : undefined}
                 className="mt-3"
               />
@@ -4805,6 +4806,7 @@ export function DashboardView({
               <WholesalerAdvice
                 alertKey={selectedRecommendation.alert_key}
                 params={popupAlertFor(selectedRecommendation)?.params}
+                department={selectedRecommendation.business_type}
                 onSetup={
                   onNavigate
                     ? () => {

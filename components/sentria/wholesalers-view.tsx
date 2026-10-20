@@ -16,12 +16,15 @@ import {
   rankTag,
   readLadder,
   readWholesalers,
+  defaultWholesalerDepartment,
+  wholesalerDepartments,
   writeWholesalers,
   type DayFlags,
   type Moment,
   type Reading,
   type Wholesaler,
 } from "@/lib/wholesalers"
+import { activityLabel } from "@/lib/activities"
 import { cn } from "@/lib/utils"
 import { DANGER, adviceLines, daysWord, formatTime, leadLabel, weekdayName, when } from "./wholesaler-text"
 
@@ -554,6 +557,8 @@ function TestPanel({
 export function WholesalersView() {
   const tx = useTx()
   const [list, setList] = useState<Wholesaler[]>([])
+  const [departments, setDepartments] = useState<string[]>([])
+  const [department, setDepartment] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
   const [today, setToday] = useState<Moment>({ weekday: 0, minutes: 0 })
   const [orderMinutes, setOrderMinutes] = useState<number | null>(null)
@@ -565,7 +570,10 @@ export function WholesalersView() {
   const focusNew = useRef<string | null>(null)
 
   useEffect(() => {
-    setList(readWholesalers())
+    const first = defaultWholesalerDepartment()
+    setDepartments(wholesalerDepartments())
+    setDepartment(first)
+    setList(readWholesalers(first))
     const now = nowOnAccountClock()
     setToday(now)
     setOrderMinutes(now.minutes)
@@ -581,8 +589,16 @@ export function WholesalersView() {
 
   const commit = (next: Wholesaler[]) => {
     setList(next)
-    writeWholesalers(next)
+    if (department) writeWholesalers(department, next)
   }
+
+  // Each department keeps its own list: switching shows the other one.
+  const switchTo = (id: string) => {
+    setDepartment(id)
+    setList(readWholesalers(id))
+    setRemoving(null)
+  }
+  const departmentName = (id: string) => activityLabel("health", id, tx) ?? id
 
   const add = () => {
     if (list.length >= MAX_WHOLESALERS) return
@@ -628,6 +644,40 @@ export function WholesalersView() {
             {tx("Ajouter un grossiste", "Add a wholesaler")}
           </button>
         </div>
+
+        {departments.length > 0 && department && (
+          <div className="mt-5 flex flex-wrap items-center gap-2" data-testid="wholesaler-departments">
+            {departments.length === 1 ? (
+              <span className="rounded-full bg-[var(--tag-success-bg)] px-3 py-1.5 text-xs font-bold text-[var(--tag-success-fg)]">
+                {tx(`Liste de : ${departmentName(department)}`, `List for: ${departmentName(department)}`)}
+              </span>
+            ) : (
+              <div role="tablist" aria-label={tx("Département", "Department")} className="flex flex-wrap gap-1.5 rounded-full bg-muted p-1">
+                {departments.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    role="tab"
+                    aria-selected={id === department}
+                    data-testid="wholesaler-department"
+                    onClick={() => switchTo(id)}
+                    className={cn(
+                      "rounded-full px-4 py-2 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      id === department ? "bg-brand text-brand-foreground" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {departmentName(id)}
+                  </button>
+                ))}
+              </div>
+            )}
+            {departments.length > 1 && (
+              <span className="text-xs text-muted-foreground">
+                {tx("Chaque département a sa propre liste.", "Each department has its own list.")}
+              </span>
+            )}
+          </div>
+        )}
 
         <div className="mt-[26px] grid grid-cols-[repeat(auto-fit,minmax(min(400px,100%),1fr))] items-start gap-[22px]">
           <div className="flex flex-col gap-3">

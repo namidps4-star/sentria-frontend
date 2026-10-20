@@ -7,7 +7,9 @@
  * and shows, for each, when an order placed now would arrive. */
 
 import { requestAccountSave } from "@/lib/account"
+import { activeDepartment } from "@/lib/active-site"
 import { TIMEZONES, readTimezoneId } from "@/lib/company"
+import { readDepartments } from "@/lib/plans"
 import { asRecord, type AlertParams } from "@/lib/value-at-risk"
 
 export const WHOLESALERS_KEY = "sentria_wholesalers"
@@ -93,19 +95,86 @@ export function parseWholesalers(text: string | null): Wholesaler[] {
   }
 }
 
-export function readWholesalers(): Wholesaler[] {
+/* ------------------------- one list per department -------------------------
+ *
+ * A pharmacy and a vet outlet on the same account order from different
+ * wholesalers, so each health department keeps its own list. They all live in
+ * the one account value WHOLESALERS_KEY, as {department: [wholesalers]}.
+ * Before this it held one list (a JSON array): that list belongs to the
+ * account's first health department, pharmacy first, and moves there on the
+ * next save. Nothing is lost on the way. */
+
+/** Wholesaler lists are kept for the health departments. */
+const WHOLESALER_SECTOR = "health"
+
+/** The health departments the account runs, pharmacy first. */
+export function wholesalerDepartments(): string[] {
   if (typeof window === "undefined") return []
 
-  try {
-    return parseWholesalers(localStorage.getItem(WHOLESALERS_KEY))
-  } catch {
-    return []
-  }
+  const list = readDepartments()[WHOLESALER_SECTOR] ?? []
+
+  return [...list].sort((a, b) => Number(b === "pharmacie") - Number(a === "pharmacie"))
 }
 
-export function writeWholesalers(list: Wholesaler[]) {
+/** Where the list goes when the account has no health department saved
+ *  (older accounts): the one list it always had. */
+const FALLBACK_DEPARTMENT = "pharmacie"
+
+/** The department the page opens on: the one on screen, else the first. */
+export function defaultWholesalerDepartment(): string {
+  const all = wholesalerDepartments()
+  const shown = activeDepartment()
+
+  return shown && all.includes(shown) ? shown : (all[0] ?? FALLBACK_DEPARTMENT)
+}
+
+/** The department an old single list belongs to. */
+function legacyOwner(): string {
+  return wholesalerDepartments()[0] ?? FALLBACK_DEPARTMENT
+}
+
+function readStore(): Record<string, Wholesaler[]> {
+  let text: string | null = null
+
   try {
-    localStorage.setItem(WHOLESALERS_KEY, JSON.stringify(list.slice(0, MAX_WHOLESALERS)))
+    text = localStorage.getItem(WHOLESALERS_KEY)
+  } catch {
+    return {}
+  }
+
+  if (!text) return {}
+
+  try {
+    const data = JSON.parse(text)
+
+    if (Array.isArray(data)) return { [legacyOwner()]: parseWholesalers(text) }
+
+    if (data && typeof data === "object") {
+      const out: Record<string, Wholesaler[]> = {}
+      for (const [department, list] of Object.entries(data)) {
+        if (Array.isArray(list)) out[department] = parseWholesalers(JSON.stringify(list))
+      }
+      return out
+    }
+  } catch {
+    /* unreadable: nothing kept */
+  }
+
+  return {}
+}
+
+/** The list of one department. Without one, the department on screen. */
+export function readWholesalers(department?: string | null): Wholesaler[] {
+  if (typeof window === "undefined") return []
+
+  return readStore()[department || defaultWholesalerDepartment()] ?? []
+}
+
+export function writeWholesalers(department: string, list: Wholesaler[]) {
+  try {
+    const store = readStore()
+    store[department] = list.slice(0, MAX_WHOLESALERS)
+    localStorage.setItem(WHOLESALERS_KEY, JSON.stringify(store))
     requestAccountSave()
   } catch {
     /* storage full or blocked: the page keeps what it shows */

@@ -37,7 +37,8 @@ const BASE = { sentria_onboarded: 'true', sentria_company_name: 'Pharmacie A', s
   };
   const rows = p => p.getByTestId('wholesaler-row');
   const names = p => p.getByTestId('wholesaler-name').evaluateAll(els => els.map(e => e.value));
-  const saved = p => p.evaluate(() => JSON.parse(localStorage.getItem('sentria_wholesalers') || '[]'));
+  // Stored per department since each one keeps its own list: this account runs a pharmacy.
+  const saved = p => p.evaluate(() => { const v = JSON.parse(localStorage.getItem('sentria_wholesalers') || '[]'); return Array.isArray(v) ? v : (v.pharmacie || []); });
   const set = (p, i, id, value) => rows(p).nth(i).getByTestId(id).selectOption(String(value));
   const days = async (p, i, on) => { // on: array of 7 booleans
     for (let d = 0; d < 7; d++) { const b = rows(p).nth(i).getByTestId(`wholesaler-day-${d}`); const cur = (await b.getAttribute('aria-pressed')) === 'true'; if (cur !== on[d]) await b.click(); }

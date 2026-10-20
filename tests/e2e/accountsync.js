@@ -24,7 +24,8 @@ const OTHER = [{ id: 'z', name: 'From another device', cutoff: null, before: 1, 
     return { p, ctx, db };
   };
   const goPage = async p => { await p.locator('aside nav button', { hasText: /^Wholesalers$/ }).click(); await p.waitForTimeout(800); };
-  const server = db => JSON.parse(db.accounts[UID].profile.sentria_wholesalers || '[]');
+  // One list per department; an account with no department saved keeps it under the pharmacy.
+  const server = db => { const v = JSON.parse(db.accounts[UID].profile.sentria_wholesalers || '[]'); return Array.isArray(v) ? v : (v.pharmacie || []); };
 
   console.log('== saved at once');
   { const { p, ctx, db } = await open();
