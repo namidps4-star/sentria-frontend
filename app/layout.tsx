@@ -5,6 +5,7 @@ import { Plus_Jakarta_Sans, Outfit, Michroma, Geist_Mono } from 'next/font/googl
 import './globals.css'
 import './transitions.css'
 import { THEME_INIT_SCRIPT } from "@/lib/theme"
+import { siteUrl } from "@/lib/site"
 
 /* Body text and headings. */
 const bodySans = Plus_Jakarta_Sans({
@@ -37,9 +38,28 @@ const geistMono = Geist_Mono({
 
    i18n-ignore-start: static build-time metadata, corrected at runtime */
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl()),
   title: 'SentrIA | Intelligence opérationnelle',
   description:
-    'SentrIA : surveillance et intelligence prédictive des systèmes, équipements et opérations critiques.',
+    'SentrIA lit vos données d\'exploitation et vous dit quoi faire, et quand : alertes en temps réel sur les stocks, les machines et les flux, pour la logistique, la santé, l\'industrie, l\'agriculture, le transport, l\'énergie et le commerce.',
+  alternates: { canonical: '/' },
+  openGraph: {
+    type: 'website',
+    url: '/',
+    siteName: 'SentrIA',
+    locale: 'fr_FR',
+    alternateLocale: ['en_US'],
+    title: 'SentrIA | Voyez les problèmes avant qu\'ils ne coûtent',
+    description:
+      'Alertes en temps réel sur vos stocks, machines et flux, avec l\'action à mener pour chacune.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SentrIA | Voyez les problèmes avant qu\'ils ne coûtent',
+    description:
+      'Alertes en temps réel sur vos stocks, machines et flux, avec l\'action à mener pour chacune.',
+  },
+  robots: { index: true, follow: true },
   /* i18n-ignore-end */
   generator: 'v0.app',
   icons: {
