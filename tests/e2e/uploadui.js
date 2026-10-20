@@ -41,9 +41,11 @@ const LS = { sentria_sector: 'health', sentria_sectors: '["industry","health"]',
   pass(scroll <= 1, `no scroll bar inside the card (${scroll})`);
   await x.panel.getByRole('button', { name: 'Health', exact: true }).click(); await x.p.waitForTimeout(200);
   const dep = x.panel.getByRole('group', { name: /Which department/ }).getByRole('button').first();
+  const first = await dep.innerText();
+  pass(/💊/.test(first) || /🏥/.test(first) || /🧪/.test(first) || /🐾/.test(first), 'each department row carries its emoji: ' + first.replace(/\n/g, ' | ').slice(0, 60));
   const second = x.panel.getByRole('group', { name: /Which department/ }).getByRole('button').nth(1);
   await second.click(); await x.p.waitForTimeout(150);
-  pass(await second.getAttribute('aria-pressed') === 'true' && (await x.panel.locator('h3').innerText()).includes((await second.innerText()).trim()), 'picking a department updates the header');
+  pass(await second.getAttribute('aria-pressed') === 'true' && (await x.panel.locator('h3').innerText()).includes((await second.locator('span.font-bold').innerText()).trim()), 'picking a department updates the header');
   pass(await x.panel.locator('[data-supplier-columns]').count() === 1, 'Health shows the supplier columns');
   await x.panel.getByRole('button', { name: 'Industry', exact: true }).click(); await x.p.waitForTimeout(200);
   pass(await x.panel.locator('[data-cost-columns]').count() === 1 && /units_per_hour/.test(await x.panel.innerText()), 'Industry shows the cost columns');

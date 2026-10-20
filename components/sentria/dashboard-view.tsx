@@ -139,6 +139,42 @@ import { SupplierActions } from "./supplier-actions"
 import { supplierFromParams, type Supplier } from "@/lib/supplier"
 import { SectorTag } from "./sector-tag"
 
+/** One emoji per department, for the import list. A department with none
+ *  gets the box. */
+const ACTIVITY_EMOJI: Record<string, string> = {
+  "usine-production": "🏭",
+  "atelier-soustraitance": "🔧",
+  "usine-agroalimentaire": "🥫",
+  pharmacie: "💊",
+  "grossiste-pharma": "📦",
+  "clinique-hopital": "🏥",
+  laboratoire: "🧪",
+  veterinaire: "🐾",
+  "exploitation-agricole": "🌾",
+  "cooperative-agricole": "🧺",
+  "silo-stockage": "🌽",
+  "transporteur-routier": "🚚",
+  "flotte-entreprise": "🚗",
+  "location-vehicules": "🔑",
+  "port-conteneurs": "⚓",
+  "entrepot-manutention": "🏗️",
+  "transport-distribution": "🚛",
+  "preparation-expedition": "📮",
+  "chaine-froid": "❄️",
+  "plusieurs-activites": "🧩",
+  "centrale-production": "⚡",
+  "generateurs-secours": "🔋",
+  "distribution-energetique": "🔌",
+  "grossiste-distributeur": "🏬",
+  "supermarche-hypermarche": "🛒",
+  "chaine-magasins": "🏪",
+  "epicerie-proximite": "🍞",
+}
+
+function activityEmoji(id: string): string {
+  return ACTIVITY_EMOJI[id] ?? "📦"
+}
+
 const SECTORS: { key: string; label: Localized }[] = [
   { key: "all", label: localized("Tous", "All") },
   { key: "industry", label: localized("Industrie", "Industry") },
@@ -2448,41 +2484,61 @@ export function DashboardView({
             </div>
           </div>
 
-          {/* The department: visible choices that wrap, no hidden menu. */}
+          {/* The department: one list, every choice visible, no hidden menu. */}
           {uploadActivitiesFor(uploadSector).length > 0 && (
             <>
-              <div className="mt-2 rounded-[20px] bg-muted px-3.5 pb-3 pt-2.5">
-                <p
-                  id="upload-activity-help"
-                  className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground"
-                >
-                  {tx("Pour quel département est ce fichier ?", "Which department is this file for?")}
-                </p>
-                <div
-                  className="mt-2 flex flex-wrap gap-1.5"
-                  role="group"
-                  aria-labelledby="upload-activity-help"
-                >
-                  {uploadActivitiesFor(uploadSector).map((activity) => {
-                    const on = uploadActivity === activity.id
-                    return (
-                      <button
-                        key={activity.id}
-                        type="button"
-                        onClick={() => setUploadActivity(activity.id)}
-                        aria-pressed={on}
-                        title={activity.description ? px(activity.description) : undefined}
-                        className={cn(
-                          "flex min-h-11 items-center gap-1.5 rounded-full px-4 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                          on ? "bg-foreground text-background" : "bg-card hover:bg-card/70"
-                        )}
+              <p
+                id="upload-activity-help"
+                className="mx-2 mb-1.5 mt-3 text-xs font-bold text-muted-foreground"
+              >
+                {tx("Pour quel département est ce fichier ?", "Which department is this file for?")}
+              </p>
+              <div
+                className="rounded-[22px] bg-muted p-1"
+                role="group"
+                aria-labelledby="upload-activity-help"
+              >
+                {uploadActivitiesFor(uploadSector).map((activity) => {
+                  const on = uploadActivity === activity.id
+                  return (
+                    <button
+                      key={activity.id}
+                      type="button"
+                      onClick={() => setUploadActivity(activity.id)}
+                      aria-pressed={on}
+                      className={cn(
+                        "flex min-h-12 w-full items-center gap-3 rounded-[18px] px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        on
+                          ? "bg-accent text-accent-foreground"
+                          : "hover:bg-card/60 [&:not(:first-child)]:border-t [&:not(:first-child)]:border-border/70"
+                      )}
+                    >
+                      <span
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-card text-lg leading-none"
+                        aria-hidden="true"
                       >
-                        {on && <Check className="h-3.5 w-3.5" aria-hidden="true" />}
-                        {px(activity.label)}
-                      </button>
-                    )
-                  })}
-                </div>
+                        {activityEmoji(activity.id)}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-bold leading-snug">{px(activity.label)}</span>
+                        {activity.description && (
+                          <span className={cn("block text-xs leading-snug", on ? "text-accent-foreground/70" : "text-muted-foreground")}>
+                            {px(activity.description)}
+                          </span>
+                        )}
+                      </span>
+                      <span
+                        className={cn(
+                          "flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
+                          on ? "bg-accent-foreground text-accent" : "border-2 border-foreground/25"
+                        )}
+                        aria-hidden="true"
+                      >
+                        {on && <Check className="h-3 w-3" />}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
 
               {uploadActivity &&
