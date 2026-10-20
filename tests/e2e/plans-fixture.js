@@ -174,6 +174,16 @@ module.exports = {
         }
       },
       {
+        "key": "outcome_loop",
+        "tier": "estimation",
+        "plan": "pro",
+        "live": true,
+        "label": {
+          "fr": "Le score de confiance s'ajuste à ce que vous dites après chaque alerte",
+          "en": "Confidence adapts to what you tell us after each alert"
+        }
+      },
+      {
         "key": "ml",
         "tier": "estimation",
         "plan": "business",

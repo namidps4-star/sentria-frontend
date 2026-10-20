@@ -644,3 +644,71 @@ const COST_ERRORS: Record<string, Localized> = {
 export function costErrorText(code: string, fallback: Localized): Localized {
   return COST_ERRORS[code] ?? fallback
 }
+
+/* ------------------------------------------------------------------ */
+/*  What happened after a task was closed (F-OUTCOME)                   */
+/* ------------------------------------------------------------------ */
+
+/** avoided and happened say the alert was a real problem, false_alarm that
+ *  it was not. The API counts them per kind of problem and, from 3 answers,
+ *  moves the confidence score by at most 10 points. */
+export type Outcome = "avoided" | "happened" | "false_alarm"
+
+export const OUTCOMES: Outcome[] = ["avoided", "happened", "false_alarm"]
+
+export type OutcomeAnswer = { outcome: Outcome; bucket: CostBucket | null; currency: string }
+
+export type OutcomeLog = {
+  /** Pro and up. Below that the lists are empty. */
+  can_answer: boolean
+  answers: Record<string, OutcomeAnswer>
+  /** Per kind of problem (alert key): real problems and false alarms. */
+  kinds: Record<string, { right: number; wrong: number }>
+}
+
+export function fetchOutcomes(): Promise<CrmResult<OutcomeLog>> {
+  return call("/outcomes", { method: "GET" }, (body) => {
+    const log = (body.outcomes ?? {}) as Partial<OutcomeLog>
+
+    return {
+      can_answer: log.can_answer === true,
+      answers: log.answers && typeof log.answers === "object" ? log.answers : {},
+      kinds: log.kinds && typeof log.kinds === "object" ? log.kinds : {},
+    }
+  })
+}
+
+/** One answer for one closed task. A cost range goes with "avoided" only. */
+export function sendOutcome(
+  taskKey: string,
+  alertKey: string,
+  outcome: Outcome,
+  bucket: CostBucket | null,
+  currency: string
+): Promise<CrmResult<OutcomeAnswer>> {
+  const body = bucket
+    ? { task_key: taskKey, alert_key: alertKey, outcome, bucket, currency }
+    : { task_key: taskKey, alert_key: alertKey, outcome }
+
+  return call("/outcomes", { method: "POST", body: JSON.stringify(body) }, () => ({
+    outcome,
+    bucket,
+    currency: bucket ? currency : "",
+  }))
+}
+
+const OUTCOME_ERRORS: Record<string, Localized> = {
+  plan_required: COST_ERRORS.plan_required,
+  task_not_closed: localized(
+    "Fermez d'abord la tâche, puis dites ce qui s'est passé.",
+    "Close the task first, then say what happened."
+  ),
+  outcomes_unavailable: localized(
+    "Cette fonction n'est pas encore prête côté serveur (migration 024).",
+    "This is not ready on the server yet (migration 024)."
+  ),
+}
+
+export function outcomeErrorText(code: string, fallback: Localized): Localized {
+  return OUTCOME_ERRORS[code] ?? fallback
+}
