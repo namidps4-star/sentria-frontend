@@ -87,6 +87,16 @@ export function guideSteps(tx: Tx): GuideStep[] {
         "Exemple : passez une tâche de À faire à Terminé quand c'est réparé.",
         "Example: move a task from To do to Done once it is fixed.",
       ),
+      bullets: [
+        tx(
+          "Que s'est-il passé ? : à la fin d'une tâche, répondez : problème évité, problème quand même, ou fausse alerte.",
+          "What happened?: when a task is done, answer: problem avoided, problem happened anyway, or false alarm.",
+        ),
+        tx(
+          "Dès 3 réponses : SentrIA ajuste la confiance des prochaines alertes du même type (Pro et plus).",
+          "From 3 answers: SentrIA adjusts the confidence of the next alerts of that kind (Pro and up).",
+        ),
+      ],
     },
     {
       id: "sites",

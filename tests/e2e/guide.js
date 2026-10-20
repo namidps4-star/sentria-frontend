@@ -74,6 +74,7 @@ const RECS = ALERTS.map(a => ({ ...a, recommended_action: 'ACT ' + a.equipment, 
         await p.screenshot({ path: 'guide-point.png' });
       }
       if (id === 'report') { const card = await p.locator('[data-testid="guide-card"]').boundingBox(); pass(card.y + card.height <= 900, 'last pointing step: the card stays on screen'); }
+      if (id === 'tracking') pass(/What happened\?/.test(await tour(p).innerText()) && /From 3 answers/.test(await tour(p).innerText()), 'tracking: the tour explains "What happened?"');
       if (id === 'done') { pass(await tour(p).getAttribute('data-pose') === 'cheer', 'last step: cheering'); await p.screenshot({ path: 'guide-done.png' }); }
       await next(p);
     }
