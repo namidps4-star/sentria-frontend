@@ -89,8 +89,8 @@ export function guideSteps(tx: Tx): GuideStep[] {
       ),
       bullets: [
         tx(
-          "Que s'est-il passé ? : à la fin d'une tâche, répondez : problème évité, problème quand même, ou fausse alerte.",
-          "What happened?: when a task is done, answer: problem avoided, problem happened anyway, or false alarm.",
+          "Tâche terminée : SentrIA demande « Que s'est-il passé ? ». Répondez : problème évité, problème quand même, ou fausse alerte.",
+          "Task done: SentrIA asks \"What happened?\". Answer: problem avoided, problem happened anyway, or false alarm.",
         ),
         tx(
           "Dès 3 réponses : SentrIA ajuste la confiance des prochaines alertes du même type (Pro et plus).",
