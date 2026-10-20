@@ -2400,109 +2400,94 @@ export function DashboardView({
           aria-label={tx("Importer des données", "Import data")}
           hidden={!importPanel.present}
           data-origin="top-right"
-          className={cn("absolute right-0 top-full z-30 mt-2 max-h-[80vh] w-[min(480px,calc(100vw-2.5rem))] overflow-y-auto rounded-[28px] bg-card p-6 shadow-2xl t-dropdown", importPanel.className)}
+          className={cn("squircle absolute right-0 top-full z-30 mt-2 w-[min(380px,calc(100vw-2.5rem))] rounded-[30px] border border-border bg-card p-2.5 shadow-2xl t-dropdown max-sm:fixed max-sm:inset-x-4 max-sm:w-auto", importPanel.className)}
         >
-          <div className="flex items-start justify-between gap-3">
-            <h3 className="font-heading text-lg font-bold">
-              {tx("Importer des données", "Import data")}
-            </h3>
-            <button
-              type="button"
-              onClick={() => setImportOpen(false)}
-              aria-label={tx("Fermer", "Close")}
-              className="-mr-2 -mt-1 flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <X className="h-4 w-4" aria-hidden="true" />
-            </button>
-          </div>
-
-          <p className="mt-1 text-sm text-muted-foreground">
-            {tx(
-              "Dites à SentrIA d'où vient le fichier, puis importez-le.",
-              "Tell SentrIA where the file comes from, then import it."
-            )}
-          </p>
-
-          {/* 1. The sector */}
-          <p className="mt-5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            {tx("1 · Secteur", "1 · Sector")}
-          </p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {SECTORS.filter(
-              (s) =>
-                s.key !== "all" &&
-                activeSectors.includes(s.key)
-            ).map((s) => (
+          {/* The lime header: where the file goes, and the sector tabs. */}
+          <div className="squircle rounded-[22px] bg-accent px-4 pb-3.5 pt-3.5 text-accent-foreground">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[11px] font-extrabold uppercase tracking-wider opacity-75">
+                  {tx("Import dans", "Importing into")}
+                </p>
+                <h3 className="mt-0.5 truncate font-heading text-xl font-bold leading-tight">
+                  {sectorName(uploadSector)}
+                  {uploadActivity ? ` · ${activityLabel(uploadSector, uploadActivity, tx) ?? uploadActivity}` : ""}
+                </h3>
+              </div>
               <button
-                key={s.key}
                 type="button"
-                onClick={() => setUploadSector(s.key)}
-                aria-pressed={uploadSector === s.key}
-                className={cn(
-                  "rounded-full px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                  uploadSector === s.key
-                    ? "bg-[var(--ink)] text-white"
-                    : "bg-muted hover:bg-muted/70"
-                )}
+                onClick={() => setImportOpen(false)}
+                aria-label={tx("Fermer", "Close")}
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-foreground/10 hover:bg-accent-foreground/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                {px(s.label)}
+                <X className="h-4 w-4" aria-hidden="true" />
               </button>
-            ))}
+            </div>
+
+            <div className="mt-3 flex gap-1 rounded-full bg-accent-foreground/10 p-[3px]">
+              {SECTORS.filter(
+                (s) =>
+                  s.key !== "all" &&
+                  activeSectors.includes(s.key)
+              ).map((s) => (
+                <button
+                  key={s.key}
+                  type="button"
+                  onClick={() => setUploadSector(s.key)}
+                  aria-pressed={uploadSector === s.key}
+                  className={cn(
+                    "min-w-0 flex-1 truncate rounded-full px-2 py-2 text-[13px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    uploadSector === s.key
+                      ? "bg-accent-foreground text-accent"
+                      : "hover:bg-accent-foreground/10"
+                  )}
+                >
+                  {px(s.label)}
+                </button>
+              ))}
+            </div>
           </div>
 
-          {/* 2. The department: large, readable choices (they used to be
-              small tabs squeezed along the card's bottom edge). */}
+          {/* The department: visible choices that wrap, no hidden menu. */}
           {uploadActivitiesFor(uploadSector).length > 0 && (
             <>
-              <p
-                id="upload-activity-help"
-                className="mt-5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"
-              >
-                {tx("2 · Pour quel département est ce fichier ?", "2 · Which department is this file for?")}
-              </p>
-              <div
-                className="mt-2 grid max-h-[40vh] grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2"
-                role="group"
-                aria-labelledby="upload-activity-help"
-              >
-                {uploadActivitiesFor(uploadSector).map((activity) => {
-                  const on = uploadActivity === activity.id
-                  return (
-                    <button
-                      key={activity.id}
-                      type="button"
-                      onClick={() => setUploadActivity(activity.id)}
-                      aria-pressed={on}
-                      className={cn(
-                        "flex items-start gap-2.5 rounded-2xl px-3.5 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                        on ? "bg-brand text-[#141414]" : "bg-muted hover:bg-muted/70"
-                      )}
-                    >
-                      <span
+              <div className="mt-2 rounded-[20px] bg-muted px-3.5 pb-3 pt-2.5">
+                <p
+                  id="upload-activity-help"
+                  className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground"
+                >
+                  {tx("Pour quel département est ce fichier ?", "Which department is this file for?")}
+                </p>
+                <div
+                  className="mt-2 flex flex-wrap gap-1.5"
+                  role="group"
+                  aria-labelledby="upload-activity-help"
+                >
+                  {uploadActivitiesFor(uploadSector).map((activity) => {
+                    const on = uploadActivity === activity.id
+                    return (
+                      <button
+                        key={activity.id}
+                        type="button"
+                        onClick={() => setUploadActivity(activity.id)}
+                        aria-pressed={on}
+                        title={activity.description ? px(activity.description) : undefined}
                         className={cn(
-                          "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
-                          on ? "bg-[var(--ink)] text-brand" : "border-2 border-foreground/25"
+                          "flex min-h-11 items-center gap-1.5 rounded-full px-4 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          on ? "bg-foreground text-background" : "bg-card hover:bg-card/70"
                         )}
-                        aria-hidden="true"
                       >
-                        {on && <Check className="h-3 w-3" />}
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-sm font-semibold leading-snug">{px(activity.label)}</span>
-                        {activity.description && (
-                          <span className={cn("mt-0.5 block text-[11px] leading-snug", on ? "text-[#141414]/70" : "text-muted-foreground")}>
-                            {px(activity.description)}
-                          </span>
-                        )}
-                      </span>
-                    </button>
-                  )
-                })}
+                        {on && <Check className="h-3.5 w-3.5" aria-hidden="true" />}
+                        {px(activity.label)}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
 
               {uploadActivity &&
                 !isConfiguredActivity(uploadSector, uploadActivity) && (
-                  <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl bg-[var(--tag-warning-bg)] px-3.5 py-2.5 text-[var(--tag-warning-fg)]">
+                  <div className="mt-2 flex flex-wrap items-center gap-2 rounded-[20px] bg-[var(--tag-warning-bg)] px-3.5 py-2.5 text-[var(--tag-warning-fg)]">
                     <p className="text-xs">
                       {tx(
                         "Vous importez une activité différente de celle configurée",
@@ -2534,22 +2519,19 @@ export function DashboardView({
             </>
           )}
 
-          {/* 3. The file */}
-          <p className="mt-5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            {uploadActivitiesFor(uploadSector).length > 0
-              ? tx("3 · Le fichier", "3 · The file")
-              : tx("2 · Le fichier", "2 · The file")}
-          </p>
-          <label className="relative mt-2 flex cursor-pointer items-center justify-between gap-3 rounded-full bg-brand py-2.5 pl-5 pr-5 text-sm font-semibold text-[#141414] transition-opacity hover:opacity-90 focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
-            <span className="flex items-center gap-2">
-              <Upload className="h-4 w-4" aria-hidden="true" />
-              {uploading
-                ? tx("Traitement...", "Processing...")
-                : tx("Importer CSV", "Import CSV")}
+          {/* The file */}
+          <label className="relative mt-2 flex cursor-pointer items-center gap-3 rounded-[20px] border-2 border-dashed border-border bg-muted px-3.5 py-3 transition-colors hover:bg-muted/70 focus-within:outline-none focus-within:ring-2 focus-within:ring-ring">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-accent-foreground">
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Upload className="h-4 w-4" aria-hidden="true" />}
             </span>
-            <span className="min-w-0 truncate text-xs font-medium text-[#141414]/70">
-              {sectorName(uploadSector)}
-              {uploadActivity ? ` · ${activityLabel(uploadSector, uploadActivity, tx) ?? uploadActivity}` : ""}
+            <span className="min-w-0">
+              <span className="block text-sm font-bold">
+                {uploading ? tx("Traitement...", "Processing...") : tx("Choisir un fichier CSV", "Choose a CSV file")}
+              </span>
+              <span className="block truncate text-xs text-muted-foreground">
+                {sectorName(uploadSector)}
+                {uploadActivity ? ` · ${activityLabel(uploadSector, uploadActivity, tx) ?? uploadActivity}` : ""}
+              </span>
             </span>
 
             <input
@@ -2565,11 +2547,11 @@ export function DashboardView({
           <CsvTemplateLink
             department={uploadActivity ?? activityIn(uploadSector)}
             sector={uploadSector}
-            className="mt-2 text-muted-foreground hover:text-foreground"
+            className="mt-1 px-2 text-muted-foreground hover:text-foreground"
           />
 
           {uploadSite && (
-            <p data-testid="upload-site" className="mt-2 text-xs text-muted-foreground">
+            <p data-testid="upload-site" className="mt-2 px-2 text-xs text-muted-foreground">
               {tx("Le fichier va dans le site :", "The file goes into site:")}{" "}
               <span className="font-semibold text-foreground">{uploadSite.name}</span>
             </p>
@@ -2579,7 +2561,7 @@ export function DashboardView({
             <p
               role={uploadFailed ? "alert" : "status"}
               className={cn(
-                "mt-3 text-sm font-medium",
+                "mt-2 px-2 text-sm font-medium",
                 uploadFailed ? "text-destructive" : "text-green-600"
               )}
             >
@@ -2587,30 +2569,13 @@ export function DashboardView({
             </p>
           )}
 
-          <p className="mt-3 text-xs text-muted-foreground">
-            {tx("Envoyé :", "Sent:")}{" "}
-            <span className="font-semibold text-foreground">
-              {sectorName(uploadSector)}
-            </span>
-
-            {uploadActivity && (
-              <>
-                {" · "}
-                <span className="font-semibold text-foreground">
-                  {activityLabel(uploadSector, uploadActivity, tx) ??
-                    uploadActivity}
-                </span>
-              </>
-            )}
-          </p>
-
           {/* Machines (Industry): two optional columns that let SentrIA work
               out what an hour of stop costs. Health needs none: its
               cold-chain alerts already carry the stock value. */}
           {/* Stock (Health, Retail): three optional columns that name who to
               order from, so the alert can say it and offer Call, Text, Email. */}
           {(uploadSector === "health" || uploadSector === "commerce") && (
-            <div data-supplier-columns="" className="mt-4 rounded-2xl border border-border bg-muted/40 p-4">
+            <div data-supplier-columns="" className="mt-2 rounded-[20px] bg-muted px-3.5 py-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 {tx("Facultatif · pour savoir chez qui commander", "Optional · to know who to order from")}
               </p>
@@ -2630,7 +2595,7 @@ export function DashboardView({
           )}
 
           {uploadSector === "industry" && (
-            <div data-cost-columns="" className="mt-4 rounded-2xl border border-border bg-muted/40 p-4">
+            <div data-cost-columns="" className="mt-2 rounded-[20px] bg-muted px-3.5 py-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                 {tx("Facultatif · pour voir ce qu'une heure d'arrêt coûte", "Optional · to see what an hour of stop costs")}
               </p>

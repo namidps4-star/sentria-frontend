@@ -285,7 +285,7 @@ export function Topbar({
               </p>
             )
           ) : (
-            <ul className="mt-2 flex max-h-80 flex-col gap-2 overflow-y-auto">
+            <ul className="mt-2 flex flex-col gap-2">
               {shown.slice(0, 8).map((n) => (
                 <li key={n.key}>
                   <button
