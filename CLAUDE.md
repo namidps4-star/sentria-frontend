@@ -10,6 +10,7 @@ Next.js 16 (App Router, Turbopack), React 19, Tailwind v4, Supabase Auth (`@supa
 - Every string is French and English via `tx(fr, en)` / `localized()`.
 - Light, dark and 390 px must all look right.
 - Theme tokens, never `dark:`.
+- No scroll bars inside cards, lists or bars. Show every row, or wrap or paginate. The founder does not want them. Page scroll and the modal sheet on a short screen are fine.
 - New big surfaces get the squircle corner: add the `squircle` class next to a large `rounded-[...]`. Only the sidebar has it so far (64px). Small controls stay plain round.
 - A chantier in Notion holds only things to do: what to build, the data it needs, the tests, what it depends on, and the acceptance check. Evidence, survey figures, sources, market notes and scores go in chat or on the prospect page, not in the chantier.
 - The owner's email address never goes into code.
@@ -61,3 +62,13 @@ All green. Real email not tried.
 - Every outreach email carries one or two interesting facts from a source we checked, with a link, to catch the reader's attention, and says how SentrIA can help with their issue. Say what exists today. Never present a planned feature as built, and never claim customers we do not have.
 - The skills are third-party and stay out of the repo, like the transitions skill. If `~/.claude/skills/humanizer` is missing (fresh container): `git clone https://github.com/NulightJens/humanizer-stack ~/humanizer-stack && git -C ~/humanizer-stack checkout 13f5c023189d428ffba726c75886ca1fd0dcba65 && ~/humanizer-stack/install.sh --copy`. The pin is the commit that was read before installing; read the diff before moving it.
 - Chisle (token saver, third-party plugin) stays out of the repo too. If `claude plugin list` does not show `chisle` (fresh container): `git clone https://github.com/JayPokale/Chisle ~/chisle && git -C ~/chisle checkout 52c954b909706e5d1ae5689530e1c4eb7047b9f5 && claude plugin marketplace add ~/chisle && claude plugin install chisle@chisle`. Auto mode blocks this (untrusted code): ask the founder to switch the mode box to Accept edits, then approve each command. It starts with the next session. It trims tool output over 8000 characters (the full text goes to `~/.claude/chisle-spill/`) and adds terse-prose and short-code rules. This file and `caveman` win when they differ (arrows, tests, screenshots). The pin is the commit that was read before installing; read the diff before moving it.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

@@ -655,7 +655,7 @@ function AssignPopover({
             : tx("Chargement des intervenants…", "Loading contractors…")}
         </p>
       ) : (
-        <div className="max-h-56 overflow-y-auto">
+        <div>
           {contractors.map((person) => {
             const picked = task.contractor_ids.includes(person.id)
 
@@ -943,7 +943,7 @@ function DetailDialog({
             </legend>
 
             {contractors.length > 0 && (
-              <div className="mt-1.5 max-h-56 overflow-y-auto rounded-xl border border-border">
+              <div className="mt-1.5 rounded-xl border border-border">
                 {contractors.map((person) => {
                   const picked = task.contractor_ids.includes(person.id)
 
