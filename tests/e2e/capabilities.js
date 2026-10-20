@@ -186,7 +186,7 @@ const rowsOf = p => p.locator('[data-capability]').evaluateAll(els => els.map(e 
       const rows = await rowsOf(p);
       pass(rows.every(r => r.cells.every(c => !c.shown)), `${theme}, 390 px: the four plan columns are hidden (no room)…`);
       const from = await p.locator('[data-capability] [data-from]').allInnerTexts();
-      pass(from.length === rows.length && from[0] === 'Every plan' && from[3] === 'From Pro' && from[8] === 'From Business' && from.at(-1) === 'From Entreprise', `…each row says its lowest plan instead (${from[0]} | ${from[3]} | ${from[8]} | ${from.at(-1)})`);
+      pass(from.length === rows.length && from[0] === 'Every plan' && from[3] === 'From Pro' && from[9] === 'From Business' && from.at(-1) === 'From Entreprise', `…each row says its lowest plan instead (${from[0]} | ${from[3]} | ${from[9]} | ${from.at(-1)})`);
       const m = await p.evaluate(() => { const s = document.querySelector('[data-capabilities]'); const r = s.getBoundingClientRect(); const t = s.querySelector('table').getBoundingClientRect(); return { page: document.documentElement.scrollWidth, win: innerWidth, tableFits: t.right <= r.right + 1 && t.left >= r.left - 1 }; });
       pass(m.page <= m.win + 1 && m.tableFits, `${theme}, 390 px: no sideways scroll; the table fits its card`);
       await section(p).scrollIntoViewIfNeeded(); await p.waitForTimeout(200); await section(p).screenshot({ path: `capabilities-section-${theme}-390.png` });

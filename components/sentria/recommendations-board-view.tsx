@@ -7,6 +7,7 @@ import { DispatchPanel } from "./dispatch-panel"
 import { TaskTextButton } from "./task-text-button"
 import { FieldLinkButton } from "./field-link-button"
 import { FieldReports } from "./field-reports"
+import { OutcomeAsk } from "./outcome-ask"
 import { StatusTag, type TagTone } from "./status-tag"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
@@ -919,6 +920,16 @@ function DetailDialog({
               })}
             </div>
           </div>
+
+          {/* What happened (F-OUTCOME): only once the task is done. */}
+          {task.status === "done" && rec.alert_key && (
+            <OutcomeAsk
+              taskKey={card.id}
+              alertKey={rec.alert_key}
+              sector={rec.sector}
+              symbol={currency.symbol}
+            />
+          )}
 
           {/* Send someone (F-DISPATCH): only on a task that is still open. */}
           {(task.status === "todo" || task.status === "in_progress") && (
