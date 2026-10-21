@@ -327,7 +327,7 @@ export function AddSiteWizard({
             })}
           </ol>
 
-          <div className="min-h-0 flex-1 overflow-y-auto pb-3 pr-1">
+          <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-3 pr-1">
             {step === 1 && (
               <div className="space-y-4">
                 <p className="text-[17px] font-bold">{tx("Comment s'appelle ce site ?", "What is this site called?")}</p>
@@ -568,7 +568,7 @@ export function AddSiteWizard({
         </div>
 
         {/* The dashboard this site will get, as it takes shape. Black in every theme, like the other dark cards. */}
-        <aside data-testid="add-site-preview" className="hidden min-h-0 flex-col gap-5 overflow-y-auto bg-sidebar p-7 text-sidebar-foreground md:flex" aria-label={tx("Aperçu du tableau de bord", "Dashboard preview")}>
+        <aside data-testid="add-site-preview" className="hidden min-h-0 flex-col gap-5 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden bg-sidebar p-7 text-sidebar-foreground md:flex" aria-label={tx("Aperçu du tableau de bord", "Dashboard preview")}>
           <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-sidebar-foreground/60">{tx("Votre nouveau tableau de bord", "Your new dashboard")}</p>
 
           <div>

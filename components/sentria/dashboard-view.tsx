@@ -4220,7 +4220,7 @@ export function DashboardView({
           )}
         >
           <div className="min-w-0 overflow-hidden rounded-3xl border border-border">
-            <div className="max-h-[600px] overflow-x-auto overflow-y-auto">
+            <div className="max-h-[600px] overflow-x-auto overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <table className="w-full border-separate border-spacing-0 text-sm">
                 <thead className="table-head sticky top-0 z-10">
                   <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">
@@ -4680,17 +4680,13 @@ export function DashboardView({
             role="dialog"
             aria-modal="true"
             aria-labelledby="recommendation-dialog-title"
-            className="squircle max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[32px] bg-card shadow-2xl ring-1 ring-border"
+            className="squircle max-h-[90vh] w-full max-w-2xl overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-[32px] bg-card shadow-2xl ring-1 ring-border"
           >
             <div className="flex items-start justify-between gap-4 border-b border-border p-6">
               <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
-                  {tx("Recommandation SentrIA", "SentrIA recommendation")}
-                </p>
-
                 <h2
                   id="recommendation-dialog-title"
-                  className="mt-2 font-heading text-2xl font-bold tracking-tight"
+                  className="font-heading text-2xl font-bold tracking-tight"
                 >
                   {selectedRecommendation.equipment}
                 </h2>

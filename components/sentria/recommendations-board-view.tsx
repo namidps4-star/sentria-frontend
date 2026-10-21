@@ -765,7 +765,7 @@ function DetailDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="priority-detail-title"
-        className={cn("max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-border bg-card shadow-2xl sm:rounded-3xl t-modal", enter)}
+        className={cn("max-h-[92vh] w-full max-w-lg overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-t-3xl border border-border bg-card shadow-2xl sm:rounded-3xl t-modal", enter)}
       >
         {/* Header ------------------------------------------------------- */}
         <div className="flex items-start justify-between gap-4 border-b border-border p-5 sm:p-6">

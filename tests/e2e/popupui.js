@@ -39,6 +39,8 @@ const alertOf = (eq, params) => ({ id: eq, equipment: eq, sector: 'health', busi
     const order = await p.evaluate(() => { const d = document.querySelector('[aria-labelledby=recommendation-dialog-title]'); const a = d.querySelector('[data-popup-steps]').getBoundingClientRect().top, b = d.querySelector('[data-cost-ignored]').getBoundingClientRect().top; return a < b; });
     pass(order, 'the steps come before the impact block');
     pass(await dlg(p).getByRole('button', { name: 'Mark handled' }).count() === 1, 'one Mark handled button in the popup');
+    pass(!/SentrIA recommendation/i.test(await dlg(p).innerText()), 'no green "SentrIA recommendation" line above the title');
+    pass(await dlg(p).evaluate(el => getComputedStyle(el).scrollbarWidth === 'none' && el.offsetWidth - el.clientWidth <= 2), 'the popup shows no scroll bar');
     await p.screenshot({ path: 'popupui-light.png' });
     pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
     await ctx.close(); }

@@ -274,7 +274,7 @@ function LegalBody({
             })}
           </nav>
 
-          <div ref={scroller} onScroll={onScroll} className="min-h-0 overflow-y-auto md:pr-1">
+          <div ref={scroller} onScroll={onScroll} className="min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:pr-1">
             <div className="flex flex-col gap-2">
               {LEGAL_DOCS[doc].map((section, index) => (
                 <section key={section.title[1]} data-legal-section={index} className={card}>

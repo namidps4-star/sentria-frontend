@@ -50,6 +50,7 @@ const ROOT = path.join(__dirname, '..', '..');
     const d = p.getByTestId('legal-dialog');
     pass(await d.isVisible() && /Terms of use/.test(await d.locator('h2').innerText()), 'the terms link opens the terms');
     pass(/Draft not reviewed by a lawyer/.test(await p.getByTestId('legal-draft').innerText()), 'it says it is a draft');
+    pass(await d.locator('section[data-legal-section]').first().evaluate(el => { let n = el.parentElement; while (n && n !== document.body) { if (/(auto|scroll)/.test(getComputedStyle(n).overflowY)) return getComputedStyle(n).scrollbarWidth === 'none' && n.offsetWidth - n.clientWidth <= 1; n = n.parentElement; } return true; }), 'the legal text shows no scroll bar');
     const toc = p.getByTestId('legal-toc').locator('button');
     pass(await toc.count() === await d.locator('section[data-legal-section]').count(), 'the contents list has one entry for each card (' + await toc.count() + ')');
     pass(await d.locator('section[data-legal-section] > span').first().innerText() === '01', 'the first card carries the number 01');

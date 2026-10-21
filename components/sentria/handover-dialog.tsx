@@ -348,7 +348,7 @@ function HandoverBody({
       aria-labelledby="handover-title"
       data-handover=""
       className={cn(
-        "max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-y-auto rounded-3xl border border-border bg-card p-5 shadow-2xl t-modal sm:p-6",
+        "max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-3xl border border-border bg-card p-5 shadow-2xl t-modal sm:p-6",
         className
       )}
     >
