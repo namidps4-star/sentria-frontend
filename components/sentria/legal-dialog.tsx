@@ -36,6 +36,26 @@ function withLead(text: string) {
   )
 }
 
+/** "We work with providers…: Supabase (sign-in), Vercel (hosting) and Render
+ *  (API)." becomes the intro and one chip per provider. Anything that does not
+ *  read exactly like that list stays a plain paragraph. */
+function asProviders(text: string) {
+  const match = text.match(/^([^:]{3,120}?)(\s?:)\s([\s\S]+?)\.$/)
+
+  if (!match) return null
+
+  const rest = match[3]
+  const items = Array.from(rest.matchAll(/([A-Z][A-Za-z]+) \(([^()]+)\)/g))
+
+  if (items.length < 4) return null
+
+  const left = items.reduce((acc, item) => acc.replace(item[0], ""), rest).replace(/,|\band\b|\bet\b|\s/g, "")
+
+  if (left !== "") return null
+
+  return { intro: match[1] + match[2], items: items.map((item) => ({ name: item[1], note: item[2] })) }
+}
+
 export function LegalDialog({
   open,
   doc,
@@ -120,16 +140,35 @@ function LegalBody({
     setCurrent(at)
   }
 
-  const card = "squircle grid grid-cols-[3.5rem_minmax(0,1fr)] gap-4 rounded-[26px] bg-muted px-5 pb-5 pt-5 max-sm:grid-cols-1 max-sm:gap-3"
+  const card = "squircle grid grid-cols-[4.5rem_minmax(0,1fr)] gap-3 rounded-[26px] bg-muted px-6 pb-6 pt-5 max-sm:grid-cols-1 max-sm:gap-1 max-sm:px-5"
 
   const numberTile = (index: number) => (
     <span
-      className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-accent text-[22px] font-extrabold leading-none tracking-tight text-accent-foreground tabular-nums max-sm:h-11 max-sm:w-11 max-sm:rounded-2xl max-sm:text-lg"
+      className="font-heading text-[44px] font-light leading-none tracking-tight text-muted-foreground tabular-nums max-sm:text-3xl"
       aria-hidden="true"
     >
       {pad(index + 1)}
     </span>
   )
+
+  const renderParagraph = (text: string) => {
+    const providers = asProviders(text)
+
+    if (!providers) return <p className="max-w-[62ch]">{withLead(text)}</p>
+
+    return (
+      <div data-legal-providers="">
+        <p className="max-w-[62ch]">{providers.intro}</p>
+        <ul className="mt-3 flex flex-wrap gap-1.5">
+          {providers.items.map((item) => (
+            <li key={item.name} className="rounded-full border border-border bg-card px-3 py-1 text-[12.5px] font-bold leading-snug text-foreground">
+              {item.name} <span className="font-medium text-muted-foreground">· {item.note}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -223,7 +262,7 @@ function LegalBody({
                   <span
                     className={cn(
                       "font-mono text-xs font-semibold tabular-nums",
-                      current === index ? "rounded-md bg-accent px-1 py-px text-accent-foreground" : "opacity-80"
+                      current === index ? "rounded-md bg-card px-1 py-px text-foreground" : "opacity-80"
                     )}
                     aria-hidden="true"
                   >
@@ -244,7 +283,7 @@ function LegalBody({
                     <h3 className="mb-2.5 mt-1 text-[19px] font-bold leading-tight tracking-tight">{tx(section.title[0], section.title[1])}</h3>
                     <div className="flex flex-col gap-2.5 text-[15px] leading-[1.7] text-muted-foreground">
                       {section.body.map((paragraph) => (
-                        <p key={paragraph[1]} className="max-w-[62ch]">{withLead(tx(paragraph[0], paragraph[1]))}</p>
+                        <div key={paragraph[1]}>{renderParagraph(tx(paragraph[0], paragraph[1]))}</div>
                       ))}
                     </div>
                   </div>
