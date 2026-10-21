@@ -5,12 +5,12 @@ import { useEffect, useState } from "react"
 import { alertIconName } from "@/lib/alert-icons"
 import { cn } from "@/lib/utils"
 
-/* The icon at the start of an alert row: a small 3D icon on a chip tinted by
- * severity (the pastel tag tokens, so light and dark follow the theme).
+/* The icon at the start of an alert row: a bold single-colour glyph (Solar)
+ * in a soft grey circle. The glyph carries the severity, in the tag tokens'
+ * text colours, so light and dark follow the theme.
  *
- * The icons are about 375 KB as source, so they load in their own chunk the
- * first time a table is drawn. Until then the chip is drawn empty at the same
- * size, so the row does not move. */
+ * The icons load in their own chunk the first time a table is drawn. Until
+ * then the circle is drawn empty at the same size, so the row does not move. */
 
 type IconData = Record<string, { viewBox: string; body: string }>
 
@@ -43,8 +43,8 @@ export function AlertIcon({
   const [data, setData] = useState<IconData | null>(null)
 
   /* Not on mount: the icons arrive after the dashboard's entrance has played.
-     Drawing a dozen 3D icons while the blocks are still rising costs frames
-     (dashmotion times the entrance); the empty chip holds the row's size, so
+     Drawing a dozen icons while the blocks are still rising costs frames
+     (dashmotion times the entrance); the empty circle holds the row's size, so
      nothing moves when they appear. */
   useEffect(() => {
     if (data) return
@@ -64,10 +64,8 @@ export function AlertIcon({
       aria-hidden="true"
       data-alert-icon={alertIconName(alert)}
       className={cn(
-        "flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full shadow-sm ring-1 ring-inset",
-        critical
-          ? "bg-[var(--tag-danger-bg)] ring-[var(--tag-danger-bd)]"
-          : "bg-[var(--tag-warning-bg)] ring-[var(--tag-warning-bd)]",
+        "flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-muted",
+        critical ? "text-[var(--tag-danger-fg)]" : "text-[var(--tag-warning-fg)]",
         className
       )}
     >

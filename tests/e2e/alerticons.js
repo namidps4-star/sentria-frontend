@@ -1,4 +1,4 @@
-// The alert rows wear a 3D icon on a severity chip instead of a dot, in every
+// The alert rows wear a bold icon in a soft circle, coloured by severity, instead of a dot, in every
 // sector. Checks: the icon follows the alert's family (key, then words, then
 // the sector), every row has one, the chip carries the severity, nothing
 // moves while the icons load, light, dark and a phone, French.
@@ -52,7 +52,7 @@ const LS = {
     await p.goto(APP_URL); await p.waitForTimeout(3500);
     return { p, ctx };
   };
-  const icons = p => p.locator('#alerts-table [data-alert-icon]').evaluateAll(els => els.map(e => ({ name: e.getAttribute('data-alert-icon'), svg: !!e.querySelector('svg path, svg g, svg defs'), row: e.closest('tr').innerText.split('\n')[0].trim(), bg: getComputedStyle(e).backgroundColor, w: Math.round(e.getBoundingClientRect().width) })));
+  const icons = p => p.locator('#alerts-table [data-alert-icon]').evaluateAll(els => els.map(e => ({ name: e.getAttribute('data-alert-icon'), svg: !!e.querySelector('svg path, svg g, svg defs'), row: e.closest('tr').innerText.split('\n')[0].trim(), bg: getComputedStyle(e).color, w: Math.round(e.getBoundingClientRect().width) })));
 
   console.log('== every row in every sector has the right icon');
   { const { p, ctx } = await open();
@@ -67,7 +67,7 @@ const LS = {
     pass(got.every(g => g.w === 30), 'every chip is 30 px wide');
     const crit = got.filter(g => CASES.find(c => c[0].equipment === g.row)[0].severity === 'CRITICAL');
     const warn = got.filter(g => CASES.find(c => c[0].equipment === g.row)[0].severity !== 'CRITICAL');
-    pass(new Set(crit.map(g => g.bg)).size === 1 && new Set(warn.map(g => g.bg)).size === 1 && crit[0].bg !== warn[0].bg, 'the chip colour carries the severity: critical and warning differ');
+    pass(new Set(crit.map(g => g.bg)).size === 1 && new Set(warn.map(g => g.bg)).size === 1 && crit[0].bg !== warn[0].bg, 'the glyph colour carries the severity: critical and warning differ');
     pass(await p.locator('#alerts-table tbody span.rounded-full.h-1\\.5').count() === 0, 'no severity dot is left in the table');
     await p.screenshot({ path: 'alerticons-light.png' });
     pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));

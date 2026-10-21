@@ -1,4 +1,4 @@
-/* Which 3D icon an alert row wears, for every sector.
+/* Which icon an alert row wears, for every sector.
  *
  * The family is the second part of the key ("health.stock.low" is stock).
  * A key the app does not know falls back to the words of the message, then to
