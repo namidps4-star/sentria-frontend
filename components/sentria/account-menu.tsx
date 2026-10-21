@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { ChevronDown, ChevronRight, MapPin, Plus, User } from "@/lib/icons"
 import { requestAddSiteOnOpen } from "@/lib/active-site"
+import { activityEmoji, sectorEmoji } from "@/lib/activity-emoji"
 import { activityLabel } from "@/lib/activities"
 import { initialsOf, useCompanyIdentity } from "@/lib/company"
 import { useT, useTx } from "@/lib/i18n"
@@ -11,10 +12,24 @@ import { chooseSite, useSites, type StoredSite } from "@/lib/sites"
 import { usePresence } from "@/lib/use-presence"
 import { cn } from "@/lib/utils"
 import { SECTORS } from "./onboarding-modal"
-import { SectorBadge } from "./sector-badge"
 
 const FOCUS_RING =
   " focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+
+/** A site's sector as an emoji on a rounded tile. */
+function EmojiTile({ emoji, onLime = false }: { emoji: string; onLime?: boolean }) {
+  return (
+    <span
+      className={cn(
+        "flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] text-[22px] leading-none",
+        onLime ? "bg-white/60" : "bg-card"
+      )}
+      aria-hidden="true"
+    >
+      {emoji}
+    </span>
+  )
+}
 
 /** The company button in the top bar (F-SITESCOPE).
  *
@@ -164,7 +179,7 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
           {sites.length === 0 ? (
             <p className="px-3 py-3 text-sm text-muted-foreground">{tx("Aucun site pour l'instant.", "No sites yet.")}</p>
           ) : (
-            <div className="max-h-[min(30rem,70vh)] space-y-2 overflow-y-auto px-0.5">
+            <div className="space-y-2 px-0.5">
               {(() => {
                 // The active site sits on top in lime; the rest follow as cards. One sector label carries the
                 // test id for each industry, whichever card shows it first.
@@ -208,7 +223,7 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
                               picked ? "border-foreground bg-foreground text-background" : "border-border bg-card hover:bg-muted"
                             )}
                           >
-                            {departmentName(site.sector, department)}
+                            <span aria-hidden="true">{activityEmoji(department)}</span> {departmentName(site.sector, department)}
                           </button>
                         )
                       })}
@@ -237,14 +252,18 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
                   <>
                     {active && (
                       <div className="squircle rounded-[28px] bg-brand p-4 text-brand-foreground" style={{ borderRadius: 28 }}>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-bold uppercase tracking-[0.1em] opacity-70">{tx("Site actif", "Active site")}</span>
-                          <span className="ml-auto flex items-center gap-1.5 text-xs font-semibold">
-                            <span data-testid={sectorTid(active.sector)}>{sectorLabel(active.sector)}</span>
-                            <SectorBadge sector={active.sector} size="sm" className="rounded-full" />
-                          </span>
+                        <span className="text-[11px] font-bold uppercase tracking-[0.1em] opacity-70">{tx("Site actif", "Active site")}</span>
+                        <div className="mt-2 flex items-center gap-3">
+                          <EmojiTile emoji={sectorEmoji(active.sector)} onLime />
+                          {siteButton(
+                            active,
+                            true,
+                            <span className="block truncate text-xs opacity-70">
+                              <span data-testid={sectorTid(active.sector)}>{sectorLabel(active.sector)}</span>
+                              {active.departments.length > 0 && ` · ${departmentsCount(active.departments.length)}`}
+                            </span>
+                          )}
                         </div>
-                        <div className="mt-2 flex items-center">{siteButton(active, true)}</div>
                         {chipsFor(active, true)}
                       </div>
                     )}
@@ -270,7 +289,7 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
                             style={{ borderRadius: 28 }}
                           >
                             <div className="flex items-center gap-2.5 px-2.5 pb-2 pt-2">
-                              <SectorBadge sector={site.sector} size="md" className="rounded-full" />
+                              <EmojiTile emoji={sectorEmoji(site.sector)} />
                               <h4 data-testid={sectorTid(site.sector)} className="font-heading text-[15px] font-semibold">
                                 {sectorLabel(site.sector)}
                               </h4>
@@ -304,10 +323,10 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
                       return (
                         <div
                           key={site.id}
-                          className="squircle flex items-center gap-2 rounded-[24px] border border-border bg-card p-3"
+                          className="squircle flex items-center gap-3 rounded-[24px] bg-muted p-2.5"
                           style={{ borderRadius: 24 }}
                         >
-                          <SectorBadge sector={site.sector} size="md" className="rounded-full" />
+                          <EmojiTile emoji={sectorEmoji(site.sector)} />
                           <div className="flex min-w-0 flex-1 items-center">
                             {siteButton(
                               site,
@@ -324,7 +343,7 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
                             aria-expanded="false"
                             aria-label={tx(`Ouvrir ${sectorLabel(site.sector)}`, `Open ${sectorLabel(site.sector)}`)}
                             data-testid="account-menu-sector-toggle"
-                            className={"flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted" + FOCUS_RING}
+                            className={"flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-card" + FOCUS_RING}
                           >
                             <ChevronRight className="h-4 w-4" aria-hidden="true" />
                           </button>
