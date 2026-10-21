@@ -197,6 +197,35 @@ const BASE = { sentria_onboarded: 'true', sentria_company_name: 'Pharmacie A', s
     await p.screenshot({ path: 'wholesalers-light.png' });
     await ctx.close(); }
 
+  console.log('== the lime header, the rank rail and the sentence');
+  { const { p, ctx } = await open({ wholesalers: [{ id: 'a', name: 'Dakar Centre', cutoff: 960, before: 0, after: 1, days: ALL }, { id: 'b', name: 'Pharma Thies', cutoff: 840, before: 2, after: 3, days: ALL }, { id: 'c', name: 'Sud', cutoff: null, before: 1, after: 1, days: ALL }] });
+    await goPage(p);
+    pass((await p.getByTestId('wholesalers-count').innerText()).replace(/\s+/g, ' ').trim() === '3 wholesalers', 'the header counts the wholesalers: 3');
+    const ranks = await p.getByTestId('wholesaler-rank').allInnerTexts();
+    pass(ranks.length === 3 && ranks.every((t, i) => t.replace(/\s+/g, ' ').includes(String(i + 1))), 'each card has a rank rail: ' + ranks.join(' | ').replace(/\n/g, ' '));
+    const rail = await p.getByTestId('wholesaler-rank').evaluateAll(els => els.map(e => getComputedStyle(e).backgroundColor));
+    pass(rail[0] !== rail[1] && rail[1] === rail[2], 'the first rail has its own colour, the others share one');
+    const sums = await p.getByTestId('wholesaler-summary').allInnerTexts();
+    pass(sums[0] === 'Order before 4:00 pm and it arrives same day. After that, next day.', 'sentence with a cutoff: ' + sums[0]);
+    pass(sums[1] === 'Order before 2:00 pm and it arrives in 2 days. After that, in 3 days.', 'and another: ' + sums[1]);
+    pass(sums[2] === 'It arrives next day.', 'no cutoff: ' + sums[2]);
+    const clip = await p.evaluate(() => [...document.querySelectorAll('[data-testid=wholesaler-row] select')].map(s => s.closest('label').querySelector('span.truncate')).filter(e => e && e.scrollWidth > e.clientWidth).length);
+    pass(clip === 0, 'on a desktop no field box clips its text (' + clip + ' clipped)');
+    pass(await rows(p).nth(0).getByTestId('wholesaler-cutoff').count() === 1 && await rows(p).nth(0).getByTestId('wholesaler-day-0').count() === 1, 'the field boxes are still there');
+    await p.screenshot({ path: 'wholesalers-m2-light.png', fullPage: true });
+    pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
+    await ctx.close(); }
+  { const { p, ctx } = await open({ lang: 'fr', wholesalers: [{ id: 'a', name: 'Dakar', cutoff: 960, before: 0, after: 1, days: ALL }] });
+    await goPage(p, 'Grossistes');
+    pass(/^Commandé avant 16:00, il arrive le jour même\. Après, le lendemain\.$/.test((await p.getByTestId('wholesaler-summary').innerText()).trim()) && /rang/i.test(await p.getByTestId('wholesaler-rank').innerText()), 'in French: ' + (await p.getByTestId('wholesaler-summary').innerText()).trim());
+    await ctx.close(); }
+  { const { p, ctx } = await open({ theme: 'dark', wholesalers: [{ id: 'a', name: 'Dakar Centre', cutoff: 960, before: 0, after: 1, days: ALL }, { id: 'b', name: 'Pharma Thies', cutoff: 840, before: 2, after: 3, days: ALL }] });
+    await goPage(p); await p.screenshot({ path: 'wholesalers-m2-dark.png', fullPage: true }); await ctx.close(); }
+  { const { p, ctx } = await open({ vw: 390, wholesalers: [{ id: 'a', name: 'Dakar Centre', cutoff: 960, before: 0, after: 1, days: ALL }, { id: 'b', name: 'Pharma Distribution Thies', cutoff: 840, before: 2, after: 3, days: ALL }] });
+    await goPage(p);
+    pass(!(await p.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)), 'no sideways scroll on a phone');
+    await p.screenshot({ path: 'wholesalers-m2-phone.png', fullPage: true }); await ctx.close(); }
+
   await browser.close();
   console.log(fails ? `\n${fails} FAILED` : '\nall passed');
   process.exit(fails ? 1 : 0);

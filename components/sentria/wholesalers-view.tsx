@@ -193,10 +193,22 @@ function Row({
         onDragEnd()
       }}
       className={cn(
-        "squircle rounded-[26px] border border-border bg-card p-[18px] pb-4 transition-opacity",
+        "squircle grid grid-cols-[3.25rem_minmax(0,1fr)] overflow-hidden rounded-[28px] bg-muted transition-opacity",
         dragging && "opacity-50"
       )}
     >
+      <div
+        data-testid="wholesaler-rank"
+        className={cn(
+          "flex flex-col items-center justify-center gap-1",
+          index === 0 ? "bg-accent text-accent-foreground" : "bg-foreground text-background"
+        )}
+      >
+        <span className="text-[9px] font-extrabold uppercase tracking-[0.06em]">{tx("Rang", "Rank")}</span>
+        <span className="font-heading text-[28px] font-bold leading-none tabular-nums">{index + 1}</span>
+      </div>
+
+      <div className="min-w-0 p-3.5 pb-4">
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -222,15 +234,6 @@ function Row({
           <GripVertical className="h-4 w-4" aria-hidden="true" />
         </button>
 
-        <span
-          className={cn(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[13.5px] font-extrabold",
-            index === 0 ? "bg-brand text-[#141414]" : "bg-foreground text-background"
-          )}
-        >
-          {index + 1}
-        </span>
-
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <input
             ref={nameRef}
@@ -244,7 +247,7 @@ function Row({
             className="min-w-0 flex-1 rounded-md bg-transparent text-[15.5px] font-bold outline-none placeholder:font-semibold placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
           />
           {tag && (
-            <span className="hidden shrink-0 rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-bold text-muted-foreground sm:inline">
+            <span className={cn("hidden shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold sm:inline", tag === "nearby" ? "bg-[var(--tag-success-bg)] text-[var(--tag-success-fg)]" : tag === "farther" ? "bg-[var(--tag-info-bg)] text-[var(--tag-info-fg)]" : "bg-[var(--tag-neutral-bg)] text-[var(--tag-neutral-fg)]")}>
               {tagText[tag]}
             </span>
           )}
@@ -283,6 +286,23 @@ function Row({
           </button>
         )}
       </div>
+
+      <p data-testid="wholesaler-summary" className="mt-2 text-[13.5px] leading-snug text-muted-foreground">
+        {(() => {
+          const lower = (text: string) => text.charAt(0).toLowerCase() + text.slice(1)
+
+          if (w.cutoff === null) {
+            return tx(`Il arrive ${lower(leadLabel(w.before, tx))}.`, `It arrives ${lower(leadLabel(w.before, tx))}.`)
+          }
+
+          const at = formatTime(w.cutoff, lang)
+
+          return tx(
+            `Commandé avant ${at}, il arrive ${lower(leadLabel(w.before, tx))}. Après, ${lower(leadLabel(w.after, tx))}.`,
+            `Order before ${at} and it arrives ${lower(leadLabel(w.before, tx))}. After that, ${lower(leadLabel(w.after, tx))}.`
+          )
+        })()}
+      </p>
 
       <div className="mt-4 grid grid-cols-[repeat(auto-fit,minmax(min(118px,100%),1fr))] gap-2.5">
         <Field label={tx("Commander avant", "Order before")}>
@@ -348,6 +368,7 @@ function Row({
             ))}
           </div>
         </Field>
+      </div>
       </div>
     </div>
   )
@@ -617,15 +638,15 @@ export function WholesalersView() {
         className="t-enter squircle rounded-[34px] border border-border bg-card p-6 text-card-foreground lg:p-[30px]"
         style={enterAt(0)}
       >
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <div className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-muted-foreground">
+        <div className="squircle flex flex-wrap items-center gap-x-6 gap-y-4 rounded-[28px] bg-accent px-6 py-5 text-accent-foreground">
+          <div className="min-w-0 flex-1 basis-80">
+            <div className="text-[11px] font-extrabold uppercase tracking-[0.12em] opacity-75">
               {tx("Stock", "Stock")}
             </div>
             <h2 className="mt-1 font-heading text-[30px] font-bold leading-tight tracking-tight">
               {tx("Grossistes", "Wholesalers")}
             </h2>
-            <p className="mt-2 max-w-[560px] text-sm leading-relaxed text-muted-foreground">
+            <p className="mt-2 max-w-[560px] text-sm leading-relaxed opacity-85">
               {tx(
                 "Listez qui vous livre, le plus proche d'abord. Quand le premier n'a pas le produit, SentrIA regarde le suivant. Elle utilise vos chiffres et ne devine jamais le stock d'un grossiste.",
                 "List who delivers to you, nearest first. When the first one has no stock, SentrIA looks at the next. It only uses your numbers and never guesses what a wholesaler has."
@@ -633,16 +654,25 @@ export function WholesalersView() {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={add}
-            disabled={full}
-            data-testid="wholesaler-add"
-            className="inline-flex items-center gap-2 rounded-full bg-foreground px-[18px] py-[11px] text-[13.5px] font-bold text-background transition-opacity hover:opacity-90 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            {tx("Ajouter un grossiste", "Add a wholesaler")}
-          </button>
+          <div className="flex items-center gap-5">
+            <div className="text-right" data-testid="wholesalers-count">
+              <div className="font-heading text-5xl font-bold leading-none tabular-nums">{list.length}</div>
+              <div className="mt-1 text-xs font-bold">
+                {list.length === 1 ? tx("grossiste", "wholesaler") : tx("grossistes", "wholesalers")}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={add}
+              disabled={full}
+              data-testid="wholesaler-add"
+              className="inline-flex min-h-11 items-center gap-2 rounded-full bg-accent-foreground px-5 py-2.5 text-[13.5px] font-bold text-accent transition-opacity hover:opacity-90 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              {tx("Ajouter un grossiste", "Add a wholesaler")}
+            </button>
+          </div>
         </div>
 
         {departments.length > 0 && department && (
