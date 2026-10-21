@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { X } from "@/lib/icons"
+import { AlertTriangle, X } from "@/lib/icons"
 
 import { useTx } from "@/lib/i18n"
 import {
@@ -232,7 +232,7 @@ function LegalBody({
           data-testid="legal-draft"
           className="mt-2 flex gap-2 rounded-[18px] bg-[var(--tag-warning-bg)] px-3.5 py-2.5 text-xs leading-relaxed text-[var(--tag-warning-fg)]"
         >
-          <span aria-hidden="true">⚠️</span>
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <span>
             {tx(
               "Brouillon non relu par un juriste. Ce texte ne dit pas que le service respecte une loi donnée. Les points à confirmer sont indiqués.",
