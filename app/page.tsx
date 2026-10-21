@@ -1,10 +1,11 @@
 import { AuthGate } from "@/components/sentria/auth-gate"
+import { CrawlerIntro } from "@/components/sentria/crawler-intro"
 import { siteUrl } from "@/lib/site"
 
 /* The sign-in screen is drawn in the browser, so the server HTML of "/" was
    only "loading". This block gives a crawler the same pitch the screen shows,
-   in both languages. It is hidden from the eye, not from the reader: it
-   repeats the visible text and nothing else.
+   in both languages. It repeats the visible text and nothing else, and
+   CrawlerIntro removes it once the page runs in a browser.
 
    i18n-ignore-start: server-rendered text for search engines, both languages kept */
 const FEATURES = {
@@ -61,7 +62,7 @@ export default function Page() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
-      <div className="sr-only">
+      <CrawlerIntro>
         {(["fr", "en"] as const).map((lang) => (
           <section key={lang} lang={lang}>
             <h1>{COPY[lang].h1}</h1>
@@ -81,7 +82,7 @@ export default function Page() {
             </ul>
           </section>
         ))}
-      </div>
+      </CrawlerIntro>
       <AuthGate />
     </>
   )
