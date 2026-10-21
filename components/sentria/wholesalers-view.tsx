@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 
-import { Check, ChevronDown, Clock, GripVertical, Minus, Plus, Trash2, Truck, X } from "@/lib/icons"
+import { Check, ChevronDown, Clock, GripVertical, MapPin, Minus, Plus, Trash2, Truck, X } from "@/lib/icons"
 import { enterAt } from "@/lib/motion"
 import { useTx, type Tx } from "@/lib/i18n"
 import {
@@ -13,7 +13,9 @@ import {
   moveItem,
   newWholesaler,
   nowOnAccountClock,
-  rankTag,
+  distanceTags,
+  MAX_KM,
+  type DistanceTag,
   readLadder,
   readWholesalers,
   defaultWholesalerDepartment,
@@ -114,7 +116,7 @@ const HALF_HOURS = Array.from({ length: 33 }, (_, i) => 6 * 60 + i * 30)
 function Row({
   w,
   index,
-  count,
+  tag,
   confirming,
   dragging,
   onChange,
@@ -129,7 +131,7 @@ function Row({
 }: {
   w: Wholesaler
   index: number
-  count: number
+  tag: DistanceTag | null
   confirming: boolean
   dragging: boolean
   onChange: (next: Wholesaler) => void
@@ -145,7 +147,6 @@ function Row({
   const tx = useTx()
   const lang = tx("fr", "en")
   const [handleDown, setHandleDown] = useState(false)
-  const tag = rankTag(index, count)
 
   const cutoffOptions = useMemo(() => {
     const times = w.cutoff !== null && !HALF_HOURS.includes(w.cutoff) ? [...HALF_HOURS, w.cutoff].sort((a, b) => a - b) : HALF_HOURS
@@ -247,8 +248,12 @@ function Row({
             className="min-w-0 flex-1 rounded-md bg-transparent text-[15.5px] font-bold outline-none placeholder:font-semibold placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
           />
           {tag && (
-            <span className={cn("hidden shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold sm:inline", tag === "nearby" ? "bg-[var(--tag-success-bg)] text-[var(--tag-success-fg)]" : tag === "farther" ? "bg-[var(--tag-info-bg)] text-[var(--tag-info-fg)]" : "bg-[var(--tag-neutral-bg)] text-[var(--tag-neutral-fg)]")}>
+            <span
+              data-testid="wholesaler-tag"
+              title={tx("D'après les distances que vous avez saisies", "From the distances you entered")}
+              className={cn("hidden shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold sm:inline", tag === "nearby" ? "bg-[var(--tag-success-bg)] text-[var(--tag-success-fg)]" : tag === "farther" ? "bg-[var(--tag-info-bg)] text-[var(--tag-info-fg)]" : "bg-[var(--tag-neutral-bg)] text-[var(--tag-neutral-fg)]")}>
               {tagText[tag]}
+              {w.km !== null && ` · ${w.km} km`}
             </span>
           )}
         </div>
@@ -345,6 +350,30 @@ function Row({
             />
           </Field>
         )}
+        <Field label={tx("Distance", "Distance")}>
+          <label className="relative flex w-full items-center gap-2 rounded-full border border-border bg-background px-3 py-2 text-[13px] font-semibold transition-colors focus-within:ring-2 focus-within:ring-ring hover:bg-accent/10">
+            <MapPin className="hidden h-[15px] w-[15px] shrink-0 text-muted-foreground sm:block" aria-hidden="true" />
+            <input
+              type="number"
+              inputMode="decimal"
+              min={0}
+              max={MAX_KM}
+              step={0.1}
+              value={w.km ?? ""}
+              placeholder={tx("ex. 4,5", "e.g. 4.5")}
+              aria-label={tx("Distance depuis la pharmacie, en km", "Distance from the pharmacy, in km")}
+              data-testid="wholesaler-km"
+              onChange={(e) => {
+                const raw = e.target.value
+                const n = Number(raw)
+
+                onChange({ ...w, km: raw === "" || !Number.isFinite(n) ? null : Math.min(Math.max(Math.round(n * 10) / 10, 0), MAX_KM) })
+              }}
+              className="min-w-0 flex-1 bg-transparent text-[13px] font-semibold outline-none [appearance:textfield] placeholder:font-medium placeholder:text-muted-foreground [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            />
+            <span className="shrink-0 text-muted-foreground">km</span>
+          </label>
+        </Field>
       </div>
 
       <div className="mt-3.5">
@@ -630,6 +659,7 @@ export function WholesalersView() {
 
   const orderAt: Moment = { weekday: today.weekday, minutes: orderMinutes ?? today.minutes }
   const full = list.length >= MAX_WHOLESALERS
+  const tags = distanceTags(list)
 
   return (
     <div className="space-y-6">
@@ -736,7 +766,7 @@ export function WholesalersView() {
                 <Row
                   w={w}
                   index={i}
-                  count={list.length}
+                  tag={tags[i]}
                   confirming={removing === w.id}
                   dragging={dragFrom === i}
                   nameRef={(el) => {

@@ -75,8 +75,19 @@ const BASE = { sentria_onboarded: 'true', sentria_company_name: 'Pharmacie A', s
     await days(p, 2, ALL);
     const all = await saved(p);
     pass(all.length === 3 && all[1].cutoff === 840 && all[1].before === 2 && all[1].after === 3 && all[2].cutoff === null && all[2].before === 4 && all[2].after === 4, `three wholesalers saved (${all.map(x => x.name).join(' | ')})`);
-    const tags = (await rows(p).evaluateAll(r => r.map(x => x.innerText))).map(t => /Nearby|Farthest|Farther/.exec(t)?.[0]);
-    pass(tags.join() === 'Nearby,Farther,Farthest', `tags by rank: ${tags.join(', ')}`);
+    const tagsOf = async () => (await rows(p).evaluateAll(r => r.map(x => x.querySelector('[data-testid=wholesaler-tag]')?.textContent || '')));
+    pass((await tagsOf()).every(t => t === ''), 'no distance typed: no tag at all (the order alone says nothing about distance)');
+    await rows(p).nth(0).getByTestId('wholesaler-km').fill('7.5'); await p.waitForTimeout(150);
+    pass((await tagsOf()).every(t => t === ''), 'one distance is not enough to compare: still no tag');
+    await rows(p).nth(1).getByTestId('wholesaler-km').fill('2'); await rows(p).nth(2).getByTestId('wholesaler-km').fill('15'); await p.waitForTimeout(250);
+    const tg = await tagsOf();
+    pass(tg.join('|') === 'Farther · 7.5 km|Nearby · 2 km|Farthest · 15 km', `tags come from the km typed, not the list order: ${tg.join(' | ')}`);
+    await rows(p).nth(1).getByTestId('wholesaler-km').fill('7.5'); await p.waitForTimeout(150);
+    await rows(p).nth(2).getByTestId('wholesaler-km').fill('7.5'); await p.waitForTimeout(250);
+    pass((await tagsOf()).every(t => t === ''), 'all the same distance: no tag');
+    await rows(p).nth(1).getByTestId('wholesaler-km').fill('2'); await rows(p).nth(2).getByTestId('wholesaler-km').fill('15'); await p.waitForTimeout(250);
+    pass((await saved(p)).map(x => x.km).join() === '7.5,2,15', 'the distances are saved with the list');
+    await p.screenshot({ path: 'wholesalers-km.png', fullPage: true });
     pass(await p.getByTestId('wholesalers-empty').count() === 0, 'the empty card is gone');
 
     console.log('== it persists');
@@ -131,7 +142,7 @@ const BASE = { sentria_onboarded: 'true', sentria_company_name: 'Pharmacie A', s
     await rows(p).nth(0).getByTestId('wholesaler-handle').dragTo(rows(p).nth(2)); await p.waitForTimeout(400);
     pass((await names(p)).join('|') === 'Pharma Distribution Thiès|Comptoir Médical Sud|Grossiste Dakar Centre', `dragging the first handle onto the last row moves it there (${(await names(p)).join(' | ')})`);
     pass((await saved(p)).map(x => x.name).join('|') === (await names(p)).join('|'), 'and the new order is saved');
-    pass(/Nearby/.test(await rows(p).nth(0).innerText()), 'the tags follow the new order');
+    pass(/Nearby/.test(await rows(p).nth(0).innerText()), 'the tag stays with the 2 km wholesaler, now first: it follows the distance, not the position');
     await rows(p).nth(2).getByTestId('wholesaler-handle').focus(); await p.keyboard.press('ArrowUp'); await p.keyboard.press('ArrowUp'); await p.waitForTimeout(300);
 
     console.log('== remove');
