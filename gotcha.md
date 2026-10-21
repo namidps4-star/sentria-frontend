@@ -312,3 +312,8 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Problem:** Run against `next dev`, about eight suites fail (`sheettabs`, `verify`, `weekrep`, `brand`, `cdelete`, `dashmotion` and others) and look like real bugs.
 **Reality:** The dev server's "N" badge sits in the bottom-left corner and covers the departments menu button, and dev builds are slow enough to break the motion timings. On a production build they pass.
 **Rule:** Judge a suite on `next build` + `next start`, as the build entry above says. A failure seen only on `next dev` is not a bug.
+
+## The tour opens on a list of parts once it has been finished
+**Problem:** The tour looks like one fixed run (hello, menu, "Go deeper"), so a test or change that expects "Take the tour" to always start at `hello` is wrong after the first finish.
+**Reality:** `components/sentria/guide-buddy.tsx` reads `sentria_guide_done` when it opens. Unset: the whole tour from `hello`, as before. Set: a list of five parts (menu, dashboard, import, tracking, sites), each opening on its own, plus "Play all parts". `lib/guide-steps.ts` (`partSteps`) builds them: menu is the quick tour, dashboard and import are the two halves of the deeper chapter, tracking and sites are short chapters of their own. Finished parts are kept in `sentria_guide_parts` (this browser only, not in `ACCOUNT_KEYS`). A part opened from the list ends with Done and closes; a chain (Play all, or Go deeper) carries on and drops the goodbye cards until the last part.
+**Rule:** A test that replays the tour sets `sentria_guide_done` and expects `data-step="parts"` (`tests/e2e/guideparts.js`). A new part is added to `PartId`, `partCards` and `partSteps`, with a card in both languages.

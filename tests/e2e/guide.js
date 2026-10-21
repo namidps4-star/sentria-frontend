@@ -82,7 +82,7 @@ const RECS = ALERTS.map(a => ({ ...a, recommended_action: 'ACT ' + a.equipment, 
     pass(await tour(p).count() === 0, 'Done closes the tour');
     pass(await p.evaluate(() => localStorage.getItem('sentria_guide_done')) === '1', 'finishing is remembered');
     await startTour(p);
-    pass(await tour(p).getAttribute('data-step') === 'hello', 'it can be replayed from the first step');
+    pass(await tour(p).getAttribute('data-step') === 'parts', 'after finishing, the tour opens on the list of parts (tests/e2e/guideparts.js)');
     pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
     await ctx.close(); }
 

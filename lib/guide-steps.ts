@@ -364,3 +364,143 @@ export function previewStep(tx: Tx): GuideStep {
     ),
   }
 }
+
+/* --------------------------------- parts ---------------------------------- *
+ * Someone who has been through the tour once can jump to one part. The first
+ * two parts are the quick tour and the dashboard half of the deeper chapter;
+ * the import part is its other half. Tracking and Sites are short chapters of
+ * their own. Which parts a person has finished is kept in this browser. */
+
+export type PartId = "menu" | "dashboard" | "import" | "tracking" | "sites"
+
+export const PART_IDS: PartId[] = ["menu", "dashboard", "import", "tracking", "sites"]
+
+/** The parts finished in this browser, as a JSON list of ids. */
+export const GUIDE_PARTS_KEY = "sentria_guide_parts"
+
+export function readSeenParts(): PartId[] {
+  try {
+    const saved = JSON.parse(localStorage.getItem(GUIDE_PARTS_KEY) || "[]")
+
+    return Array.isArray(saved) ? PART_IDS.filter((id) => saved.includes(id)) : []
+  } catch {
+    return []
+  }
+}
+
+export function markPartsSeen(ids: PartId[]) {
+  try {
+    const seen = new Set<PartId>(readSeenParts())
+    for (const id of ids) seen.add(id)
+    localStorage.setItem(GUIDE_PARTS_KEY, JSON.stringify(PART_IDS.filter((id) => seen.has(id))))
+  } catch {
+    /* A blocked localStorage only loses the checkmarks. */
+  }
+}
+
+export type PartCard = { id: PartId; title: string; hint: string; minutes: number }
+
+export function partCards(tx: Tx): PartCard[] {
+  return [
+    { id: "menu", title: tx("Le menu", "The menu"), hint: tx("À quoi sert chaque entrée", "What each menu item is for"), minutes: 1 },
+    { id: "dashboard", title: tx("Le tableau de bord", "The dashboard"), hint: tx("Priorités, chiffres clés, alertes", "Priorities, KPIs, alerts"), minutes: 2 },
+    { id: "import", title: tx("Quoi importer", "What to import"), hint: tx("Les colonnes de votre fichier", "The columns your file needs"), minutes: 1 },
+    { id: "tracking", title: tx("Suivi et tâches", "Tracking and tasks"), hint: tx("Responsables, terminé, Que s'est-il passé ?", "Owners, done, What happened?"), minutes: 1 },
+    { id: "sites", title: tx("Sites et équipe", "Sites and team"), hint: tx("Plusieurs sites, qui voit quoi", "Several sites, who sees what"), minutes: 1 },
+  ]
+}
+
+function trackingSteps(tx: Tx): GuideStep[] {
+  return [
+    {
+      id: "part-tracking-board",
+      pose: "point",
+      nav: "tracking",
+      view: "tracking",
+      title: tx("Suivi", "Tracking"),
+      body: tx(
+        "Chaque problème est une carte. Trois colonnes : À traiter, En cours, Résolu.",
+        "Each problem is a card. Three columns: To do, In progress, Resolved.",
+      ),
+    },
+    {
+      id: "part-tracking-owner",
+      pose: "wave",
+      view: "tracking",
+      title: tx("Un responsable par tâche", "An owner on every task"),
+      body: tx(
+        "Ouvrez une carte pour choisir qui s'en charge parmi vos intervenants, et lui envoyer la tâche par SMS.",
+        "Open a card to pick who handles it from your Field team, and send them the task by text.",
+      ),
+    },
+    {
+      id: "part-tracking-outcome",
+      pose: "cheer",
+      view: "tracking",
+      title: tx("Que s'est-il passé ?", "What happened?"),
+      body: tx(
+        "Quand une tâche est terminée, SentrIA pose la question. Trois réponses : problème évité, problème quand même, ou fausse alerte.",
+        "When a task is done, SentrIA asks. Three answers: problem avoided, problem happened anyway, or false alarm.",
+      ),
+      example: tx(
+        "Dès 3 réponses, SentrIA ajuste la confiance des prochaines alertes du même type (Pro et plus).",
+        "From 3 answers, SentrIA adjusts the confidence of the next alerts of that kind (Pro and up).",
+      ),
+    },
+  ]
+}
+
+function sitesSteps(tx: Tx): GuideStep[] {
+  return [
+    {
+      id: "part-sites-list",
+      pose: "point",
+      nav: "sites",
+      view: "sites",
+      title: tx("Sites", "Sites"),
+      body: tx(
+        "Chaque site garde ses propres données. Ajoutez-en un avec « Ajouter un site ».",
+        "Each site keeps its own data. Add one with \"Add a site\".",
+      ),
+    },
+    {
+      id: "part-sites-switch",
+      pose: "wave",
+      title: tx("Passer d'un site à l'autre", "Switching sites"),
+      body: tx(
+        "Le menu de l'entreprise, en haut à droite, liste vos sites. Choisissez-en un : le tableau de bord ne montre que ce site.",
+        "The company menu, top right, lists your sites. Pick one and the dashboard shows that site only.",
+      ),
+    },
+    {
+      id: "part-sites-team",
+      pose: "point",
+      nav: "settings",
+      view: "settings",
+      title: tx("Équipe", "Team"),
+      body: tx(
+        "Dans Paramètres, invitez une personne en charge d'un site. Elle ne voit que ce site.",
+        "In Settings, invite a person in charge of one site. They see that site only.",
+      ),
+    },
+  ]
+}
+
+/** The steps of one part. `queued` drops the goodbye cards: another part follows. */
+export function partSteps(id: PartId, tx: Tx, context: DeepContext, queued = false): GuideStep[] {
+  let steps: GuideStep[]
+
+  if (id === "menu") steps = guideSteps(tx)
+  else if (id === "tracking") steps = trackingSteps(tx)
+  else if (id === "sites") steps = sitesSteps(tx)
+  else {
+    const deep = deepSteps(tx, context)
+    const cut = deep.findIndex((s) => s.id === "deep-import")
+
+    if (id === "dashboard") steps = deep.slice(0, cut)
+    // The import button sits on the dashboard: open it first.
+    else steps = deep.slice(cut).map((s, i) => (i === 0 ? { ...s, view: "dashboard" as const } : s))
+  }
+
+  return queued ? steps.filter((s) => s.id !== "done" && s.id !== "deep-done") : steps
+}

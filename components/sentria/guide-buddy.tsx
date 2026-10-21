@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 
+import { Check } from "@/lib/icons"
 import { useTx } from "@/lib/i18n"
 import { activeDepartment } from "@/lib/active-site"
 import { activityLabel } from "@/lib/activities"
@@ -9,12 +10,15 @@ import { columnsForUpload } from "@/lib/csv-columns"
 import {
   GUIDE_DONE_KEY,
   GUIDE_NAME,
-  deepSteps,
-  guideSteps,
+  markPartsSeen,
+  partCards,
+  partSteps,
   previewStep,
+  readSeenParts,
   type DeepContext,
   type GuidePose,
   type GuideStep,
+  type PartId,
 } from "@/lib/guide-steps"
 import type { ViewKey } from "./types"
 import { cn } from "@/lib/utils"
@@ -23,6 +27,9 @@ import { cn } from "@/lib/utils"
  * The first-use tour (ONB-GUIDE): a small lime robot with a black screen face
  * walks down the sidebar, points at each item, and says in plain words what it
  * is for, with one example. Scripted, so no AI and no cost per use.
+ *
+ * Someone who has been through it once opens a list of parts instead, and
+ * jumps to the one they need ("Play all parts" runs them in order).
  *
  * "Go deeper" at the end opens a second chapter on the dashboard and on what
  * to import: it points at the dashboard's own blocks (data-tour), and shows
@@ -119,9 +126,14 @@ export function RoboFigure({ pose, className, style }: { pose: GuidePose; classN
 }
 
 type Box = { left: number; top: number; width: number; height: number }
-type Chapter = "quick" | "deep"
+/** What the tour is showing: the list of parts, or one part. */
+type Part = PartId | "list"
+
+/** The card the list of parts sits on: it has no step of its own to read. */
+const LIST_STEP: GuideStep = { id: "parts", pose: "wave", title: "", body: "" }
 
 const CARD_W = 320
+const PARTS_W = 380
 const ROBO_W = 142
 const GAP = 12
 
@@ -173,7 +185,12 @@ export function GuideBuddy({
   onNavigate: (view: ViewKey) => void
 }) {
   const tx = useTx()
-  const [chapter, setChapter] = useState<Chapter>("quick")
+  const [part, setPart] = useState<Part>("menu")
+  // The parts still to come after this one (the full run, or the deeper chapter).
+  const [queue, setQueue] = useState<PartId[]>([])
+  // Opened from the list: Back on a part's first step returns to it.
+  const [fromList, setFromList] = useState(false)
+  const [seen, setSeen] = useState<PartId[]>([])
   const [index, setIndex] = useState(0)
   const [targets, setTargets] = useState<Record<string, Box | null>>({})
   const [narrow, setNarrow] = useState(false)
@@ -185,15 +202,27 @@ export function GuideBuddy({
 
   useEffect(() => {
     if (!open) return
-    setChapter("quick")
+
+    let finished = false
+    try {
+      finished = !!localStorage.getItem(GUIDE_DONE_KEY)
+    } catch {
+      /* No storage: the whole tour is offered. */
+    }
+
+    setSeen(readSeenParts())
+    setQueue([])
+    setFromList(false)
+    // Whoever has finished the tour once picks a part; a first visit gets it from the top.
+    setPart(finished ? "list" : "menu")
     setIndex(0)
   }, [open])
 
   const all = useMemo(
-    () => (chapter === "deep" ? deepSteps(tx, deepContext(tx)) : guideSteps(tx)),
-    // The columns are read when the chapter opens.
+    () => (part === "list" ? [LIST_STEP] : partSteps(part, tx, deepContext(tx), queue.length > 0)),
+    // The columns are read when the part opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [tx, chapter, open],
+    [tx, part, open, queue.length],
   )
 
   const measure = useCallback(() => {
@@ -276,24 +305,69 @@ export function GuideBuddy({
       /* A blocked localStorage just lets the tour offer itself again. */
     }
     setIndex(0)
-    setChapter("quick")
+    setPart("menu")
+    setQueue([])
     onClose()
   }, [onClose])
 
   const step = steps[Math.min(index, steps.length - 1)]
   const last = index >= steps.length - 1
 
+  const isList = part === "list"
+
   const go = useCallback(
     (delta: number) => {
-      if (delta > 0 && last) return finish()
+      if (isList) return
+
+      if (delta > 0 && last) {
+        markPartsSeen([part as PartId])
+
+        // Another part follows: carry on into it.
+        if (queue.length > 0) {
+          setSettled(false)
+          setPart(queue[0])
+          setQueue(queue.slice(1))
+          setIndex(0)
+          return
+        }
+
+        return finish()
+      }
+
+      if (delta < 0 && index === 0 && fromList) {
+        setPart("list")
+        setQueue([])
+        setSeen(readSeenParts())
+        return
+      }
+
       setIndex((i) => Math.max(0, Math.min(steps.length - 1, i + delta)))
     },
-    [last, finish, steps.length],
+    [isList, last, part, queue, index, fromList, finish, steps.length],
   )
 
+  /** The deeper chapter: the dashboard, then what to import. */
   function goDeeper() {
     setSettled(false)
-    setChapter("deep")
+    setQueue(["import"])
+    setPart("dashboard")
+    setIndex(0)
+  }
+
+  function pickPart(id: PartId) {
+    setSettled(false)
+    setFromList(true)
+    setQueue([])
+    setPart(id)
+    setIndex(0)
+  }
+
+  /** Every part, in order, from the menu to sites. */
+  function playAll() {
+    setSettled(false)
+    setFromList(false)
+    setQueue(["dashboard", "import", "tracking", "sites"])
+    setPart("menu")
     setIndex(0)
   }
 
@@ -327,12 +401,12 @@ export function GuideBuddy({
     return () => timers.forEach(clearTimeout)
     // `view` is read at entry only: leaving the view would otherwise restart the step.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, stepId, stepView, stepSelector, stepIsNav, chapter, measure])
+  }, [open, stepId, stepView, stepSelector, stepIsNav, part, measure])
 
   useEffect(() => {
     if (!open) return
     next.current?.focus()
-  }, [open, index, chapter])
+  }, [open, index, part])
 
   useEffect(() => {
     if (!open) return
@@ -398,7 +472,7 @@ export function GuideBuddy({
       data-testid="guide-buddy"
       data-step={step.id}
       data-pose={step.pose}
-      data-chapter={chapter}
+      data-chapter={part === "menu" ? "quick" : part === "dashboard" || part === "import" ? "deep" : part}
       data-placement={placement}
     >
       {/* Hello and goodbye dim the page behind the card. A pointing step dims it through the ring's
@@ -436,6 +510,16 @@ export function GuideBuddy({
           <RoboFigure pose={step.pose} className={roboClass} style={cornerGlow} />
         )}
 
+        {isList ? (
+          <PartsCard
+            tx={tx}
+            seen={seen}
+            width={narrow ? "100%" : PARTS_W}
+            onPick={pickPart}
+            onPlayAll={playAll}
+            onSkip={finish}
+          />
+        ) : (
         <div
           className="squircle shrink-0 rounded-[22px] border border-border bg-card p-4 text-card-foreground shadow-xl"
           style={{ width: narrow ? "100%" : CARD_W }}
@@ -472,7 +556,7 @@ export function GuideBuddy({
 
           {step.example && <p className="mt-1.5 text-xs leading-snug text-muted-foreground">{step.example}</p>}
 
-          {last && chapter === "quick" && (
+          {last && part === "menu" && queue.length === 0 && (
             <button
               type="button"
               onClick={goDeeper}
@@ -506,7 +590,7 @@ export function GuideBuddy({
             </span>
 
             <span className="flex items-center gap-1.5">
-              {index > 0 && (
+              {(index > 0 || fromList) && (
                 <button
                   type="button"
                   onClick={() => go(-1)}
@@ -521,12 +605,109 @@ export function GuideBuddy({
                 onClick={() => go(1)}
                 className="rounded-full bg-brand px-3.5 py-1.5 text-xs font-semibold text-[#141414] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                {last ? tx("Terminer", "Done") : tx("Suivant", "Next")}
+                {last && queue.length === 0 ? tx("Terminer", "Done") : tx("Suivant", "Next")}
               </button>
             </span>
           </div>
         </div>
+        )}
       </div>
+    </div>
+  )
+}
+
+/** The list a returning visitor picks a part from. */
+function PartsCard({
+  tx,
+  seen,
+  width,
+  onPick,
+  onPlayAll,
+  onSkip,
+}: {
+  tx: ReturnType<typeof useTx>
+  seen: PartId[]
+  width: number | string
+  onPick: (id: PartId) => void
+  onPlayAll: () => void
+  onSkip: () => void
+}) {
+  return (
+    <div
+      className="squircle shrink-0 rounded-[22px] border border-border bg-card p-4 text-card-foreground shadow-xl"
+      style={{ width }}
+      data-testid="guide-card"
+      data-parts=""
+    >
+      <div className="text-sm font-semibold">{tx("Content de vous revoir. Choisissez une partie.", "Welcome back. Pick a part.")}</div>
+      <p className="mt-1 text-[13px] leading-snug text-card-foreground/85">
+        {tx("Chaque partie est courte. Allez à celle qu'il vous faut.", "Every part is short. Jump to the one you need.")}
+      </p>
+
+      <ul className="mt-3 space-y-1.5">
+        {partCards(tx).map((card, i) => {
+          const done = seen.includes(card.id)
+
+          return (
+            <li key={card.id}>
+              <button
+                type="button"
+                onClick={() => onPick(card.id)}
+                data-testid="guide-part"
+                data-part={card.id}
+                data-seen={done ? "true" : "false"}
+                className="flex w-full items-center gap-2.5 rounded-2xl border border-border bg-muted/40 px-2.5 py-2 text-left transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <span
+                  className={cn(
+                    "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold",
+                    done ? "bg-brand text-[#141414]" : "bg-foreground text-brand",
+                  )}
+                  aria-hidden="true"
+                >
+                  {done ? <Check className="h-3.5 w-3.5" /> : i + 1}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13px] font-semibold leading-tight">{card.title}</span>
+                  <span className="block text-[11px] leading-snug text-muted-foreground">
+                    {card.hint} · {card.minutes} min
+                  </span>
+                </span>
+                <span
+                  className={cn(
+                    "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold",
+                    done ? "bg-muted text-muted-foreground" : "bg-brand text-[#141414]",
+                  )}
+                >
+                  {done ? tx("Revoir", "Replay") : tx("Commencer", "Start")}
+                </span>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={onSkip}
+          className="whitespace-nowrap text-xs text-muted-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {tx("Passer la visite", "Skip tour")}
+        </button>
+        <button
+          type="button"
+          onClick={onPlayAll}
+          data-testid="guide-play-all"
+          className="rounded-full bg-brand px-3.5 py-1.5 text-xs font-semibold text-[#141414] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {tx("Tout lire", "Play all parts")}
+        </button>
+      </div>
+
+      <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
+        {tx("Rouvrez cette liste depuis « Aide et retours », bouton « Visite guidée ».", "Open this list any time from \"Help & feedback\", button \"Take the tour\".")}
+      </p>
     </div>
   )
 }
