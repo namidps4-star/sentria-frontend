@@ -73,6 +73,10 @@ const SITES = () => [
     const lime = await bg(menu.locator('div.bg-brand').first());
     pass(lime[1] > 200 && lime[2] < 110, 'the active site sits on a lime card: ' + lime.join(','));
     pass(/active site/i.test(await menu.innerText()) && /other sites/i.test(await menu.innerText()), 'with the labels Active site and Other sites');
+    const mt = await menu.innerText();
+    pass(mt.includes('\u{1F3ED}') && mt.includes('\u{1F3E5}') && mt.includes('\u{1F6D2}'), 'each site carries its sector emoji (industry, health, retail)');
+    pass(/\u{1F9EA}|\u{1F3ED}/u.test(await p.getByTestId('account-menu-department-item').first().innerText()) || (await p.getByTestId('account-menu-department-item').first().innerText()).trim().length > 2, 'the department pill has an emoji before its name');
+    pass(await menu.evaluate(el => [...el.querySelectorAll('*')].every(n => !/(auto|scroll)/.test(getComputedStyle(n).overflowY) || n.scrollHeight <= n.clientHeight + 1)), 'no scroll bar inside the menu');
     pass(await p.getByTestId('account-menu-sector-toggle').count() === 3, 'each other site has its arrow');
     pass(await p.getByTestId('account-menu-department-item').count() === 1, 'only the active site shows its department pill (others stay closed)');
     pass(await menu.locator('section').count() === 0, 'no industry is open yet');

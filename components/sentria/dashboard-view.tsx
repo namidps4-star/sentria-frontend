@@ -116,6 +116,7 @@ import {
 } from "@/lib/plans"
 import { sendAlertFeedback } from "@/lib/feedback"
 import { runUpload } from "@/lib/upload"
+import { activityEmoji } from "@/lib/activity-emoji"
 import { setUploadPanel } from "@/lib/upload-panel"
 import { holdInPlace } from "@/lib/hold-scroll"
 import { uploadProblemMessage } from "@/lib/upload-problem"
@@ -138,42 +139,6 @@ import { WholesalerAdvice } from "./wholesaler-advice"
 import { SupplierActions } from "./supplier-actions"
 import { supplierFromParams, type Supplier } from "@/lib/supplier"
 import { SectorTag } from "./sector-tag"
-
-/** One emoji per department, for the import list. A department with none
- *  gets the box. */
-const ACTIVITY_EMOJI: Record<string, string> = {
-  "usine-production": "🏭",
-  "atelier-soustraitance": "🔧",
-  "usine-agroalimentaire": "🥫",
-  pharmacie: "💊",
-  "grossiste-pharma": "📦",
-  "clinique-hopital": "🏥",
-  laboratoire: "🧪",
-  veterinaire: "🐾",
-  "exploitation-agricole": "🌾",
-  "cooperative-agricole": "🧺",
-  "silo-stockage": "🌽",
-  "transporteur-routier": "🚚",
-  "flotte-entreprise": "🚗",
-  "location-vehicules": "🔑",
-  "port-conteneurs": "⚓",
-  "entrepot-manutention": "🏗️",
-  "transport-distribution": "🚛",
-  "preparation-expedition": "📮",
-  "chaine-froid": "❄️",
-  "plusieurs-activites": "🧩",
-  "centrale-production": "⚡",
-  "generateurs-secours": "🔋",
-  "distribution-energetique": "🔌",
-  "grossiste-distributeur": "🏬",
-  "supermarche-hypermarche": "🛒",
-  "chaine-magasins": "🏪",
-  "epicerie-proximite": "🍞",
-}
-
-function activityEmoji(id: string): string {
-  return ACTIVITY_EMOJI[id] ?? "📦"
-}
 
 const SECTORS: { key: string; label: Localized }[] = [
   { key: "all", label: localized("Tous", "All") },
