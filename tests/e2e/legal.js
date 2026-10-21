@@ -50,6 +50,15 @@ const ROOT = path.join(__dirname, '..', '..');
     const d = p.getByTestId('legal-dialog');
     pass(await d.isVisible() && /Terms of use/.test(await d.locator('h2').innerText()), 'the terms link opens the terms');
     pass(/Draft not reviewed by a lawyer/.test(await p.getByTestId('legal-draft').innerText()), 'it says it is a draft');
+    const toc = p.getByTestId('legal-toc').locator('button');
+    pass(await toc.count() === await d.locator('section[data-legal-section]').count(), 'the contents list has one entry for each card (' + await toc.count() + ')');
+    pass(/\u{1F9ED}/u.test(await d.innerText()), 'the cards carry an emoji');
+    await toc.nth(5).click(); await p.waitForTimeout(900);
+    pass(await toc.nth(5).getAttribute('aria-current') === 'true', 'a click on a contents entry marks it');
+    pass(await d.locator('section[data-legal-section="5"]').evaluate(el => { const r = el.getBoundingClientRect(), b = el.parentElement.parentElement.getBoundingClientRect(); return r.top - b.top < 80; }), 'and brings its card to the top');
+    await toc.last().click(); await p.waitForTimeout(900);
+    pass(await toc.last().getAttribute('aria-current') === 'true', 'Contact is the last entry and can be reached');
+    await toc.first().click(); await p.waitForTimeout(900);
     await p.screenshot({ path: 'legal-terms-1440.png' });
     await p.getByTestId('legal-tab-privacy').click(); await p.waitForTimeout(200);
     const txt = await d.innerText();
@@ -80,6 +89,7 @@ const ROOT = path.join(__dirname, '..', '..');
     await p.getByTestId('auth-privacy-link').click(); await p.waitForTimeout(500);
     const box = await p.getByTestId('legal-dialog').boundingBox();
     pass(box && box.x >= 0 && box.x + box.width <= 390 && box.y >= 0 && box.y + box.height <= 900, 'at 390 px the dialog fits the screen: ' + JSON.stringify(box && { x: Math.round(box.x), w: Math.round(box.width), h: Math.round(box.height) }));
+    pass((await p.getByTestId('legal-toc').boundingBox()).width <= 390 && await p.getByTestId('legal-toc').evaluate(el => el.scrollWidth <= el.clientWidth + 1), 'on a phone the contents are emoji chips that wrap');
     pass(!(await p.evaluate(() => document.documentElement.scrollWidth > innerWidth)), 'no sideways scroll');
     await p.screenshot({ path: 'legal-390.png' }); await ctx.close(); }
 
