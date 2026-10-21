@@ -117,7 +117,7 @@ import {
 } from "@/lib/plans"
 import { sendAlertFeedback } from "@/lib/feedback"
 import { runUpload } from "@/lib/upload"
-import { activityEmoji } from "@/lib/activity-emoji"
+import { departmentIconKey, sectorTileBackground, useSiteIcons } from "@/lib/site-icons"
 import { RelativeTime } from "./relative-time"
 import { setUploadPanel } from "@/lib/upload-panel"
 import { holdInPlace } from "@/lib/hold-scroll"
@@ -1109,6 +1109,8 @@ export function DashboardView({
   const [uploading, setUploading] = useState(false)
   // The import panel: opened from the upload icon at the top.
   const [importOpen, setImportOpen] = useState(false)
+  // The department glyphs of the import list load when it first opens.
+  const siteIcons = useSiteIcons(importOpen)
   const importPanel = usePresence(importOpen, "--dropdown-close-dur")
   // Where the upload icon goes: a slot the top bar keeps for the page.
   const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null)
@@ -2490,10 +2492,18 @@ export function DashboardView({
                       )}
                     >
                       <span
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-card text-lg leading-none"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-[inset_0_0.5px_0_rgba(255,255,255,0.55),0_1px_2px_rgba(0,0,0,0.22)]"
+                        style={{ background: sectorTileBackground(uploadSector) }}
+                        data-department-icon={activity.id}
                         aria-hidden="true"
                       >
-                        {activityEmoji(activity.id)}
+                        {(() => {
+                          const icon = siteIcons?.[departmentIconKey(activity.id)] ?? siteIcons?.["dept:other"]
+
+                          return icon ? (
+                            <svg viewBox={icon.viewBox} width={20} height={20} focusable="false" dangerouslySetInnerHTML={{ __html: icon.body }} />
+                          ) : null
+                        })()}
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block font-bold leading-snug">{px(activity.label)}</span>
