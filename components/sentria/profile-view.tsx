@@ -45,6 +45,7 @@ import {
   type LogisticsAlert,
 } from "@/lib/logistics-signals"
 import { useTx } from "@/lib/i18n"
+import { useLatestRead } from "@/lib/latest-read"
 import { sectorLabel } from "@/lib/priorities"
 import { withOurSector } from "@/lib/sector"
 import { enterAt } from "@/lib/motion"
@@ -130,20 +131,32 @@ export function ProfileView({
   // a change of site (F-SITESCOPE).
   const shownSite = useSiteVersion()
 
+  // A late answer in the language or on the site left behind never lands.
+  const startAlertsRead = useLatestRead(`${lang}|${shownSite}`)
+
   useEffect(() => {
+    const stillCurrent = startAlertsRead()
+
     apiFetch(`${API_BASE}/alerts?lang=${lang}`)
       .then((r) => readList<LogisticsAlert>(r, "alerts"))
       .then((answer) => {
+        if (!stillCurrent()) return
+
         // A failed read keeps the rows held and says so, never "no alerts".
         setAlertsError(answer.ok ? null : answer.reason)
         if (answer.ok) setAlerts(answer.rows.map(withOurSector))
         else console.error("Failed to load alerts for the profile page:", answer.reason)
       })
       .catch((error) => {
+        if (!stillCurrent()) return
+
         console.error("Failed to load alerts for the profile page:", error)
         setAlertsError("network")
       })
-      .finally(() => setLoaded(true))
+      .finally(() => {
+        if (stillCurrent()) setLoaded(true)
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lang, attempt, shownSite])
 
   /* Only the account's own signals (B-09): alerts of the sectors it

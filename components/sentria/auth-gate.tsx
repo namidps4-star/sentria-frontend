@@ -7,6 +7,7 @@ import type { Session } from "@supabase/supabase-js"
 import { clearLocalAccount, loadAccount, syncAccount } from "@/lib/account"
 import { refreshEntitlements } from "@/lib/entitlements"
 import { useTx } from "@/lib/i18n"
+import { markLocaleHydrated } from "@/lib/locale"
 import { supabase } from "@/lib/supabase"
 
 import { USERNAME_UPDATED_EVENT } from "./username-card"
@@ -82,6 +83,11 @@ export function AuthGate() {
     current.current = null
     clearLocalAccount()
     setState({ kind: "signed-out" })
+  }, [])
+
+  // The first page has hydrated: what mounts from now on reads the saved language straight away.
+  useEffect(() => {
+    markLocaleHydrated()
   }, [])
 
   // A username chosen on the Profile page shows in the sidebar at once.

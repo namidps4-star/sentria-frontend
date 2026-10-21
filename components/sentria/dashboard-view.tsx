@@ -54,6 +54,7 @@ import { readList } from "@/lib/answer"
 import { FreshnessNote } from "./freshness-note"
 import { NotMeasuredFigure, SourceNotice } from "./not-measured"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
+import { useLatestRead } from "@/lib/latest-read"
 import { computeConfidence, confidenceWord, convergenceFor, signalsTogether } from "@/lib/confidence"
 import { LogisticsBlockagesView } from "./logistics-blockages-view"
 import { LogisticsWaitingView } from "./logistics-waiting-view"
@@ -1643,7 +1644,12 @@ export function DashboardView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [alertsLang, alertsRetry, shownSite])
 
+  // A late answer in the language or on the site left behind never lands.
+  const startRecommendationsRead = useLatestRead(`${tx("fr", "en")}|${shownSite}`)
+
   function refreshRecommendations() {
+    const stillCurrent = startRecommendationsRead()
+
     return apiFetch(
       `${API}/recommendations?limit=20&lang=${tx("fr", "en")}`
     )
@@ -1654,6 +1660,8 @@ export function DashboardView({
         )
       )
       .then((answer) => {
+        if (!stillCurrent()) return
+
         // A failed read keeps what is on screen and says so (L4): "no
         // priorities" must not stand for "could not ask".
         setRecommendationsError(answer.ok ? null : answer.reason)
@@ -1702,6 +1710,8 @@ export function DashboardView({
         setRecommendations(normalized)
       })
       .catch((err) => {
+        if (!stillCurrent()) return
+
         console.error(
           "Failed to load recommendations:",
           err

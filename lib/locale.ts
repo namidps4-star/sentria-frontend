@@ -473,19 +473,35 @@ export type LocaleState = {
   currency: Currency
 }
 
-/** Read after mount, like every other stored value in this app.
+/** Set once the first page has hydrated. Until then the first render must match
+ *  the server's, so it is French. After it, every component that mounts is
+ *  client-only (the app is drawn after the sign-in check), so it can read the
+ *  saved language at once. Without this, each view's first fetch asked the API
+ *  in French, then again in English, and the French answer could land last. */
+let hydrated = false
+
+export function markLocaleHydrated() {
+  hydrated = true
+}
+
+function firstState(): LocaleState {
+  if (!hydrated) {
+    return { language: DEFAULT_LANGUAGE, ui: DEFAULT_LANGUAGE, countryCode: "", currency: EUR }
+  }
+
+  const language = readLanguage()
+
+  return { language, ui: uiLanguage(language), countryCode: readCountryCode(), currency: readCurrency() }
+}
+
+/** Read after mount while the page hydrates, like every other stored value in
+ *  this app, and at once for anything that mounts later.
  *
- *  Reading localStorage during the first render is what produced the
- *  hydration mismatches earlier in this branch, so the initial state is
- *  the same on the server and the client and the real values arrive on
- *  the next tick. */
+ *  Reading localStorage during the hydration render is what produced the
+ *  hydration mismatches earlier in this branch, so that render is the same on
+ *  the server and the client and the real values arrive on the next tick. */
 export function useLocale(): LocaleState {
-  const [state, setState] = useState<LocaleState>({
-    language: DEFAULT_LANGUAGE,
-    ui: DEFAULT_LANGUAGE,
-    countryCode: "",
-    currency: EUR,
-  })
+  const [state, setState] = useState<LocaleState>(firstState)
 
   useEffect(() => {
     const sync = () => {

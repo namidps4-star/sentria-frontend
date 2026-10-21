@@ -29,6 +29,7 @@ import { WeekCard } from "./week-card"
 import { AccountFreshnessNote, useAccountFreshness } from "./account-freshness"
 import { SourceNotice } from "./not-measured"
 import { localized, resolve, useTx, type Localized } from "@/lib/i18n"
+import { useLatestRead } from "@/lib/latest-read"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -658,24 +659,34 @@ export function ReportView({ data }: { data?: ReportData }) {
 
   // A change of site fetches again (F-SITESCOPE).
   const shownSite = useSiteVersion()
+  // A late answer in the language or on the site left behind never lands.
+  const startAlertsRead = useLatestRead(`${tx("fr", "en")}|${shownSite}`)
 
   useEffect(() => {
     setCompanyName(readCompanyName())
     setTimezoneId(readTimezoneId())
 
+    const stillCurrent = startAlertsRead()
+
     apiFetch(`${API_BASE}/alerts?lang=${tx("fr", "en")}`)
       .then((r) => readList<LogisticsAlert>(r, "alerts"))
       .then((answer) => {
+        if (!stillCurrent()) return
+
         // A failed read keeps the rows held and says so, never "no alerts".
         setAlertsError(answer.ok ? null : answer.reason)
         if (answer.ok) setAlerts(answer.rows)
         else console.error("Failed to load alerts for the report:", answer.reason)
       })
       .catch((error) => {
+        if (!stillCurrent()) return
+
         console.error("Failed to load alerts for the report:", error)
         setAlertsError("network")
       })
-      .finally(() => setLoaded(true))
+      .finally(() => {
+        if (stillCurrent()) setLoaded(true)
+      })
     // Refetched on a language switch: /alerts rebuilds messages (B-11).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tx("fr", "en"), attempt, shownSite])
