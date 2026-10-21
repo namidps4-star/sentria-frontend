@@ -118,6 +118,7 @@ import {
 import { sendAlertFeedback } from "@/lib/feedback"
 import { runUpload } from "@/lib/upload"
 import { activityEmoji } from "@/lib/activity-emoji"
+import { RelativeTime } from "./relative-time"
 import { setUploadPanel } from "@/lib/upload-panel"
 import { holdInPlace } from "@/lib/hold-scroll"
 import { uploadProblemMessage } from "@/lib/upload-problem"
@@ -4327,9 +4328,10 @@ export function DashboardView({
                           )}
                         >
                           <div className="flex items-center justify-between gap-2">
-                            {new Date(
-                              alert.date
-                            ).toLocaleString(dateLocale)}
+                            <RelativeTime
+                              date={alert.date}
+                              fullDate={new Date(alert.date).toLocaleString(dateLocale)}
+                            />
 
                             <ChevronRight
                               className={cn(
