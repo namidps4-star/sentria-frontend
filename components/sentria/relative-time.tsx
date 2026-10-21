@@ -4,10 +4,11 @@ import { useEffect, useState } from "react"
 
 import { useTx } from "@/lib/i18n"
 import { agoLabel } from "@/lib/relative-time"
+import { cn } from "@/lib/utils"
 
 /** "12 min ago" that keeps itself current while the page stays open, with the
  *  exact date and time in the tooltip. */
-export function RelativeTime({ date, fullDate }: { date: string; fullDate: string }) {
+export function RelativeTime({ date, fullDate, className }: { date: string; fullDate: string; className?: string }) {
   const tx = useTx()
   const [now, setNow] = useState(() => Date.now())
 
@@ -18,7 +19,7 @@ export function RelativeTime({ date, fullDate }: { date: string; fullDate: strin
   }, [])
 
   return (
-    <time dateTime={date} title={fullDate} data-alert-time="" className="tabular-nums">
+    <time dateTime={date} title={fullDate} data-alert-time="" className={cn("tabular-nums", className)}>
       {agoLabel(date, tx, now)}
     </time>
   )
