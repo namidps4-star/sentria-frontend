@@ -4678,7 +4678,7 @@ export function DashboardView({
             role="dialog"
             aria-modal="true"
             aria-labelledby="recommendation-dialog-title"
-            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-card shadow-2xl ring-1 ring-border"
+            className="squircle max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[32px] bg-card shadow-2xl ring-1 ring-border"
           >
             <div className="flex items-start justify-between gap-4 border-b border-border p-6">
               <div className="min-w-0">
@@ -4702,22 +4702,6 @@ export function DashboardView({
                   </span>
 
                   <SeverityTag severity={selectedRecommendation.severity} tx={tx} size="xs" />
-
-                  {selectedRecommendation.risk_score !==
-                    null &&
-                    selectedRecommendation.risk_score !==
-                      undefined && (
-                      <span
-                        className="rounded-full bg-accent/15 px-2.5 py-1 text-[10px] font-semibold text-accent-foreground"
-                        title={tx(
-                          "Gravité du problème lui-même, calculée à partir des mesures brutes",
-                          "How severe the problem itself is, computed from the raw measurements"
-                        )}
-                      >
-                        {tx("Risque :", "Risk:")}{" "}
-                        {selectedRecommendation.risk_score} / 100
-                      </span>
-                    )}
 
                   <span
                     className="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-[10px] font-semibold text-muted-foreground"
@@ -4748,6 +4732,27 @@ export function DashboardView({
                     })()}
                   </span>
                 </div>
+
+                {selectedRecommendation.risk_score !== null &&
+                  selectedRecommendation.risk_score !== undefined && (
+                    <div
+                      data-popup-risk=""
+                      className="mt-3 flex items-center gap-2.5 text-xs font-semibold text-muted-foreground"
+                      title={tx(
+                        "Gravité du problème lui-même, calculée à partir des mesures brutes",
+                        "How severe the problem itself is, computed from the raw measurements"
+                      )}
+                    >
+                      <span>{tx("Risque :", "Risk:")}</span>
+                      <span className="h-1.5 w-40 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+                        <span
+                          className="block h-full rounded-full bg-[var(--tag-danger-fg)]"
+                          style={{ width: `${Math.max(0, Math.min(100, Number(selectedRecommendation.risk_score)))}%` }}
+                        />
+                      </span>
+                      <span className="text-foreground">{selectedRecommendation.risk_score} / 100</span>
+                    </div>
+                  )}
               </div>
 
               <button
@@ -4774,30 +4779,73 @@ export function DashboardView({
                 />
               )}
 
-              <div className="rounded-2xl border border-border bg-muted/30 p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  {tx("Alerte détectée", "Alert detected")}
-                </p>
+              {/* What happened, why, what to do: three steps down one line. */}
+              <ol data-popup-steps="" className="px-1">
+                <li className="flex gap-3">
+                  <span className="flex flex-col items-center" aria-hidden="true">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-extrabold">1</span>
+                    <span className="my-1 w-0.5 flex-1 bg-border" />
+                  </span>
+                  <div className="min-w-0 flex-1 pb-4">
+                    <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">
+                      {tx("Ce qui s'est passé", "What happened")}
+                    </p>
+                    <p className="mt-1 text-[15px] font-bold leading-snug">
+                      {selectedRecommendation.message}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      <span className="capitalize">
+                        {selectedRecommendation.action_category || tx("Opérationnelle", "Operational")}
+                      </span>
+                      {" · "}
+                      {new Date(selectedRecommendation.date).toLocaleString(dateLocale)}
+                    </p>
+                  </div>
+                </li>
 
-                <p className="mt-2 text-sm leading-6 text-foreground">
-                  {selectedRecommendation.message}
-                </p>
-              </div>
+                <li className="flex gap-3">
+                  <span className="flex flex-col items-center" aria-hidden="true">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-muted text-xs font-extrabold">2</span>
+                    <span className="my-1 w-0.5 flex-1 bg-border" />
+                  </span>
+                  <div className="min-w-0 flex-1 pb-4">
+                    <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">
+                      {tx("Pourquoi", "Why")}
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                      {reasoningFor(
+                        selectedRecommendation,
+                        recurrenceOf(
+                          selectedRecommendation.equipment,
+                          alerts
+                        ),
+                        tx
+                      )}
+                    </p>
+                  </div>
+                </li>
 
-              <div className="rounded-2xl border border-accent/30 bg-accent/10 p-5">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-accent-foreground">
-                  {tx("Action recommandée", "Recommended action")}
-                </p>
+                <li className="flex gap-3">
+                  <span className="flex flex-col items-center" aria-hidden="true">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-xs font-extrabold text-accent-foreground">3</span>
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-extrabold uppercase tracking-widest text-muted-foreground">
+                      {tx("À faire maintenant", "Do this now")}
+                    </p>
+                    <div data-popup-action="" className="squircle mt-1.5 rounded-3xl bg-accent p-4 text-accent-foreground">
+                      <p className="text-lg font-bold leading-snug">
+                        {selectedRecommendation.recommended_action}
+                      </p>
 
-                <p className="mt-2 text-base font-semibold leading-7 text-foreground">
-                  {selectedRecommendation.recommended_action}
-                </p>
-
-                <SupplierActions
-                  supplier={selectedRecommendation.supplier ?? supplierFromParams(popupAlertFor(selectedRecommendation)?.params)}
-                  className="mt-3"
-                />
-              </div>
+                      <SupplierActions
+                        supplier={selectedRecommendation.supplier ?? supplierFromParams(popupAlertFor(selectedRecommendation)?.params)}
+                        className="mt-3"
+                      />
+                    </div>
+                  </div>
+                </li>
+              </ol>
 
               <WholesalerAdvice
                 alertKey={selectedRecommendation.alert_key}
@@ -4813,48 +4861,6 @@ export function DashboardView({
                 }
                 tone="light"
               />
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-border bg-background p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {tx("Catégorie", "Category")}
-                  </p>
-
-                  <p className="mt-1.5 text-sm font-semibold capitalize">
-                    {selectedRecommendation.action_category ||
-                      tx("Opérationnelle", "Operational")}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-border bg-background p-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    {tx("Date de détection", "Detected on")}
-                  </p>
-
-                  <p className="mt-1.5 text-sm font-semibold">
-                    {new Date(
-                      selectedRecommendation.date
-                    ).toLocaleString(dateLocale)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-muted/30 p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  {tx("Pourquoi", "Why")}
-                </p>
-
-                <p className="mt-1.5 text-sm leading-6 text-foreground/80">
-                  {reasoningFor(
-                    selectedRecommendation,
-                    recurrenceOf(
-                      selectedRecommendation.equipment,
-                      alerts
-                    ),
-                    tx
-                  )}
-                </p>
-              </div>
 
               <div className="rounded-2xl border border-border bg-sidebar p-5 text-sidebar-foreground">
                 <div className="flex items-start gap-3">
