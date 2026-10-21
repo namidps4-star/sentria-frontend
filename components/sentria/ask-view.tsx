@@ -365,7 +365,7 @@ export function AskView({
             </button>
           </div>
 
-          <ul className="mt-4 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto" aria-label={tx("Vos conversations", "Your conversations")}>
+          <ul className="mt-4 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label={tx("Vos conversations", "Your conversations")}>
             {threads.map((thread) => {
               const on = thread.id === active?.id
               const count = thread.messages.filter((m) => m.role === "user").length
@@ -430,7 +430,7 @@ export function AskView({
           role="log"
           aria-live="polite"
           aria-label={tx("Messages", "Messages")}
-          className="-mx-1 mt-5 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-1 pb-2"
+          className="-mx-1 mt-5 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-1 pb-2"
         >
           {/* The greeting, and questions to start with. */}
           <div className="max-w-[85%] self-start rounded-[22px] bg-[var(--ink)] p-4 text-sm leading-relaxed text-white">
@@ -598,7 +598,7 @@ export function AskView({
         {/* Quick questions */}
         <div className="flex min-h-0 flex-1 flex-col rounded-[28px] bg-card p-5 shadow-sm">
           <h2 className="font-heading text-xl font-semibold tracking-tight">{tx("Questions rapides", "Quick questions")}</h2>
-          <ul className="mt-4 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+          <ul className="mt-4 flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {questions.map((q) => (
               <li key={q}>
                 <button

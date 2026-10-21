@@ -225,7 +225,7 @@ function SupportBody({
         data-support=""
         style={{ borderRadius: 32 }}
         className={cn(
-          "max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto squircle rounded-[32px] border border-border bg-card p-2 shadow-2xl t-modal",
+          "max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden squircle rounded-[32px] border border-border bg-card p-2 shadow-2xl t-modal",
           className
         )}
       >

@@ -1243,7 +1243,7 @@ export function OnboardingView({
         </header>
 
         {/* THE QUESTION */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-7 md:px-8 md:py-10">
+        <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-5 py-7 md:px-8 md:py-10">
           <div className="mx-auto w-full max-w-5xl">
            <StepSlide key={step} direction={direction} className="flex flex-col gap-7">
             {step !== countryStepNumber && (

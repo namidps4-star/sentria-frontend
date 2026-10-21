@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react"
 import { Search, Bell, Menu, X, ArrowRight } from "@/lib/icons"
 
-import { formatInCompanyZone } from "@/lib/company"
 import { useT, useTx } from "@/lib/i18n"
+import { agoLabel } from "@/lib/relative-time"
 import { sectorLabel } from "@/lib/priorities"
 import { usePresence } from "@/lib/use-presence"
 import { cn } from "@/lib/utils"
@@ -31,24 +31,6 @@ function sectorTag(sector: string): string {
   if (sector === "industry") return "bg-[var(--tag-warning-bg)] text-[var(--tag-warning-fg)]"
   if (sector === "logistics") return "bg-[var(--tag-info-bg)] text-[var(--tag-info-fg)]"
   return "bg-[var(--tag-neutral-bg)] text-[var(--tag-neutral-fg)]"
-}
-
-/** "12 min ago" for a recent alert, a date once it is older than two days. */
-function agoLabel(date: string, tx: (fr: string, en: string) => string): string {
-  const at = Date.parse(date)
-
-  if (!Number.isFinite(at)) return ""
-
-  const min = Math.max(0, Math.round((Date.now() - at) / 60000))
-
-  if (min < 60) return tx(`il y a ${Math.max(1, min)} min`, `${Math.max(1, min)} min ago`)
-
-  const h = Math.round(min / 60)
-
-  if (h < 24) return tx(`il y a ${h} h`, `${h} h ago`)
-  if (h < 48) return tx("Hier", "Yesterday")
-
-  return formatInCompanyZone(date, tx)
 }
 
 export function Topbar({

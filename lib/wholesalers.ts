@@ -28,9 +28,13 @@ export type Wholesaler = {
   after: number
   /** Days it delivers, Monday first. */
   days: DayFlags
+  /** Distance from the pharmacy in km, as the pharmacy typed it, or null. */
+  km: number | null
 }
 
 export const MAX_WHOLESALERS = 10
+/** The largest distance the page accepts, in km. */
+export const MAX_KM = 9999
 /** The longest delivery time the pickers offer. */
 export const MAX_LEAD_DAYS = 7
 /** Days the test panel looks ahead, today included. */
@@ -46,6 +50,7 @@ export function newWholesaler(): Wholesaler {
     before: 0,
     after: 1,
     days: [...DEFAULT_DAYS] as DayFlags,
+    km: null,
   }
 }
 
@@ -76,6 +81,7 @@ function parseOne(raw: unknown): Wholesaler | null {
     before,
     after: cutoff === null ? before : Math.max(clampDays(r.after, before + 1), before),
     days,
+    km: typeof r.km === "number" && Number.isFinite(r.km) && r.km >= 0 && r.km <= MAX_KM ? Math.round(r.km * 10) / 10 : null,
   }
 }
 
@@ -282,14 +288,29 @@ export function advise(readings: Reading[]): Advice {
   return { kind: "late", fastest }
 }
 
-/** The "Nearby / Farther / Farthest" tag: the list is in order of preference,
- *  and the pharmacy lists the nearest first. */
-export function rankTag(index: number, count: number): "nearby" | "farther" | "farthest" | null {
-  if (count < 2) return null
-  if (index === 0) return "nearby"
-  if (index === count - 1 && count > 2) return "farthest"
+export type DistanceTag = "nearby" | "farther" | "farthest"
 
-  return "farther"
+/** The "Nearby / Farther / Farthest" tag, from the distances the pharmacy
+ *  typed. A wholesaler with no distance gets no tag, and nothing is compared
+ *  until two have one. The list order is the pharmacy's preference and does
+ *  not change a tag. */
+export function distanceTags(list: { km: number | null }[]): (DistanceTag | null)[] {
+  const known = list.map((w) => w.km).filter((km): km is number => km !== null)
+
+  if (known.length < 2) return list.map(() => null)
+
+  const min = Math.min(...known)
+  const max = Math.max(...known)
+
+  if (min === max) return list.map(() => null)
+
+  return list.map((w) => {
+    if (w.km === null) return null
+    if (w.km === min) return "nearby"
+    if (w.km === max && known.length > 2) return "farthest"
+
+    return "farther"
+  })
 }
 
 export function moveItem<T>(list: T[], from: number, to: number): T[] {
