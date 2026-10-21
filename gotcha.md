@@ -307,3 +307,8 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Problem:** The canonical link, the sitemap, robots.txt and the share card all need the site's own address. A wrong one tells Google the page lives somewhere else.
 **Reality:** `lib/site.ts` reads `NEXT_PUBLIC_SITE_URL`, else Vercel's `VERCEL_PROJECT_PRODUCTION_URL`, else localhost. `/` is the sign-in screen drawn in the browser, so `app/page.tsx` also renders the pitch (both languages) in a `sr-only` block and the JSON-LD on the server.
 **Rule:** Set `NEXT_PUBLIC_SITE_URL` on Vercel to the real domain. Keep the `sr-only` text equal to the visible sign-in text: it must never say more than the screen does.
+
+## Suites fail on `next dev` that pass on `next start`
+**Problem:** Run against `next dev`, about eight suites fail (`sheettabs`, `verify`, `weekrep`, `brand`, `cdelete`, `dashmotion` and others) and look like real bugs.
+**Reality:** The dev server's "N" badge sits in the bottom-left corner and covers the departments menu button, and dev builds are slow enough to break the motion timings. On a production build they pass.
+**Rule:** Judge a suite on `next build` + `next start`, as the build entry above says. A failure seen only on `next dev` is not a bug.

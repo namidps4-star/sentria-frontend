@@ -50,8 +50,9 @@ const costOf = (plan, { starter = { amount: 500, currency: '€' }, learned = {}
     pass(p._starterPuts.length === 1 && /above zero/.test(await card(p).innerText()), 'zero is refused on screen, nothing sent');
     await p.locator('[data-cost-starter-input]').fill('lots'); await p.locator('[data-cost-starter-save]').click(); await p.waitForTimeout(300);
     pass(p._starterPuts.length === 1, 'words are refused too');
-    const sizes = await p.evaluate(() => { const h = n => { const s = [...document.querySelectorAll('section')].find(x => new RegExp(n).test(x.innerText.slice(0, 40))); return s ? Math.round(s.getBoundingClientRect().height) : null; }; return { org: h('Organisation'), lang: h('Language'), cost: h('What a stop') }; });
-    pass(sizes.org !== null && sizes.org < 450 && sizes.lang !== null && sizes.lang < 450, `the boxes fit their content, none is stretched (${JSON.stringify(sizes)})`);
+    // Empty space under each box's last line: a stretched box has a lot. A fixed height cap broke as boxes gained content.
+    const sizes = await p.evaluate(() => { const gap = n => { const s = [...document.querySelectorAll('section')].find(x => new RegExp(n).test(x.innerText.slice(0, 40))); if (!s) return null; const kids = [...s.querySelectorAll('*')].filter(e => e.getBoundingClientRect().height > 0); const bottom = Math.max(...kids.map(e => e.getBoundingClientRect().bottom)); return Math.round(s.getBoundingClientRect().bottom - bottom); }; return { org: gap('Organisation'), lang: gap('Language'), cost: gap('What a stop') }; });
+    pass(['org', 'lang', 'cost'].every(k => sizes[k] !== null && sizes[k] <= 48), `the boxes fit their content, none is stretched (space under the last line: ${JSON.stringify(sizes)})`);
     const langs = await p.locator('button:has-text("English"), button:has-text("Français"), button:has-text("Español"), button:has-text("Kiswahili")').allInnerTexts();
     pass(/Fran/.test(langs.join()) && /English/.test(langs.join()) && !/Español|Kiswahili|Português/.test(await p.locator('body').innerText()), 'the language box lists French and English only');
     await p.screenshot({ path: 'costsetup-settings.png' });
