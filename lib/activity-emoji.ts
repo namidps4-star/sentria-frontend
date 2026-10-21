@@ -33,19 +33,3 @@ const ACTIVITY_EMOJI: Record<string, string> = {
 export function activityEmoji(id: string): string {
   return ACTIVITY_EMOJI[id] ?? "📦"
 }
-
-
-const SECTOR_EMOJI: Record<string, string> = {
-  health: "🏥",
-  industry: "🏭",
-  commerce: "🛒",
-  agriculture: "🌾",
-  logistics: "⚓",
-  energy: "⚡",
-  transportation: "🚚",
-}
-
-/** One emoji per sector, for a site's tile in the site menu. */
-export function sectorEmoji(sector: string): string {
-  return SECTOR_EMOJI[sector] ?? "📍"
-}

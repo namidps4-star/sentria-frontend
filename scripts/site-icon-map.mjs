@@ -1,0 +1,43 @@
+// The glyphs of the site menu: one per sector (on its coloured squircle) and
+// one per department (on its pill). Solar Bold (480 Design, CC BY 4.0).
+// Solar has no factory, truck or wrench, so a near one stands in.
+// After editing, run: node scripts/build-site-icons.mjs
+export const SITE_ICONS = {
+  "sector:industry": "buildings-2-bold",
+  "sector:health": "hospital-bold",
+  "sector:commerce": "cart-large-2-bold",
+  "sector:agriculture": "leaf-bold",
+  "sector:logistics": "delivery-bold",
+  "sector:energy": "bolt-bold",
+  "sector:transportation": "bus-bold",
+  "sector:other": "map-point-bold",
+
+  "dept:usine-production": "buildings-2-bold",
+  "dept:atelier-soustraitance": "tuning-2-bold",
+  "dept:usine-agroalimentaire": "bottle-bold",
+  "dept:pharmacie": "pills-2-bold",
+  "dept:grossiste-pharma": "delivery-bold",
+  "dept:clinique-hopital": "hospital-bold",
+  "dept:laboratoire": "test-tube-bold",
+  "dept:veterinaire": "paw-bold",
+  "dept:exploitation-agricole": "leaf-bold",
+  "dept:cooperative-agricole": "bag-3-bold",
+  "dept:silo-stockage": "database-bold",
+  "dept:transporteur-routier": "delivery-bold",
+  "dept:flotte-entreprise": "car-bold",
+  "dept:location-vehicules": "key-bold",
+  "dept:port-conteneurs": "compass-bold",
+  "dept:entrepot-manutention": "box-minimalistic-bold",
+  "dept:transport-distribution": "bus-bold",
+  "dept:preparation-expedition": "inbox-out-bold",
+  "dept:chaine-froid": "snowflake-bold",
+  "dept:plusieurs-activites": "widget-4-bold",
+  "dept:centrale-production": "bolt-bold",
+  "dept:generateurs-secours": "battery-charge-bold",
+  "dept:distribution-energetique": "plug-circle-bold",
+  "dept:grossiste-distributeur": "shop-2-bold",
+  "dept:supermarche-hypermarche": "cart-large-2-bold",
+  "dept:chaine-magasins": "shop-bold",
+  "dept:epicerie-proximite": "bag-4-bold",
+  "dept:other": "box-bold",
+}

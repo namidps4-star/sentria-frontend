@@ -74,8 +74,10 @@ const SITES = () => [
     pass(lime[1] > 200 && lime[2] < 110, 'the active site sits on a lime card: ' + lime.join(','));
     pass(/active site/i.test(await menu.innerText()) && /other sites/i.test(await menu.innerText()), 'with the labels Active site and Other sites');
     const mt = await menu.innerText();
-    pass(mt.includes('\u{1F3ED}') && mt.includes('\u{1F3E5}') && mt.includes('\u{1F6D2}'), 'each site carries its sector emoji (industry, health, retail)');
-    pass(/\u{1F9EA}|\u{1F3ED}/u.test(await p.getByTestId('account-menu-department-item').first().innerText()) || (await p.getByTestId('account-menu-department-item').first().innerText()).trim().length > 2, 'the department pill has an emoji before its name');
+    pass((await menu.locator('[data-sector-icon]').evaluateAll(els => els.map(e => e.getAttribute('data-sector-icon') + ':' + !!e.querySelector('svg path')))).join() === 'sector:industry:true,sector:health:true,sector:health:true,sector:commerce:true', 'each site carries its sector glyph, drawn (industry, health, health, retail)');
+    pass(!/[\u{1F300}-\u{1FAFF}]/u.test(mt), 'and no emoji is left in the menu');
+    pass(await p.getByTestId('account-menu-department-item').first().locator('svg[data-department-icon] path').count() > 0, 'the department pill carries its glyph, drawn');
+    const tileBg = await menu.locator('[data-sector-icon="sector:health"]').first().evaluate(e => getComputedStyle(e).backgroundImage); pass(/linear-gradient/.test(tileBg), 'the sector tile is a gradient squircle');
     pass(await menu.evaluate(el => [...el.querySelectorAll('*')].every(n => !/(auto|scroll)/.test(getComputedStyle(n).overflowY) || n.scrollHeight <= n.clientHeight + 1)), 'no scroll bar inside the menu');
     pass(await p.getByTestId('account-menu-sector-toggle').count() === 3, 'each other site has its arrow');
     pass(await p.getByTestId('account-menu-department-item').count() === 1, 'only the active site shows its department pill (others stay closed)');

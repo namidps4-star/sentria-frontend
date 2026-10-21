@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { ChevronDown, ChevronRight, MapPin, Plus, User } from "@/lib/icons"
 import { requestAddSiteOnOpen } from "@/lib/active-site"
-import { activityEmoji, sectorEmoji } from "@/lib/activity-emoji"
+import { departmentIconKey, sectorIconKey, sectorTileBackground, useSiteIcons, type SiteIconData } from "@/lib/site-icons"
 import { activityLabel } from "@/lib/activities"
 import { initialsOf, useCompanyIdentity } from "@/lib/company"
 import { useT, useTx } from "@/lib/i18n"
@@ -16,18 +16,38 @@ import { SECTORS } from "./onboarding-modal"
 const FOCUS_RING =
   " focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
 
-/** A site's sector as an emoji on a rounded tile. */
-function EmojiTile({ emoji, onLime = false }: { emoji: string; onLime?: boolean }) {
+/** A site's sector: a white glyph on the sector's own gradient squircle. */
+function SectorTile({ sector, icons }: { sector: string; icons: SiteIconData | null }) {
+  const key = sectorIconKey(sector)
+  const icon = icons?.[key]
+
   return (
     <span
-      className={cn(
-        "flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] text-[22px] leading-none",
-        onLime ? "bg-white/60" : "bg-card"
-      )}
+      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[13px] text-white shadow-[inset_0_0.5px_0_rgba(255,255,255,0.55),0_1px_3px_rgba(0,0,0,0.25)]"
+      style={{ background: sectorTileBackground(sector) }}
+      data-sector-icon={key}
       aria-hidden="true"
     >
-      {emoji}
+      {icon && <svg viewBox={icon.viewBox} width={24} height={24} focusable="false" dangerouslySetInnerHTML={{ __html: icon.body }} />}
     </span>
+  )
+}
+
+/** A department's small glyph, in the colour of the pill's text. */
+function DepartmentGlyph({ department, icons }: { department: string; icons: SiteIconData | null }) {
+  const icon = icons?.[departmentIconKey(department)] ?? icons?.["dept:other"]
+
+  return (
+    <svg
+      viewBox={icon?.viewBox ?? "0 0 24 24"}
+      width={15}
+      height={15}
+      focusable="false"
+      aria-hidden="true"
+      data-department-icon={department}
+      className="mr-1 inline-block align-[-2px]"
+      dangerouslySetInnerHTML={{ __html: icon?.body ?? "" }}
+    />
   )
 }
 
@@ -59,6 +79,8 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
   const departmentName = (sector: string, id: string) => activityLabel(sector, id, tx) ?? id
 
   const [open, setOpen] = useState(false)
+  // The glyphs load the first time the menu opens.
+  const icons = useSiteIcons(open)
   // The sector opened into its own card (one at a time); it closes with the menu.
   const [expanded, setExpanded] = useState<string | null>(null)
   const menu = usePresence(open, "--dropdown-close-dur")
@@ -223,7 +245,7 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
                               picked ? "border-foreground bg-foreground text-background" : "border-border bg-card hover:bg-muted"
                             )}
                           >
-                            <span aria-hidden="true">{activityEmoji(department)}</span> {departmentName(site.sector, department)}
+                            <DepartmentGlyph department={department} icons={icons} />{departmentName(site.sector, department)}
                           </button>
                         )
                       })}
@@ -254,7 +276,7 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
                       <div className="squircle rounded-[28px] bg-brand p-4 text-brand-foreground" style={{ borderRadius: 28 }}>
                         <span className="text-[11px] font-bold uppercase tracking-[0.1em] opacity-70">{tx("Site actif", "Active site")}</span>
                         <div className="mt-2 flex items-center gap-3">
-                          <EmojiTile emoji={sectorEmoji(active.sector)} onLime />
+                          <SectorTile sector={active.sector} icons={icons} />
                           {siteButton(
                             active,
                             true,
@@ -289,7 +311,7 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
                             style={{ borderRadius: 28 }}
                           >
                             <div className="flex items-center gap-2.5 px-2.5 pb-2 pt-2">
-                              <EmojiTile emoji={sectorEmoji(site.sector)} />
+                              <SectorTile sector={site.sector} icons={icons} />
                               <h4 data-testid={sectorTid(site.sector)} className="font-heading text-[15px] font-semibold">
                                 {sectorLabel(site.sector)}
                               </h4>
@@ -326,7 +348,7 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
                           className="squircle flex items-center gap-3 rounded-[24px] bg-muted p-2.5"
                           style={{ borderRadius: 24 }}
                         >
-                          <EmojiTile emoji={sectorEmoji(site.sector)} />
+                          <SectorTile sector={site.sector} icons={icons} />
                           <div className="flex min-w-0 flex-1 items-center">
                             {siteButton(
                               site,
