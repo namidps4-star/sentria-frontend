@@ -1,0 +1,88 @@
+// Onboarding steps 2 to 6: every step keeps the black rail (big light step number with the lime line, title,
+// numbered steps with a lime tick on the done ones) beside one soft card. Picked tiles go black with a lime tick.
+const { chromium } = require('playwright');
+const { LAUNCH, APP_URL } = require('./env');
+const { mockSupabase } = require('./auth-mock');
+let fails = 0;
+const pass = (ok, l) => { fails += !ok; console.log(`   ${ok ? 'PASS' : 'FAIL'} ${l}`); };
+const rgb = (loc, prop) => loc.evaluate((el, prop) => { const cv = document.createElement('canvas'); cv.width = cv.height = 1; const c = cv.getContext('2d', { willReadFrequently: true }); c.fillStyle = '#000'; c.fillStyle = getComputedStyle(el)[prop]; c.fillRect(0, 0, 1, 1); return [...c.getImageData(0, 0, 1, 1).data].slice(0, 3); }, prop);
+const dark = c => c.every(v => v < 60);
+
+(async () => {
+  const browser = await chromium.launch(LAUNCH);
+  const open = async ({ theme = 'light', width = 1280, lang = 'en' } = {}) => {
+    const ctx = await browser.newContext({ viewport: { width, height: width < 500 ? 844 : 900 }, locale: lang === 'fr' ? 'fr-FR' : 'en-US' });
+    const p = await ctx.newPage(); p._errors = []; p.on('pageerror', e => p._errors.push(e.message));
+    await p.route(/onrender\.com\//, r => r.fulfill({ status: 200, contentType: 'application/json', body: r.request().url().includes('/alerts') ? '[]' : '{"recommendations":[],"assignments":[],"contractors":[]}' }));
+    await mockSupabase(p, { users: { 'new@co.bj': { uid: 'u-new', password: 'newpass12' } }, accounts: {} });
+    await p.addInitScript(([l, t]) => { localStorage.setItem('sentria_language', l); localStorage.setItem('sentria_theme', t); }, [lang, theme]);
+    await p.goto(APP_URL); await p.waitForTimeout(1200);
+    await p.fill('#auth-email', 'new@co.bj'); await p.fill('#auth-password', 'newpass12');
+    await p.getByRole('button', { name: lang === 'fr' ? /^Se connecter$/ : /^Sign in$/ }).click(); await p.waitForTimeout(2500);
+    const dlg = p.getByRole('dialog');
+    const next = async () => { await p.getByRole('button', { name: /^(Continue|Continuer)/ }).last().click(); await p.waitForTimeout(500); };
+    await p.getByText("Côte d'Ivoire", { exact: true }).first().click(); await p.waitForTimeout(200); await next();
+    return { p, ctx, dlg, next };
+  };
+  const shot = async (x, name) => { await x.p.waitForTimeout(500); await x.p.screenshot({ path: name }); };
+
+  console.log('== desktop, light');
+  let x = await open();
+  let t = (await x.dlg.innerText()).replace(/\s+/g, ' ');
+  pass(/Step 2 of 6/.test(t) && /Your company/.test(t), 'step 2: company');
+  pass(/02/.test(t) && await x.dlg.locator('ol[aria-label="The steps"] li').count() === 6, 'the rail shows 02 and six numbered steps');
+  pass(await x.dlg.locator('ol[aria-label="The steps"] li svg').count() === 1, 'one lime tick, on the done step');
+  await x.p.locator('#company-name').fill('Atlantic Terminal Ltd');
+  pass(await x.p.locator('#company-name').evaluate(el => getComputedStyle(el.parentElement).borderRadius) !== '0px', 'the field is a soft pill');
+  await shot(x, 'onbsteps-company-light.png');
+  await x.next();
+  t = (await x.dlg.innerText()).replace(/\s+/g, ' ');
+  pass(/Step 3 of 6/.test(t) && /Your sector/.test(t), 'step 3: sector');
+  const tiles = x.dlg.locator('section button[aria-pressed]');
+  pass(await tiles.count() >= 4, 'sector tiles: ' + await tiles.count());
+  pass(await x.dlg.locator('section img').count() > 0, 'the sector icons and pictures are kept');
+  await tiles.first().click(); await x.p.waitForTimeout(300);
+  pass(dark(await rgb(x.dlg.locator('section button[aria-pressed=true]').first(), 'backgroundColor')), 'the picked sector tile is black');
+  await shot(x, 'onbsteps-sector-light.png');
+  await x.next();
+  t = (await x.dlg.innerText()).replace(/\s+/g, ' ');
+  pass(/Step 4 of 6/.test(t) && /Your activity/.test(t), 'step 4: activity');
+  pass(await x.dlg.locator('section img').count() > 0, 'activity pictures kept');
+  await x.dlg.locator('section button[aria-pressed]').first().click(); await x.p.waitForTimeout(300);
+  pass(/Activity chosen/.test(await x.dlg.innerText()), 'picking an activity shows "Activity chosen"');
+  await shot(x, 'onbsteps-activity-light.png');
+  await x.next();
+  t = (await x.dlg.innerText()).replace(/\s+/g, ' ');
+  pass(/Step 5 of 6/.test(t) && /monitor|priorities/i.test(t), 'step 5: what to monitor');
+  await x.dlg.locator('section button[aria-pressed]').first().click(); await x.p.waitForTimeout(300);
+  await shot(x, 'onbsteps-goals-light.png');
+  await x.next();
+  t = (await x.dlg.innerText()).replace(/\s+/g, ' ');
+  pass(/Step 6 of 6/.test(t) && /Your data/.test(t), 'step 6: data');
+  await x.p.getByRole('button', { name: /Set this up later/ }).click(); await x.p.waitForTimeout(300);
+  pass(dark(await rgb(x.p.getByRole('button', { name: /Set this up later/ }), 'backgroundColor')), '"Set this up later" goes black when picked');
+  await shot(x, 'onbsteps-data-light.png');
+  pass(await x.p.getByRole('button', { name: /Open my dashboard/ }).isEnabled(), 'Open my dashboard is on');
+  pass(x.p._errors.length === 0, 'no page errors ' + x.p._errors.join('|'));
+  await x.ctx.close();
+
+  console.log('== French, dark, phone');
+  x = await open({ lang: 'fr' });
+  pass(/Votre entreprise/.test(await x.dlg.innerText()) && /Comment s'appelle votre entreprise/i.test(await x.dlg.innerText()), 'French: company');
+  await x.ctx.close();
+  x = await open({ theme: 'dark' });
+  await x.p.locator('#company-name').fill('Atlantic Terminal Ltd'); await x.next();
+  await x.dlg.locator('section button[aria-pressed]').first().click(); await shot(x, 'onbsteps-sector-dark.png');
+  await x.ctx.close();
+  x = await open({ width: 390 });
+  await x.p.locator('#company-name').fill('Atlantic Terminal Ltd'); await x.next();
+  await x.dlg.locator('section button[aria-pressed]').first().click();
+  pass(await x.p.evaluate(() => Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth) <= 0, 'no sideways scroll at 390 px');
+  await shot(x, 'onbsteps-sector-phone.png');
+  await x.next(); await x.dlg.locator('section button[aria-pressed]').first().click(); await shot(x, 'onbsteps-activity-phone.png');
+  await x.ctx.close();
+
+  await browser.close();
+  console.log(fails ? `\n${fails} FAILED` : '\nall passed');
+  process.exit(fails ? 1 : 0);
+})();

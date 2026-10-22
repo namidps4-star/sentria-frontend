@@ -328,23 +328,6 @@ function imageForPriority(priorityId: string | undefined): string | undefined {
 /* GRID COLUMN SPANS                                                          */
 /* -------------------------------------------------------------------------- */
 
-/** Cards per row for the activity and priority steps: balanced rows
- *  whatever the count (5 and 6 become 3 + 2 and 3 + 3), never a lone card
- *  pushed to one side. */
-function cardColumns(total: number): number {
-  if (total <= 4) return Math.max(total, 2)
-  if (total <= 6) return 3
-  return 4
-}
-
-const CARD_WIDTH = 208
-const CARD_GAP = 16
-
-function cardRowWidth(total: number): number {
-  const columns = cardColumns(total)
-  return columns * CARD_WIDTH + (columns - 1) * CARD_GAP
-}
-
 /* -------------------------------------------------------------------------- */
 /* DATA SOURCES                                                               */
 /* -------------------------------------------------------------------------- */
@@ -1137,6 +1120,60 @@ export function OnboardingView({
                 )
               : null
 
+  /* The black rail every step shares: the big light step number with the
+     lime line, the title, a line on what the step is for, and the numbered
+     steps (a lime tick on the ones done). */
+  const renderRail = (description: string) => (
+    <div className="squircle relative flex flex-col justify-between gap-8 overflow-hidden rounded-[40px] bg-[var(--ink)] p-7 text-white shadow-[0_14px_44px_rgba(20,20,18,0.12)] sm:p-9">
+      <div className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full bg-brand/15 blur-3xl" aria-hidden="true" />
+
+      <div className="relative">
+        <p className="text-[13px] font-semibold text-white/60">
+          {firstName ? tx(`Bienvenue, ${firstName}`, `Welcome, ${firstName}`) : tx("Bienvenue", "Welcome")}
+        </p>
+
+        <span
+          className="relative mt-3 inline-block pb-3 font-heading text-[72px] font-light leading-none tracking-tight text-white/70 lg:text-[88px]"
+          aria-hidden="true"
+        >
+          {String(step).padStart(2, "0")}
+          <span className="absolute bottom-0 left-0.5 h-1 w-7 rounded-full bg-brand" />
+        </span>
+
+        <h2
+          ref={headingRef}
+          tabIndex={-1}
+          className="mt-5 font-heading text-[30px] font-extrabold leading-tight tracking-tight outline-none"
+        >
+          {currentMeta.title}
+        </h2>
+
+        <p className="mt-3 text-[15px] leading-relaxed text-white/65">{description}</p>
+      </div>
+
+      <ol className="relative hidden border-t border-white/10 pt-4 lg:block" aria-label={tx("Les étapes", "The steps")}>
+        {steps.map((meta, index) => {
+          const on = index + 1 === step
+          const done = index + 1 < step
+          return (
+            <li
+              key={meta.title}
+              aria-current={on ? "step" : undefined}
+              className={cn("flex items-center gap-3.5 py-2 text-[15px]", on ? "font-extrabold" : done ? "font-medium text-white/80" : "font-medium text-white/50")}
+            >
+              <span className="w-5 text-[13px] font-light tabular-nums" aria-hidden="true">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span className="truncate">{meta.title}</span>
+              {on && <span className="ml-auto h-2 w-2 shrink-0 rounded-full bg-brand" aria-hidden="true" />}
+              {done && <Check className="ml-auto h-3.5 w-3.5 shrink-0 text-brand" strokeWidth={3} aria-hidden="true" />}
+            </li>
+          )
+        })}
+      </ol>
+    </div>
+  )
+
   return (
     <div
       ref={dialogRef}
@@ -1246,35 +1283,6 @@ export function OnboardingView({
         <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden px-5 py-7 md:px-8 md:py-10">
           <div className="mx-auto w-full max-w-5xl">
            <StepSlide key={step} direction={direction} className="flex flex-col gap-7">
-            {step !== countryStepNumber && (
-            <div className="flex gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand/20 text-foreground md:h-14 md:w-14">
-                <CurrentStepIcon
-                  className="h-6 w-6 md:h-7 md:w-7"
-                  aria-hidden="true"
-                />
-              </div>
-
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                  {tx(`Étape ${step}`, `Step ${step}`)}
-                </p>
-
-                <h2
-                  ref={headingRef}
-                  tabIndex={-1}
-                  className="mt-1.5 max-w-[24ch] text-balance font-heading text-2xl font-bold tracking-tight outline-none md:text-[2rem] md:leading-[1.15]"
-                >
-                  {currentMeta.title}
-                </h2>
-
-                <p className="mt-2.5 max-w-[52ch] text-sm leading-6 text-muted-foreground">
-                  {currentMeta.description}
-                </p>
-              </div>
-            </div>
-            )}
-
             {/* COUNTRY: a black rail (the big step number, what it sets, the
                 steps) beside one soft card (the question, the countries, the
                 time zone, what the choice sets). */}
@@ -1293,60 +1301,12 @@ export function OnboardingView({
               return (
                 <div className="grid gap-4 lg:grid-cols-[19.5rem_minmax(0,1fr)]">
                   {/* ------------------------------------------ RAIL */}
-                  <div className="squircle relative flex flex-col justify-between gap-8 overflow-hidden rounded-[40px] bg-[var(--ink)] p-7 text-white shadow-[0_14px_44px_rgba(20,20,18,0.12)] sm:p-9">
-                    <div className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full bg-brand/15 blur-3xl" aria-hidden="true" />
-
-                    <div className="relative">
-                      <p className="text-[13px] font-semibold text-white/60">
-                        {firstName ? tx(`Bienvenue, ${firstName}`, `Welcome, ${firstName}`) : tx("Bienvenue", "Welcome")}
-                      </p>
-
-                      <span
-                        className="relative mt-3 inline-block pb-3 font-heading text-[72px] font-light leading-none tracking-tight text-white/70 lg:text-[88px]"
-                        aria-hidden="true"
-                      >
-                        {String(step).padStart(2, "0")}
-                        <span className="absolute bottom-0 left-0.5 h-1 w-7 rounded-full bg-brand" />
-                      </span>
-
-                      <h2
-                        ref={headingRef}
-                        tabIndex={-1}
-                        className="mt-5 font-heading text-[30px] font-extrabold leading-tight tracking-tight outline-none"
-                      >
-                        {currentMeta.title}
-                      </h2>
-
-                      <p className="mt-3 text-[15px] leading-relaxed text-white/65">
-                        {tx(
-                          "Il fixe la devise de vos montants et le fuseau de vos alertes.",
-                          "It sets the currency of your figures and the time zone of your alerts."
-                        )}
-                      </p>
-                    </div>
-
-                    <ol className="relative hidden border-t border-white/10 pt-4 lg:block" aria-label={tx("Les étapes", "The steps")}>
-                      {steps.map((meta, index) => {
-                        const on = index + 1 === step
-                        return (
-                          <li
-                            key={meta.title}
-                            aria-current={on ? "step" : undefined}
-                            className={cn(
-                              "flex items-center gap-3.5 py-2 text-[15px]",
-                              on ? "font-extrabold" : "font-medium text-white/50"
-                            )}
-                          >
-                            <span className="w-5 text-[13px] font-light tabular-nums" aria-hidden="true">
-                              {String(index + 1).padStart(2, "0")}
-                            </span>
-                            <span className="truncate">{meta.title}</span>
-                            {on && <span className="ml-auto h-2 w-2 shrink-0 rounded-full bg-brand" aria-hidden="true" />}
-                          </li>
-                        )
-                      })}
-                    </ol>
-                  </div>
+                  {renderRail(
+                    tx(
+                      "Il fixe la devise de vos montants et le fuseau de vos alertes.",
+                      "It sets the currency of your figures and the time zone of your alerts."
+                    )
+                  )}
 
                   {/* ------------------------------------------ CARD */}
                   <section className="squircle flex flex-col gap-7 rounded-[40px] bg-card p-6 shadow-[0_14px_44px_rgba(20,20,18,0.09)] sm:p-9">
@@ -1493,430 +1453,365 @@ export function OnboardingView({
               )
             })()}
 
-            {/* COMPANY (only when sign-up gave none) */}
-            {step === companyStepNumber && (
-              <div className="flex flex-col items-center justify-center py-8">
-                <div className="relative w-full max-w-xl group">
-                  <Sparkles className="absolute -left-8 -top-8 h-6 w-6 text-lime-400 rotate-12 opacity-60 hidden sm:block" />
+            {step !== countryStepNumber && (
+              <div className="grid gap-4 lg:grid-cols-[19.5rem_minmax(0,1fr)]">
+                {renderRail(currentMeta.description)}
 
-                  <div className="flex w-full items-stretch rounded-[2rem] overflow-hidden shadow-xl transition-transform duration-300 hover:scale-[1.01]">
-                    <div className="flex-1 bg-zinc-900 px-6 py-5 flex items-center">
-                      <label htmlFor="company-name" className="sr-only">
-                        {tx("Nom de votre entreprise", "Your company name")}
-                      </label>
-                      <input
-                        id="company-name"
-                        value={companyName}
-                        onChange={(event) => setCompanyName(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" && companyName.trim()) {
-                            event.preventDefault()
-                            nextStep()
-                          }
-                        }}
-                        placeholder={tx(
-                          "Ex. Terminal Atlantique SA",
-                          "e.g. Atlantic Terminal Ltd"
-                        )}
-                        autoComplete="organization"
-                        className="w-full bg-transparent text-lg font-bold text-white placeholder:text-zinc-500 outline-none md:text-xl"
-                      />
-                    </div>
+                <section className="squircle flex min-w-0 flex-col gap-6 rounded-[40px] bg-card p-6 shadow-[0_14px_44px_rgba(20,20,18,0.09)] sm:p-9">
+                  {/* COMPANY (only when sign-up gave none) */}
+                  {step === companyStepNumber && (
+                    <div className="flex flex-1 flex-col justify-center gap-4 py-6">
+                      <p className="text-[12px] font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
+                        {tx("Comment s'appelle votre entreprise ?", "What is your company called?")}
+                      </p>
 
-                    <button
-                      type="button"
-                      onClick={nextStep}
-                      disabled={!canContinue}
-                      className={cn(
-                        "flex w-20 shrink-0 items-center justify-center bg-lime-400 transition-colors duration-300",
-                        "hover:bg-lime-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-500 focus-visible:ring-inset",
-                        !canContinue && "opacity-50 cursor-not-allowed"
-                      )}
-                    >
-                      <ArrowRight className="h-8 w-8 text-zinc-900 stroke-[2.5]" />
-                    </button>
-                  </div>
+                      <div className="flex items-center gap-3 rounded-full bg-muted py-3 pl-8 pr-3">
+                        <label htmlFor="company-name" className="sr-only">
+                          {tx("Nom de votre entreprise", "Your company name")}
+                        </label>
+                        <input
+                          id="company-name"
+                          value={companyName}
+                          onChange={(event) => setCompanyName(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" && companyName.trim()) {
+                              event.preventDefault()
+                              nextStep()
+                            }
+                          }}
+                          placeholder={tx("Ex. Terminal Atlantique SA", "e.g. Atlantic Terminal Ltd")}
+                          autoComplete="organization"
+                          className="min-w-0 flex-1 bg-transparent text-2xl font-bold outline-none placeholder:text-muted-foreground/60 md:text-3xl"
+                        />
 
-                  <div className="absolute -bottom-4 left-4 right-4 -z-10 rounded-[2rem] bg-lime-400/20 blur-xl" />
-                </div>
-
-                <p className="mt-8 text-center text-xs text-muted-foreground max-w-sm">
-                  {tx(
-                    "Ce nom sera utilisé dans vos rapports et par l'assistant IA.",
-                    "This name will be used in your reports and by the AI assistant."
-                  )}
-                </p>
-              </div>
-            )}
-
-            {/* SECTOR */}
-            {step === sectorStepNumber && (
-              <>
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-12">
-                  {SECTORS.map((item, index) => {
-                    const Icon = item.icon
-                    const active = sector === item.id
-                    const secondary = extraSectors.includes(item.id)
-                    const isSelected = active || secondary
-
-                    const isTopRow = index < 4
-                    const colSpan = isTopRow
-                      ? "lg:col-span-3"
-                      : "lg:col-span-4"
-
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() =>
-                          multiSector && sector && sector !== item.id
-                            ? toggleExtraSector(item.id)
-                            : chooseSector(item.id)
-                        }
-                        aria-pressed={isSelected}
-                        className={cn(
-                          "group relative flex flex-col items-center justify-between rounded-3xl border p-6 text-center transition-all duration-300",
-                          "min-h-[260px] w-full",
-                          colSpan,
-                          "border-neutral-200 bg-white shadow-sm hover:-translate-y-0.5 hover:border-lime-500 hover:shadow-md",
-                          isSelected && "border-lime-500 bg-lime-50 shadow-md",
-                          item.recommended && !isSelected && "border-lime-500 ring-1 ring-lime-500/30"
-                        )}
-                      >
-                        {item.maturity && (
-                          <span
-                            className={cn(
-                              "absolute right-4 top-4 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
-                              isSelected
-                                ? "bg-lime-500 text-white"
-                                : "bg-lime-100 text-lime-700 border border-lime-200"
-                            )}
-                          >
-                            {maturityLabel(item.maturity, tx)}
-                          </span>
-                        )}
-
-                        <div className="flex flex-1 flex-col items-center justify-center pt-5">
-                          {item.image ? (
-                            <div className="mb-5 flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl bg-neutral-100">
-                              <img
-                                src={item.image}
-                                alt=""
-                                className={cn(
-                                  "h-full w-full object-contain transition-transform duration-300",
-                                  isSelected ? "scale-110" : "group-hover:scale-105"
-                                )}
-                              />
-                            </div>
-                          ) : (
-                            <div
-                              className={cn(
-                                "flex h-20 w-20 items-center justify-center rounded-2xl transition-all duration-300 mb-5",
-                                isSelected
-                                  ? "bg-lime-100 text-lime-700 scale-105"
-                                  : "bg-neutral-100 text-neutral-500 group-hover:text-lime-600"
-                              )}
-                            >
-                              <Icon className="h-10 w-10 stroke-[1.5]" />
-                            </div>
-                          )}
-
-                          <span
-                            className={cn(
-                              "text-lg font-bold tracking-tight transition-colors duration-300",
-                              isSelected ? "text-lime-700" : "text-neutral-900 group-hover:text-neutral-950"
-                            )}
-                          >
-                            {px(item.label)}
-                          </span>
-                        </div>
-
-                        <span
-                          className={cn(
-                            "mt-3 max-w-[22ch] text-xs leading-relaxed transition-colors duration-300",
-                            isSelected
-                              ? "text-lime-800/80"
-                              : "text-neutral-500 group-hover:text-neutral-600"
-                          )}
+                        <button
+                          type="button"
+                          onClick={nextStep}
+                          disabled={!canContinue}
+                          aria-label={tx("Continuer", "Continue")}
+                          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-brand text-[#141414] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
                         >
-                          {px(item.description)}
-                        </span>
+                          <ArrowRight className="h-6 w-6" strokeWidth={2.5} aria-hidden="true" />
+                        </button>
+                      </div>
 
-                        {isSelected && (
-                          <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-lime-500 text-white ring-2 ring-white">
-                            <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                          </span>
-                        )}
-
-                        {secondary && !active && (
-                          <span className="absolute bottom-4 rounded-full bg-neutral-200 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neutral-600">
-                            {tx("Secondaire", "Secondary")}
-                          </span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-
-                {canMultiSector ? (
-                  <div className="mt-8 rounded-2xl border border-neutral-200 bg-white p-5 shadow-sm">
-                    <label className="flex cursor-pointer items-start gap-3">
-                      <input
-                        type="checkbox"
-                        checked={multiSector}
-                        onChange={(event) => {
-                          setMultiSector(event.target.checked)
-                          if (!event.target.checked) setExtraSectors([])
-                        }}
-                        className="mt-0.5 h-4 w-4 shrink-0 accent-lime-500"
-                      />
-                      <span>
-                        <span className="block text-sm font-semibold text-neutral-900">
-                          {tx(
-                            "Mon entreprise couvre plusieurs secteurs",
-                            "My company covers more than one sector"
-                          )}
-                        </span>
-                        <span className="mt-0.5 block text-xs leading-5 text-neutral-500">
-                          {tx(
-                            "Par exemple une usine avec son propre entrepôt. Le secteur choisi ci-dessus reste le principal.",
-                            "A factory with its own warehouse, for instance. The sector chosen above stays the main one."
-                          )}
-                        </span>
-                      </span>
-                    </label>
-
-                    {multiSector && (
-                      <p className="mt-4 border-t border-neutral-200 pt-4 text-xs text-neutral-500">
-                        {extraSectors.length > 0 ? (
-                          <>
-                            {tx("Secteurs :", "Sectors:")}{" "}
-                            <span className="font-semibold text-lime-700">
-                              {allSectors
-                                .map((id) => sectorName(id))
-                                .join(", ")}
-                            </span>
-                          </>
-                        ) : sector ? (
-                          tx(
-                            "Touchez un autre secteur pour l'ajouter.",
-                            "Tap another sector to add it."
-                          )
-                        ) : (
-                          tx(
-                            "Choisissez d'abord votre secteur principal.",
-                            "Choose your main sector first."
-                          )
+                      <p className="pl-8 text-sm text-muted-foreground">
+                        {tx(
+                          "Ce nom sera utilisé dans vos rapports et par l'assistant IA.",
+                          "This name will be used in your reports and by the AI assistant."
                         )}
                       </p>
-                    )}
-                  </div>
-                ) : (
-                  <p className="mt-8 rounded-2xl border border-neutral-200 bg-white p-5 text-xs leading-5 text-neutral-500 shadow-sm">
-                    {tx(
-                      "Une entreprise suit un secteur. Plusieurs secteurs (une usine avec son entrepôt, par exemple) : offre Entreprise.",
-                      "A company follows one sector. Several sectors (a factory with its own warehouse, say): Entreprise plan."
-                    )}
-                  </p>
-                )}
-              </>
-            )}
+                    </div>
+                  )}
 
-            {/* BUSINESS TYPE (ACTIVITY) */}
-            {step === subTypeStepNumber && sector && (
-              <div>
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <div className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
-                    {selectedSector ? px(selectedSector.label) : null}
-                  </div>
-                  <p className="text-xs leading-5 text-muted-foreground">
-                    {tx(
-                      "Cette précision adapte les seuils d'alerte à votre métier",
-                      "This detail tunes the alert thresholds to your trade"
-                    )}
-                  </p>
-                </div>
+                  {/* SECTOR */}
+                  {step === sectorStepNumber && (
+                    <>
+                      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+                        {SECTORS.map((item) => {
+                          const Icon = item.icon
+                          const active = sector === item.id
+                          const secondary = extraSectors.includes(item.id)
+                          const isSelected = active || secondary
 
-                {!canMultiDepartment && (
-                  <p className="mb-3 text-xs text-muted-foreground">
-                    {tx(
-                      "Choisissez votre département. Plusieurs départements qui tournent ensemble : offre Business.",
-                      "Pick your department. Several departments that run together: Business plan."
-                    )}
-                  </p>
-                )}
-
-                {canMultiDepartment && !isLogistics && (
-                  <p className="mb-3 text-xs text-muted-foreground">
-                    {tx(
-                      "Cochez tous les départements que vous exploitez ensemble, par exemple une clinique avec sa pharmacie et son laboratoire. Ceux qui ne vont pas avec votre choix sont grisés.",
-                      "Tick every department you run together, a clinic with its own pharmacy and lab for instance. Those that don't go with your choice are greyed out."
-                    )}
-                  </p>
-                )}
-
-                {canMultiDepartment && isLogistics && (
-                  <p className="mb-3 text-xs text-muted-foreground">
-                    {tx(
-                      "Sélectionnez toutes les activités que vous exploitez. Un terminal qui manipule des conteneurs réfrigérés fait du port et de la chaîne du froid : cochez les deux et SentrIA suivra les étapes des deux, sans y ajouter celles que vous n'avez pas.",
-                      "Select every activity you run. A terminal handling refrigerated containers does both port work and cold chain: tick both and SentrIA follows the stages of both, without adding the ones you do not have."
-                    )}
-                  </p>
-                )}
-
-                <div
-                  className="mx-auto flex flex-wrap justify-center gap-4"
-                  style={{ maxWidth: cardRowWidth(shownSubTypes.length) }}
-                >
-                  {shownSubTypes.map((item) => {
-                    const Icon = item.icon
-                    const active = subTypes2.includes(item.id)
-                    const img = imageForActivity(item.id)
-                    // Greyed when it doesn't run with what is ticked: a
-                    // click then starts over with it.
-                    const fits =
-                      !canMultiDepartment ||
-                      active ||
-                      subTypes2.length === 0 ||
-                      atLeast(plan, "entreprise") ||
-                      combinableWith(sector, subTypes2).has(item.id)
-
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => chooseSubType(item.id)}
-                        aria-pressed={active}
-                        title={
-                          fits
-                            ? undefined
-                            : tx(
-                                "Ne va pas avec votre choix : le sélectionner remplace la sélection.",
-                                "Doesn't go with your choice: selecting it replaces the selection."
-                              )
-                        }
-                        className={cn(
-                          !fits && "opacity-50",
-                          "group relative flex flex-col items-center rounded-2xl border px-3 pb-5 pt-6 text-center transition-all duration-300",
-                          // Two per row on phones, a fixed width from sm up so
-                          // every row lines up whatever the card count.
-                          "w-[calc(50%-0.5rem)] sm:w-[208px]",
-                          "border-neutral-200 bg-white shadow-sm hover:-translate-y-1 hover:border-lime-500 hover:shadow-md",
-                          active && "border-lime-500 bg-lime-50 shadow-md ring-1 ring-lime-500/20"
-                        )}
-                      >
-                        {item.maturity && (
-                          <span
-                            className={cn(
-                              "absolute right-2 top-2 whitespace-nowrap rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider",
-                              active
-                                ? "bg-lime-500 text-white"
-                                : "bg-lime-100 text-lime-700 border border-lime-200"
-                            )}
-                          >
-                            {maturityLabel(item.maturity, tx)}
-                          </span>
-                        )}
-
-                        <div className="flex w-full flex-col items-center">
-                          {img ? (
-                            <div className="mb-3 flex h-24 w-24 items-center justify-center overflow-hidden rounded-xl bg-neutral-100">
-                              <img
-                                src={img}
-                                alt=""
-                                className={cn(
-                                  "h-full w-full object-contain transition-transform duration-300",
-                                  active ? "scale-110" : "group-hover:scale-105"
-                                )}
-                              />
-                            </div>
-                          ) : (
-                            <div
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() =>
+                                multiSector && sector && sector !== item.id
+                                  ? toggleExtraSector(item.id)
+                                  : chooseSector(item.id)
+                              }
+                              aria-pressed={isSelected}
                               className={cn(
-                                "flex h-24 w-24 items-center justify-center rounded-xl transition-all duration-300 mb-3",
-                                active
-                                  ? "bg-lime-100 text-lime-700 scale-105"
-                                  : "bg-neutral-100 text-neutral-500 group-hover:text-lime-600"
+                                "group relative flex min-h-[210px] flex-col justify-between gap-5 rounded-[30px] p-5 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                isSelected
+                                  ? "bg-[var(--ink)] text-white shadow-[0_14px_44px_rgba(20,20,18,0.18)]"
+                                  : "bg-muted hover:-translate-y-0.5 hover:bg-muted/70",
+                                item.recommended && !isSelected && "ring-2 ring-brand/60"
                               )}
                             >
-                              <Icon className="h-9 w-9 stroke-[1.5]" />
-                            </div>
-                          )}
+                              <span className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-[22px] bg-card">
+                                {item.image ? (
+                                  <img
+                                    src={item.image}
+                                    alt=""
+                                    className={cn(
+                                      "h-full w-full object-contain transition-transform duration-300",
+                                      isSelected ? "scale-110" : "group-hover:scale-105"
+                                    )}
+                                  />
+                                ) : (
+                                  <Icon className="h-9 w-9 stroke-[1.5] text-muted-foreground" aria-hidden="true" />
+                                )}
+                              </span>
 
-                          <span
-                            className={cn(
-                              "min-h-[2.5em] text-sm font-bold leading-tight tracking-tight transition-colors duration-300 line-clamp-2",
-                              active ? "text-lime-700" : "text-neutral-900 group-hover:text-neutral-950"
-                            )}
-                          >
-                            {px(item.label)}
-                          </span>
+                              <span>
+                                <span className="block font-heading text-[21px] font-extrabold leading-tight tracking-tight">
+                                  {px(item.label)}
+                                </span>
+                                <span className={cn("mt-1 block text-[13px] leading-snug", isSelected ? "text-white/60" : "text-muted-foreground")}>
+                                  {px(item.description)}
+                                </span>
+                                {item.maturity && (
+                                  <span
+                                    className={cn(
+                                      "mt-2.5 inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                                      isSelected ? "bg-brand text-[#141414]" : "bg-card text-muted-foreground"
+                                    )}
+                                  >
+                                    {maturityLabel(item.maturity, tx)}
+                                  </span>
+                                )}
+                              </span>
+
+                              {isSelected && (
+                                <span className="absolute -right-1.5 -top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-brand text-[#141414] ring-2 ring-card">
+                                  <Check className="h-4 w-4" strokeWidth={3} />
+                                </span>
+                              )}
+
+                              {secondary && !active && (
+                                <span className="absolute bottom-4 right-4 rounded-full bg-card px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                                  {tx("Secondaire", "Secondary")}
+                                </span>
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      {canMultiSector ? (
+                        <div className="rounded-[26px] bg-muted p-5">
+                          <label className="flex cursor-pointer items-start gap-3">
+                            <input
+                              type="checkbox"
+                              checked={multiSector}
+                              onChange={(event) => {
+                                setMultiSector(event.target.checked)
+                                if (!event.target.checked) setExtraSectors([])
+                              }}
+                              className="mt-0.5 h-4 w-4 shrink-0 accent-lime-500"
+                            />
+                            <span>
+                              <span className="block text-sm font-semibold">
+                                {tx(
+                                  "Mon entreprise couvre plusieurs secteurs",
+                                  "My company covers more than one sector"
+                                )}
+                              </span>
+                              <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
+                                {tx(
+                                  "Par exemple une usine avec son propre entrepôt. Le secteur choisi ci-dessus reste le principal.",
+                                  "A factory with its own warehouse, for instance. The sector chosen above stays the main one."
+                                )}
+                              </span>
+                            </span>
+                          </label>
+
+                          {multiSector && (
+                            <p className="mt-4 border-t border-border pt-4 text-xs text-muted-foreground">
+                              {extraSectors.length > 0 ? (
+                                <>
+                                  {tx("Secteurs :", "Sectors:")}{" "}
+                                  <span className="font-semibold text-foreground">
+                                    {allSectors.map((id) => sectorName(id)).join(", ")}
+                                  </span>
+                                </>
+                              ) : sector ? (
+                                tx(
+                                  "Touchez un autre secteur pour l'ajouter.",
+                                  "Tap another sector to add it."
+                                )
+                              ) : (
+                                tx(
+                                  "Choisissez d'abord votre secteur principal.",
+                                  "Choose your main sector first."
+                                )
+                              )}
+                            </p>
+                          )}
                         </div>
-
-                        <span
-                          className={cn(
-                            "mt-1.5 min-h-[2.8em] w-full text-xs leading-snug transition-colors duration-300 line-clamp-3 sm:line-clamp-2",
-                            active
-                              ? "text-lime-800/80"
-                              : "text-neutral-500 group-hover:text-neutral-600"
+                      ) : (
+                        <p className="rounded-[26px] bg-muted p-5 text-xs leading-5 text-muted-foreground">
+                          {tx(
+                            "Une entreprise suit un secteur. Plusieurs secteurs (une usine avec son entrepôt, par exemple) : offre Entreprise.",
+                            "A company follows one sector. Several sectors (a factory with its own warehouse, say): Entreprise plan."
                           )}
-                        >
-                          {px(item.description)}
+                        </p>
+                      )}
+                    </>
+                  )}
+
+                  {/* BUSINESS TYPE (ACTIVITY) */}
+                  {step === subTypeStepNumber && sector && (
+                    <div>
+                      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                        <div className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
+                          {selectedSector ? px(selectedSector.label) : null}
+                        </div>
+                        <p className="text-xs leading-5 text-muted-foreground">
+                          {tx(
+                            "Cette précision adapte les seuils d'alerte à votre métier",
+                            "This detail tunes the alert thresholds to your trade"
+                          )}
+                        </p>
+                      </div>
+
+                      {!canMultiDepartment && (
+                        <p className="mb-3 text-xs text-muted-foreground">
+                          {tx(
+                            "Choisissez votre département. Plusieurs départements qui tournent ensemble : offre Business.",
+                            "Pick your department. Several departments that run together: Business plan."
+                          )}
+                        </p>
+                      )}
+
+                      {canMultiDepartment && !isLogistics && (
+                        <p className="mb-3 text-xs text-muted-foreground">
+                          {tx(
+                            "Cochez tous les départements que vous exploitez ensemble, par exemple une clinique avec sa pharmacie et son laboratoire. Ceux qui ne vont pas avec votre choix sont grisés.",
+                            "Tick every department you run together, a clinic with its own pharmacy and lab for instance. Those that don't go with your choice are greyed out."
+                          )}
+                        </p>
+                      )}
+
+                      {canMultiDepartment && isLogistics && (
+                        <p className="mb-3 text-xs text-muted-foreground">
+                          {tx(
+                            "Sélectionnez toutes les activités que vous exploitez. Un terminal qui manipule des conteneurs réfrigérés fait du port et de la chaîne du froid : cochez les deux et SentrIA suivra les étapes des deux, sans y ajouter celles que vous n'avez pas.",
+                            "Select every activity you run. A terminal handling refrigerated containers does both port work and cold chain: tick both and SentrIA follows the stages of both, without adding the ones you do not have."
+                          )}
+                        </p>
+                      )}
+
+                      <div className="grid grid-cols-2 gap-3.5 md:grid-cols-3">
+                        {shownSubTypes.map((item) => {
+                          const Icon = item.icon
+                          const active = subTypes2.includes(item.id)
+                          const img = imageForActivity(item.id)
+                          // Greyed when it doesn't run with what is ticked: a
+                          // click then starts over with it.
+                          const fits =
+                            !canMultiDepartment ||
+                            active ||
+                            subTypes2.length === 0 ||
+                            atLeast(plan, "entreprise") ||
+                            combinableWith(sector, subTypes2).has(item.id)
+
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => chooseSubType(item.id)}
+                              aria-pressed={active}
+                              title={
+                                fits
+                                  ? undefined
+                                  : tx(
+                                      "Ne va pas avec votre choix : le sélectionner remplace la sélection.",
+                                      "Doesn't go with your choice: selecting it replaces the selection."
+                                    )
+                              }
+                              className={cn(
+                                !fits && "opacity-50",
+                                "group relative flex flex-col items-start gap-3 rounded-[28px] p-4 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-5",
+                                active
+                                  ? "bg-[var(--ink)] text-white shadow-[0_14px_44px_rgba(20,20,18,0.18)]"
+                                  : "bg-muted hover:-translate-y-0.5 hover:bg-muted/70"
+                              )}
+                            >
+                              <span className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-[22px] bg-card">
+                                {img ? (
+                                  <img
+                                    src={img}
+                                    alt=""
+                                    className={cn(
+                                      "h-full w-full object-contain transition-transform duration-300",
+                                      active ? "scale-110" : "group-hover:scale-105"
+                                    )}
+                                  />
+                                ) : (
+                                  <Icon className="h-9 w-9 stroke-[1.5] text-muted-foreground" aria-hidden="true" />
+                                )}
+                              </span>
+
+                              <span className="block">
+                                <span className="line-clamp-2 block font-heading text-[17px] font-extrabold leading-tight tracking-tight">
+                                  {px(item.label)}
+                                </span>
+                                <span
+                                  className={cn(
+                                    "mt-1 line-clamp-3 block text-[13px] leading-snug",
+                                    active ? "text-white/60" : "text-muted-foreground"
+                                  )}
+                                >
+                                  {px(item.description)}
+                                </span>
+                                {item.maturity && (
+                                  <span
+                                    className={cn(
+                                      "mt-2 inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider",
+                                      active ? "bg-brand text-[#141414]" : "bg-card text-muted-foreground"
+                                    )}
+                                  >
+                                    {maturityLabel(item.maturity, tx)}
+                                  </span>
+                                )}
+                              </span>
+
+                              {active && (
+                                <span className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-brand text-[#141414] ring-2 ring-card">
+                                  <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                                </span>
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-[22px] bg-muted px-5 py-3.5">
+                        <span className="text-xs text-muted-foreground">
+                          {subTypes2.length > 0 ? (
+                            <>
+                              {subTypes2.length > 1
+                                ? tx("Activités retenues : ", "Activities chosen: ")
+                                : tx("Activité retenue : ", "Activity chosen: ")}
+                              <span className="font-semibold text-foreground">
+                                {subTypes2
+                                  .map((id) => {
+                                    const found = subTypes.find((item) => item.id === id)
+                                    return found ? px(found.label) : id
+                                  })
+                                  .join(", ")}
+                              </span>
+                            </>
+                          ) : isLogistics ? (
+                            tx(
+                              "Cochez chaque activité que vous exploitez",
+                              "Tick every activity you run"
+                            )
+                          ) : (
+                            tx(
+                              "Sélectionnez l'activité la plus proche de la vôtre",
+                              "Pick the activity closest to yours"
+                            )
+                          )}
                         </span>
-
-                        {active && (
-                          <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-lime-500 text-white ring-2 ring-white shadow-sm">
-                            <Check className="h-3 w-3" strokeWidth={3} />
-                          </span>
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-
-                <div className="mt-4 flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
-                  <span className="text-xs text-muted-foreground">
-                    {subTypes2.length > 0 ? (
-                      <>
-                        {subTypes2.length > 1
-                          ? tx("Activités retenues : ", "Activities chosen: ")
-                          : tx("Activité retenue : ", "Activity chosen: ")}
-                        <span className="font-semibold text-foreground">
-                          {subTypes2
-                            .map((id) => {
-                              const found = subTypes.find(
-                                (item) => item.id === id
-                              )
-                              return found ? px(found.label) : id
-                            })
-                            .join(", ")}
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          {tx("Modifiable plus tard", "Changeable later")}
                         </span>
-                      </>
-                    ) : isLogistics ? (
-                      tx(
-                        "Cochez chaque activité que vous exploitez",
-                        "Tick every activity you run"
-                      )
-                    ) : (
-                      tx(
-                        "Sélectionnez l'activité la plus proche de la vôtre",
-                        "Pick the activity closest to yours"
-                      )
-                    )}
-                  </span>
-                  <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    {tx("Modifiable plus tard", "Changeable later")}
-                  </span>
-                </div>
+                      </div>
 
-                {isLogistics && selectedOpsTypes.length > 0 && (
-                  <ActivityFlowPreview
-                    opsType={opsTypeFor(selectedOpsTypes)}
-                    selected={selectedOpsTypes}
-                  />
-                )}
-              </div>
-            )}
+                      {isLogistics && selectedOpsTypes.length > 0 && (
+                        <ActivityFlowPreview
+                          opsType={opsTypeFor(selectedOpsTypes)}
+                          selected={selectedOpsTypes}
+                        />
+                      )}
+                    </div>
+                  )}
 
             {/* MONITORING PRIORITIES */}
             {step === equipmentStepNumber && sector && (
@@ -2069,15 +1964,19 @@ export function OnboardingView({
                         type="button"
                         onClick={() => toggleSource(source.id)}
                         className={cn(
-                          "flex flex-col items-start gap-1 rounded-2xl border p-4 text-left transition-all",
+                          "flex flex-col items-start gap-1 rounded-[28px] p-5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                           active
-                            ? "border-foreground bg-foreground text-background"
-                            : "border-border hover:border-accent/60 hover:bg-accent/10"
+                            ? "bg-[var(--ink)] text-white shadow-[0_14px_44px_rgba(20,20,18,0.18)]"
+                            : "bg-muted hover:bg-muted/70"
                         )}
                       >
                         <div className="flex w-full items-center justify-between">
                           <Icon className="h-5 w-5" />
-                          {active && <Check className="h-4 w-4" />}
+                          {active && (
+                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand text-[#141414]">
+                              <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                            </span>
+                          )}
                         </div>
 
                         <span className="mt-2 text-sm font-semibold">
@@ -2088,7 +1987,7 @@ export function OnboardingView({
                           className={cn(
                             "text-xs leading-5",
                             active
-                              ? "text-background/70"
+                              ? "text-white/65"
                               : "text-muted-foreground"
                           )}
                         >
@@ -2099,7 +1998,7 @@ export function OnboardingView({
                           className={cn(
                             "mt-1 text-[11px] leading-5",
                             active
-                              ? "text-background/50"
+                              ? "text-white/45"
                               : "text-muted-foreground/70"
                           )}
                         >
@@ -2111,7 +2010,7 @@ export function OnboardingView({
                 </div>
 
                 {selectedSources.includes("csv") && (
-                  <div className="mt-4 rounded-2xl border border-accent/40 bg-accent/5 p-4 md:p-5">
+                  <div className="mt-4 rounded-[28px] bg-muted p-5 md:p-6">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold">
@@ -2285,10 +2184,10 @@ export function OnboardingView({
                   type="button"
                   onClick={selectConfigureLater}
                   className={cn(
-                    "mt-3 flex w-full items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-semibold transition-all",
+                    "mt-3 flex w-full items-center justify-center gap-2 rounded-[22px] px-4 py-4 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     configureLater
-                      ? "border-foreground bg-foreground text-background"
-                      : "border-border bg-background text-muted-foreground hover:border-accent/60 hover:bg-accent/10"
+                      ? "bg-[var(--ink)] text-white"
+                      : "bg-muted text-muted-foreground hover:bg-muted/70"
                   )}
                 >
                   <Clock3 className="h-4 w-4" />
@@ -2296,7 +2195,7 @@ export function OnboardingView({
                   {configureLater && <Check className="h-4 w-4" />}
                 </button>
 
-                <div className="mt-4 rounded-xl border border-border bg-background px-4 py-3">
+                <div className="mt-4 rounded-[22px] bg-muted px-5 py-4">
                   <div className="flex items-start gap-3">
                     <Activity className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                     <div>
@@ -2315,6 +2214,10 @@ export function OnboardingView({
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+                </section>
               </div>
             )}
 
