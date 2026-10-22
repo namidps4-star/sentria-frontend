@@ -214,7 +214,7 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
                     className={cn(
                       "min-w-[1.9rem] shrink-0 rounded-full px-2.5 py-0.5 text-center text-xs font-bold tabular-nums",
                       (site.alerts ?? 0) > 0
-                        ? "bg-[var(--tag-danger-bg)] text-[var(--tag-danger-fg)]"
+                        ? "bg-[var(--tag-critical-bg)] text-[var(--tag-critical-fg)]"
                         : onLime
                           ? "bg-white/70 text-[#141414]/70"
                           : "bg-muted text-muted-foreground"

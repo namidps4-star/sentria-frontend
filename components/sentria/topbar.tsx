@@ -277,7 +277,7 @@ export function Topbar({
                   >
                     <span className="flex min-w-0 flex-1 flex-col gap-2">
                       <span className="flex flex-wrap items-center gap-1.5">
-                        <span className="rounded-full bg-[var(--tag-danger-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--tag-danger-fg)]">
+                        <span className="rounded-full bg-[var(--tag-critical-bg)] px-2.5 py-0.5 text-xs font-bold text-[var(--tag-critical-fg)]">
                           {tx("Critique", "Critical")}
                         </span>
                         {n.sector && (
