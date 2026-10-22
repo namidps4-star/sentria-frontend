@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 import type { ViewKey } from "./types"
 import { StatusTag, type TagTone } from "./status-tag"
+import { SentriaStatus } from "./sentria-status"
 import { SupportDialog } from "./support-dialog"
 import { useT, useTx, type MessageKey } from "@/lib/i18n"
 import { readSectors } from "@/lib/activities"
@@ -454,33 +455,12 @@ export function Sidebar({
                 </div>
               </div>
             ))}
-
-            {/* SENTRIA ACTIVE CARD */}
-            {/* Decorative: gives way on short screens so the sign-out
-                button (below) always fits. */}
-            {!collapsed && (
-              <div className="mt-auto pt-6 [@media(max-height:960px)]:hidden">
-                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent/10">
-                      <Bot className="h-4 w-4 text-accent" />
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="text-xs font-medium text-sidebar-foreground">
-                        {t("brand.status.title")}
-                      </div>
-
-                      <div className="flex items-center gap-1.5 text-[10px] text-sidebar-foreground/40">
-                        <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                        {t("brand.status.subtitle")}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </nav>
+
+          {/* The status bubble sits outside the scrolling list, so it is on screen at every height. */}
+          <div className="shrink-0 px-3 pb-3 [@media(max-height:700px)]:pb-1.5">
+            <SentriaStatus collapsed={collapsed} />
+          </div>
 
           {/* SIGN OUT */}
           {onSignOut && (
