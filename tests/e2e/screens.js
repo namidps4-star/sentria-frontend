@@ -50,7 +50,7 @@ const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y
     pass(await p.evaluate(() => document.querySelector('[role=dialog] h2').innerText) === 'Your country', 'the heading is the step title');
     await p.getByText('Senegal', { exact: true }).click(); await p.waitForTimeout(200);
     pass(await p.getByRole('button', { name: /Senegal/ }).getAttribute('aria-pressed') === 'true' && await p.locator('select[aria-label="Account currency"]').inputValue() === 'XOF', 'Senegal: pressed, currency XOF');
-    pass(/Your figures in\s*F CFA/.test(await p.evaluate(() => document.body.innerText)), 'the black card shows the currency');
+    pass(/XOF\s*Currency/i.test(await p.evaluate(() => document.querySelector('[role=dialog] section').innerText)), 'the card shows the currency as a light number');
     await p._ctx.close(); }
 
   console.log('== Settings');

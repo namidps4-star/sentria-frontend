@@ -1275,180 +1275,140 @@ export function OnboardingView({
             </div>
             )}
 
-            {/* COUNTRY: the Ask SentrIA layout. Lime card (who, how far),
-                grey panel (the question, as a chat), black card (what the
-                choice sets). */}
+            {/* COUNTRY: a black rail (the big step number, what it sets, the
+                steps) beside one soft card (the question, the countries, the
+                time zone, what the choice sets). */}
             {step === countryStepNumber && (() => {
               const picked = countryFor(countryCode)
               const currency = CURRENCIES.find((c) => c.code === currencyCode)
               const zone = TIMEZONES.find((z) => z.id === timezoneId)
+              /* Two letters of the country code make its flag. */
+              const flagOf = (code: string) =>
+                /^[A-Z]{2}$/.test(code) && code !== "XX"
+                  ? String.fromCodePoint(...[...code].map((c) => 127397 + c.charCodeAt(0)))
+                  : "🌍"
+              const zoneCode = (label: string) => label.split(" ")[0]
+              const zoneCities = (label: string) => label.slice(label.indexOf("(") + 1, label.lastIndexOf(")"))
 
               return (
-                <div className="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)_280px]">
-                  {/* ------------------------------------------ LEFT */}
-                  <div className="flex flex-col gap-4">
-                    <div className="rounded-[28px] bg-brand p-5 text-[#141414]">
-                      <div className="flex items-center gap-2.5">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--ink)] text-brand">
-                          <Sparkles className="h-4 w-4" aria-hidden="true" />
-                        </span>
-                        <span className="leading-tight">
-                          <span className="block text-sm font-bold">SentrIA</span>
-                          <span className="block text-[11px] text-[#141414]/65">{tx("Configuration", "Setup")}</span>
-                        </span>
-                      </div>
-                      <p className="mt-5 font-heading text-2xl font-semibold tracking-tight">
+                <div className="grid gap-4 lg:grid-cols-[19.5rem_minmax(0,1fr)]">
+                  {/* ------------------------------------------ RAIL */}
+                  <div className="squircle relative flex flex-col justify-between gap-8 overflow-hidden rounded-[40px] bg-[var(--ink)] p-7 text-white shadow-[0_14px_44px_rgba(20,20,18,0.12)] sm:p-9">
+                    <div className="pointer-events-none absolute -right-20 -top-20 h-60 w-60 rounded-full bg-brand/15 blur-3xl" aria-hidden="true" />
+
+                    <div className="relative">
+                      <p className="text-[13px] font-semibold text-white/60">
                         {firstName ? tx(`Bienvenue, ${firstName}`, `Welcome, ${firstName}`) : tx("Bienvenue", "Welcome")}
                       </p>
-                      <div className="mt-4">
-                        <div className="h-2 overflow-hidden rounded-full bg-white/70" aria-hidden="true">
-                          <div
-                            className="h-full rounded-full bg-[var(--ink)] transition-[width] duration-500"
-                            style={{ width: `${Math.round((step / totalSteps) * 100)}%` }}
-                          />
-                        </div>
-                        <div className="mt-1.5 flex items-center justify-between text-[11px] font-semibold">
-                          <span>{tx("Configuration", "Setup")}</span>
-                          <span className="tabular-nums">
-                            {step} / {totalSteps}
-                          </span>
-                        </div>
-                      </div>
+
+                      <span
+                        className="relative mt-3 inline-block pb-3 font-heading text-[72px] font-light leading-none tracking-tight text-white/70 lg:text-[88px]"
+                        aria-hidden="true"
+                      >
+                        {String(step).padStart(2, "0")}
+                        <span className="absolute bottom-0 left-0.5 h-1 w-7 rounded-full bg-brand" />
+                      </span>
+
+                      <h2
+                        ref={headingRef}
+                        tabIndex={-1}
+                        className="mt-5 font-heading text-[30px] font-extrabold leading-tight tracking-tight outline-none"
+                      >
+                        {currentMeta.title}
+                      </h2>
+
+                      <p className="mt-3 text-[15px] leading-relaxed text-white/65">
+                        {tx(
+                          "Il fixe la devise de vos montants et le fuseau de vos alertes.",
+                          "It sets the currency of your figures and the time zone of your alerts."
+                        )}
+                      </p>
                     </div>
 
-                    <div className="hidden rounded-[28px] bg-card p-5 shadow-sm lg:block">
-                      <p className="font-heading text-lg font-semibold tracking-tight">{tx("Les étapes", "The steps")}</p>
-                      <ol className="mt-3 flex flex-col gap-2">
-                        {steps.map((meta, index) => {
-                          const on = index + 1 === step
-                          return (
-                            <li
-                              key={meta.title}
-                              className={cn(
-                                "flex items-center justify-between gap-2 rounded-2xl px-4 py-2.5 text-sm",
-                                on ? "bg-[var(--ink)] font-semibold text-white" : "bg-muted text-muted-foreground"
-                              )}
-                            >
-                              <span className="truncate">{meta.title}</span>
-                              {on && <span className="h-2 w-2 shrink-0 rounded-full bg-brand" aria-hidden="true" />}
-                            </li>
-                          )
-                        })}
-                      </ol>
-                    </div>
-                  </div>
-
-                  {/* ---------------------------------------- CENTER */}
-                  <section className="flex flex-col rounded-[28px] bg-foreground/[0.055] p-5 sm:p-6">
-                    <h2
-                      ref={headingRef}
-                      tabIndex={-1}
-                      className="font-heading text-3xl font-semibold leading-[1.05] tracking-tight outline-none"
-                    >
-                      {currentMeta.title}
-                    </h2>
-                    <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="h-2 w-2 rounded-full bg-brand ring-2 ring-brand/30" aria-hidden="true" />
-                      {tx(`Étape ${step} sur ${totalSteps}`, `Step ${step} of ${totalSteps}`)}
-                    </p>
-
-                    <div className="mt-5 max-w-[85%] self-start rounded-[22px] bg-[var(--ink)] p-4 text-sm leading-relaxed text-white">
-                      {firstName ? tx(`Bonjour ${firstName}. `, `Hello ${firstName}. `) : tx("Bonjour. ", "Hello. ")}
-                      {tx(
-                        "Où travaillez-vous ? Votre pays fixe la devise de vos montants et le fuseau de vos alertes.",
-                        "Where do you work? Your country sets the currency of your figures and the time zone of your alerts."
-                      )}
-                    </div>
-
-                    <p className="mt-5 px-1 text-xs text-muted-foreground">{tx("Votre pays :", "Your country:")}</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {pickableCountries(countryCode).map((item) => {
-                        const active = countryCode === item.code
+                    <ol className="relative hidden border-t border-white/10 pt-4 lg:block" aria-label={tx("Les étapes", "The steps")}>
+                      {steps.map((meta, index) => {
+                        const on = index + 1 === step
                         return (
-                          <button
-                            key={item.code}
-                            type="button"
-                            onClick={() => {
-                              setCountryCode(item.code)
-                              setCurrencyCode(item.currency.code)
-                              setTimezoneId(item.timezoneId)
-                            }}
-                            aria-pressed={active}
+                          <li
+                            key={meta.title}
+                            aria-current={on ? "step" : undefined}
                             className={cn(
-                              "inline-flex items-center gap-2 rounded-full py-1.5 pl-4 pr-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                              active ? "bg-brand text-[#141414]" : "bg-card hover:bg-card/70"
+                              "flex items-center gap-3.5 py-2 text-[15px]",
+                              on ? "font-extrabold" : "font-medium text-white/50"
                             )}
                           >
-                            <span>{px(item.name)}</span>
-                            <span
-                              className={cn(
-                                "flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-xs font-bold",
-                                active ? "bg-[var(--ink)] text-brand" : "bg-muted text-muted-foreground"
-                              )}
-                              aria-hidden="true"
-                            >
-                              {active ? <Check className="h-3.5 w-3.5" /> : item.currency.symbol}
+                            <span className="w-5 text-[13px] font-light tabular-nums" aria-hidden="true">
+                              {String(index + 1).padStart(2, "0")}
                             </span>
-                          </button>
+                            <span className="truncate">{meta.title}</span>
+                            {on && <span className="ml-auto h-2 w-2 shrink-0 rounded-full bg-brand" aria-hidden="true" />}
+                          </li>
                         )
                       })}
-                    </div>
-                  </section>
+                    </ol>
+                  </div>
 
-                  {/* ----------------------------------------- RIGHT */}
-                  <div className="flex flex-col gap-4">
-                    <div className="rounded-[28px] bg-[var(--ink)] p-5 text-white">
-                      <div className="flex items-center justify-between">
-                        <p className="font-heading text-lg font-semibold tracking-tight">{tx("Ce que cela règle", "What this sets")}</p>
-                        <Globe2 className="h-4 w-4 text-white/50" aria-hidden="true" />
-                      </div>
-                      <dl className="mt-4 space-y-2.5 text-xs">
-                        <div className="flex items-center justify-between gap-3">
-                          <dt className="text-white/55">{tx("Pays", "Country")}</dt>
-                          <dd className="truncate font-semibold">{picked ? px(picked.name) : "—"}</dd>
-                        </div>
-                        <div className="flex items-center justify-between gap-3">
-                          <dt className="text-white/55">{tx("Devise", "Currency")}</dt>
-                          <dd>
-                            <select
-                              value={currencyCode}
-                              onChange={(event) => setCurrencyCode(event.target.value)}
-                              disabled={!countryCode}
-                              aria-label={tx("Devise du compte", "Account currency")}
-                              className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50 [&>option]:text-[#141414]"
+                  {/* ------------------------------------------ CARD */}
+                  <section className="squircle flex flex-col gap-7 rounded-[40px] bg-card p-6 shadow-[0_14px_44px_rgba(20,20,18,0.09)] sm:p-9">
+                    <div>
+                      <p className="text-[15px] font-semibold text-muted-foreground">
+                        {firstName ? tx(`Bonjour ${firstName}. `, `Hello ${firstName}. `) : tx("Bonjour. ", "Hello. ")}
+                        {tx("Où travaillez-vous ?", "Where do you work?")}
+                      </p>
+
+                      <div className="mt-4 grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+                        {pickableCountries(countryCode).map((item) => {
+                          const active = countryCode === item.code
+                          return (
+                            <button
+                              key={item.code}
+                              type="button"
+                              onClick={() => {
+                                setCountryCode(item.code)
+                                setCurrencyCode(item.currency.code)
+                                setTimezoneId(item.timezoneId)
+                              }}
+                              aria-pressed={active}
+                              className={cn(
+                                "relative flex items-center gap-4 rounded-[30px] p-5 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-col sm:items-start sm:gap-8 sm:p-6",
+                                active
+                                  ? "bg-[var(--ink)] text-white shadow-[0_14px_44px_rgba(20,20,18,0.18)]"
+                                  : "bg-muted hover:-translate-y-0.5 hover:bg-muted/70"
+                              )}
                             >
-                              {!countryCode && <option value="">{tx("Choisissez un pays", "Pick a country")}</option>}
-                              {CURRENCIES.map((c) => (
-                                <option key={c.code} value={c.code}>
-                                  {c.code} · {c.symbol}
-                                </option>
-                              ))}
-                            </select>
-                          </dd>
-                        </div>
-                        <div className="flex items-center justify-between gap-3">
-                          <dt className="text-white/55">{tx("Fuseau", "Time zone")}</dt>
-                          <dd className="truncate font-semibold">{zone ? zone.label.split(" ")[0] : "—"}</dd>
-                        </div>
-                      </dl>
-                      <div className="mt-4 flex items-end justify-between border-t border-white/10 pt-4">
-                        <span className="text-xs text-white/55">{tx("Vos montants en", "Your figures in")}</span>
-                        <span className="font-heading text-4xl font-bold leading-none text-brand">{currency?.symbol ?? "—"}</span>
+                              <span className="text-[40px] leading-none" aria-hidden="true">
+                                {flagOf(item.code)}
+                              </span>
+
+                              <span>
+                                <span className="block font-heading text-[21px] font-extrabold leading-tight tracking-tight">{px(item.name)}</span>
+                                <span className={cn("mt-1 block text-[13px]", active ? "text-white/60" : "text-muted-foreground")}>
+                                  {item.currency.symbol} · {item.currency.code}
+                                </span>
+                              </span>
+
+                              {active && (
+                                <span
+                                  className="absolute right-5 top-5 flex h-7 w-7 items-center justify-center rounded-full bg-brand text-[#141414]"
+                                  aria-hidden="true"
+                                >
+                                  <Check className="h-4 w-4" strokeWidth={3} />
+                                </span>
+                              )}
+                            </button>
+                          )
+                        })}
                       </div>
                     </div>
 
                     {/* Time zone: already detected (then set from the
                         country), shown here to confirm or correct. */}
-                    <div
-                      role="group"
-                      aria-label={tx("Fuseau horaire", "Time zone")}
-                      className="rounded-[28px] bg-card p-5 shadow-sm"
-                    >
-                      <div className="flex items-center justify-between">
-                        <p className="font-heading text-lg font-semibold tracking-tight">{tx("Fuseau horaire", "Time zone")}</p>
-                        <Clock3 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                      </div>
-                      <div className="mt-3 flex flex-col gap-1.5">
+                    <div role="group" aria-label={tx("Fuseau horaire", "Time zone")}>
+                      <p className="text-[12px] font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
+                        {tx("Fuseau horaire", "Time zone")}
+                      </p>
+
+                      <div className="mt-3.5 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                         {TIMEZONES.map((z) => {
                           const active = timezoneId === z.id
                           const suggested = picked?.timezoneId === z.id
@@ -1460,16 +1420,19 @@ export function OnboardingView({
                               aria-pressed={active}
                               title={z.label}
                               className={cn(
-                                "flex w-full items-center justify-between gap-2 rounded-2xl px-3.5 py-2 text-left text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                                active ? "bg-[var(--ink)] text-white" : "bg-muted hover:bg-muted/70"
+                                "flex min-h-12 w-full items-center justify-between gap-3 rounded-[22px] px-5 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                active ? "bg-brand text-[#141414]" : "bg-muted hover:bg-muted/70"
                               )}
                             >
-                              <span className="truncate">{z.label}</span>
+                              <span className="text-[17px] font-extrabold">{zoneCode(z.label)}</span>
+                              <span className={cn("truncate text-[14px]", active ? "text-[#141414]/70" : "text-muted-foreground")}>
+                                {zoneCities(z.label)}
+                              </span>
                               {suggested && (
                                 <span
                                   className={cn(
-                                    "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                                    active ? "bg-brand text-[#141414]" : "bg-card text-muted-foreground"
+                                    "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold",
+                                    active ? "bg-[var(--ink)] text-brand" : "bg-card text-muted-foreground"
                                   )}
                                 >
                                   {tx("Déduit de votre pays", "From your country")}
@@ -1479,14 +1442,53 @@ export function OnboardingView({
                           )
                         })}
                       </div>
-                      <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+                    </div>
+
+                    <div className="mt-auto flex flex-wrap items-end gap-x-10 gap-y-5 border-t border-border pt-6">
+                      <div>
+                        <span className="relative inline-block pb-3 font-heading text-[38px] font-light leading-none tracking-tight tabular-nums">
+                          {currency?.code ?? "—"}
+                          <span className="absolute bottom-0 left-0.5 h-1 w-7 rounded-full bg-brand" />
+                        </span>
+                        <div className="mt-2 flex items-center gap-2.5">
+                          <span className="text-[12px] font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
+                            {tx("Devise", "Currency")}
+                          </span>
+                          <select
+                            value={currencyCode}
+                            onChange={(event) => setCurrencyCode(event.target.value)}
+                            disabled={!countryCode}
+                            aria-label={tx("Devise du compte", "Account currency")}
+                            className="rounded-full bg-muted px-3 py-1 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                          >
+                            {!countryCode && <option value="">{tx("Choisissez un pays", "Pick a country")}</option>}
+                            {CURRENCIES.map((c) => (
+                              <option key={c.code} value={c.code}>
+                                {c.code} · {c.symbol}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="relative inline-block pb-3 font-heading text-[38px] font-light leading-none tracking-tight tabular-nums">
+                          {zone ? zoneCode(zone.label) : "—"}
+                          <span className="absolute bottom-0 left-0.5 h-1 w-7 rounded-full bg-brand" />
+                        </span>
+                        <p className="mt-2 text-[12px] font-extrabold uppercase tracking-[0.1em] text-muted-foreground">
+                          {tx("Fuseau", "Time zone")}
+                        </p>
+                      </div>
+
+                      <p className="max-w-[34ch] text-[12px] leading-relaxed text-muted-foreground">
                         {tx(
                           "Aucune conversion : la devise étiquette vos montants. Vos seuils sont en heures, ils suivent votre fuseau.",
                           "No conversion: the currency labels your figures. Your thresholds are in hours, so they follow your time zone."
                         )}
                       </p>
                     </div>
-                  </div>
+                  </section>
                 </div>
               )
             })()}
