@@ -12,6 +12,7 @@ import { enterAt } from "@/lib/motion"
 import { setViewAs } from "@/lib/view-as"
 import { cn } from "@/lib/utils"
 
+import { AdminChecks } from "./admin-checks"
 import { AdminGuard } from "./admin-guard"
 import { AdminSites } from "./admin-sites"
 import { AdminThresholds } from "./admin-thresholds"
@@ -419,6 +420,8 @@ export function AdminView() {
       </div>
 
       <AdminSites />
+
+      <AdminChecks />
 
       <AdminGuard />
 
