@@ -33,13 +33,18 @@ const logout = log => log.filter(l => l.path === '/auth/v1/logout').length;
     await signOutBtn(p).click(); await p.waitForTimeout(300);
     pass(await dialog(p).count() === 1, 'a confirm dialog opens');
     pass(/End your session\?/.test(await dialog(p).innerText()), 'it asks "End your session?"');
-    pass(await dialog(p).getByRole('button', { name: 'Cancel' }).count() === 1 && await dialog(p).getByRole('button', { name: 'Sign out' }).count() === 1, 'with Cancel and Sign out');
-    pass(await p.evaluate(() => document.activeElement?.textContent?.trim()) === 'Cancel', 'the safe button (Cancel) has the focus');
+    pass(await dialog(p).getByRole('button', { name: 'Stay signed in' }).count() === 1 && await dialog(p).getByRole('button', { name: 'Sign out' }).count() === 1, 'with Stay signed in and Sign out');
+    pass(await p.evaluate(() => document.activeElement?.textContent?.trim()) === 'Stay signed in', 'the safe button (Stay signed in) has the focus');
     pass(logout(log) === 0 && await stillIn(p), 'nothing signed out yet');
+    pass(/You will sign in again to come back\./.test(await dialog(p).innerText()), 'it says you will sign in again');
+    pass(/ama@acme\.test/.test(await dialog(p).locator('[data-testid=sign-out-account]').innerText()), 'it shows the real account email');
+    pass(/Esc/.test(await dialog(p).innerText()), 'and the Esc hint');
+    const lime = await dialog(p).getByRole('button', { name: 'Sign out' }).evaluate(el => { const cv = document.createElement('canvas'); cv.width = cv.height = 1; const c = cv.getContext('2d', { willReadFrequently: true }); c.fillStyle = getComputedStyle(el).backgroundColor; c.fillRect(0, 0, 1, 1); return [...c.getImageData(0, 0, 1, 1).data].slice(0, 3); });
+    pass(lime[1] > 200 && lime[2] < 100, 'Sign out is the lime button: rgb(' + lime.join(',') + ')');
     await p.screenshot({ path: 'signout-light.png' });
 
     console.log('== cancel, Escape and a click outside keep the session');
-    await dialog(p).getByRole('button', { name: 'Cancel' }).click(); await p.waitForTimeout(300);
+    await dialog(p).getByRole('button', { name: 'Stay signed in' }).click(); await p.waitForTimeout(300);
     pass(await dialog(p).count() === 0, 'Cancel closes the dialog');
     pass(logout(log) === 0 && await stillIn(p), 'Cancel: still signed in, server not called');
     pass(await p.evaluate(() => document.activeElement?.textContent?.trim()) === 'Sign out', 'Cancel: focus is back on the Sign out button');
@@ -70,7 +75,7 @@ const logout = log => log.filter(l => l.path === '/auth/v1/logout').length;
   { const { p, ctx } = await open({ lang: 'fr' });
     await signOutBtn(p, /^Se déconnecter$/).click(); await p.waitForTimeout(300);
     const t = await dialog(p).innerText();
-    pass(/Fermer votre session \?/.test(t) && /Annuler/.test(t) && /Se déconnecter/.test(t), 'title and both buttons are in French');
+    pass(/Fermer votre session \?/.test(t) && /Rester connecté/.test(t) && /Se déconnecter/.test(t) && /Vous vous reconnecterez/.test(t), 'title, hint and both buttons are in French');
     await ctx.close(); }
 
   console.log('== collapsed sidebar (icon only)');
@@ -104,7 +109,7 @@ const logout = log => log.filter(l => l.path === '/auth/v1/logout').length;
     });
     pass(r.inside && r.top, '390 px: the dialog fits and is above the open sidebar'); pass(r.scroll, 'no sideways page scroll');
     await p.screenshot({ path: 'signout-390.png' });
-    await dialog(p).getByRole('button', { name: 'Cancel' }).click(); await p.waitForTimeout(300);
+    await dialog(p).getByRole('button', { name: 'Stay signed in' }).click(); await p.waitForTimeout(300);
     pass(logout(log) === 0, '390 px: Cancel keeps the session'); await ctx.close(); }
 
   await browser.close();

@@ -31,6 +31,9 @@ export const en: Record<keyof typeof fr, string> = {
   "sidebar.expand": "Expand the sidebar",
   "sidebar.signOut": "Sign out",
   "sidebar.signOutConfirm": "End your session?",
+  "sidebar.signOutHint": "You will sign in again to come back.",
+  "sidebar.staySignedIn": "Stay signed in",
+  "sidebar.escToStay": "to stay",
 
   /* ---------------------------------------------------------------- */
   /*  Navigation                                                       */

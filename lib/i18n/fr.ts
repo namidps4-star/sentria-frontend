@@ -52,6 +52,9 @@ export const fr = {
   "sidebar.expand": "Déployer la barre latérale",
   "sidebar.signOut": "Se déconnecter",
   "sidebar.signOutConfirm": "Fermer votre session ?",
+  "sidebar.signOutHint": "Vous vous reconnecterez pour revenir.",
+  "sidebar.staySignedIn": "Rester connecté",
+  "sidebar.escToStay": "pour rester",
 
   /* ---------------------------------------------------------------- */
   /*  Navigation                                                       */
