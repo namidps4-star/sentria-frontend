@@ -1,5 +1,6 @@
 "use client"
 
+import { RelativeTime } from "./relative-time"
 import { SupplierActions } from "./supplier-actions"
 import type { Supplier } from "@/lib/supplier"
 import { AskHeader } from "./ask-header"
@@ -1681,7 +1682,7 @@ export function RecommendationsBoard({
       aria-expanded={assigningId === id}
       aria-haspopup="dialog"
       className={cn(
-        "flex min-w-0 shrink-0 items-center gap-1.5 rounded-full text-left transition-opacity hover:opacity-70",
+        "flex min-w-0 shrink-0 items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-left transition-opacity hover:opacity-70",
         compact && "[&_span.h-6]:h-5 [&_span.h-6]:w-5"
       )}
     >
@@ -1697,7 +1698,7 @@ export function RecommendationsBoard({
   ) => (
     <label
       className={cn(
-        "relative flex shrink-0 cursor-pointer items-center gap-1 rounded-lg px-1 py-0.5 text-[11px] transition-colors hover:bg-muted",
+        "relative flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full bg-muted px-2.5 py-1.5 text-xs transition-colors hover:bg-muted/70",
         "focus-within:outline-none focus-within:ring-2 focus-within:ring-ring",
         overdue ? "font-semibold text-destructive" : "text-muted-foreground"
       )}
@@ -2180,10 +2181,9 @@ export function RecommendationsBoard({
                   </div>
                 )}
 
-                {columnCards.map(({ id, rec, task }) => {
+                {columnCards.map(({ id, rec, task }, cardIndex) => {
                   const Icon = CATEGORY_ICON[rec.action_category] ?? Sparkles
                   const tone = toneOf(rec)
-                  const risk = riskOf(rec)
                   const isDragging = draggingId === id
                   const overdue = isDeadlineOverdue(task.deadline)
 
@@ -2217,80 +2217,37 @@ export function RecommendationsBoard({
                       onDragEnd={handleDragEnd}
                       aria-labelledby={`board-card-${id}`}
                       className={cn(
-                        "group relative cursor-grab rounded-2xl border border-border bg-card px-3 py-2.5 shadow-sm",
-                        "transition-[box-shadow,border-color,transform] duration-200 ease-out",
-                        "hover:border-foreground/15 hover:shadow-md active:cursor-grabbing",
+                        "group relative cursor-grab squircle rounded-[26px] bg-card px-[18px] pb-3.5 pt-3.5 shadow-sm",
+                        "transition-[box-shadow,transform] duration-200 ease-out",
+                        "hover:shadow-md active:cursor-grabbing",
                         arrivals.has(id) && "t-rise-in",
                         isDragging &&
                           "scale-[1.02] opacity-95 shadow-xl ring-2 ring-brand"
                       )}
                     >
-                      {/* Three lines: what and how bad; what to do; who,
-                          by when, for how much. The rest is in the detail. */}
-                      <div className="flex items-center gap-2">
-                        <h5
-                          id={`board-card-${id}`}
-                          className="min-w-0 flex-1 truncate text-sm font-semibold tracking-tight"
-                          title={subtitle ? `${rec.equipment} · ${subtitle}` : rec.equipment}
+                      {/* The priority number with its lime line, and how bad
+                          it is; then what and what to do; then who, by when,
+                          and how long ago. The rest is in the detail. */}
+                      <div className="flex items-start gap-2.5">
+                        <span
+                          data-board-number=""
+                          className={cn(
+                            "relative pb-2 font-heading text-[44px] font-light leading-none tracking-tight tabular-nums",
+                            column.id === "done" ? "text-muted-foreground/45" : "text-muted-foreground"
+                          )}
+                          aria-hidden="true"
                         >
-                          {rec.equipment}
-                          {subtitle && (
-                            <span className="font-normal text-muted-foreground">
-                              {` · ${subtitle}`}
-                            </span>
-                          )}
-                        </h5>
-
-                        <StatusTag tone={tone.tag} size="xs">
-                          {px(tone.word)}
-                          {risk !== null && (
-                            <span className="tabular-nums opacity-70">
-                              {` · ${risk}`}
-                            </span>
-                          )}
-                        </StatusTag>
-                      </div>
-
-                      <p
-                        className="mt-1 flex items-start gap-1.5 text-xs leading-5 text-muted-foreground"
-                        title={rec.recommended_action}
-                      >
-                        <Icon
-                          className="mt-1 h-3 w-3 shrink-0"
-                          aria-label={px(
-                            CATEGORY_LABEL[rec.action_category] ?? CATEGORY_LABEL.other
-                          )}
-                        />
-                        <span className="line-clamp-1">{rec.recommended_action}</span>
-                      </p>
-
-                      <div className="relative mt-2 flex items-center gap-1.5">
-                        {ownerButton(id, assignees, true)}
-
-                        {assigningId === id && (
-                          <AssignPopover
-                            task={task}
-                            contractors={contractors}
-                            contractorsLoaded={loaded}
-                            onPatch={(patch) => updateTask(id, patch)}
-                            onClose={closeAssign}
+                          {String(cardIndex + 1).padStart(2, "0")}
+                          <span
+                            className={cn(
+                              "absolute bottom-0 left-0.5 h-1 w-[26px] rounded-full",
+                              column.id === "done" ? "bg-[var(--tag-success-fg)] opacity-50" : "bg-accent"
+                            )}
                           />
-                        )}
+                        </span>
 
-                        {dueDate(id, rec.equipment, task.deadline, overdue)}
-
-                        {/* Priority is the column's sort order, and the
-                            severity tag already says how bad it is. */}
-                        {(rec.exposureEUR ?? 0) > 0 && (
-                          <span className="min-w-0 truncate text-[11px] font-semibold tabular-nums">
-                            {formatMoney(rec.exposureEUR!, currency, tx)}
-                          </span>
-                        )}
-
-                        {/* Move arrows appear on hover or keyboard focus;
-                            the detail button is always there (touch has
-                            no hover). */}
-                        <div className="ml-auto flex shrink-0 items-center opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+                        <div className="ml-auto mt-1 flex shrink-0 items-center gap-1">
+                        <div className="flex shrink-0 items-center opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
                           <button
                             type="button"
                             aria-label={tx(
@@ -2326,6 +2283,11 @@ export function RecommendationsBoard({
                           </button>
                         </div>
 
+
+                          <StatusTag tone={tone.tag} size="xs">
+                            {px(tone.word)}
+                          </StatusTag>
+
                         <button
                           type="button"
                           onClick={() => setEditingId(id)}
@@ -2337,6 +2299,68 @@ export function RecommendationsBoard({
                         >
                           <MoreHorizontal className="h-3.5 w-3.5" />
                         </button>
+
+                        </div>
+                      </div>
+
+                      <h5
+                        id={`board-card-${id}`}
+                        className="mt-1.5 truncate text-[17px] font-bold tracking-tight"
+                        title={subtitle ? `${rec.equipment} · ${subtitle}` : rec.equipment}
+                      >
+                        {rec.equipment}
+                        {subtitle && (
+                          <span className="text-sm font-normal text-muted-foreground">
+                            {` · ${subtitle}`}
+                          </span>
+                        )}
+                      </h5>
+
+                      <p
+                        className="mt-1 flex items-start gap-1.5 text-sm leading-snug text-muted-foreground"
+                        title={rec.recommended_action}
+                      >
+                        <Icon
+                          className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                          aria-label={px(
+                            CATEGORY_LABEL[rec.action_category] ?? CATEGORY_LABEL.other
+                          )}
+                        />
+                        <span className="line-clamp-2">{rec.recommended_action}</span>
+                      </p>
+
+                      <div className="relative mt-3.5 flex items-center gap-1.5">
+                        {ownerButton(id, assignees, true)}
+
+                        {assigningId === id && (
+                          <AssignPopover
+                            task={task}
+                            contractors={contractors}
+                            contractorsLoaded={loaded}
+                            onPatch={(patch) => updateTask(id, patch)}
+                            onClose={closeAssign}
+                          />
+                        )}
+
+                        {dueDate(id, rec.equipment, task.deadline, overdue)}
+
+                        {/* Priority is the column's sort order, and the
+                            severity tag already says how bad it is. */}
+                        {(rec.exposureEUR ?? 0) > 0 && (
+                          <span className="min-w-0 truncate text-[11px] font-semibold tabular-nums">
+                            {formatMoney(rec.exposureEUR!, currency, tx)}
+                          </span>
+                        )}
+
+                        {/* Move arrows appear on hover or keyboard focus;
+                            the detail button is always there (touch has
+                            no hover). */}
+                        <RelativeTime
+                          date={rec.date}
+                          fullDate={new Date(rec.date).toLocaleString(tx("fr-FR", "en-GB"))}
+                          className="ml-auto text-xs font-semibold text-muted-foreground"
+                        />
+
                       </div>
                     </article>
                   )

@@ -324,7 +324,7 @@ function CountBadge({ tab, tx }: { tab: SheetTab; tx: Tx }) {
     <span
       className={cn(
         "inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums",
-        critical ? "bg-[var(--tag-danger-bg)] text-[var(--tag-danger-fg)]" : "bg-muted text-muted-foreground"
+        critical ? "bg-[var(--tag-critical-bg)] text-[var(--tag-critical-fg)]" : "bg-muted text-muted-foreground"
       )}
       aria-label={
         critical

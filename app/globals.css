@@ -382,6 +382,8 @@
    the tags stay clear without glaring. Every pair is at least 5:1. */
 :root {
   --tag-danger-bg: #ffd6da; --tag-danger-bd: #ffb3bc; --tag-danger-fg: #b3202e;
+  /* Solid red for the Critical tag and the red counts: clearly red, white text (4.6:1). The pastel danger tokens above stay for text and panels. */
+  --tag-critical-bg: #d83a44; --tag-critical-fg: #ffffff;
   --tag-warning-bg: #ffe6a8; --tag-warning-bd: #f5cf6a; --tag-warning-fg: #7a4a00;
   --tag-success-bg: #c9f2dc; --tag-success-bd: #92dcb6; --tag-success-fg: #0f6139;
   --tag-info-bg: #dfe3ff; --tag-info-bd: #b7bdfa; --tag-info-fg: #2b36a8;
@@ -391,6 +393,7 @@
 }
 .dark {
   --tag-danger-bg: #4f3536; --tag-danger-bd: #7a4a4e; --tag-danger-fg: #ffb8bf;
+  --tag-critical-bg: #e0525c; --tag-critical-fg: #1a0507;
   --tag-warning-bg: #4b422a; --tag-warning-bd: #6e5e33; --tag-warning-fg: #ffd97a;
   --tag-success-bg: #2b4437; --tag-success-bd: #3d6a52; --tag-success-fg: #8ee8bb;
   --tag-info-bg: #3a3d53; --tag-info-bd: #545a86; --tag-info-fg: #c3c9ff;
@@ -401,6 +404,8 @@
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
     --tag-danger-bg: #4f3536; --tag-danger-bd: #7a4a4e; --tag-danger-fg: #ffb8bf;
+    --tag-critical-bg: #e0525c; --tag-critical-fg: #1a0507;
+  --tag-critical-bg: #e0525c; --tag-critical-fg: #1a0507;
     --tag-warning-bg: #4b422a; --tag-warning-bd: #6e5e33; --tag-warning-fg: #ffd97a;
     --tag-success-bg: #2b4437; --tag-success-bd: #3d6a52; --tag-success-fg: #8ee8bb;
     --tag-info-bg: #3a3d53; --tag-info-bd: #545a86; --tag-info-fg: #c3c9ff;
@@ -415,6 +420,8 @@
    "system"): no `dark:` override needed. Keep in step with :root above. */
 .tags-light {
   --tag-danger-bg: #ffd6da; --tag-danger-bd: #ffb3bc; --tag-danger-fg: #b3202e;
+  /* Solid red for the Critical tag and the red counts: clearly red, white text (4.6:1). The pastel danger tokens above stay for text and panels. */
+  --tag-critical-bg: #d83a44; --tag-critical-fg: #ffffff;
   --tag-warning-bg: #ffe6a8; --tag-warning-bd: #f5cf6a; --tag-warning-fg: #7a4a00;
   --tag-success-bg: #c9f2dc; --tag-success-bd: #92dcb6; --tag-success-fg: #0f6139;
   --tag-info-bg: #dfe3ff; --tag-info-bd: #b7bdfa; --tag-info-fg: #2b36a8;

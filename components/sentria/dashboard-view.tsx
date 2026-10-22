@@ -4393,39 +4393,47 @@ export function DashboardView({
           </div>
 
           {expandedAlert && (
-            <div className="min-w-0 self-start rounded-3xl bg-sidebar p-5 text-sidebar-foreground shadow-lg ring-1 ring-sidebar-border lg:sticky lg:top-6">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-accent">
+            <div
+              data-alert-detail=""
+              className="squircle min-w-0 self-start rounded-[30px] bg-sidebar p-5 text-sidebar-foreground shadow-lg ring-1 ring-sidebar-border lg:sticky lg:top-6"
+            >
+              <div className="flex items-center gap-3.5">
+                <AlertIcon
+                  alert={expandedAlert}
+                  className="h-[46px] w-[46px] rounded-2xl bg-white/10 text-sidebar-foreground [&_svg]:h-[22px] [&_svg]:w-[22px]"
+                />
+
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-sidebar-foreground/60">
                     {tx("Détails de l'alerte", "Alert detail")}
                   </p>
 
-                  <h4 className="mt-1.5 truncate font-heading text-xl font-bold tracking-tight">
+                  <h4 className="truncate font-heading text-2xl font-bold leading-tight tracking-tight">
                     {expandedAlert.equipment}
                   </h4>
 
-                  <p className="mt-0.5 text-xs text-sidebar-foreground/50">
-                    {new Date(
-                      expandedAlert.date
-                    ).toLocaleString(dateLocale)}
-                  </p>
+                  <RelativeTime
+                    date={expandedAlert.date}
+                    fullDate={new Date(expandedAlert.date).toLocaleString(dateLocale)}
+                    className="text-[13px] text-sidebar-foreground/65"
+                  />
                 </div>
 
-                <div className="flex shrink-0 items-center gap-2">
-                  <SeverityTag severity={expandedAlert.severity} tx={tx} size="sm" />
-                  <ValueTag params={expandedAlert.params} tx={tx} size="sm" />
-                  <LossTag params={expandedAlert.params} tx={tx} size="sm" />
-                  <DemotedTag params={expandedAlert.params} tx={tx} size="sm" />
+                <button
+                  type="button"
+                  onClick={() => setExpandedAlertKey(null)}
+                  aria-label={tx("Fermer les détails", "Close the detail")}
+                  className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-white/10 text-sidebar-foreground/70 transition-colors hover:bg-accent hover:text-accent-foreground"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setExpandedAlertKey(null)}
-                    aria-label={tx("Fermer les détails", "Close the detail")}
-                    className="flex h-7 w-7 items-center justify-center rounded-full bg-white/5 text-sidebar-foreground/60 ring-1 ring-white/10 transition-colors hover:bg-accent hover:text-accent-foreground hover:ring-transparent"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+              <div className="mt-3.5 flex flex-wrap items-center gap-1.5">
+                <SeverityTag severity={expandedAlert.severity} tx={tx} size="sm" />
+                <ValueTag params={expandedAlert.params} tx={tx} size="sm" />
+                <LossTag params={expandedAlert.params} tx={tx} size="sm" />
+                <DemotedTag params={expandedAlert.params} tx={tx} size="sm" />
               </div>
 
               {(() => {
@@ -4438,15 +4446,130 @@ export function DashboardView({
                 ) : null
               })()}
 
-              <div className="mt-4 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-sidebar-foreground/40">
-                  {tx("Message", "Message")}
-                </p>
+              {/* Risk, confidence and category as three big light numbers
+                  with the lime line, like the Tracking board. */}
+              {(() => {
+                const risk = expandedRecommendation?.risk_score
+                const hasRisk = typeof risk === "number"
+                const confidence = expandedRecommendation
+                  ? estimateConfidence(
+                      expandedRecommendation,
+                      recurrenceOf(expandedRecommendation.equipment, alerts),
+                      trackRecordForCategory(expandedRecommendation.action_category, recommendations, taskMap),
+                      alerts
+                    )
+                  : null
+                const numeral = "relative pb-2.5 font-heading text-[44px] font-light leading-none tracking-tight tabular-nums"
+                const line = (on: boolean) => (
+                  <span className={cn("absolute bottom-0 left-0.5 h-1 w-[26px] rounded-full", on ? "bg-accent" : "bg-white/20")} />
+                )
+                const caption = "mt-2 text-[11px] font-extrabold uppercase tracking-[0.1em] text-sidebar-foreground/55"
 
-                <p className="mt-1 text-sm leading-5 text-sidebar-foreground/90">
-                  {expandedAlert.message}
-                </p>
-              </div>
+                return (
+                  <div data-alert-numbers="" className="mt-5 grid grid-cols-[1fr_1fr_1.25fr] gap-2 px-1">
+                    <div
+                      title={
+                        hasRisk
+                          ? tx(
+                              "Gravité du problème lui-même, calculée à partir des mesures brutes",
+                              "How severe the problem itself is, computed from the raw measurements"
+                            )
+                          : tx(
+                              "Ce secteur ne calcule pas encore de score de risque pour cette alerte",
+                              "This sector does not compute a risk score for this alert yet"
+                            )
+                      }
+                    >
+                      <div className={cn(numeral, !hasRisk && "text-sidebar-foreground/40")}>
+                        {hasRisk ? risk : "—"}
+                        {hasRisk && <span className="ml-0.5 text-base font-semibold opacity-50">/100</span>}
+                        {line(hasRisk)}
+                      </div>
+                      <p className={caption}>{tx("Score de risque", "Risk score")}</p>
+                    </div>
+
+                    <div
+                      title={tx(
+                        "À quel point SentrIA est sûr que cette alerte mérite votre attention",
+                        "How sure SentrIA is that this alert deserves your attention"
+                      )}
+                    >
+                      <div className={cn(numeral, confidence === null && "text-sidebar-foreground/40")}>
+                        {confidence === null ? "—" : confidence}
+                        {confidence !== null && <span className="ml-0.5 text-base font-semibold opacity-50">%</span>}
+                        {line(confidence !== null)}
+                      </div>
+                      <p className={caption}>{tx("Confiance", "Confidence")}</p>
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="pt-3.5 text-xl font-bold capitalize leading-tight">
+                        {expandedRecommendation?.action_category?.replace(/_/g, " ") ?? "N/A"}
+                      </p>
+                      <p className={caption}>{tx("Catégorie", "Category")}</p>
+                    </div>
+                  </div>
+                )
+              })()}
+
+              {/* What happened, why, what to do: three steps down one line. */}
+              <ol data-alert-steps="" className="mt-6 px-1">
+                <li className="flex gap-3">
+                  <span className="flex flex-col items-center" aria-hidden="true">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-xs font-extrabold">1</span>
+                    <span className="my-1 w-0.5 flex-1 bg-white/15" />
+                  </span>
+                  <div className="min-w-0 flex-1 pb-4">
+                    <p className="text-[10px] font-extrabold uppercase tracking-widest text-sidebar-foreground/55">
+                      {tx("Ce qui s'est passé", "What happened")}
+                    </p>
+                    <p className="mt-1 text-base font-bold leading-snug">{expandedAlert.message}</p>
+                  </div>
+                </li>
+
+                {expandedRecommendation && (
+                  <li className="flex gap-3">
+                    <span className="flex flex-col items-center" aria-hidden="true">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-xs font-extrabold">2</span>
+                      <span className="my-1 w-0.5 flex-1 bg-white/15" />
+                    </span>
+                    <div className="min-w-0 flex-1 pb-4">
+                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-sidebar-foreground/55">
+                        {tx("Pourquoi", "Why")}
+                      </p>
+                      <p className="mt-1 text-sm leading-6 text-sidebar-foreground/80">
+                        {reasoningFor(
+                          expandedRecommendation,
+                          recurrenceOf(expandedRecommendation.equipment, alerts),
+                          tx
+                        )}
+                      </p>
+                    </div>
+                  </li>
+                )}
+
+                <li className="flex gap-3">
+                  <span className="flex flex-col items-center" aria-hidden="true">
+                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-xs font-extrabold text-accent-foreground">
+                      {expandedRecommendation ? 3 : 2}
+                    </span>
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-extrabold uppercase tracking-widest text-sidebar-foreground/55">
+                      {tx("À faire maintenant", "Do this now")}
+                    </p>
+                    <div data-alert-action="" className="squircle mt-1.5 rounded-3xl bg-accent p-4 text-accent-foreground">
+                      <p className="text-base font-bold leading-snug">
+                        {expandedRecommendation?.recommended_action ??
+                          tx(
+                            "Analyse en cours, recommandation bientôt disponible.",
+                            "Analysis in progress, a recommendation is coming."
+                          )}
+                      </p>
+                    </div>
+                  </div>
+                </li>
+              </ol>
 
               <SupplierActions supplier={supplierFromParams(expandedAlert.params)} tone="dark" className="mt-3" />
 
@@ -4458,197 +4581,48 @@ export function DashboardView({
                 className="mt-3"
               />
 
-              <div className="mt-3 grid grid-cols-2 gap-2 rounded-2xl bg-white/[0.06] p-4 ring-1 ring-white/10">
-                <div>
-                  <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
-                    {tx("Secteur", "Sector")}
-                  </p>
-
-                  <p className="mt-1 text-sm font-semibold capitalize">
-                    {getSectorLabel(expandedAlert.sector, tx)}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
-                    {tx("Statut", "Status")}
-                  </p>
-
-                  <SeverityTag severity={expandedAlert.severity} tx={tx} size="sm" className="mt-1" />
-                </div>
-
-                <div>
-                  <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
-                    {tx("Score de risque", "Risk score")}
-                  </p>
-
-                  <p
-                    className={cn(
-                      "mt-1 text-sm font-semibold",
-                      typeof expandedRecommendation?.risk_score === "number"
-                        ? "text-accent"
-                        : "text-sidebar-foreground/40"
+              <p className="mt-3 px-1 text-xs leading-5 text-sidebar-foreground/55">
+                {expandedRecommendation
+                  ? getRecommendationContext(expandedRecommendation, tx)
+                  : tx(
+                      "SentrIA analyse cette alerte afin d'identifier l'action opérationnelle la plus pertinente.",
+                      "SentrIA is working out the most useful operational action for this alert."
                     )}
-                    title={
-                      typeof expandedRecommendation?.risk_score === "number"
-                        ? tx(
-                            "Gravité du problème lui-même, calculée à partir des mesures brutes",
-                            "How severe the problem itself is, computed from the raw measurements"
-                          )
-                        : tx(
-                            "Ce secteur ne calcule pas encore de score de risque pour cette alerte",
-                            "This sector does not compute a risk score for this alert yet"
-                          )
-                    }
-                  >
-                    {typeof expandedRecommendation?.risk_score === "number"
-                      ? `${expandedRecommendation.risk_score} / 100`
-                      : tx("Non calculé", "Not computed")}
-                  </p>
-                </div>
+              </p>
 
-                <div>
-                  <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
-                    {tx("Confiance", "Confidence")}
-                  </p>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                {expandedRecommendation &&
+                  (() => {
+                    const actionKey = taskKeyFor(expandedRecommendation)
+                    const row = taskMap[actionKey]
 
-                  {expandedRecommendation ? (
-                    <p
-                      className="mt-1 inline-flex items-center gap-1 text-sm font-semibold"
-                      title={tx(
-                        "À quel point SentrIA est sûr que cette alerte mérite votre attention",
-                        "How sure SentrIA is that this alert deserves your attention"
-                      )}
-                    >
-                      <Gauge className="h-3 w-3 shrink-0 text-sidebar-foreground/50" />
-                      {estimateConfidence(
-                        expandedRecommendation,
-                        recurrenceOf(
-                          expandedRecommendation.equipment,
-                          alerts
-                        ),
-                        trackRecordForCategory(
-                          expandedRecommendation.action_category,
-                          recommendations,
-                          taskMap
-                        ),
-                        alerts
-                      )}
-                      %
-                    </p>
-                  ) : (
-                    <p className="mt-1 text-sm font-semibold text-sidebar-foreground/40">
-                      {tx("Non mesuré", "Not measured")}
-                    </p>
-                  )}
-                </div>
-
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-wide text-sidebar-foreground/40">
-                    {tx("Catégorie", "Category")}
-                  </p>
-
-                  <p className="mt-1 truncate text-sm font-semibold capitalize">
-                    {expandedRecommendation?.action_category ?? "N/A"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-3 rounded-2xl border border-accent/20 bg-accent/5 px-4 py-3">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-accent">
-                  {tx("Recommandation", "Recommendation")}
-                </p>
-
-                <p className="mt-1.5 text-sm font-medium leading-5 text-sidebar-foreground/90">
-                  {expandedRecommendation?.recommended_action ??
-                    tx(
-                      "Analyse en cours, recommandation bientôt disponible.",
-                      "Analysis in progress, a recommendation is coming."
-                    )}
-                </p>
-              </div>
-
-              {expandedRecommendation && (
-                <div className="mt-3 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
-                    {tx("Pourquoi", "Why")}
-                  </p>
-
-                  <p className="mt-1.5 text-xs leading-5 text-sidebar-foreground/70">
-                    {reasoningFor(
-                      expandedRecommendation,
-                      recurrenceOf(
-                        expandedRecommendation.equipment,
-                        alerts
-                      ),
-                      tx
-                    )}
-                  </p>
-                </div>
-              )}
-
-              <div className="mt-3 rounded-2xl bg-white/[0.06] px-4 py-3 ring-1 ring-white/10">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">
-                  {tx("Contexte sectoriel", "Sector context")}
-                </p>
-
-                <p className="mt-1.5 text-xs leading-5 text-sidebar-foreground/70">
-                  {expandedRecommendation
-                    ? getRecommendationContext(
-                        expandedRecommendation,
-                        tx
-                      )
-                    : tx(
-                        "SentrIA analyse cette alerte afin d'identifier l'action opérationnelle la plus pertinente.",
-                        "SentrIA is working out the most useful operational action for this alert."
-                      )}
-                </p>
-              </div>
-
-              {expandedRecommendation &&
-                (() => {
-                  const actionKey = taskKeyFor(expandedRecommendation)
-                  const row = taskMap[actionKey]
-
-                  return !row || row.status !== "done" ? (
-                    <div className="mt-3">
+                    return !row || row.status !== "done" ? (
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation()
                           markHandled(actionKey, expandedRecommendation)
                         }}
-                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-accent px-3 py-2 text-xs font-semibold text-accent-foreground transition-opacity hover:opacity-90"
+                        className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-[13px] font-bold text-accent-foreground transition-opacity hover:opacity-90"
                       >
                         <Check className="h-3.5 w-3.5" />
                         {tx("Marquer traité", "Mark handled")}
                       </button>
-
-                      {actionError && (
-                        <p
-                          role="alert"
-                          className="mt-2 text-[11px] leading-4 text-destructive"
-                        >
-                          {actionError}
+                    ) : (
+                      <div className="w-full rounded-2xl bg-emerald-500/10 px-3 py-2.5 ring-1 ring-emerald-500/30">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-sidebar-foreground/60">
+                          {tx("Résultat", "Outcome")}
                         </p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="mt-3 rounded-xl bg-emerald-500/10 px-3 py-2.5 ring-1 ring-emerald-500/30">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-sidebar-foreground/60">
-                        {tx("Résultat", "Outcome")}
-                      </p>
-                      <p className="mt-1 text-[11px] leading-4 text-sidebar-foreground/80">
-                        {tx(
-                          "Traité. SentrIA continue de surveiller cet actif pour confirmer l'effet.",
-                          "Handled. SentrIA keeps watching this asset to confirm the effect."
-                        )}
-                      </p>
-                    </div>
-                  )
-                })()}
+                        <p className="mt-1 text-[11px] leading-4 text-sidebar-foreground/80">
+                          {tx(
+                            "Traité. SentrIA continue de surveiller cet actif pour confirmer l'effet.",
+                            "Handled. SentrIA keeps watching this asset to confirm the effect."
+                          )}
+                        </p>
+                      </div>
+                    )
+                  })()}
 
-              <div className="mt-4 flex items-center justify-end">
                 <button
                   type="button"
                   disabled={!expandedRecommendation}
@@ -4656,15 +4630,13 @@ export function DashboardView({
                     e.stopPropagation()
 
                     if (expandedRecommendation) {
-                      setSelectedRecommendation(
-                        expandedRecommendation
-                      )
+                      setSelectedRecommendation(expandedRecommendation)
                     }
                   }}
                   className={cn(
-                    "inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition-transform",
+                    "inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-[13px] font-bold transition-colors",
                     expandedRecommendation
-                      ? "bg-accent text-accent-foreground hover:scale-[1.02]"
+                      ? "bg-white/10 text-sidebar-foreground hover:bg-white/15"
                       : "cursor-not-allowed bg-white/10 text-sidebar-foreground/40"
                   )}
                 >
@@ -4672,6 +4644,12 @@ export function DashboardView({
                   <ArrowUpRight className="h-3.5 w-3.5" />
                 </button>
               </div>
+
+              {actionError && (
+                <p role="alert" className="mt-2 text-[11px] leading-4 text-destructive">
+                  {actionError}
+                </p>
+              )}
             </div>
           )}
         </div>

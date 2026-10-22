@@ -44,7 +44,7 @@ const TONES: Record<TagTone, { tag: string; icon: LucideIcon }> = {
     icon: CircleCheck,
   },
   danger: {
-    tag: "border-[var(--tag-danger-bd)] bg-[var(--tag-danger-bg)] text-[var(--tag-danger-fg)]",
+    tag: "border-[var(--tag-critical-bg)] bg-[var(--tag-critical-bg)] text-[var(--tag-critical-fg)]",
     icon: CircleX,
   },
   neutral: {
