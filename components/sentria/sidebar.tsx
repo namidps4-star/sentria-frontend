@@ -570,31 +570,54 @@ export function Sidebar({
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="sign-out-title"
-            className={cn("w-full max-w-sm rounded-3xl border border-border bg-card p-6 shadow-2xl t-modal", signOutDialog.className)}
+            className={cn("squircle w-full max-w-[26rem] rounded-[48px] bg-card px-8 pb-7 pt-10 text-center shadow-[0_1px_3px_rgba(0,0,0,0.08),0_40px_90px_rgba(0,0,0,0.3)] t-modal", signOutDialog.className)}
           >
-            <h3 id="sign-out-title" className="font-heading text-lg font-bold text-foreground">
+            <span className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-brand/30" aria-hidden="true">
+              <span className="flex h-[68px] w-[68px] items-center justify-center rounded-full bg-brand text-[#141414]">
+                <LogOut className="h-7 w-7" strokeWidth={2.3} />
+              </span>
+            </span>
+
+            <h3 id="sign-out-title" className="mt-6 font-heading text-[32px] font-extrabold leading-tight tracking-tight text-foreground">
               {t("sidebar.signOutConfirm")}
             </h3>
-            <div className="mt-5 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                autoFocus
-                onClick={cancelSignOut}
-                className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {t("action.cancel")}
-              </button>
+
+            <p className="mt-2 text-base leading-snug text-muted-foreground">{t("sidebar.signOutHint")}</p>
+
+            {email && (
+              <span className="mt-5 inline-flex max-w-full items-center gap-2.5 rounded-full bg-muted py-1.5 pl-1.5 pr-4" data-testid="sign-out-account">
+                <span className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-[13px] font-extrabold uppercase text-brand" aria-hidden="true">
+                  {(name || email).trim().charAt(0)}
+                </span>
+                <span className="truncate text-sm font-semibold text-foreground/80">{email}</span>
+              </span>
+            )}
+
+            <div className="mt-6 grid gap-2.5">
               <button
                 type="button"
                 onClick={() => {
                   setConfirmingSignOut(false)
                   onSignOut?.()
                 }}
-                className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-[#141414] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="inline-flex h-14 items-center justify-center rounded-full bg-brand text-[17px] font-extrabold text-[#141414] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
                 {t("sidebar.signOut")}
               </button>
+
+              <button
+                type="button"
+                autoFocus
+                onClick={cancelSignOut}
+                className="inline-flex h-14 items-center justify-center rounded-full bg-muted text-[17px] font-extrabold text-foreground transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                {t("sidebar.staySignedIn")}
+              </button>
             </div>
+
+            <p className="mt-4 hidden text-[13px] text-muted-foreground sm:block">
+              <kbd className="rounded-md border border-border px-1.5 py-0.5 font-sans text-xs font-bold">Esc</kbd> {t("sidebar.escToStay")}
+            </p>
           </div>
         </div>
       )}
