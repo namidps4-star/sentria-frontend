@@ -1,5 +1,5 @@
-// The glyphs of the site menu: one per sector (on its coloured squircle) and
-// one per department (on its pill). Solar Bold (480 Design, CC BY 4.0).
+// The glyphs of the site menu and the Sites page: one per sector (on its
+// coloured squircle), one per department (on its pill) and one per data source. Solar Bold (480 Design, CC BY 4.0).
 // Solar has no factory, truck or wrench, so a near one stands in.
 // After editing, run: node scripts/build-site-icons.mjs
 export const SITE_ICONS = {
@@ -11,6 +11,11 @@ export const SITE_ICONS = {
   "sector:energy": "bolt-bold",
   "sector:transportation": "bus-bold",
   "sector:other": "map-point-bold",
+
+  "source:csv": "upload-bold",
+  "source:api": "code-square-bold",
+  "source:erp": "database-bold",
+  "source:iot": "wi-fi-router-bold",
 
   "dept:usine-production": "buildings-2-bold",
   "dept:atelier-soustraitance": "tuning-2-bold",

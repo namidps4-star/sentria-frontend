@@ -61,6 +61,13 @@ export function sectorIconKey(sector: string): string {
   return sector in SECTOR_TILE ? `sector:${sector}` : "sector:other"
 }
 
+/** A data source's squircle: a quiet graphite, so the sectors keep the colour. */
+export const SOURCE_TILE_BACKGROUND = "linear-gradient(165deg, #9aa5bd, #566178)"
+
+export function sourceIconKey(type: string): string {
+  return `source:${type}`
+}
+
 export function departmentIconKey(department: string): string {
   return `dept:${department}`
 }

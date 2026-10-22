@@ -1,4 +1,5 @@
-// The site page wears the app's UI: black squircle banner, lime / white / black tiles, squircle cards.
+// The site page wears the app's UI: black squircle banner, lime / white / black tiles, squircle cards,
+// and the same gradient glyph tiles as the site menu for the sectors and the data sources.
 // Light, dark and 390 px. Screenshots go to E2E_SHOTS (default: the working directory).
 const { chromium } = require('playwright');
 const { LAUNCH, APP_URL } = require('./env');
@@ -88,6 +89,12 @@ const json = (r, body) => r.fulfill({ status: 200, contentType: 'application/jso
     pass(stats.every(c => c.n === 3 && c.keys === 'assets,warnings,critical'), 'each card has the Assets, Warnings and Critical cells');
     pass(stats.every(c => c.squircle && c.radius.every(r => r >= 24)), 'the cells are squircles with a big corner');
     pass(stats.every(c => c.bars && c.tags), 'each cell has its tag and its bar');
+    const tiles = await p.evaluate(() => ({
+      sector: [...document.querySelectorAll('main [data-sector-icon]')].map(e => ({ drawn: !!e.querySelector('svg path'), tile: /linear-gradient/.test(getComputedStyle(e).backgroundImage), w: Math.round(e.getBoundingClientRect().width) })),
+    }));
+    pass(tiles.sector.length >= 4 && tiles.sector.every(t => t.drawn && t.tile), `every sector icon is a drawn glyph on a gradient squircle (${tiles.sector.length}: the active tile, its chip and the cards)`);
+    pass(tiles.sector.filter(t => t.w === 46).length === 3, 'the three site cards carry a 46 px tile');
+        pass(!(await p.locator('main').evaluate(el => /[\u{1F300}-\u{1FAFF}]/u.test(el.innerText))), 'and no emoji');
     await p.screenshot({ path: path.join(SHOTS, `sitesui-list-${name}.png`), fullPage: vw < 768 });
     await ctx.close();
   }

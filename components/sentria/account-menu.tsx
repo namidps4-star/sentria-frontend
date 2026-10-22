@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react"
 import { ChevronDown, ChevronRight, MapPin, Plus, User } from "@/lib/icons"
 import { requestAddSiteOnOpen } from "@/lib/active-site"
-import { departmentIconKey, sectorIconKey, sectorTileBackground, useSiteIcons, type SiteIconData } from "@/lib/site-icons"
+import { departmentIconKey, useSiteIcons, type SiteIconData } from "@/lib/site-icons"
+import { SectorTile } from "./site-tiles"
 import { activityLabel } from "@/lib/activities"
 import { initialsOf, useCompanyIdentity } from "@/lib/company"
 import { useT, useTx } from "@/lib/i18n"
@@ -15,23 +16,6 @@ import { SECTORS } from "./onboarding-modal"
 
 const FOCUS_RING =
   " focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-
-/** A site's sector: a white glyph on the sector's own gradient squircle. */
-function SectorTile({ sector, icons }: { sector: string; icons: SiteIconData | null }) {
-  const key = sectorIconKey(sector)
-  const icon = icons?.[key]
-
-  return (
-    <span
-      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[13px] text-white shadow-[inset_0_0.5px_0_rgba(255,255,255,0.55),0_1px_3px_rgba(0,0,0,0.25)]"
-      style={{ background: sectorTileBackground(sector) }}
-      data-sector-icon={key}
-      aria-hidden="true"
-    >
-      {icon && <svg viewBox={icon.viewBox} width={24} height={24} focusable="false" dangerouslySetInnerHTML={{ __html: icon.body }} />}
-    </span>
-  )
-}
 
 /** A department's small glyph, in the colour of the pill's text. */
 function DepartmentGlyph({ department, icons }: { department: string; icons: SiteIconData | null }) {

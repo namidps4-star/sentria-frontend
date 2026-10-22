@@ -274,6 +274,7 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
     pass(await p.locator('main').getByText('Main site').first().isVisible() && await p.locator('main').getByText('Power depot').first().isVisible(), 'and the Sites page lists both');
     pass(await p.getByTestId('site-active-tag').count() === 1 && /Main site/.test(await p.locator('[data-active]').innerText()), 'the Sites page marks only the site on the dashboard as active');
     pass(await p.getByTestId('site-source-row').count() === 4, 'the sources panel lists the active site\'s own four sources');
+    pass(await p.getByTestId('site-source-row').evaluateAll(rows => rows.map(r => { const t = r.querySelector('[data-source-icon]'); return t && t.getAttribute('data-source-icon') + ':' + !!t.querySelector('svg path') + ':' + /linear-gradient/.test(getComputedStyle(t).backgroundImage); }).join()) === 'csv:true:true,api:true:true,erp:true:true,iot:true:true', 'each source row carries a drawn glyph on a graphite tile');
     pass(/Active site/i.test(await p.getByTestId('site-active-card').innerText()) && /Main site/.test(await p.getByTestId('site-active-card').innerText()), 'the lime card names the active site');
     const first = await p.locator('main [data-active], main button.group').first().getAttribute('data-active');
     pass(first !== null, 'the active site card comes first');

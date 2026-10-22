@@ -5,7 +5,6 @@ import {
   AlertTriangle,
   ArrowLeft,
   ArrowUpRight,
-  Building2,
   CheckCircle2,
   ChevronRight,
   CircleDot,
@@ -19,14 +18,14 @@ import {
   Ship,
   Truck,
   Upload,
-  Wifi,
   Wheat,
   X,
   XCircle,
   Zap,
   type LucideIcon,
 } from "@/lib/icons"
-import { SectorBadge } from "./sector-badge"
+import { useSiteIcons } from "@/lib/site-icons"
+import { SectorTile, SourceTile } from "./site-tiles"
 import { takeAddSiteHint } from "@/lib/active-site"
 import { API_BASE } from "@/lib/api"
 import { normalizeOpsType } from "@/lib/activities"
@@ -282,6 +281,8 @@ const SITE_CARD_SKIN = {
 
 export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void } = {}) {
   const tx = useTx()
+  // The glyphs of the tiles load as soon as the page opens.
+  const siteIcons = useSiteIcons(true)
 
   /** Resolve a module-level pair. */
   const px = (text: Localized | undefined) => resolve(text, tx)
@@ -528,7 +529,6 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
    */
   if (activeSite) {
     const sector = getSector(activeSite.sector)
-    const SectorIcon = sector.icon
     const status = STATUS_META[activeSite.status]
     const StatusIcon = status.icon
 
@@ -558,9 +558,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand text-[#141414]">
-                <SectorIcon className="h-6 w-6" />
-              </div>
+              <SectorTile sector={activeSite.sector} icons={siteIcons} size={48} />
 
               <div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -982,15 +980,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                   className="flex items-center justify-between rounded-2xl border border-border p-4"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-muted">
-                      {source.type === "iot" ? (
-                        <Wifi className="h-4 w-4" />
-                      ) : source.type === "api" || source.type === "erp" ? (
-                        <Database className="h-4 w-4" />
-                      ) : (
-                        <Upload className="h-4 w-4" />
-                      )}
-                    </div>
+                    <SourceTile type={source.type} icons={siteIcons} size={36} />
 
                     <div>
                       <p className="text-sm font-semibold">
@@ -1199,9 +1189,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
           <div className="t-enter rounded-[28px] bg-brand p-5 text-[#141414]" style={enterAt(0)}>
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2.5">
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--ink)] text-brand">
-                  <Building2 className="h-4 w-4" aria-hidden="true" />
-                </span>
+                <SectorTile sector={shownSite?.sector ?? "industry"} icons={siteIcons} size={40} />
                 <span className="leading-tight">
                   <span className="block text-sm font-bold">SentrIA</span>
                   <span className="block text-[11px] text-[#141414]/65">{tx("Infrastructure", "Infrastructure")}</span>
@@ -1226,7 +1214,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                   {shownSite.name}
                 </p>
                 <p className="mt-1 flex items-center gap-2 text-xs font-medium text-[#141414]/75">
-                  <SectorBadge sector={shownSite.sector} size="sm" />
+                  <SectorTile sector={shownSite.sector} icons={siteIcons} size={22} />
                   <span className="truncate">
                     {px(getSector(shownSite.sector).label)}
                     {shownStored && shownStored.departments.length > 0 &&
@@ -1340,7 +1328,6 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
             <div className="mt-5 grid grid-cols-1 gap-3 2xl:grid-cols-2">
               {ordered.map((site, index) => {
                 const sector = getSector(site.sector)
-                const SectorIcon = sector.icon
                 const status = STATUS_META[site.status]
                 // Our cards: the active site is lime (the first one when none is active), the others alternate white and black.
                 const isLime = site.id === held.activeId || (held.activeId == null && index === 0)
@@ -1363,9 +1350,7 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex min-w-0 items-center gap-3">
-                        <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-full", chip)}>
-                          <SectorIcon className="h-5 w-5" aria-hidden="true" />
-                        </span>
+                        <SectorTile sector={site.sector} icons={siteIcons} size={46} />
                         <span className="min-w-0">
                           <span className="block truncate font-heading text-lg font-semibold">{site.name}</span>
                           <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -1481,16 +1466,13 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
             <ul className="mt-3 flex flex-col gap-2">
               {shownSite ? (
                 shownSite.sources.map((source) => {
-                  const Icon =
-                    source.type === "iot" ? Wifi : source.type === "csv" ? Upload : Database
-
                   return (
                     <li
                       key={source.type}
                       data-testid="site-source-row"
-                      className="flex items-center gap-3 rounded-2xl bg-muted px-4 py-3 text-sm font-medium"
+                      className="flex items-center gap-3 rounded-2xl bg-muted px-3 py-2.5 text-sm font-medium"
                     >
-                      <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                      <SourceTile type={source.type} icons={siteIcons} size={30} />
                       <span className="min-w-0 flex-1 truncate">{px(source.name)}</span>
                       {source.connected ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-brand px-2 py-0.5 text-[11px] font-semibold text-[#141414]">
