@@ -65,6 +65,69 @@ const stamp = h => ({ freshness: [{ sector: 'health', scope: 'pharmacie', last_u
   await x.p.screenshot({ path: 'sentriastatus-phone.png' });
   await x.ctx.close();
 
+  console.log('== click the bubble: Robo explains');
+  x = await open({ state: 'fresh' });
+  await x.bubble.click(); await x.p.waitForTimeout(500);
+  let pop = x.p.getByTestId('robo-popover');
+  t = (await pop.innerText()).replace(/\s+/g, ' ');
+  pass(await pop.count() === 1 && await pop.getAttribute('data-mood') === 'fresh', 'a click opens Robo\'s pop-out (fresh)');
+  pass(/robo/i.test(t) && /All good, your data is fresh/.test(t) && /Your newest file came in 3 h ago/.test(t) && /more than 7 days/.test(t), 'he says the data is fresh and when the file came in: ' + t.slice(0, 120));
+  pass(/Health · Pharmacy/.test(t) && /Rows read\s*10/.test(t) && /Alerts raised\s*1/.test(t), 'with real facts from the stamps');
+  pass(!/Upload a file/.test(t) && /Got it/.test(t), 'fresh: only Got it');
+  await x.p.screenshot({ path: 'sentriastatus-pop-fresh.png' });
+  await x.p.keyboard.press('Escape'); await x.p.waitForTimeout(400);
+  pass(await x.p.getByTestId('robo-popover').count() === 0, 'Escape closes it');
+  await x.bubble.click(); await x.p.waitForTimeout(400);
+  await x.p.mouse.click(900, 300); await x.p.waitForTimeout(400);
+  pass(await x.p.getByTestId('robo-popover').count() === 0, 'a click elsewhere closes it');
+  await x.ctx.close();
+
+  x = await open({ state: 'stale' });
+  await x.bubble.click(); await x.p.waitForTimeout(500);
+  pop = x.p.getByTestId('robo-popover');
+  t = (await pop.innerText()).replace(/\s+/g, ' ');
+  pass(await pop.getAttribute('data-mood') === 'stale' && /Hmm, it has gone quiet/.test(t) && /no new file for 12 days/.test(t) && /a zero is not a measurement/.test(t), 'stale: he says it went quiet, how long, and that a zero is not a measurement');
+  pass(/Limit before a warning\s*7 days/.test(t) && /Upload a file/.test(t) && /Not now/.test(t), 'with the limit, Upload a file and Not now');
+  await x.p.screenshot({ path: 'sentriastatus-pop-stale.png' });
+  await x.p.getByRole('button', { name: 'Not now' }).click(); await x.p.waitForTimeout(400);
+  pass(await x.p.getByTestId('robo-popover').count() === 0, 'Not now closes it');
+  await x.ctx.close();
+
+  x = await open({ state: 'unknown' });
+  await x.bubble.click(); await x.p.waitForTimeout(500);
+  t = (await x.p.getByTestId('robo-popover').innerText()).replace(/\s+/g, ' ');
+  pass(/I cannot tell yet/.test(t) && /I will not guess/.test(t) && await x.p.getByTestId('robo-facts').count() === 0, 'unknown: he will not guess, and shows no facts');
+  await x.p.screenshot({ path: 'sentriastatus-pop-unknown.png' });
+  await x.ctx.close();
+
+  console.log('== Upload a file opens the import panel, from another page');
+  x = await open({ state: 'stale' });
+  await x.p.locator('aside nav button').filter({ hasText: /^Tracking$/ }).first().click(); await x.p.waitForTimeout(1200);
+  await x.bubble.click(); await x.p.waitForTimeout(400);
+  await x.p.getByTestId('robo-upload').click(); await x.p.waitForTimeout(1500);
+  pass(await x.p.locator('#import-panel').isVisible(), 'Upload a file goes to the dashboard and opens the import panel');
+  pass(await x.p.getByTestId('robo-popover').count() === 0, 'and the pop-out is closed');
+  await x.ctx.close();
+  x = await open({ state: 'stale' });
+  await x.bubble.click(); await x.p.waitForTimeout(400);
+  await x.p.getByTestId('robo-upload').click(); await x.p.waitForTimeout(800);
+  pass(await x.p.locator('#import-panel').isVisible(), 'and on the dashboard itself it opens at once');
+  pass(x.p._errors.length === 0, 'no page errors ' + x.p._errors.join('|'));
+  await x.ctx.close();
+
+  console.log('== French, phone');
+  x = await open({ state: 'stale', lang: 'fr' });
+  await x.bubble.click(); await x.p.waitForTimeout(500);
+  t = (await x.p.getByTestId('robo-popover').innerText()).replace(/\s+/g, ' ');
+  pass(/Hmm, c'est devenu silencieux/.test(t) && /Importer un fichier/.test(t) && /Pas maintenant/.test(t), 'in French: ' + t.slice(0, 90));
+  await x.ctx.close();
+  x = await open({ state: 'stale', vw: 390, vh: 844 });
+  await x.bubble.click(); await x.p.waitForTimeout(500);
+  const pb = await x.p.getByTestId('robo-popover').boundingBox();
+  pass(pb.x >= 0 && pb.x + pb.width <= 390 && pb.y >= 0 && pb.y + pb.height <= 844, 'on a phone the pop-out fits the screen');
+  await x.p.screenshot({ path: 'sentriastatus-pop-phone.png' });
+  await x.ctx.close();
+
   await browser.close();
   console.log(fails ? `\n${fails} FAILED` : '\nall passed');
   process.exit(fails ? 1 : 0);

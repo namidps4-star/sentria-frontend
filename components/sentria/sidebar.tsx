@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 import type { ViewKey } from "./types"
 import { StatusTag, type TagTone } from "./status-tag"
+import { requestImportOpen } from "@/lib/import-request"
 import { SentriaStatus } from "./sentria-status"
 import { SupportDialog } from "./support-dialog"
 import { useT, useTx, type MessageKey } from "@/lib/i18n"
@@ -459,7 +460,13 @@ export function Sidebar({
 
           {/* The status bubble sits outside the scrolling list, so it is on screen at every height. */}
           <div className="shrink-0 px-3 pb-3 [@media(max-height:700px)]:pb-1.5">
-            <SentriaStatus collapsed={collapsed} />
+            <SentriaStatus
+              collapsed={collapsed}
+              onUpload={() => {
+                onNavigate("dashboard")
+                requestImportOpen()
+              }}
+            />
           </div>
 
           {/* SIGN OUT */}

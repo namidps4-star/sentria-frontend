@@ -118,6 +118,7 @@ import {
 import { sendAlertFeedback } from "@/lib/feedback"
 import { runUpload } from "@/lib/upload"
 import { departmentIconKey, sectorTileBackground, useSiteIcons } from "@/lib/site-icons"
+import { IMPORT_REQUEST_EVENT, consumeImportRequest } from "@/lib/import-request"
 import { RelativeTime } from "./relative-time"
 import { setUploadPanel } from "@/lib/upload-panel"
 import { holdInPlace } from "@/lib/hold-scroll"
@@ -1109,6 +1110,20 @@ export function DashboardView({
   const [uploading, setUploading] = useState(false)
   // The import panel: opened from the upload icon at the top.
   const [importOpen, setImportOpen] = useState(false)
+
+  // Robo's "Upload a file" asks for the import panel (lib/import-request.ts):
+  // a request made before this page mounted is read now, a later one by event.
+  useEffect(() => {
+    if (consumeImportRequest()) setImportOpen(true)
+
+    const onRequest = () => {
+      if (consumeImportRequest()) setImportOpen(true)
+    }
+
+    window.addEventListener(IMPORT_REQUEST_EVENT, onRequest)
+
+    return () => window.removeEventListener(IMPORT_REQUEST_EVENT, onRequest)
+  }, [])
   // The department glyphs of the import list load when it first opens.
   const siteIcons = useSiteIcons(importOpen)
   const importPanel = usePresence(importOpen, "--dropdown-close-dur")
