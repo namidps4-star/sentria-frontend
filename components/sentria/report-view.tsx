@@ -849,6 +849,18 @@ export function ReportView({ data }: { data?: ReportData }) {
       {/* F-REPORT: the week in the numbers the Monday email sends. */}
       {!data && <WeekCard stale={freshness.kind === "stale"} />}
 
+      {/* The old report, named as the detail under the story. */}
+      {!data && (
+        <div className="pt-4 print:hidden">
+          <h2 className="font-heading text-2xl font-semibold tracking-tight">
+            {tx("Les chiffres derrière le récit", "The figures behind the story")}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {tx("Indicateurs, tendances et la liste complète des alertes.", "Key figures, trends and the full list of alerts.")}
+          </p>
+        </div>
+      )}
+
       <ReportBody
         data={resolved}
         timezoneLabel={built.timezoneLabel}
