@@ -1,6 +1,6 @@
 "use client"
 
-import { SeverityTag, StatusTag } from "./status-tag"
+import { SeverityTag } from "./status-tag"
 import { WholesalerAdvice } from "./wholesaler-advice"
 import type { AlertParams } from "@/lib/value-at-risk"
 import { useState } from "react"
@@ -14,7 +14,7 @@ import {
   Package,
   Radar,
   Cpu,
-  Gauge,
+  ArrowRight,
   Check,
   X,
   ShoppingCart,
@@ -76,6 +76,8 @@ type RecommendationsPanelProps = {
   /** The alerts did not load, or the data behind them is old (L4): an empty
    *  list is then not "all under control". */
   unmeasured?: boolean
+  /** Opens the Tracking page: the "See all" link shows only when set. */
+  onOpenTracking?: () => void
 }
 
 const OPS_TYPE_LABEL: Record<string, Localized> = {
@@ -263,6 +265,7 @@ export function RecommendationsPanel({
   alerts,
   opsType,
   unmeasured = false,
+  onOpenTracking,
 }: RecommendationsPanelProps) {
   const tx = useTx()
 
@@ -356,9 +359,6 @@ export function RecommendationsPanel({
 
   const [top, ...rest] = recommendations
 
-  const TopIcon = CATEGORY_ICON[top.action_category] ?? Sparkles
-  const topCritical = top.severity === "CRITICAL"
-
   const topRiskPct =
     typeof top.risk_score === "number"
       ? Math.round(
@@ -384,154 +384,148 @@ export function RecommendationsPanel({
   const opsMeta = opsType ? OPS_TYPE_LABEL[opsType] : undefined
   const opsLabel = opsMeta ? px(opsMeta) : undefined
 
-  return (
-    <div className="relative overflow-hidden rounded-3xl border border-border bg-card p-6">
-      <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-accent/20 blur-3xl" />
+  /* A priority's number: big, light, with the lime line under it, like the
+     Tracking board and the Alert detail card. */
+  const numeral = (n: number, size: string, tone: string) => (
+    <span
+      className={cn("relative inline-block pb-2.5 font-heading font-light leading-none tracking-tight tabular-nums", size, tone)}
+      aria-hidden="true"
+    >
+      {String(n).padStart(2, "0")}
+      <span className="absolute bottom-0 left-0.5 h-1 w-[26px] rounded-full bg-accent" />
+    </span>
+  )
 
-      <div className="relative flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-            <Sparkles className="h-4 w-4" />
-          </div>
-
-          <div>
-            <h3 className="font-heading text-lg font-bold">
-              {tx(
-                "Qu'est-ce qui a besoin de votre attention maintenant ?",
-                "What needs your attention right now?"
-              )}
-            </h3>
-
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {tx(
-                `${recommendations.length} situations classées par urgence · preuve, confiance et action pour chacune.`,
-                `${recommendations.length} situations ranked by urgency · evidence, confidence and an action for each.`
-              )}
-            </p>
-
-            {opsLabel && (
-              <span className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-2.5 py-0.5 text-[11px] font-medium text-accent-foreground">
-                <Shield className="h-3 w-3" />
-                {tx("Vue adaptée :", "Tailored view:")} {opsLabel}
-              </span>
-            )}
-          </div>
-        </div>
+  const statusBox = (action: ActionRecord) => (
+    <div
+      role="status"
+      className={cn(
+        "rounded-2xl px-3.5 py-3",
+        action.status === "done" ? "bg-emerald-500/15 ring-1 ring-emerald-500/30" : "bg-white/10"
+      )}
+    >
+      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.13em] text-sidebar-foreground/60">
+        <Check className="h-3 w-3" />
+        {tx("Résultat", "Outcome")}
       </div>
 
-      <div className="relative mt-6 flex flex-col gap-4 lg:flex-row">
-        <div className="flex w-full shrink-0 flex-col justify-between rounded-2xl border border-transparent bg-gradient-to-br from-accent/20 via-card to-card p-5 ring-1 ring-accent/40 lg:w-96">
-          <div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="inline-flex items-center gap-1 rounded-full bg-accent px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-accent-foreground">
-                <Sparkles className="h-3 w-3" />
-                {tx("Priorité n°1", "Priority no. 1")}
-              </span>
+      <p className="mt-1 text-xs leading-5 text-sidebar-foreground/85">
+        {action.status === "done"
+          ? tx(
+              `Traité à ${action.at}. SentrIA continue de surveiller cet actif pour confirmer l'effet.`,
+              `Handled at ${action.at}. SentrIA keeps watching this asset to confirm the effect.`
+            )
+          : tx(
+              `Écarté à ${action.at}. Réapparaîtra si le signal s'aggrave.`,
+              `Dismissed at ${action.at}. It will come back if the signal worsens.`
+            )}
+      </p>
+    </div>
+  )
 
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent text-accent-foreground shadow-sm">
-                <TopIcon className="h-4 w-4" />
-              </div>
+  return (
+    <div data-testid="top5" className="squircle rounded-[34px] border border-border bg-card p-3.5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 pb-3.5 pt-2">
+        <h3 className="font-heading text-xl font-bold tracking-tight">
+          {tx(`Top ${recommendations.length} priorités`, `Top ${recommendations.length} priorities`)}
+        </h3>
+
+        <p className="text-[13px] text-muted-foreground">
+          {tx("classées par urgence, chacune avec son action", "ranked by urgency, each with its action")}
+        </p>
+
+        {opsLabel && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold">
+            <Shield className="h-3 w-3" />
+            {tx("Vue adaptée :", "Tailored view:")} {opsLabel}
+          </span>
+        )}
+
+        {onOpenTracking && (
+          <button
+            type="button"
+            onClick={onOpenTracking}
+            className={"ml-auto inline-flex min-h-10 items-center gap-1.5 rounded-full bg-muted px-4 text-[13px] font-bold transition-colors hover:bg-muted/70" + PANEL_FOCUS}
+          >
+            {tx("Tout voir dans le suivi", "See all in Tracking")}
+            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        )}
+      </div>
+
+      <div className="grid gap-2.5 lg:grid-cols-[26rem_minmax(0,1fr)]">
+        <div data-testid="top5-lead" className="squircle flex flex-col justify-between rounded-[28px] bg-sidebar p-5 text-sidebar-foreground">
+          <div>
+            <div className="flex items-start gap-2.5">
+              {numeral(1, "text-[52px]", "text-sidebar-foreground/60")}
+
+              <span className="ml-auto mt-2 shrink-0">
+                <SeverityTag severity={top.severity} tx={tx} size="sm" />
+              </span>
             </div>
 
-            <p className="mt-4 font-heading text-base font-bold leading-snug">
-              {top.equipment}
-            </p>
+            <p className="mt-2 font-heading text-[22px] font-bold leading-tight tracking-tight">{top.equipment}</p>
 
-            <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              <SeverityTag severity={top.severity} tx={tx} size="xs" />
-
-              <span className="text-[10px] text-muted-foreground">
-                {px(CATEGORY_LABEL[top.action_category] ?? CATEGORY_LABEL.other)}
-              </span>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-sidebar-foreground/60">
+              <span>{px(CATEGORY_LABEL[top.action_category] ?? CATEGORY_LABEL.other)}</span>
 
               {topRecurrence > 1 && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive">
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-sidebar-foreground">
                   <TrendingUp className="h-3 w-3" />
-                  {tx(
-                    `${topRecurrence}x cette semaine`,
-                    `${topRecurrence}x this week`
-                  )}
+                  {tx(`${topRecurrence}x cette semaine`, `${topRecurrence}x this week`)}
                 </span>
               )}
             </div>
 
-            {/* 1 · EVIDENCE + CONFIDENCE */}
-            <div className="mt-4">
-              <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-muted-foreground">
-                {tx("1 · Preuve & confiance", "1 · Evidence & confidence")}
+            <div className="squircle mt-3.5 rounded-3xl bg-accent px-4 py-3.5 text-accent-foreground">
+              <p className="text-[10.5px] font-extrabold uppercase tracking-[0.1em] opacity-75">
+                {tx("À faire maintenant", "Do this now")}
               </p>
+              <p className="mt-1 text-[16.5px] font-extrabold leading-snug">{top.recommended_action}</p>
+            </div>
 
-              {topRiskPct !== null ? (
-                <div className="mt-1.5 flex items-center gap-2">
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-background/70">
-                    <div
-                      className={cn(
-                        "h-full rounded-full transition-all duration-500",
-                        topCritical ? "bg-destructive" : "bg-warning"
-                      )}
-                      style={{ width: `${topRiskPct}%` }}
-                    />
-                  </div>
-
-                  <span className="shrink-0 text-[10px] font-medium text-muted-foreground">
-                    {tx(`${topRiskPct}% de risque`, `${topRiskPct}% risk`)}
-                  </span>
-                </div>
-              ) : (
-                <p className="mt-1.5 text-[10px] text-muted-foreground">
-                  {tx(
-                    "Score de risque non calculé pour ce secteur.",
-                    "No risk score computed for this sector."
-                  )}
-                </p>
-              )}
-
+            <div className="mt-4 flex gap-6 px-1">
               <div
-                className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-background/60 px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
                 title={tx(
-                  "À quel point SentrIA est sûr de cette analyse",
-                  "How sure SentrIA is of this analysis"
+                  "Gravité du problème lui-même, calculée à partir des mesures brutes",
+                  "How severe the problem itself is, computed from the raw measurements"
                 )}
               >
-                <Gauge className="h-3 w-3" />
-                {tx("Confiance", "Confidence")}{" "}
-                {confidenceWord(topConfidence, tx)} · {topConfidence}%
+                <div
+                  className={cn(
+                    "relative pb-2.5 font-heading text-[30px] font-light leading-none tracking-tight tabular-nums",
+                    topRiskPct === null && "text-sidebar-foreground/40"
+                  )}
+                >
+                  {topRiskPct === null ? "—" : topRiskPct}
+                  {topRiskPct !== null && <span className="ml-0.5 text-[13px] font-semibold opacity-50">/100</span>}
+                  <span className={cn("absolute bottom-0 left-0.5 h-1 w-[22px] rounded-full", topRiskPct === null ? "bg-white/20" : "bg-accent")} />
+                </div>
+                <p className="mt-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-sidebar-foreground/55">
+                  {tx("Risque", "Risk")}
+                </p>
+              </div>
+
+              <div title={tx("À quel point SentrIA est sûr de cette analyse", "How sure SentrIA is of this analysis")}>
+                <div className="relative pb-2.5 font-heading text-[30px] font-light leading-none tracking-tight tabular-nums">
+                  {topConfidence}
+                  <span className="ml-0.5 text-[13px] font-semibold opacity-50">%</span>
+                  <span className="absolute bottom-0 left-0.5 h-1 w-[22px] rounded-full bg-accent" />
+                </div>
+                <p className="mt-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-sidebar-foreground/55">
+                  {tx("Confiance", "Confidence")} · {confidenceWord(topConfidence, tx)}
+                </p>
               </div>
             </div>
 
-            {/* 2 · REASONING */}
-            <div className="mt-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-muted-foreground">
-                {tx("2 · Pourquoi", "2 · Why")}
-              </p>
-              <p className="mt-1 text-[11px] leading-4 text-muted-foreground">
-                {topReasoning}
-              </p>
-            </div>
+            <p className="mt-3.5 text-[13px] leading-relaxed text-sidebar-foreground/70">{topReasoning}</p>
 
-            {/* 3 · IMPACT */}
-            <div className="mt-3 flex items-start gap-1.5 rounded-lg bg-background/60 px-2.5 py-2">
-              <Shield className="mt-0.5 h-3 w-3 shrink-0 text-accent-foreground" />
+            <p className="mt-2.5 flex items-start gap-1.5 text-[12px] leading-snug text-sidebar-foreground/55">
+              <Shield className="mt-0.5 h-3 w-3 shrink-0" />
+              {px(IMPACT_HINT[top.action_category] ?? IMPACT_HINT.other)}
+            </p>
 
-              <p className="text-[11px] leading-4 text-muted-foreground">
-                {px(IMPACT_HINT[top.action_category] ?? IMPACT_HINT.other)}
-              </p>
-            </div>
-
-            {/* 4 · RECOMMENDATION */}
-            <div className="mt-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.13em] text-muted-foreground">
-                {tx("4 · Recommandation", "4 · Recommendation")}
-              </p>
-              <p className="mt-1 text-sm leading-5 text-foreground/90">
-                {top.recommended_action}
-              </p>
-            </div>
-
-            {/* Apart from the numbered steps: where to order is an extra, and
-                it stays out of the alert's own words. */}
             <WholesalerAdvice
-              tone="light"
               alertKey={top.alert_key}
               params={paramsOf(top)}
               department={top.business_type}
@@ -539,14 +533,13 @@ export function RecommendationsPanel({
             />
           </div>
 
-          {/* 5 · HUMAN ACTION → 6 · OUTCOME */}
           <div className="mt-4">
             {!topAction ? (
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => recordAction(topKey, "done", top)}
-                  className={"inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-foreground px-3 py-2 text-xs font-semibold text-background transition-opacity hover:opacity-90" + PANEL_FOCUS}
+                  className={"inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-accent px-4 text-[13px] font-bold text-accent-foreground transition-opacity hover:opacity-90" + PANEL_FOCUS}
                 >
                   <Check className="h-3.5 w-3.5" />
                   {tx("Marquer traité", "Mark handled")}
@@ -555,128 +548,58 @@ export function RecommendationsPanel({
                 <button
                   type="button"
                   onClick={() => recordAction(topKey, "dismissed", top)}
-                  className={"inline-flex items-center justify-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-muted-foreground transition-colors hover:bg-muted" + PANEL_FOCUS}
+                  aria-label={tx("Ignorer", "Dismiss")}
+                  title={tx("Ignorer", "Dismiss")}
+                  className={"inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10 text-sidebar-foreground/70 transition-colors hover:bg-white/20" + PANEL_FOCUS}
                 >
                   <X className="h-3.5 w-3.5" />
-                  {tx("Ignorer", "Dismiss")}
                 </button>
               </div>
             ) : (
-              <div
-                role="status"
-                className={cn(
-                  "rounded-xl border px-3 py-2.5",
-                  topAction.status === "done"
-                    ? "border-emerald-500/30 bg-emerald-500/10"
-                    : "border-border bg-background/60"
-                )}
-              >
-                <div
-                  className={cn(
-                    "flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.13em]",
-                    topAction.status === "done"
-                      ? "text-emerald-700 dark:text-emerald-400"
-                      : "text-muted-foreground"
-                  )}
-                >
-                  <Check className="h-3 w-3" />
-                  {tx("6 · Résultat", "6 · Outcome")}
-                </div>
-
-                <p className="mt-1 text-[11px] leading-4 text-foreground/90">
-                  {topAction.status === "done"
-                    ? tx(
-                        `Traité à ${topAction.at}. SentrIA continue de surveiller cet actif pour confirmer l'effet.`,
-                        `Handled at ${topAction.at}. SentrIA keeps watching this asset to confirm the effect.`
-                      )
-                    : tx(
-                        `Écarté à ${topAction.at}. Réapparaîtra si le signal s'aggrave.`,
-                        `Dismissed at ${topAction.at}. It will come back if the signal worsens.`
-                      )}
-                </p>
-              </div>
+              statusBox(topAction)
             )}
           </div>
         </div>
 
         {rest.length > 0 && (
-          <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <div className="flex min-w-0 flex-col gap-2">
             {rest.map((rec, idx) => {
               const rank = idx + 2
               const Icon = CATEGORY_ICON[rec.action_category] ?? Sparkles
-              const isCritical = rec.severity === "CRITICAL"
               const recurrence = recurrenceOf(rec.equipment)
-              const confidence = confidenceOf(rec, recurrence)
               const key = actionKeyFor(rec)
               const action = actionsLog[key]
 
               return (
                 <div
                   key={`${rec.equipment}-${rec.alert_key}-${idx}`}
-                  className="group flex flex-1 flex-col justify-center gap-3 rounded-2xl border border-border bg-background p-4 transition-all duration-300 ease-out animate-in fade-in slide-in-from-right-2 hover:border-accent/40 hover:shadow-md sm:flex-row sm:items-center sm:gap-4"
-                  style={{
-                    animationDelay: `${idx * 70}ms`,
-                    animationFillMode: "backwards",
-                  }}
+                  data-testid="top5-row"
+                  className="squircle grid grid-cols-[3.25rem_minmax(0,1fr)] items-center gap-x-3 gap-y-2.5 rounded-3xl bg-muted px-4 py-3.5 animate-in fade-in slide-in-from-right-2 sm:grid-cols-[3.75rem_minmax(0,1fr)_auto]"
+                  style={{ animationDelay: `${idx * 70}ms`, animationFillMode: "backwards" }}
                 >
-                  <span
-                    className={cn(
-                      "hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold tabular-nums sm:flex",
-                      isCritical
-                        ? "bg-destructive/10 text-destructive"
-                        : "bg-warning/12 text-warning"
-                    )}
-                  >
-                    {String(rank).padStart(2, "0")}
-                  </span>
+                  {numeral(rank, "text-4xl", "text-muted-foreground")}
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={cn(
-                          "flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold tabular-nums sm:hidden",
-                          isCritical
-                            ? "bg-destructive/10 text-destructive"
-                            : "bg-warning/12 text-warning"
-                        )}
-                      >
-                        {String(rank).padStart(2, "0")}
-                      </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-[16.5px] font-bold leading-tight tracking-tight">{rec.equipment}</p>
 
-                      <p className="min-w-0 flex-1 truncate text-sm font-semibold">
-                        {rec.equipment}
-                      </p>
-
-                      <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    </div>
-
-                    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
                       <SeverityTag severity={rec.severity} tx={tx} size="xs" />
 
-                      <span
-                        className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground"
-                        title={tx(
-                          "Confiance de SentrIA dans cette analyse",
-                          "How confident SentrIA is in this analysis"
-                        )}
-                      >
-                        <Gauge className="h-3 w-3" />
-                        {confidence}%
+                      <span className="text-[12px] text-muted-foreground">
+                        {px(CATEGORY_LABEL[rec.action_category] ?? CATEGORY_LABEL.other)}
                       </span>
 
                       {recurrence > 1 && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-1.5 py-0.5 text-[10px] font-semibold text-destructive">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-card px-2 py-0.5 text-[11px] font-semibold">
                           <TrendingUp className="h-3 w-3" />
-                          {tx(
-                            `${recurrence}x cette semaine`,
-                            `${recurrence}x this week`
-                          )}
+                          {tx(`${recurrence}x cette semaine`, `${recurrence}x this week`)}
                         </span>
                       )}
                     </div>
 
-                    <p className="mt-2 line-clamp-2 text-xs leading-4 text-muted-foreground">
-                      {rec.recommended_action}
+                    <p className="mt-1.5 flex items-start gap-1.5 text-sm leading-snug text-muted-foreground" title={rec.recommended_action}>
+                      <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      <span>{rec.recommended_action}</span>
                     </p>
 
                     <WholesalerAdvice
@@ -688,47 +611,42 @@ export function RecommendationsPanel({
                     />
                   </div>
 
-                  <div className="flex shrink-0 gap-1.5 sm:w-36">
+                  <div className="col-span-2 flex shrink-0 items-center gap-1.5 sm:col-span-1">
                     {!action ? (
                       <>
                         <button
                           type="button"
                           onClick={() => recordAction(key, "done", rec)}
-                          className={"inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-foreground px-2 py-2 text-[11px] font-semibold text-background transition-opacity hover:opacity-90" + PANEL_FOCUS}
+                          className={"inline-flex min-h-10 flex-1 items-center justify-center gap-1.5 rounded-full bg-foreground px-4 text-[13px] font-bold text-background transition-opacity hover:opacity-90 sm:flex-none" + PANEL_FOCUS}
                         >
-                          <Check className="h-3 w-3" />
+                          <Check className="h-3.5 w-3.5" />
                           {tx("Traité", "Handled")}
                         </button>
 
                         <button
                           type="button"
                           onClick={() => recordAction(key, "dismissed", rec)}
-                          className={"inline-flex items-center justify-center rounded-lg border border-border px-2.5 py-2 text-[11px] font-semibold text-muted-foreground transition-colors hover:bg-muted" + PANEL_FOCUS}
                           aria-label={tx("Ignorer", "Dismiss")}
+                          title={tx("Ignorer", "Dismiss")}
+                          className={"inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-card text-muted-foreground transition-colors hover:text-foreground" + PANEL_FOCUS}
                         >
-                          <X className="h-3 w-3" />
+                          <X className="h-3.5 w-3.5" />
                         </button>
                       </>
                     ) : (
                       <span
                         role="status"
                         className={cn(
-                          "inline-flex w-full items-center justify-center gap-1 rounded-lg px-2 py-2 text-[11px] font-semibold",
+                          "inline-flex min-h-10 w-full items-center justify-center gap-1.5 rounded-full px-4 text-[13px] font-bold",
                           action.status === "done"
-                            ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                            : "bg-muted text-muted-foreground"
+                            ? "bg-emerald-500/10 text-emerald-600"
+                            : "bg-card text-muted-foreground"
                         )}
                       >
-                        <Check className="h-3 w-3" />
+                        <Check className="h-3.5 w-3.5" />
                         {action.status === "done"
-                          ? tx(
-                              `Traité à ${action.at}`,
-                              `Handled at ${action.at}`
-                            )
-                          : tx(
-                              `Écarté à ${action.at}`,
-                              `Dismissed at ${action.at}`
-                            )}
+                          ? tx(`Traité à ${action.at}`, `Handled at ${action.at}`)
+                          : tx(`Écarté à ${action.at}`, `Dismissed at ${action.at}`)}
                       </span>
                     )}
                   </div>

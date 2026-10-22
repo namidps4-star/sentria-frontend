@@ -3498,6 +3498,7 @@ export function DashboardView({
           recommendations={filteredRecommendations}
           totalRecommendationsCount={recommendations.length}
           unmeasured={zeroUnknown}
+          onOpenTracking={onNavigate ? () => onNavigate("tracking") : undefined}
           // Recurrence counts only this view's alerts: the same equipment
           // name in another sector or activity is another asset (B-08).
           alerts={alerts.filter(
