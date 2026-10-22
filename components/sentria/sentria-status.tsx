@@ -187,8 +187,8 @@ export function SentriaStatus({
   )
 
   const face = (
-    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10 [@media(max-height:700px)]:h-9 [@media(max-height:700px)]:w-9">
-      <RoboHead mood={mood} className="h-8 w-8 [@media(max-height:700px)]:h-6 [@media(max-height:700px)]:w-6" />
+    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10 [@media(max-height:820px)]:h-9 [@media(max-height:820px)]:w-9">
+      <RoboHead mood={mood} className="h-8 w-8 [@media(max-height:820px)]:h-6 [@media(max-height:820px)]:w-6" />
     </span>
   )
 
@@ -207,7 +207,7 @@ export function SentriaStatus({
         className={cn(
           "flex items-center rounded-3xl text-left text-sidebar-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           open ? "bg-white/15" : "bg-white/[0.07] hover:bg-white/10",
-          collapsed ? "mx-auto h-12 w-12 justify-center p-0" : "w-full gap-3 p-3 [@media(max-height:700px)]:gap-2.5 [@media(max-height:700px)]:p-2"
+          collapsed ? "mx-auto h-12 w-12 justify-center p-0" : "w-full gap-3 p-3 [@media(max-height:820px)]:gap-2.5 [@media(min-height:701px)_and_(max-height:820px)]:p-2 [@media(max-height:700px)]:p-1.5"
         )}
         style={open ? { boxShadow: `0 0 0 2px ${color}` } : undefined}
       >

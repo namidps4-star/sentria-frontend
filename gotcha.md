@@ -347,3 +347,9 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Problem:** The founder does not want a scroll bar anywhere, and a per-component `[scrollbar-width:none]` misses the page, tables and every new scroll area.
 **Reality:** `app/globals.css` sets `scrollbar-width: none` and `::-webkit-scrollbar { display: none }` on `*`, outside any `@layer` so no utility overrides it. Scrolling by wheel, touch and keyboard still works. Because headless Chromium hides bars anyway (see the sidebar entry), `tests/e2e/noscrollbars.js` launches with `--hide-scrollbars` off and reads the computed `scrollbar-width` and the bar's width.
 **Rule:** Do not add a rule that shows a scroll bar. An area that scrolls must still be reachable: say so in the UI (a fade, a "more" cue) when content hides below the fold.
+
+## Two max-height rules on one property: the wider one wins on short screens
+**Problem:** `[@media(max-height:700px)]:h-8` next to `[@media(max-height:820px)]:h-9` should give 32 px at 560 px high, but the element is 36 px. The sidebar stopped fitting after the status bubble and the Help row were added.
+**Reality:** Tailwind writes the 820 rule after the 700 rule, and both match on a short screen, so the later one wins. `tests/e2e/sidebarfit.js` (74 checks: every sidebar item on screen from 560 px high, sign-out visible collapsed at 720) caught it.
+**Rule:** Give the middle tier a band, `[@media(min-height:701px)_and_(max-height:820px)]:`, and keep `[@media(max-height:700px)]:` for the short tier, as `sidebar.tsx` does. A new row, bubble or footer line in the sidebar costs height: run `sidebarfit.js`.
+

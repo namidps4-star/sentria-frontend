@@ -291,7 +291,7 @@ export function Sidebar({
           {/* LOGO */}
           <div
             className={[
-              "flex h-[76px] shrink-0 items-center [@media(max-height:700px)]:h-14",
+              "flex h-[76px] shrink-0 items-center [@media(min-height:701px)_and_(max-height:820px)]:h-14 [@media(max-height:700px)]:h-10",
               collapsed ? "justify-center px-2" : "px-4",
             ].join(" ")}
           >
@@ -359,16 +359,16 @@ export function Sidebar({
               unclipped: its labels pop out to the right. */}
           <nav
             className={[
-              "flex flex-1 flex-col px-3 py-3 [@media(max-height:700px)]:py-1.5",
+              "flex flex-1 flex-col px-3 py-3 [@media(min-height:701px)_and_(max-height:820px)]:py-2 [@media(max-height:700px)]:py-0.5",
               collapsed
-                ? "overflow-visible"
+                ? "min-h-0 overflow-visible"
                 : "min-h-0 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
             ].join(" ")}
           >
             {visibleSections.map((section, sectionIndex) => (
               <div key={section.title} className="flex min-h-0 shrink flex-col">
                 {sectionIndex > 0 && (
-                  <div className="my-4 h-px w-full shrink-0 bg-white/15 [@media(max-height:820px)]:my-2 [@media(max-height:700px)]:my-1" />
+                  <div className="my-4 h-px w-full shrink-0 bg-white/15 [@media(max-height:820px)]:my-2 [@media(max-height:700px)]:my-0.5" />
                 )}
 
                 {!collapsed && (
@@ -377,7 +377,7 @@ export function Sidebar({
                   </div>
                 )}
 
-                <div className="flex min-h-0 shrink flex-col gap-1 [@media(max-height:700px)]:gap-0.5">
+                <div className="flex min-h-0 shrink flex-col gap-1 [@media(min-height:701px)_and_(max-height:820px)]:gap-0.5 [@media(max-height:700px)]:gap-px">
                   {section.items.map((item) => {
                     const isActive = active === item.id
                     const Icon = item.icon
@@ -459,7 +459,7 @@ export function Sidebar({
           </nav>
 
           {/* The status bubble sits outside the scrolling list, so it is on screen at every height. */}
-          <div className="shrink-0 px-3 pb-3 [@media(max-height:700px)]:pb-1.5">
+          <div className="shrink-0 px-3 pb-3 [@media(min-height:701px)_and_(max-height:820px)]:pb-2 [@media(max-height:700px)]:pb-1">
             <SentriaStatus
               collapsed={collapsed}
               onUpload={() => {
@@ -471,7 +471,7 @@ export function Sidebar({
 
           {/* SIGN OUT */}
           {onSignOut && (
-            <div className="shrink-0 border-t border-white/10 px-3 py-3 [@media(max-height:700px)]:py-1.5">
+            <div className="shrink-0 border-t border-white/10 px-3 py-3 [@media(min-height:701px)_and_(max-height:820px)]:py-2 [@media(max-height:700px)]:py-0.5">
               {!collapsed && (name || username || email) && (
                 <div className="mb-1 px-3 [@media(max-height:700px)]:hidden" title={email} data-testid="signed-in-user">
                   <div className="flex items-center gap-1.5">
@@ -502,7 +502,7 @@ export function Sidebar({
                 title={collapsed ? tx("Aide et retours", "Help & feedback") : undefined}
                 data-support-open=""
                 className={[
-                  "mb-0.5 flex h-10 w-full items-center rounded-xl [@media(max-height:700px)]:h-8 text-sidebar-foreground/65 transition hover:bg-accent/10 hover:text-accent",
+                  "mb-0.5 flex h-10 w-full items-center rounded-xl [@media(min-height:701px)_and_(max-height:820px)]:h-9 [@media(max-height:700px)]:h-[26px] text-sidebar-foreground/65 transition hover:bg-accent/10 hover:text-accent",
                   collapsed ? "justify-center" : "gap-3 px-3 text-left",
                   SIDEBAR_FOCUS,
                 ].join(" ")}
@@ -520,7 +520,7 @@ export function Sidebar({
                 aria-label={collapsed ? t("sidebar.signOut") : undefined}
                 title={collapsed ? t("sidebar.signOut") : undefined}
                 className={[
-                  "flex h-10 w-full items-center rounded-xl [@media(max-height:700px)]:h-8 text-sidebar-foreground/65 transition hover:bg-accent/10 hover:text-accent",
+                  "flex h-10 w-full items-center rounded-xl [@media(min-height:701px)_and_(max-height:820px)]:h-9 [@media(max-height:700px)]:h-[26px] text-sidebar-foreground/65 transition hover:bg-accent/10 hover:text-accent",
                   collapsed ? "justify-center" : "gap-3 px-3 text-left",
                   SIDEBAR_FOCUS,
                 ].join(" ")}
