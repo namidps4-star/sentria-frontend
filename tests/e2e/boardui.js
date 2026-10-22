@@ -42,6 +42,9 @@ const pass = (ok, l) => { fails += !ok; console.log(`   ${ok ? 'PASS' : 'FAIL'} 
   pass(tagTexts.every(t => !/(Critical|Warning)\s*·\s*\d+/.test(t)), 'the severity tag carries no risk number');
   const times = await p.locator('article [data-alert-time]').allInnerTexts();
   pass(times.length === 5 && times.includes('Yesterday') && times.some(t => /min ago$/.test(t)), 'each card shows how long ago: ' + times.join(' | '));
+  const warnTag = p.locator('article span', { hasText: /^Warning$/ }).first();
+  const warnCol = await warnTag.evaluate(el => { const t = el.closest('span.rounded-full') || el; const cv = document.createElement('canvas'); cv.width = cv.height = 1; const c = cv.getContext('2d', { willReadFrequently: true }); const get = v => { c.fillStyle = '#000'; c.fillStyle = v; c.fillRect(0, 0, 1, 1); return [...c.getImageData(0, 0, 1, 1).data].slice(0, 3); }; const s = getComputedStyle(t); return { bg: get(s.backgroundColor), fg: get(s.color) }; });
+  pass(warnCol.bg[0] > 220 && warnCol.bg[1] > 120 && warnCol.bg[1] < 170 && warnCol.bg[2] < 80 && warnCol.fg[0] < 70, 'the Warning tag is solid orange with dark text: bg rgb(' + warnCol.bg.join(',') + ') text rgb(' + warnCol.fg.join(',') + ')');
   const first = p.locator('article').first();
   pass(await first.getByRole('button', { name: /Move to the next column/ }).count() === 1 && await first.getByRole('button', { name: /Priority detail/ }).count() === 1, 'the move arrows and the detail button are still there');
   pass(await first.locator('input[type=date]').count() === 1, 'the due date is still there');

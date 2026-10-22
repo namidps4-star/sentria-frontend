@@ -32,7 +32,7 @@ export type TagTone = "warning" | "info" | "success" | "danger" | "neutral" | "b
 
 const TONES: Record<TagTone, { tag: string; icon: LucideIcon }> = {
   warning: {
-    tag: "border-[var(--tag-warning-bd)] bg-[var(--tag-warning-bg)] text-[var(--tag-warning-fg)]",
+    tag: "border-[var(--tag-watch-bg)] bg-[var(--tag-watch-bg)] text-[var(--tag-watch-fg)]",
     icon: CircleAlert,
   },
   info: {

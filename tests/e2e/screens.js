@@ -27,9 +27,9 @@ const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y
     await p.locator('#alerts-table').scrollIntoViewIfNeeded().catch(() => {});
     const c = await style(crit);
     const dark = theme !== 'light';
-    const want = dark ? { crit: 'rgb(224, 82, 92)', critFg: 'rgb(26, 5, 7)', warn: 'rgb(75, 66, 42)' } : { crit: 'rgb(216, 58, 68)', critFg: 'rgb(255, 255, 255)', warn: 'rgb(255, 230, 168)' };
+    const want = dark ? { crit: 'rgb(224, 82, 92)', critFg: 'rgb(26, 5, 7)', warn: 'rgb(242, 154, 58)', warnFg: 'rgb(43, 20, 0)' } : { crit: 'rgb(216, 58, 68)', critFg: 'rgb(255, 255, 255)', warn: 'rgb(245, 146, 43)', warnFg: 'rgb(43, 20, 0)' };
     pass(c.bg === want.crit && c.fg === want.critFg, `${label}: Critical is a solid red tag with high-contrast text (${c.bg} / ${c.fg})`);
-    if (await warn.count()) { const w = await style(warn); pass(w.bg === want.warn && contrast(w.bg, w.fg) >= 4.5, `${label}: Warning is butter pastel, readable (${w.bg}, ${contrast(w.bg, w.fg).toFixed(1)}:1)`); }
+    if (await warn.count()) { const w = await style(warn); pass(w.bg === want.warn && w.fg === want.warnFg && contrast(w.bg, w.fg) >= 4.5, `${label}: Warning is a solid orange tag with dark text, readable (${w.bg}, ${contrast(w.bg, w.fg).toFixed(1)}:1)`); }
     pass(contrast(c.bg, c.fg) >= 4.5, `${label}: Critical text contrast ${contrast(c.bg, c.fg).toFixed(2)}:1`);
     const tags = await p.$$eval('span.rounded-full.border.font-semibold', els => els.filter(e => e.offsetParent).map(e => { const s = getComputedStyle(e); return { t: e.innerText.trim(), bg: s.backgroundColor, fg: s.color, bright: !!e.closest('.tags-light') }; }));
     // Solid fills only: the see-through chips on the black banner are not status tags.
@@ -37,8 +37,8 @@ const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y
     const bad = tags.filter(t => solid(t) && contrast(t.bg, t.fg) < 4.5);
     pass(tags.length > 0 && bad.length === 0, `${label}: all ${tags.length} tags on the dashboard ≥ 4.5:1` + (bad.length ? ' — ' + JSON.stringify(bad.slice(0, 3)) : ''));
     // A surface that stays bright in dark (the lime and white KPI tiles) takes .tags-light, so its tags are light on purpose.
-    if (theme !== 'light') { const all = tags.filter(solid).filter(t => !t.bright && t.bg !== want.crit); pass(all.length > 0 && all.every(t => lum(t.bg) < 0.12 && lum(t.fg) > 0.4), `${label}: every tag is a deep tint with bright pastel text, no glare (${all.map(t => t.t).slice(0, 5).join(', ')})`); }
-    else { const all = tags.filter(solid).filter(t => t.bg !== want.crit); pass(all.length > 0 && all.every(t => lum(t.bg) > 0.6), `${label}: every other tag is a light pastel fill (Critical is the solid red)`); }
+    if (theme !== 'light') { const all = tags.filter(solid).filter(t => !t.bright && t.bg !== want.crit && t.bg !== want.warn); pass(all.length > 0 && all.every(t => lum(t.bg) < 0.12 && lum(t.fg) > 0.4), `${label}: every tag is a deep tint with bright pastel text, no glare (${all.map(t => t.t).slice(0, 5).join(', ')})`); }
+    else { const all = tags.filter(solid).filter(t => t.bg !== want.crit && t.bg !== want.warn); pass(all.length > 0 && all.every(t => lum(t.bg) > 0.6), `${label}: every other tag is a light pastel fill (Critical is solid red, Warning solid orange)`); }
     pass(p._errs.length === 0, `${label}: no page errors ` + p._errs.join('|'));
     await p._ctx.close();
   }
