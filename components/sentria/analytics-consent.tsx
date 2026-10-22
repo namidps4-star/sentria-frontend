@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 
 import { analyticsConfigured, CONSENT_EVENT, readConsent, setConsent, startAnalytics, type Consent } from "@/lib/analytics"
+import { errorTrackingConfigured, followConsent } from "@/lib/error-tracking"
 import { useTx } from "@/lib/i18n"
 
 import { LegalDialog } from "./legal-dialog"
@@ -22,11 +23,15 @@ export function AnalyticsConsent() {
     sync()
     void startAnalytics()
     window.addEventListener(CONSENT_EVENT, sync)
+    const stopFollowing = followConsent()
 
-    return () => window.removeEventListener(CONSENT_EVENT, sync)
+    return () => {
+      window.removeEventListener(CONSENT_EVENT, sync)
+      stopFollowing()
+    }
   }, [])
 
-  if (!analyticsConfigured() || consent !== null) return null
+  if (!(analyticsConfigured() || errorTrackingConfigured()) || consent !== null) return null
 
   return (
     <>
@@ -39,8 +44,8 @@ export function AnalyticsConsent() {
         <p className="text-sm font-semibold">{tx("Mesurer l'usage de SentrIA ?", "Measure how SentrIA is used?")}</p>
         <p className="mt-1 text-xs text-muted-foreground">
           {tx(
-            "Nous comptons les écrans ouverts et les étapes terminées pour améliorer le produit. Aucun nom, aucun contenu de fichier. Vous pouvez changer d'avis dans Paramètres.",
-            "We count the screens opened and the steps finished, to improve the product. No names, no file contents. You can change your mind in Settings."
+            "Nous comptons les écrans ouverts et les étapes terminées, et nous recevons un rapport quand l'application plante, pour améliorer le produit. Aucun nom, aucun contenu de fichier. Vous pouvez changer d'avis dans Paramètres.",
+            "We count the screens opened and the steps finished, and we get a report when the app crashes, to improve the product. No names, no file contents. You can change your mind in Settings."
           )}{" "}
           <button
             type="button"
