@@ -285,6 +285,17 @@
   }
 }
 
+/* No scroll bars, anywhere: pages, tables, lists, the modal sheet. Content
+ * still scrolls with the wheel, touch and keyboard. Outside any @layer on
+ * purpose, so no utility class can bring a bar back. */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+
 @layer base {
   /* App-wide keyboard focus baseline.
    *
