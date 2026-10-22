@@ -1,0 +1,32 @@
+name: ci
+on:
+  push:
+    branches: [new_feat, main]
+  pull_request:
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # The build needs these to exist. They point at nothing real.
+      NEXT_PUBLIC_SUPABASE_URL: https://ci.invalid
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-anon-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install with the frozen lockfile
+        run: pnpm install --frozen-lockfile
+      - name: Type check (next build does not fail on types)
+        run: npx tsc --noEmit -p .
+      - name: Lint (errors fail, warnings do not)
+        run: npx eslint . --quiet
+      - name: Unit tests
+        run: pnpm test:unit
+      - name: Production build
+        run: pnpm build

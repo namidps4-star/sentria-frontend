@@ -20,7 +20,7 @@ export function BriefingCard({ alerts, stale, staleDays }: { alerts: LogisticsAl
   return (
     <section data-testid="briefing" className="space-y-4 print:space-y-3">
       <div className="rounded-[28px] bg-brand p-6 text-[#141414] sm:p-8 print:bg-transparent">
-        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#141414]/60">
+        <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#141414]/75">
           {tx("Votre semaine", "Your week")}
         </p>
         <h2 className="mt-2 max-w-2xl font-heading text-3xl font-bold leading-[1.08] tracking-tight sm:text-4xl">

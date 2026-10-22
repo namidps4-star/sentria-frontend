@@ -1,5 +1,7 @@
 # SentrIA frontend
 
+[![ci](https://github.com/namidps4-star/sentria-frontend/actions/workflows/ci.yml/badge.svg)](https://github.com/namidps4-star/sentria-frontend/actions/workflows/ci.yml) [![e2e](https://github.com/namidps4-star/sentria-frontend/actions/workflows/e2e.yml/badge.svg)](https://github.com/namidps4-star/sentria-frontend/actions/workflows/e2e.yml) [![security](https://github.com/namidps4-star/sentria-frontend/actions/workflows/security.yml/badge.svg)](https://github.com/namidps4-star/sentria-frontend/actions/workflows/security.yml)
+
 The web app for SentrIA: operating data in, alerts and plain-language actions out. Next.js 16 (App Router, Turbopack), React 19, Tailwind v4, Supabase Auth, pnpm. The API is the `Sentria` repo (FastAPI).
 
 ## Run it
@@ -16,7 +18,10 @@ It needs `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. `NEXT_P
 ```sh
 npx tsc --noEmit -p .    # next build does not fail on type errors
 npx eslint <files>
+pnpm test:unit           # vitest, the pure helpers in lib/ (tests/unit)
 ```
+
+CI (`.github/workflows/ci.yml`) runs the install, types, lint, unit tests and the build on every push. `e2e.yml` runs the browser suites on Chromium, Firefox and WebKit, and `smoke.yml` checks a live deploy (needs the `SMOKE_EMAIL` and `SMOKE_PASSWORD` secrets for the sign-in steps).
 
 Browser suites live in `tests/e2e/` (Playwright, fake Supabase): see `tests/e2e/README.md`. Judge them on a production build, not `next dev`.
 

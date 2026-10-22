@@ -1,0 +1,32 @@
+name: smoke
+# After a deploy: open the app, ask the API, sign in with a test account.
+# Vercel reports a finished deploy as a deployment_status event.
+on:
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Address of the deploy to check
+        required: true
+jobs:
+  smoke:
+    if: github.event_name == 'workflow_dispatch' || (github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Production')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright
+        working-directory: tests/e2e
+        run: npm ci && npx playwright install --with-deps chromium
+      - name: Smoke test
+        working-directory: tests/smoke
+        env:
+          NODE_PATH: ${{ github.workspace }}/tests/e2e/node_modules
+          SMOKE_URL: ${{ github.event.inputs.url || github.event.deployment_status.environment_url }}
+          # A test account made for this. Without both, the sign-in steps are skipped and the run says so.
+          SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+        run: node smoke.js

@@ -308,7 +308,7 @@ export function Sidebar({
                     SentrIA
                   </span>
 
-                  <span className="text-[10px] text-sidebar-foreground/40">
+                  <span className="text-[10px] text-sidebar-foreground/60">
                     {t("brand.tagline")}
                   </span>
                 </div>
@@ -372,7 +372,7 @@ export function Sidebar({
                 )}
 
                 {!collapsed && (
-                  <div className="mb-2 shrink-0 px-3 text-[10px] font-semibold tracking-[0.16em] text-sidebar-foreground/40 [@media(max-height:700px)]:hidden">
+                  <div className="mb-2 shrink-0 px-3 text-[10px] font-semibold tracking-[0.16em] text-sidebar-foreground/60 [@media(max-height:700px)]:hidden">
                     {t(section.title)}
                   </div>
                 )}

@@ -4045,6 +4045,7 @@ export function DashboardView({
 
         <div className="flex flex-wrap items-center gap-2 border-t border-border px-6 py-3">
           <select
+            aria-label={tx("Filtrer par statut", "Filter by status")}
             value={statusFilter}
             onChange={(e) =>
               setStatusFilter(
@@ -4069,6 +4070,7 @@ export function DashboardView({
           </select>
 
           <select
+            aria-label={tx("Filtrer par période", "Filter by period")}
             value={periodPreset}
             onChange={(e) => {
               const value = e.target.value as

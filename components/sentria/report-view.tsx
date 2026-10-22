@@ -527,7 +527,12 @@ function AlertsTable({ alerts }: { alerts: AlertRow[] }) {
         </div>
       </div>
 
-      <div className="overflow-x-auto border-t border-border">
+      <div
+        className="overflow-x-auto border-t border-border"
+        tabIndex={0}
+        role="region"
+        aria-label={tx("Tableau des alertes", "Alerts table")}
+      >
         <table className="w-full border-collapse text-sm">
           <thead className="table-head">
             <tr className="border-b border-border text-left">
