@@ -1816,38 +1816,57 @@ export function OnboardingView({
             {/* MONITORING PRIORITIES */}
             {step === equipmentStepNumber && sector && (
               <div>
-                <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
-                  {selectedSector ? px(selectedSector.label) : null}
-                  {subType && (
-                    <>
-                      <span className="text-muted-foreground/50">/</span>
-                      {px(
-                        subTypes.find((item) => item.id === subType)?.label
-                      )}
-                    </>
-                  )}
+                <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+                  <div className="flex items-end gap-4">
+                    <span
+                      className="relative inline-block pb-3 font-heading text-[64px] font-light leading-none tracking-tight tabular-nums"
+                      aria-hidden="true"
+                    >
+                      {selectedEquipment.length}
+                      <span className="absolute bottom-0 left-0.5 h-1 w-7 rounded-full bg-brand" />
+                    </span>
+
+                    <div className="pb-3.5">
+                      <p className="text-lg font-extrabold leading-tight" aria-live="polite">
+                        {tx(
+                          `${selectedEquipment.length} sur ${selectableEquipment.length} choisies`,
+                          `${selectedEquipment.length} of ${selectableEquipment.length} picked`
+                        )}
+                      </p>
+                      <p className="mt-0.5 text-sm text-muted-foreground">
+                        {selectedSector ? px(selectedSector.label) : null}
+                        {subType && (
+                          <>
+                            {" · "}
+                            {px(subTypes.find((item) => item.id === subType)?.label)}
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pb-3">
+                    <button
+                      type="button"
+                      onClick={selectAllEquipment}
+                      disabled={allEquipmentSelected}
+                      className="rounded-full bg-muted px-[18px] py-2.5 text-sm font-bold transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {tx("Tout sélectionner", "Select all")}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={clearEquipment}
+                      disabled={selectedEquipment.length === 0}
+                      className="rounded-full bg-muted px-[18px] py-2.5 text-sm font-bold transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {tx("Tout désélectionner", "Clear all")}
+                    </button>
+                  </div>
                 </div>
 
-                <BulkSelect
-                  count={selectedEquipment.length}
-                  total={selectableEquipment.length}
-                  allSelected={allEquipmentSelected}
-                  onSelectAll={selectAllEquipment}
-                  onClear={clearEquipment}
-                  // French keeps 0 and 1 singular; English only 1.
-                  noun={tx(
-                    selectedEquipment.length > 1
-                      ? "priorités sélectionnées"
-                      : "priorité sélectionnée",
-                    selectedEquipment.length === 1
-                      ? "priority selected"
-                      : "priorities selected"
-                  )}
-                />
-
-                {/* Compact rows, two per line: the name, what it watches,
-                    and what only this card does. */}
-                <div className="grid gap-2.5 sm:grid-cols-2">
+                <div className="mt-5 grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
                   {equipment.map((item) => {
                     const Icon = item.icon
                     const active = selectedEquipment.includes(item.id)
@@ -1863,66 +1882,56 @@ export function OnboardingView({
                         disabled={disabled}
                         aria-pressed={disabled ? undefined : active}
                         className={cn(
-                          "group relative flex items-start gap-3.5 rounded-2xl border p-3.5 text-left transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          "relative flex min-h-[190px] flex-col justify-between gap-5 rounded-[28px] p-5 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                           disabled
-                            ? "cursor-not-allowed border-dashed border-border bg-card/60 opacity-60"
+                            ? "cursor-not-allowed bg-muted opacity-50"
                             : active
-                              ? "border-transparent bg-[#141414] text-white shadow-md dark:ring-1 dark:ring-brand/60"
-                              : "border-border bg-card shadow-sm hover:-translate-y-0.5 hover:border-foreground/30 hover:shadow-md"
+                              ? "bg-[var(--ink)] text-white shadow-[0_14px_44px_rgba(20,20,18,0.18)]"
+                              : "bg-muted hover:-translate-y-0.5 hover:bg-muted/70"
                         )}
                       >
-                        <span
-                          className={cn(
-                            "flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl",
-                            active ? "bg-white" : "bg-muted"
-                          )}
-                        >
+                        <span className="flex h-[54px] w-[54px] items-center justify-center overflow-hidden rounded-[18px] bg-card">
                           {img ? (
-                            <img src={img} alt="" className="h-11 w-11 object-contain" />
+                            <img src={img} alt="" className="h-10 w-10 object-contain" />
                           ) : (
-                            <Icon className="h-6 w-6 stroke-[1.75] text-neutral-700" aria-hidden="true" />
+                            <Icon className="h-6 w-6 stroke-[1.75] text-muted-foreground" aria-hidden="true" />
                           )}
                         </span>
 
-                        <span className="min-w-0 flex-1 pr-7">
-                          <span className="flex flex-wrap items-center gap-2">
-                            <span className="text-sm font-bold leading-snug">{px(item.label)}</span>
-                            {disabled && (
+                        <span className="block">
+                          <span className="block font-heading text-[18px] font-extrabold leading-tight tracking-tight">
+                            {px(item.label)}
+                          </span>
+                          <span className={cn("mt-1 block text-[13px] leading-snug", active ? "text-white/60" : "text-muted-foreground")}>
+                            {px(item.description)}
+                          </span>
+
+                          {disabled ? (
+                            <span className="mt-2.5 inline-block">
                               <StatusTag tone="neutral" size="xs">
                                 {tx("Bientôt", "Soon")}
                               </StatusTag>
-                            )}
-                          </span>
-                          <span
-                            className={cn(
-                              "mt-0.5 block text-xs leading-snug",
-                              active ? "text-white/65" : "text-muted-foreground"
-                            )}
-                          >
-                            {px(item.description)}
-                          </span>
-                          {edge && (
-                            <span
-                              className={cn(
-                                "mt-2 flex items-start gap-1.5 text-xs font-medium leading-snug",
-                                active ? "text-brand" : "text-foreground/80"
-                              )}
-                            >
-                              <Sparkles className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
-                              <span>{edge}</span>
                             </span>
+                          ) : (
+                            edge && (
+                              <span
+                                className={cn(
+                                  "mt-2.5 inline-block rounded-2xl px-3 py-1.5 text-xs font-bold leading-snug",
+                                  active ? "bg-brand text-[#141414]" : "bg-card text-foreground"
+                                )}
+                              >
+                                {edge}
+                              </span>
+                            )
                           )}
                         </span>
 
-                        {!disabled && (
+                        {!disabled && active && (
                           <span
-                            className={cn(
-                              "absolute right-3.5 top-3.5 flex h-6 w-6 items-center justify-center rounded-full border transition-colors",
-                              active ? "border-brand bg-brand text-[#141414]" : "border-border bg-background text-transparent"
-                            )}
+                            className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full bg-brand text-[#141414]"
                             aria-hidden="true"
                           >
-                            <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                            <Check className="h-4 w-4" strokeWidth={3} />
                           </span>
                         )}
                       </button>
@@ -1930,7 +1939,7 @@ export function OnboardingView({
                   })}
                 </div>
 
-                <p className="mt-4 rounded-xl border border-border bg-background px-4 py-3 text-[10px] uppercase tracking-wider text-muted-foreground">
+                <p className="mt-5 text-[11px] uppercase tracking-wider text-muted-foreground">
                   {tx("Modifiable plus tard", "Changeable later")}
                 </p>
               </div>
