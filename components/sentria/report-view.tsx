@@ -26,6 +26,7 @@ import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import { StatusTag } from "./status-tag"
 import { WeekCard } from "./week-card"
+import { BriefingCard } from "./briefing-card"
 import { AccountFreshnessNote, useAccountFreshness } from "./account-freshness"
 import { SourceNotice } from "./not-measured"
 import { localized, resolve, useTx, type Localized } from "@/lib/i18n"
@@ -833,6 +834,15 @@ export function ReportView({ data }: { data?: ReportData }) {
             "The report shows the alerts already loaded. It says nothing about what may have happened since."
           )}
           onRetry={retry}
+        />
+      )}
+
+      {/* The week told as a story, above the figures it comes from. */}
+      {!data && (
+        <BriefingCard
+          alerts={scopedAlerts}
+          stale={freshness.kind === "stale"}
+          staleDays={freshness.stale.length ? Math.max(...freshness.stale.map((s) => s.ageDays)) : null}
         />
       )}
 
