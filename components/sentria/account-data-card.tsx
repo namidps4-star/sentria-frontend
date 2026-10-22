@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 
 import { analyticsConfigured, CONSENT_EVENT, readConsent, setConsent } from "@/lib/analytics"
+import { errorTrackingConfigured } from "@/lib/error-tracking"
 import { API_BASE, apiFetch } from "@/lib/api"
 import { useTx } from "@/lib/i18n"
 import { useIsEmployee } from "@/lib/role"
@@ -119,7 +120,7 @@ export function AccountDataCard() {
         )}
       </p>
 
-      {analyticsConfigured() && (
+      {(analyticsConfigured() || errorTrackingConfigured()) && (
         <label className="mt-3 flex cursor-pointer items-start gap-2.5 text-xs">
           <input
             type="checkbox"
@@ -132,8 +133,8 @@ export function AccountDataCard() {
             <span className="font-semibold">{tx("Statistiques d'usage", "Usage statistics")}</span>
             <span className="block text-muted-foreground">
               {tx(
-                "Compter les écrans ouverts et les étapes terminées, sans nom ni contenu de fichier.",
-                "Count the screens opened and the steps finished, with no names or file contents."
+                "Compter les écrans ouverts et les étapes terminées, et recevoir un rapport quand l'application plante, sans nom ni contenu de fichier.",
+                "Count the screens opened and the steps finished, and get a report when the app crashes, with no names or file contents."
               )}
             </span>
           </span>
