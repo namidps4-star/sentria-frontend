@@ -332,3 +332,8 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Problem:** A boss-facing story invites a loss figure, a named fix or a "saved" total.
 **Reality:** `lib/briefing.ts` reads only the alerts (equipment, message, severity, date, risk score) and the freshness stamps. Repeats of one asset and kind are one story with a count. `/alerts` rows carry no params, so there is no cost, no wholesaler and no recommended action to quote. Closed-task and outcome lines need task history and are not built.
 **Rule:** Add a line to the story only when the data for it is in the alerts or the stamps. `tests/e2e/briefing.js` fails on a money sign.
+
+## `error.tsx` takes `retry`, not `reset`, and the status pages share one component (LAUNCH-READY A)
+**Problem:** Next's older docs and most examples give an error boundary a `reset` prop.
+**Reality:** In this Next version `error.tsx` and `global-error.tsx` receive `retry`; `reset` is undefined. `app/global-error.tsx` replaces the root layout, so it carries its own `<html>`, fixed colours and both languages and cannot use theme tokens or `useTx`. The 404 and the error card are `components/sentria/status-page.tsx`. Pictures in `public/` get a one-day cache header from `next.config.mjs`; nothing per company may ever be served from there.
+**Rule:** Read `node_modules/next/dist/docs/.../error.md` before touching these files. `tests/e2e/statuspages.js` guards the 404 and the header; the error page itself has no browser test, as it needs a render error to appear.

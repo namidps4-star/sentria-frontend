@@ -11,7 +11,15 @@ const securityHeaders = [
 
 const nextConfig = {
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }]
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      /* Pictures in public/ are not fingerprinted: a day in the browser, a week
+         served stale while it refreshes. Nothing here is per company. */
+      ...["png", "avif", "svg", "ico"].map((ext) => ({
+        source: `/:file(.+\\.${ext})`,
+        headers: [{ key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" }],
+      })),
+    ]
   },
   typescript: {
     ignoreBuildErrors: true,

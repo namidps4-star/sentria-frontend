@@ -1656,17 +1656,36 @@ export function RecommendationsBoard({
 
   if (recommendations.length === 0) {
     return (
-      <div className="flex items-center gap-3 rounded-3xl border border-dashed border-border bg-card p-6 text-sm text-muted-foreground">
-        <Sparkles className="h-4 w-4 shrink-0 text-brand-foreground" />
-        {unmeasured
-          ? tx(
-              "Aucune priorité urgente pour ce secteur dans les données dont nous disposons. Elles ne sont pas à jour : cela ne dit pas que tout va bien.",
-              "No urgent priority for this sector in the data we hold. It is not up to date, so this does not say all is well."
-            )
-          : tx(
-              "Aucune priorité urgente pour ce secteur pour le moment. Tout est sous contrôle ici.",
-              "No urgent priority for this sector right now. Everything here is under control."
-            )}
+      <div className="flex items-center gap-4 rounded-[28px] bg-muted p-5 sm:p-6">
+        <span
+          className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[19px] text-white shadow-md"
+          style={{
+            background: unmeasured
+              ? "linear-gradient(165deg, #9aa5bd, #566178)"
+              : "linear-gradient(165deg, #5fd68a, #1f9d55)",
+          }}
+          aria-hidden="true"
+        >
+          <Sparkles className="h-7 w-7" />
+        </span>
+        <div className="min-w-0">
+          <p className="font-heading text-lg font-semibold tracking-tight">
+            {unmeasured
+              ? tx("Rien d'urgent dans les données que nous avons", "Nothing urgent in the data we hold")
+              : tx("Rien d'urgent ici", "Nothing urgent here")}
+          </p>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+            {unmeasured
+              ? tx(
+                  "Aucune priorité urgente pour ce secteur dans les données dont nous disposons. Elles ne sont pas à jour : cela ne dit pas que tout va bien.",
+                  "No urgent priority for this sector in the data we hold. It is not up to date, so this does not say all is well."
+                )
+              : tx(
+                  "Aucune priorité urgente pour ce secteur pour le moment. Tout est sous contrôle ici.",
+                  "No urgent priority for this sector right now. Everything here is under control."
+                )}
+          </p>
+        </div>
       </div>
     )
   }
