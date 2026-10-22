@@ -61,7 +61,17 @@ const skip = (name, why) => {
       await page.locator('input[autocomplete="username"]').first().fill(EMAIL);
       await page.locator('input[autocomplete="current-password"]').first().fill(PASSWORD);
       await page.locator('form button[type="submit"]').first().click();
-      await page.locator('aside nav').first().waitFor();
+
+      try {
+        await page.locator('aside nav').first().waitFor();
+      } catch (error) {
+        // Say what the page shows instead, without the account's details: an error line, or the heading it stopped on.
+        const alert = await page.locator('[role="alert"]').first().innerText({ timeout: 1000 }).catch(() => '');
+        const heading = await page.locator('h1, h2').first().innerText({ timeout: 1000 }).catch(() => '');
+        const stuck = (alert || heading || 'no message and no heading').replace(/\s+/g, ' ').slice(0, 140);
+        await page.screenshot({ path: 'smoke-signin.png' }).catch(() => {});
+        throw new Error(`the page after sign-in shows: "${stuck}"`);
+      }
     });
 
     await step('The dashboard loads', async () => {

@@ -30,3 +30,10 @@ jobs:
           SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
           SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
         run: node smoke.js
+      - name: Screenshot of a failed sign-in
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-signin
+          path: tests/smoke/smoke-signin.png
+          if-no-files-found: ignore
