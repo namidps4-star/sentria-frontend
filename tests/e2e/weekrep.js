@@ -34,7 +34,7 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   const sw = card.getByRole('switch', { name: 'Monday email' });
   pass(await sw.getAttribute('aria-checked') === 'false' && /Get this summary by email every Monday/.test(t), 'email off by default, says how to get it');
   const box = await card.boundingBox(), body = await p.locator('main h2', { hasText: /This week/ }).boundingBox();
-  pass(box.y > 0 && box.y < (await p.getByText('Key figures').first().boundingBox()).y, 'the card sits above the figures, after the story');
+  pass(box.y > 0 && await p.locator('#report-panel-story').getByTestId('week-card').count() === 1, 'the card is on the story tab, after the story');
   await sw.click(); await p.waitForTimeout(300);
   pass(await sw.getAttribute('aria-checked') === 'true' && await stored(p) === 'on', 'turning it on saves "on" with the account');
   pass(/On\. Sending starts as soon as email is set up/.test(await card.innerText()), 'honest while email is not set up on the server');

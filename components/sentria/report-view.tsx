@@ -662,6 +662,8 @@ export function ReportView({ data }: { data?: ReportData }) {
   const [timezoneId, setTimezoneId] = useState("")
   const [sectors] = useState<Sector[]>(readOnboardedSectors)
   const [activeSector, setActiveSector] = useState<"all" | Sector>("all")
+  // The week told as a story, or the figures behind it: one page, two tabs.
+  const [tab, setTab] = useState<"story" | "figures">("story")
 
   // A change of site fetches again (F-SITESCOPE).
   const shownSite = useSiteVersion()
@@ -842,38 +844,104 @@ export function ReportView({ data }: { data?: ReportData }) {
         />
       )}
 
-      {/* The week told as a story, above the figures it comes from. */}
-      {!data && (
-        <BriefingCard
-          alerts={scopedAlerts}
-          stale={freshness.kind === "stale"}
-          staleDays={freshness.stale.length ? Math.max(...freshness.stale.map((s) => s.ageDays)) : null}
+      {data ? (
+        <ReportBody
+          data={resolved}
+          timezoneLabel={built.timezoneLabel}
+          sectorContext={activeSectorLabel}
         />
+      ) : (
+        <>
+          {/* One report, two tabs: the story first, the figures behind it.
+              Export as PDF prints both. */}
+          <div className="t-enter flex flex-wrap items-center justify-between gap-3 print:hidden" style={enterAt(0)}>
+            <div
+              role="tablist"
+              aria-label={tx("Rapport", "Report")}
+              className="inline-flex rounded-full bg-muted p-1"
+              onKeyDown={(event) => {
+                if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return
+                event.preventDefault()
+                const next = tab === "story" ? "figures" : "story"
+                setTab(next)
+                document.getElementById(`report-tab-${next}`)?.focus()
+              }}
+            >
+              {(
+                [
+                  ["story", tx("Le récit", "The story")],
+                  ["figures", tx("Les chiffres", "The figures")],
+                ] as const
+              ).map(([id, label]) => (
+                <button
+                  key={id}
+                  id={`report-tab-${id}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === id}
+                  aria-controls={`report-panel-${id}`}
+                  tabIndex={tab === id ? 0 : -1}
+                  onClick={() => setTab(id)}
+                  className={cn(
+                    "rounded-full px-6 py-2.5 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    tab === id ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-2.5 rounded-full bg-[var(--ink)] py-2.5 pl-5 pr-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#141414] focus-visible:ring-offset-2"
+            >
+              {tx("Exporter en PDF", "Export as PDF")}
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand text-[#141414]">
+                <FileDown className="h-3.5 w-3.5" aria-hidden="true" />
+              </span>
+            </button>
+          </div>
+
+          <div id="sentria-print" className="space-y-6">
+            <div
+              role="tabpanel"
+              id="report-panel-story"
+              aria-labelledby="report-tab-story"
+              className={cn("space-y-6 print:block", tab !== "story" && "hidden")}
+            >
+              <div className="t-enter" style={enterAt(0.4)}>
+                <BriefingCard
+                  alerts={scopedAlerts}
+                  stale={freshness.kind === "stale"}
+                  staleDays={freshness.stale.length ? Math.max(...freshness.stale.map((s) => s.ageDays)) : null}
+                />
+              </div>
+
+              {/* F-REPORT: the week in the numbers the Monday email sends. */}
+              <div className="t-enter" style={enterAt(0.8)}>
+                <WeekCard stale={freshness.kind === "stale"} />
+              </div>
+            </div>
+
+            <div
+              role="tabpanel"
+              id="report-panel-figures"
+              aria-labelledby="report-tab-figures"
+              className={cn("print:block", tab !== "figures" && "hidden")}
+            >
+              <ReportBody
+                data={resolved}
+                timezoneLabel={built.timezoneLabel}
+                sectorContext={activeSectorLabel}
+                showExport={false}
+                staleNote={alertsError === null ? <AccountFreshnessNote assessment={freshness} /> : null}
+              />
+            </div>
+          </div>
+        </>
       )}
-
-      {/* F-REPORT: the week in the numbers the Monday email sends. */}
-      {!data && <WeekCard stale={freshness.kind === "stale"} />}
-
-      {/* The old report, named as the detail under the story. */}
-      {!data && (
-        <div className="pt-4 print:hidden">
-          <h2 className="font-heading text-2xl font-semibold tracking-tight">
-            {tx("Les chiffres derrière le récit", "The figures behind the story")}
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {tx("Indicateurs, tendances et la liste complète des alertes.", "Key figures, trends and the full list of alerts.")}
-          </p>
-        </div>
-      )}
-
-      <ReportBody
-        data={resolved}
-        timezoneLabel={built.timezoneLabel}
-        sectorContext={activeSectorLabel}
-        staleNote={
-          !data && alertsError === null ? <AccountFreshnessNote assessment={freshness} /> : null
-        }
-      />
     </div>
   )
 }
@@ -883,8 +951,11 @@ function ReportBody({
   timezoneLabel,
   sectorContext,
   staleNote,
+  showExport = true,
 }: {
   data: ReportData
+  /** The Export as PDF button: off when the page has its own, above the tabs. */
+  showExport?: boolean
   /** The warning that the data is old, which prints with the report. */
   staleNote?: ReactNode
   timezoneLabel?: string
@@ -926,15 +997,21 @@ function ReportBody({
           body * {
             visibility: hidden;
           }
+          #sentria-print,
+          #sentria-print *,
           #sentria-report,
           #sentria-report * {
             visibility: visible;
           }
-          #sentria-report {
+          #sentria-report,
+          #sentria-print {
             position: absolute;
             left: 0;
             top: 0;
             width: 100%;
+          }
+          #sentria-print #sentria-report {
+            position: static;
           }
         }
       `}</style>
@@ -981,16 +1058,18 @@ function ReportBody({
               </span>
             </p>
 
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="mt-4 flex w-full items-center justify-between rounded-full bg-[var(--ink)] py-2 pl-5 pr-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#141414] print:hidden"
-            >
-              {tx("Exporter en PDF", "Export as PDF")}
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-[#141414]">
-                <FileDown className="h-4 w-4" aria-hidden="true" />
-              </span>
-            </button>
+            {showExport && (
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="mt-4 flex w-full items-center justify-between rounded-full bg-[var(--ink)] py-2 pl-5 pr-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#141414] print:hidden"
+              >
+                {tx("Exporter en PDF", "Export as PDF")}
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-[#141414]">
+                  <FileDown className="h-4 w-4" aria-hidden="true" />
+                </span>
+              </button>
+            )}
           </div>
 
           {/* Auto-generated summary */}

@@ -97,6 +97,7 @@ const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y
     await p.getByPlaceholder('e.g. Lyon plant').fill('Usine Lyon'); await p.getByRole('button', { name: 'Create the site' }).click(); await p.waitForTimeout(400);
     pass(/Usine Lyon/.test(await p.evaluate(() => document.querySelector('main').innerText)), 'Create my first site: form, then the new site opens');
     await go(p, 'Report');
+    await p.getByRole('tab', { name: 'The figures' }).click(); await p.waitForTimeout(400);
     const t = await p.evaluate(() => document.querySelector('main').innerText);
     pass(/Your report/.test(t) && /Alerts in all\s*12/.test(t) && /Critical\s*8/.test(t) && /Warning\s*4/.test(t), 'report: 12 alerts, 8 critical, 4 warning in the black card');
     pass(await p.getByRole('button', { name: /Export as PDF/ }).count() === 1, 'Export as PDF still there');

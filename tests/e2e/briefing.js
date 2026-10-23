@@ -39,7 +39,7 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   pass(/What keeps coming back/.test(t) && /CRANE-02 \(2 alerts\)/.test(t), 'what keeps coming back names the repeat asset');
   pass(/The plan/i.test(t) && /Today: deal with CRANE-02/.test(t) && /Today: deal with REEFER-7/.test(t) && /This week: find out why CRANE-02/.test(t), 'a short plan: today for critical, this week for the repeat');
   pass(!/€|\$/.test(t), 'no money figure invented');
-  pass(await p.getByText('Key figures', { exact: true }).count() === 1 && await p.getByText('The figures behind the story').count() === 1, 'the old figures stay below the story');
+  pass(await p.getByRole('tab', { name: 'The figures' }).count() === 1 && await p.getByText('The figures behind the story').count() === 0 && await p.getByText('Key figures', { exact: true }).isHidden(), 'the old figures are on the other tab, not stacked under the story');
   pass(p._errs.length === 0, 'no page errors ' + p._errs.join('|'));
   await p.screenshot({ path: 'briefing-light.png' });
   await p.close();
