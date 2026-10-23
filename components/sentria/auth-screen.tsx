@@ -407,7 +407,7 @@ export function AuthScreen({
 
       <div className="relative z-10 flex flex-1 flex-col lg:flex-row lg:items-center lg:justify-center lg:gap-16 lg:px-10 lg:py-8">
         {/* ----------------------------------------------------- FORM */}
-        <main className="order-1 flex justify-center px-5 py-8 lg:order-2 lg:w-[26.875rem] lg:shrink-0 lg:p-0">
+        <main className="order-1 flex justify-center px-5 py-8 lg:order-3 lg:w-[26.875rem] lg:shrink-0 lg:p-0">
           <div className="relative w-full max-w-[26.875rem]">
             <div className="pointer-events-none absolute -inset-6 rounded-[70px] bg-brand/30 blur-3xl" aria-hidden="true" />
 
@@ -673,6 +673,13 @@ export function AuthScreen({
             </section>
           </div>
         </main>
+
+        {/* The slight line between the pitch and the form. */}
+        <div
+          aria-hidden="true"
+          data-testid="auth-divider"
+          className="hidden w-px self-stretch bg-gradient-to-b from-transparent via-foreground/15 to-transparent lg:order-2 lg:block"
+        />
 
         {/* --------------------------------------------------- PITCH */}
         <aside className="order-2 flex flex-col px-5 pb-8 pt-2 lg:order-1 lg:w-[600px] lg:shrink-0 lg:p-0">
