@@ -212,7 +212,7 @@ export function SectorShowcase({ tx, className }: { tx: Tx; className?: string }
         className="relative mt-5 grid grid-cols-[auto_1fr] items-start gap-5"
       >
         <div key={`figure-${current.id}`} className="min-w-[96px] animate-in fade-in duration-500 motion-reduce:animate-none">
-          <p className="font-heading text-4xl font-bold leading-none tracking-tight text-brand tabular-nums">
+          <p className="font-heading text-5xl font-light leading-none tracking-tight text-brand tabular-nums sm:text-[64px]">
             {t(current.figure)}
           </p>
           <p className="mt-1.5 whitespace-nowrap text-[11px] leading-snug text-white/55">{t(current.figureCaption)}</p>
@@ -226,7 +226,7 @@ export function SectorShowcase({ tx, className }: { tx: Tx; className?: string }
             </span>
             <SeverityTag severity={current.severity} tx={tx} size="xs" />
           </div>
-          <p className="mt-2.5 text-[15px] font-semibold leading-snug">{t(current.title)}</p>
+          <p className="mt-2.5 font-heading text-[19px] font-semibold leading-snug sm:text-[22px]">{t(current.title)}</p>
           <p className="mt-2 flex gap-2 text-sm leading-snug text-white/70">
             <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
             <span>{t(current.action)}</span>

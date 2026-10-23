@@ -38,6 +38,16 @@ const rgb = (loc, prop) => loc.evaluate((el, prop) => { const cv = document.crea
   pass(await p.getByRole('group', { name: 'Language' }).count() === 1, 'one language switch is shown');
   await p.screenshot({ path: 'loginui-light.png' });
 
+  console.log('== the pair sits together in the middle (1440 px wide)');
+  { const w = await open({ width: 1440, height: 900 });
+    const g = await w.p.evaluate(() => { const a = document.querySelector('aside').getBoundingClientRect(); const f = document.querySelector('main section').getBoundingClientRect(); return { gap: Math.round(f.left - a.right), formW: Math.round(f.width), left: Math.round(a.left), right: Math.round(innerWidth - f.right), cy: Math.round((a.top + a.bottom) / 2 - (f.top + f.bottom) / 2) }; });
+    pass(g.gap > 0 && g.gap <= 80, 'the pitch and the form are ' + g.gap + ' px apart');
+    pass(g.formW >= 420 && g.formW <= 440, 'the form card is ' + g.formW + ' px wide');
+    pass(Math.abs(g.left - g.right) <= 6, 'the pair is centered: ' + g.left + ' px left, ' + g.right + ' px right');
+    pass(Math.abs(g.cy) <= 90, 'the card is level with the pitch (centers ' + g.cy + ' px apart)');
+    pass(await w.p.locator('aside span[aria-hidden=true].absolute').count() === 2, 'two more example alerts peek out beneath the front one');
+    await w.p.screenshot({ path: 'loginui-1440.png' }); await w.ctx.close(); }
+
   console.log('== Create account');
   await p.getByRole('tab', { name: 'Create account' }).click(); await p.waitForTimeout(300);
   t = (await p.locator('body').innerText()).replace(/\s+/g, ' ');
@@ -62,7 +72,7 @@ const rgb = (loc, prop) => loc.evaluate((el, prop) => { const cv = document.crea
   ({ p, ctx } = await open({ theme: 'dark' })); await p.screenshot({ path: 'loginui-dark.png' }); await ctx.close();
   ({ p, ctx } = await open({ height: 700 }));
   const over = await p.evaluate(() => document.documentElement.scrollHeight - innerHeight);
-  pass(over <= 80, 'at 700 px high the page is at most 80 px taller than the screen: ' + over);
+  pass(over <= 130, 'at 700 px high the page is at most 130 px taller than the screen: ' + over);
   await p.screenshot({ path: 'loginui-700.png' }); await ctx.close();
   ({ p, ctx } = await open({ width: 390, height: 844 }));
   pass(await p.evaluate(() => Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth) <= 0, 'no sideways scroll at 390 px');

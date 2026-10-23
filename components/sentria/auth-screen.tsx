@@ -392,23 +392,26 @@ export function AuthScreen({
     </div>
   )
 
-  /* Two halves: the pitch (the headline, an example alert, the three
-     promises) and the form on a soft card. On a phone the form comes first
-     and the pitch follows it. */
+  /* The pitch and the form as one block in the middle of the screen: the
+     headline, an example alert, the three promises, and a soft form card
+     beside them. On a phone the form comes first and the pitch follows. */
   return (
-    <div className="relative flex min-h-dvh flex-col bg-[var(--auth-bg)] lg:grid lg:grid-cols-2 lg:grid-rows-[1fr_auto]">
-      <header className="flex items-center justify-between px-5 pt-5 lg:hidden">
+    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-[var(--auth-bg)]">
+      <div className="pointer-events-none absolute -bottom-52 -right-44 h-[46rem] w-[46rem] rounded-full bg-brand/25 blur-3xl" aria-hidden="true" />
+      <div className="pointer-events-none absolute -left-40 -top-52 h-[38rem] w-[42rem] rounded-full bg-[var(--auth-glow)] blur-3xl" aria-hidden="true" />
+
+      <header className="relative z-10 flex items-center justify-between px-5 pt-5 lg:px-11 lg:pt-7">
         {logo}
         {langPill}
       </header>
 
-      {/* ------------------------------------------------------- FORM */}
-      <main className="relative order-1 flex items-center justify-center overflow-hidden px-5 py-8 lg:order-2 lg:px-10">
-        <div className="pointer-events-none absolute -bottom-40 -right-32 h-[34rem] w-[34rem] rounded-full bg-brand/25 blur-3xl" aria-hidden="true" />
-        <div className="pointer-events-none absolute left-1/2 top-16 h-80 w-80 -translate-x-1/2 rounded-full bg-brand/15 blur-3xl" aria-hidden="true" />
-        <div className="absolute right-6 top-6 hidden lg:block">{langPill}</div>
+      <div className="relative z-10 flex flex-1 flex-col lg:flex-row lg:items-center lg:justify-center lg:gap-16 lg:px-10 lg:py-8">
+        {/* ----------------------------------------------------- FORM */}
+        <main className="order-1 flex justify-center px-5 py-8 lg:order-2 lg:w-[26.875rem] lg:shrink-0 lg:p-0">
+          <div className="relative w-full max-w-[26.875rem]">
+            <div className="pointer-events-none absolute -inset-6 rounded-[70px] bg-brand/30 blur-3xl" aria-hidden="true" />
 
-        <section className="squircle relative w-full max-w-[26.25rem] rounded-[44px] bg-card/90 p-6 shadow-[0_0_0_1px_rgb(20_20_18/0.04),0_24px_70px_rgb(20_20_18/0.12)] backdrop-blur-xl sm:p-10">
+            <section className="squircle relative w-full rounded-[44px] bg-card/90 p-6 shadow-[0_0_0_1px_rgb(20_20_18/0.04),0_24px_70px_rgb(20_20_18/0.14)] backdrop-blur-xl sm:p-10">
           {(mode === "sign-in" || mode === "sign-up") && (
             <div
               role="tablist"
@@ -667,47 +670,51 @@ export function AuthScreen({
               )}
             </form>
           )}
-        </section>
-      </main>
+            </section>
+          </div>
+        </main>
 
-      {/* ------------------------------------------------------- PITCH */}
-      <aside className="order-2 flex flex-col px-5 pb-8 pt-2 lg:order-1 lg:border-r lg:border-border lg:bg-[radial-gradient(560px_380px_at_8%_0%,var(--auth-glow),transparent)] lg:px-[60px] lg:py-8">
-        <div className="hidden lg:block">{logo}</div>
+        {/* --------------------------------------------------- PITCH */}
+        <aside className="order-2 flex flex-col px-5 pb-8 pt-2 lg:order-1 lg:w-[600px] lg:shrink-0 lg:p-0">
+          <h2 className="font-heading text-[34px] font-semibold leading-[1.03] tracking-[-0.04em] sm:text-[44px] lg:text-[54px]">
+            {tx("Voyez les problèmes avant ", "See problems before they ")}
+            <span className="bg-[linear-gradient(transparent_64%,var(--brand)_64%,var(--brand)_92%,transparent_92%)] px-0.5">
+              {tx("qu'ils ne coûtent.", "cost you.")}
+            </span>
+          </h2>
+          <p className="mt-3.5 max-w-[37.5rem] text-base leading-relaxed text-muted-foreground lg:text-[17px]">
+            {tx(
+              "SentrIA lit vos données d'exploitation et vous dit quoi faire, et quand.",
+              "SentrIA reads your operating data and tells you what to do, and when."
+            )}
+          </p>
 
-        <h2 className="font-heading text-[34px] font-semibold leading-[1.04] tracking-tight sm:text-[44px] lg:mt-7">
-          {tx("Voyez les problèmes avant ", "See problems before they ")}
-          <span className="bg-[linear-gradient(transparent_64%,var(--brand)_64%,var(--brand)_92%,transparent_92%)] px-0.5">
-            {tx("qu'ils ne coûtent.", "cost you.")}
-          </span>
-        </h2>
-        <p className="mt-3 max-w-[30rem] text-base leading-relaxed text-muted-foreground">
-          {tx(
-            "SentrIA lit vos données d'exploitation et vous dit quoi faire, et quand.",
-            "SentrIA reads your operating data and tells you what to do, and when."
-          )}
-        </p>
+          {/* The example alert, with two more peeking out beneath it (the
+              carousel shows one per sector; examples, labelled as such). */}
+          <div className="relative mb-9 mt-8 lg:mt-10">
+            <span aria-hidden="true" className="absolute inset-x-[34px] -bottom-[30px] top-[30px] rounded-[34px] bg-[#2a4a38]/50" />
+            <span aria-hidden="true" className="absolute inset-x-[17px] -bottom-[15px] top-[15px] rounded-[34px] bg-[#1f3d2e]/80" />
+            <SectorShowcase
+              tx={tx}
+              className="relative w-full rounded-[34px] p-5 shadow-[0_24px_70px_rgb(20_20_18/0.28)] sm:p-7"
+            />
+          </div>
 
-        {/* The example alert: what SentrIA says, sector by sector (examples,
-            labelled as such). */}
-        <SectorShowcase
-          tx={tx}
-          className="mt-6 w-full max-w-[34rem] rounded-[34px] p-5 shadow-[0_24px_70px_rgb(20_20_18/0.22)] sm:p-6"
-        />
+          <ul className="mt-3 grid grid-cols-3 gap-5 border-t border-border pt-5 lg:mt-5">
+            {promises.map((title, index) => (
+              <li key={title}>
+                <span className="relative inline-block pb-2.5 font-heading text-[30px] font-light leading-none tabular-nums" aria-hidden="true">
+                  {String(index + 1).padStart(2, "0")}
+                  <span className="absolute bottom-0 left-0.5 h-[3px] w-5 rounded-full bg-brand" />
+                </span>
+                <p className="mt-2.5 text-sm font-bold leading-snug">{title}</p>
+              </li>
+            ))}
+          </ul>
+        </aside>
+      </div>
 
-        <ul className="mt-6 grid max-w-[34rem] grid-cols-3 gap-5 border-t border-border pt-5">
-          {promises.map((title, index) => (
-            <li key={title}>
-              <span className="relative inline-block pb-2.5 font-heading text-[30px] font-light leading-none tabular-nums" aria-hidden="true">
-                {String(index + 1).padStart(2, "0")}
-                <span className="absolute bottom-0 left-0.5 h-[3px] w-5 rounded-full bg-brand" />
-              </span>
-              <p className="mt-2.5 text-sm font-bold leading-snug">{title}</p>
-            </li>
-          ))}
-        </ul>
-      </aside>
-
-      <p className="order-3 px-5 pb-6 text-center text-xs text-muted-foreground lg:col-span-2 lg:px-10 lg:pb-5 lg:text-right">
+      <p className="relative z-10 px-5 pb-6 text-center text-xs text-muted-foreground lg:pb-5">
         <button type="button" data-testid="auth-footer-privacy" onClick={() => openLegal("privacy")} className="underline underline-offset-2 hover:text-foreground">
           {tx("Confidentialité", "Privacy")}
         </button>

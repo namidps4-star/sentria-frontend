@@ -164,7 +164,7 @@ const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y
     const { mockSupabase } = require('./auth-mock'); await mockSupabase(p, { users: {}, accounts: {} });
     await p.addInitScript(() => localStorage.setItem('sentria_language', 'en'));
     await p.goto(APP_URL); await p.waitForTimeout(1200);
-    const head = await p.locator('aside h2').boundingBox(), sc = await p.locator('section[aria-roledescription=carousel]').boundingBox(), form = await p.locator('main > section').boundingBox();
+    const head = await p.locator('aside h2').boundingBox(), sc = await p.locator('section[aria-roledescription=carousel]').boundingBox(), form = await p.locator('main section').boundingBox();
     pass(Math.abs(sc.x - head.x) < 2 && sc.y > head.y + head.height, 'the example alert sits right under the headline, same column');
     pass(form.x > sc.x + sc.width, 'the form card is in the other column');
     await p.getByRole('tab', { name: 'Create account' }).click(); await p.waitForTimeout(300);
