@@ -1,4 +1,5 @@
 import { activeSiteId } from "./active-site"
+import { normalizeApiBase } from "@/lib/api-base"
 import { readViewAs } from "@/lib/view-as"
 import { supabase } from "./supabase"
 
@@ -16,8 +17,7 @@ import { supabase } from "./supabase"
  * place. Override per environment with NEXT_PUBLIC_API_URL (useful for
  * pointing the UI at a local backend while debugging).
  */
-export const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ?? "https://sentria-8btn.onrender.com"
+export const API_BASE = normalizeApiBase(process.env.NEXT_PUBLIC_API_URL, "https://sentria-8btn.onrender.com")
 
 /** The routes that answer for one site (F-SITESCOPE): alerts, recommendations,
  *  uploads and Ask. The active site rides along on them, so no view has to
