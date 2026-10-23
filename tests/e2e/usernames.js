@@ -15,7 +15,7 @@ const api = p => p.route(/onrender\.com\//, r => r.fulfill({ status: 200, conten
     p._errors = []; p.on('pageerror', e => p._errors.push(e.message));
     await api(p); const log = await mockSupabase(p, db, opts);
     await p.goto(APP); await p.waitForTimeout(800);
-    await p.getByRole('button', { name: 'Create one' }).click(); await p.waitForTimeout(200);
+    await p.getByRole('tab', { name: 'Create account' }).click(); await p.waitForTimeout(200);
     await p.fill('#auth-name', 'Afi'); await p.fill('#auth-company', 'Clinique Sud'); await p.fill('#auth-email', 'afi@clinique.bj'); await p.fill('#auth-password', 'longenough1');
     return { p, log };
   };

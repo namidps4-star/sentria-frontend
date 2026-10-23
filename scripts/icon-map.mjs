@@ -66,6 +66,7 @@ export const ICONS = {
   ListChecks: "solar:checklist-linear",
   Loader2: "tabler:loader-2",
   LogOut: "solar:logout-2-linear",
+  Lock: "solar:lock-password-linear",
   Mail: "solar:letter-linear",
   MapPin: "solar:map-point-linear",
   Menu: "solar:hamburger-menu-linear",

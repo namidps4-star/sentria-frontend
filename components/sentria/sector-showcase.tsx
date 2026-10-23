@@ -215,7 +215,7 @@ export function SectorShowcase({ tx, className }: { tx: Tx; className?: string }
           <p className="font-heading text-4xl font-bold leading-none tracking-tight text-brand tabular-nums">
             {t(current.figure)}
           </p>
-          <p className="mt-1.5 text-[11px] leading-snug text-white/55">{t(current.figureCaption)}</p>
+          <p className="mt-1.5 whitespace-nowrap text-[11px] leading-snug text-white/55">{t(current.figureCaption)}</p>
         </div>
 
         <div key={`text-${current.id}`} className="min-w-0 animate-in fade-in slide-in-from-bottom-1 duration-500 motion-reduce:animate-none">

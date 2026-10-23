@@ -32,7 +32,7 @@ const ROOT = path.join(__dirname, '..', '..');
 
   console.log('== sign-up needs the box');
   { const { p, ctx, log } = await out();
-    await p.getByRole('button', { name: 'Create one' }).click(); await p.waitForTimeout(300);
+    await p.getByRole('tab', { name: 'Create account' }).click(); await p.waitForTimeout(300);
     await fill(p);
     pass(await p.getByTestId('auth-terms').isVisible() && !(await p.getByTestId('auth-terms').isChecked()), 'the box is there and starts unticked');
     await p.getByRole('button', { name: /Create my account/ }).click(); await p.waitForTimeout(500);
@@ -45,7 +45,7 @@ const ROOT = path.join(__dirname, '..', '..');
 
   console.log('== the dialog');
   { const { p, ctx } = await out();
-    await p.getByRole('button', { name: 'Create one' }).click(); await p.waitForTimeout(300);
+    await p.getByRole('tab', { name: 'Create account' }).click(); await p.waitForTimeout(300);
     await p.getByTestId('auth-terms-link').click(); await p.waitForTimeout(500);
     const d = p.getByTestId('legal-dialog');
     pass(await d.isVisible() && /Terms of use/.test(await d.locator('h2').innerText()), 'the terms link opens the terms');
@@ -73,7 +73,7 @@ const ROOT = path.join(__dirname, '..', '..');
     pass(/Help & feedback/.test(txt) && !/@/.test(txt), 'no address configured: it points to Help & feedback and shows no address');
     await p.keyboard.press('Escape'); await p.waitForTimeout(400);
     pass(await d.count() === 0, 'Escape closes it');
-    await p.getByRole('button', { name: 'Sign in', exact: true }).click(); await p.waitForTimeout(300);
+    await p.getByRole('tab', { name: 'Sign in', exact: true }).click(); await p.waitForTimeout(300);
     await p.getByTestId('auth-footer-privacy').click(); await p.waitForTimeout(400);
     pass(/Privacy/.test(await p.getByTestId('legal-dialog').locator('h2').innerText()), 'the footer on the sign-in screen opens the privacy page');
     pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
@@ -91,7 +91,7 @@ const ROOT = path.join(__dirname, '..', '..');
     await p.getByTestId('auth-footer-privacy').click(); await p.waitForTimeout(500);
     await p.screenshot({ path: 'legal-dark-1440.png' }); await ctx.close(); }
   { const { p, ctx } = await out({ vw: 390 });
-    await p.getByRole('button', { name: 'Create one' }).click(); await p.waitForTimeout(300);
+    await p.getByRole('tab', { name: 'Create account' }).click(); await p.waitForTimeout(300);
     await p.getByTestId('auth-privacy-link').click(); await p.waitForTimeout(500);
     const box = await p.getByTestId('legal-dialog').boundingBox();
     pass(box && box.x >= 0 && box.x + box.width <= 390 && box.y >= 0 && box.y + box.height <= 900, 'at 390 px the dialog fits the screen: ' + JSON.stringify(box && { x: Math.round(box.x), w: Math.round(box.width), h: Math.round(box.height) }));

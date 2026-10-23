@@ -103,7 +103,7 @@ const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y
     pass(p._errs.length === 0, 'no page errors ' + p._errs.join('|'));
     await p._ctx.close(); }
 
-  console.log('== login: floating glossy cards, pill fields');
+  console.log('== login: soft form card, pill fields');
   { const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, locale: 'en-US' }); const p = await ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
     const { mockSupabase } = require('./auth-mock'); await mockSupabase(p, { users: {}, accounts: {} });
     await p.addInitScript(() => localStorage.setItem('sentria_language', 'en'));
@@ -112,8 +112,8 @@ const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y
     pass(main === '0px', 'no black outline around the page (was a 2px frame)');
     const f = await p.locator('#auth-email').evaluate(e => { const s = getComputedStyle(e); return { r: parseFloat(s.borderTopLeftRadius), under: s.borderBottomWidth, bg: s.backgroundColor }; });
     pass(f.r >= 12 && f.bg !== 'rgba(0, 0, 0, 0)', `fields are filled pills, not underlines (radius ${f.r}px)`);
-    pass(await p.locator('.gloss').count() >= 4, 'glossy cards: ' + await p.locator('.gloss').count());
-    pass(/Hello\. Sign in with your email or your @username\./.test(await p.evaluate(() => document.body.innerText)), 'the form opens with a chat line');
+    pass(await p.locator('main .squircle').count() === 1, 'one soft squircle form card');
+    pass(/Use your email or your @username\./.test(await p.evaluate(() => document.body.innerText)), 'the form opens with one line on what to type');
     const sc = await p.locator('section[aria-roledescription=carousel]').boundingBox(), panel = await p.locator('#showcase-panel').boundingBox();
     pass(panel.y + panel.height > sc.y + sc.height * 0.6, 'the example alert sits low in its card, no empty bottom');
     pass(errs.length === 0, 'no page errors ' + errs.join('|'));
@@ -159,15 +159,15 @@ const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y
     pass(/other than the configured one/.test(await panel.innerText()), 'importing another department is flagged');
     await p._ctx.close(); }
 
-  console.log('== login: example alert under the pitch');
+  console.log('== login: example alert under the headline');
   { const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, locale: 'en-US' }); const p = await ctx.newPage();
     const { mockSupabase } = require('./auth-mock'); await mockSupabase(p, { users: {}, accounts: {} });
     await p.addInitScript(() => localStorage.setItem('sentria_language', 'en'));
     await p.goto(APP_URL); await p.waitForTimeout(1200);
-    const lime = await p.locator('main > div > section').first().boundingBox(), sc = await p.locator('section[aria-roledescription=carousel]').boundingBox(), form = await p.locator('main > section').boundingBox();
-    pass(Math.abs(sc.x - lime.x) < 2 && sc.y > lime.y + lime.height, 'the example alert sits right under the lime card, same column');
-    pass(form.x > lime.x + lime.width && Math.abs(form.y + form.height - (sc.y + sc.height)) < 3, 'the form fills the other column, bottoms aligned');
-    await p.getByRole('button', { name: 'Create one' }).click(); await p.waitForTimeout(300);
+    const head = await p.locator('aside h2').boundingBox(), sc = await p.locator('section[aria-roledescription=carousel]').boundingBox(), form = await p.locator('main > section').boundingBox();
+    pass(Math.abs(sc.x - head.x) < 2 && sc.y > head.y + head.height, 'the example alert sits right under the headline, same column');
+    pass(form.x > sc.x + sc.width, 'the form card is in the other column');
+    await p.getByRole('tab', { name: 'Create account' }).click(); await p.waitForTimeout(300);
     const t = await p.evaluate(() => document.body.innerText);
     pass(/You'll sign in with this @name or your email/.test(t) && /Email \(to sign in and reset your password\)/.test(t), 'sign-up says both @username and email sign you in');
     await ctx.close(); }

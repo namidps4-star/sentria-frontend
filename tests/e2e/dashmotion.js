@@ -317,7 +317,7 @@ const node = (animations, parent = null, sub = []) => ({ parentElement: parent, 
     await p.locator('aside').getByRole('button', { name: /^Sign out$/ }).click(); await p.waitForTimeout(700);
     const d = await p.evaluate(() => { const back = document.querySelector('[role="alertdialog"]').parentElement; const c = getComputedStyle(back); return { cls: back.className, blur: c.backdropFilter || c.webkitBackdropFilter, op: c.opacity }; });
     pass(/t-modal-backdrop/.test(d.cls) && /blur\(6px\)/.test(d.blur) && d.op === '1', `${reduced ? 'reduce motion' : 'normal'}: the backdrop is ${d.blur}`);
-    await p.getByRole('alertdialog').getByRole('button', { name: 'Cancel' }).click(); await p.waitForTimeout(500);
+    await p.getByRole('alertdialog').getByRole('button', { name: 'Stay signed in' }).click(); await p.waitForTimeout(500);
     pass(await p.locator('[role="alertdialog"]').count() === 0, `${reduced ? 'reduce motion' : 'normal'}: and goes away again`);
     await ctx.close();
   }

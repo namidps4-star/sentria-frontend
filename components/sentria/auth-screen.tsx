@@ -3,12 +3,12 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react"
 import {
   ArrowRight,
-  BellRing,
+  AtSign,
   Eye,
   EyeOff,
-  ListChecks,
   Loader2,
-  ShieldCheck,
+  Lock,
+  Mail,
 } from "@/lib/icons"
 import type { AuthError } from "@supabase/supabase-js"
 
@@ -126,7 +126,7 @@ function Field({
 }) {
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-bold">
+      <label htmlFor={id} className="ml-1.5 block text-sm font-bold">
         {label}
       </label>
       {children}
@@ -134,10 +134,9 @@ function Field({
   )
 }
 
-/* Glossy pill fields: a soft inset shade with a light lower edge, and a
-   lime glow when focused (the black underline read as a hard line). */
+/* Soft pill fields: a quiet grey fill, a lime glow when focused. */
 const INPUT =
-  "mt-1.5 block w-full rounded-2xl border border-transparent bg-muted px-4 py-3 text-base text-foreground placeholder:text-muted-foreground/70 shadow-[inset_0_1px_2px_rgb(0_0_0/0.07),0_1px_0_var(--field-hi)] transition-[background-color,border-color,box-shadow] focus:border-brand focus:bg-card focus:outline-none focus:ring-4 focus:ring-brand/30"
+  "mt-1.5 block h-[54px] w-full rounded-full border border-transparent bg-muted px-6 text-base text-foreground placeholder:text-muted-foreground/70 transition-[background-color,border-color,box-shadow] focus:border-brand focus:bg-card focus:outline-none focus:ring-4 focus:ring-brand/30"
 
 /** Sign in, create an account, and reset a password (S-3 step 1).
  *
@@ -355,124 +354,100 @@ export function AuthScreen({
     reset: tx("Enregistrer le mot de passe", "Save the password"),
   }[mode]
 
-  const features = [
-    {
-      icon: BellRing,
-      title: tx("Alertes en temps réel", "Real-time alerts"),
-      body: tx(
-        "Stocks, machines, flux : prévenu avant la panne ou la rupture.",
-        "Stock, machines, flows: warned before a breakdown or a stock-out."
-      ),
-    },
-    {
-      icon: ShieldCheck,
-      title: tx("Vos données restent les vôtres", "Your data stays yours"),
-      body: tx(
-        "Chaque entreprise ne voit que ses propres données.",
-        "Each company sees its own data, and only its own."
-      ),
-    },
-    {
-      icon: ListChecks,
-      title: tx("Des actions, pas juste des chiffres", "Actions, not just numbers"),
-      body: tx(
-        "Chaque alerte dit quoi faire, à qui, et suit le résultat.",
-        "Every alert says what to do, who does it, and tracks it."
-      ),
-    },
+  const promises = [
+    tx("Alertes en temps réel", "Real-time alerts"),
+    tx("Vos données restent les vôtres", "Your data stays yours"),
+    tx("Des actions, pas juste des chiffres", "Actions, not just numbers"),
   ]
 
-  /* The Ask SentrIA layout: lime card (who we are, what we do), white card
-     (the form, introduced like a chat), black card (an example alert).
-     Glossy cards floating on the canvas instead of one outlined frame. */
+  const logo = (
+    <div className="flex items-center gap-2.5">
+      <span className="flex h-[30px] w-[30px] items-center justify-center overflow-hidden rounded-[9px]">
+        <img src="/logo-mark.png" alt="" className="h-full w-full object-contain" />
+      </span>
+      <span className="font-heading text-[19px] font-semibold">SentrIA</span>
+    </div>
+  )
+
+  const langPill = (
+    <div
+      className="inline-flex items-center rounded-full bg-muted p-[3px] text-xs"
+      role="group"
+      aria-label={tx("Langue", "Language")}
+    >
+      {(["fr", "en"] as const).map((code) => (
+        <button
+          key={code}
+          type="button"
+          onClick={() => writeLanguage(code)}
+          aria-pressed={ui === code}
+          className={cn(
+            "rounded-full px-3 py-1.5 font-extrabold uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            ui === code ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          {code}
+        </button>
+      ))}
+    </div>
+  )
+
+  /* Two halves: the pitch (the headline, an example alert, the three
+     promises) and the form on a soft card. On a phone the form comes first
+     and the pitch follows it. */
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-[radial-gradient(ellipse_at_top_left,var(--auth-glow)_0%,transparent_55%),radial-gradient(ellipse_at_bottom_right,var(--auth-glow)_0%,transparent_60%)] bg-[var(--auth-bg)] px-4 py-8">
-      <main className="grid w-full max-w-[1120px] gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
-        {/* --------------------------------------------------------- LEFT */}
-        <div className="flex flex-col gap-4">
-          <section className="gloss rounded-[28px] bg-brand p-6 text-[#141414]">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--ink)]">
-                  <img src="/logo-mark.png" alt="" className="h-7 w-7 object-contain" />
-                </span>
-                <span className="font-heading text-xl font-bold">SentrIA</span>
-              </div>
+    <div className="relative flex min-h-dvh flex-col bg-[var(--auth-bg)] lg:grid lg:grid-cols-2 lg:grid-rows-[1fr_auto]">
+      <header className="flex items-center justify-between px-5 pt-5 lg:hidden">
+        {logo}
+        {langPill}
+      </header>
 
-              <div
-                className="flex items-center rounded-full bg-white/60 p-0.5 text-xs"
-                role="group"
-                aria-label={tx("Langue", "Language")}
-              >
-                {(["fr", "en"] as const).map((code) => (
-                  <button
-                    key={code}
-                    type="button"
-                    onClick={() => writeLanguage(code)}
-                    aria-pressed={ui === code}
-                    className={cn(
-                      "rounded-full px-3 py-1.5 font-semibold uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#141414]",
-                      ui === code ? "bg-[var(--ink)] text-white" : "text-[#141414]/70 hover:text-[#141414]"
-                    )}
-                  >
-                    {code}
-                  </button>
-                ))}
-              </div>
-            </div>
+      {/* ------------------------------------------------------- FORM */}
+      <main className="relative order-1 flex items-center justify-center overflow-hidden px-5 py-8 lg:order-2 lg:px-10">
+        <div className="pointer-events-none absolute -bottom-40 -right-32 h-[34rem] w-[34rem] rounded-full bg-brand/25 blur-3xl" aria-hidden="true" />
+        <div className="pointer-events-none absolute left-1/2 top-16 h-80 w-80 -translate-x-1/2 rounded-full bg-brand/15 blur-3xl" aria-hidden="true" />
+        <div className="absolute right-6 top-6 hidden lg:block">{langPill}</div>
 
-            <p className="mt-6 font-heading text-2xl font-bold leading-tight md:text-3xl">
-              {tx("Voyez les problèmes avant qu'ils ne coûtent.", "See problems before they cost you.")}
-            </p>
-            <p className="mt-2 text-sm text-[#141414]/70">
-              {tx(
-                "SentrIA lit vos données d'exploitation et vous dit quoi faire, et quand.",
-                "SentrIA reads your operating data and tells you what to do, and when."
-              )}
-            </p>
-
-            {/* Three promises, as rows. */}
-            <ul className="mt-5 hidden flex-col gap-2 md:flex">
-              {features.map(({ icon: Icon, title, body }) => (
-                <li key={title} className="flex items-start gap-3 rounded-2xl bg-white/55 p-3">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--ink)] text-brand">
-                    <Icon className="h-4 w-4" aria-hidden="true" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-bold leading-snug tracking-tight">{title}</span>
-                    <span className="mt-0.5 block text-xs leading-relaxed text-[#141414]/70">{body}</span>
-                  </span>
-                </li>
+        <section className="squircle relative w-full max-w-[26.25rem] rounded-[44px] bg-card/90 p-6 shadow-[0_0_0_1px_rgb(20_20_18/0.04),0_24px_70px_rgb(20_20_18/0.12)] backdrop-blur-xl sm:p-10">
+          {(mode === "sign-in" || mode === "sign-up") && (
+            <div
+              role="tablist"
+              aria-label={tx("Connexion ou création de compte", "Sign in or create an account")}
+              className="mb-7 inline-flex rounded-full bg-muted p-1"
+            >
+              {(
+                [
+                  ["sign-in", tx("Se connecter", "Sign in")],
+                  ["sign-up", tx("Créer un compte", "Create account")],
+                ] as const
+              ).map(([target, label]) => (
+                <button
+                  key={target}
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === target}
+                  onClick={() => mode !== target && switchTo(target)}
+                  className={cn(
+                    "rounded-full px-5 py-2.5 text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    mode === target ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {label}
+                </button>
               ))}
-            </ul>
-          </section>
+            </div>
+          )}
 
-          {/* The example alert, right under the pitch: what SentrIA says,
-              sector by sector (examples, labelled as such). */}
-          <SectorShowcase tx={tx} className="gloss hidden md:flex" />
-        </div>
-
-        {/* ------------------------------------------------------- CENTER */}
-        <section className="gloss flex flex-col justify-center rounded-[28px] bg-card p-6 md:p-10">
-          <h1 className="font-heading text-3xl font-bold leading-tight md:text-5xl">
-            {heading}
-          </h1>
-          <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="h-2 w-2 rounded-full bg-brand ring-2 ring-brand/30" aria-hidden="true" />
-            {tx("Connexion sécurisée", "Secure sign-in")}
-          </p>
+          <h1 className="font-heading text-[32px] font-semibold leading-[1.05] tracking-tight sm:text-[38px]">{heading}</h1>
 
           {mode === "sign-in" && (
-            <p className="mt-5 max-w-md self-start rounded-[22px] bg-[var(--ink)] p-4 text-sm leading-relaxed text-white">
-              {tx(
-                "Bonjour. Connectez-vous avec votre email ou votre @nom d'utilisateur.",
-                "Hello. Sign in with your email or your @username."
-              )}
+            <p className="mt-2 text-[15px] text-muted-foreground">
+              {tx("Utilisez votre email ou votre @nom d'utilisateur.", "Use your email or your @username.")}
             </p>
           )}
 
           {mode === "forgot" && (
-            <p className="mt-3 text-sm text-muted-foreground">
+            <p className="mt-2 text-[15px] text-muted-foreground">
               {tx(
                 "Entrez votre email : nous vous envoyons un lien pour en choisir un nouveau.",
                 "Enter your email: we'll send you a link to choose a new one."
@@ -488,7 +463,7 @@ export function AuthScreen({
               )}
             </p>
           ) : (
-            <form ref={formRef} onSubmit={submit} className="mt-6 flex w-full flex-col gap-4" noValidate>
+            <form ref={formRef} onSubmit={submit} className="mt-6 flex w-full flex-col gap-3.5" noValidate>
               {mode === "sign-up" && (
                 <>
                   <Field id="auth-name" label={tx("Nom", "Name")}>
@@ -568,10 +543,14 @@ export function AuthScreen({
                         : "Email"
                   }
                 >
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-5 top-1/2 mt-[3px] -translate-y-1/2 text-muted-foreground">
+                      {mode === "sign-in" ? <AtSign className="h-[18px] w-[18px]" aria-hidden="true" /> : <Mail className="h-[18px] w-[18px]" aria-hidden="true" />}
+                    </span>
                   <input
                     id="auth-email"
                     type={mode === "sign-in" ? "text" : "email"}
-                    className={INPUT}
+                    className={cn(INPUT, "pl-12")}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     autoComplete={mode === "sign-in" ? "username" : "email"}
@@ -581,6 +560,7 @@ export function AuthScreen({
                     placeholder={mode === "sign-in" ? tx("vous@entreprise.com ou @nom", "you@company.com or @name") : undefined}
                     required
                   />
+                  </div>
                 </Field>
               )}
 
@@ -590,10 +570,13 @@ export function AuthScreen({
                   label={mode === "reset" ? tx("Nouveau mot de passe", "New password") : tx("Mot de passe", "Password")}
                 >
                   <div className="relative">
+                    <span className="pointer-events-none absolute left-5 top-1/2 mt-[3px] -translate-y-1/2 text-muted-foreground">
+                      <Lock className="h-[18px] w-[18px]" aria-hidden="true" />
+                    </span>
                     <input
                       id="auth-password"
                       type={showPassword ? "text" : "password"}
-                      className={cn(INPUT, "pr-12")}
+                      className={cn(INPUT, "pl-12 pr-14")}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
@@ -605,7 +588,7 @@ export function AuthScreen({
                       onClick={() => setShowPassword((v) => !v)}
                       aria-label={showPassword ? tx("Masquer le mot de passe", "Hide the password") : tx("Afficher le mot de passe", "Show the password")}
                       aria-pressed={showPassword}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-1.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="absolute right-3.5 top-1/2 mt-[3px] -translate-y-1/2 rounded-full p-1.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" aria-hidden="true" /> : <Eye className="h-4 w-4" aria-hidden="true" />}
                     </button>
@@ -622,7 +605,7 @@ export function AuthScreen({
                 <button
                   type="button"
                   onClick={() => switchTo("forgot")}
-                  className="-mt-1 self-end px-1 text-xs font-semibold underline underline-offset-2 hover:no-underline"
+                  className="-mt-1 self-end px-1.5 text-[13px] font-bold underline underline-offset-[3px] hover:no-underline"
                 >
                   {tx("Mot de passe oublié ?", "Forgot your password?")}
                 </button>
@@ -667,49 +650,74 @@ export function AuthScreen({
               <button
                 type="submit"
                 disabled={busy}
-                className="gloss mt-2 flex h-14 items-center justify-between rounded-full bg-brand pl-6 pr-2 text-base font-bold text-[#141414] transition-opacity hover:opacity-90 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-card"
+                className="mt-2 flex h-14 items-center justify-between rounded-full bg-brand pl-7 pr-2 text-[17px] font-extrabold text-[#141414] shadow-[0_14px_34px_rgb(160_200_20/0.4)] transition-opacity hover:opacity-90 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2 focus-visible:ring-offset-card"
               >
                 {button}
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--ink)] text-brand">
+                <span className="flex h-[42px] w-[42px] items-center justify-center rounded-full bg-[var(--ink)] text-brand">
                   {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <ArrowRight className="h-4 w-4" aria-hidden="true" />}
                 </span>
               </button>
 
-              {mode !== "reset" && (
+              {(mode === "forgot" || mode === "reset") && (
                 <p className="text-center text-sm">
-                  {mode === "sign-in" ? (
-                    <>
-                      {tx("Pas encore de compte ?", "No account yet?")}{" "}
-                      <button type="button" onClick={() => switchTo("sign-up")} className="font-bold underline underline-offset-2 hover:no-underline">
-                        {tx("Créer un compte", "Create one")}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      {mode === "sign-up" ? tx("Déjà un compte ?", "Already have an account?") : null}{" "}
-                      <button type="button" onClick={() => switchTo("sign-in")} className="font-bold underline underline-offset-2 hover:no-underline">
-                        {mode === "sign-up" ? tx("Se connecter", "Sign in") : tx("Retour à la connexion", "Back to sign in")}
-                      </button>
-                    </>
-                  )}
+                  <button type="button" onClick={() => switchTo("sign-in")} className="font-bold underline underline-offset-2 hover:no-underline">
+                    {tx("Retour à la connexion", "Back to sign in")}
+                  </button>
                 </p>
               )}
             </form>
           )}
         </section>
+      </main>
 
-        <p className="mt-4 text-center text-xs text-muted-foreground">
-          <button type="button" data-testid="auth-footer-privacy" onClick={() => openLegal("privacy")} className="underline underline-offset-2 hover:text-foreground">
-            {tx("Confidentialité", "Privacy")}
-          </button>
-          {" · "}
-          <button type="button" data-testid="auth-footer-terms" onClick={() => openLegal("terms")} className="underline underline-offset-2 hover:text-foreground">
-            {tx("Conditions", "Terms")}
-          </button>
+      {/* ------------------------------------------------------- PITCH */}
+      <aside className="order-2 flex flex-col px-5 pb-8 pt-2 lg:order-1 lg:border-r lg:border-border lg:bg-[radial-gradient(560px_380px_at_8%_0%,var(--auth-glow),transparent)] lg:px-[60px] lg:py-8">
+        <div className="hidden lg:block">{logo}</div>
+
+        <h2 className="font-heading text-[34px] font-semibold leading-[1.04] tracking-tight sm:text-[44px] lg:mt-7">
+          {tx("Voyez les problèmes avant ", "See problems before they ")}
+          <span className="bg-[linear-gradient(transparent_64%,var(--brand)_64%,var(--brand)_92%,transparent_92%)] px-0.5">
+            {tx("qu'ils ne coûtent.", "cost you.")}
+          </span>
+        </h2>
+        <p className="mt-3 max-w-[30rem] text-base leading-relaxed text-muted-foreground">
+          {tx(
+            "SentrIA lit vos données d'exploitation et vous dit quoi faire, et quand.",
+            "SentrIA reads your operating data and tells you what to do, and when."
+          )}
         </p>
 
-        <LegalDialog open={legalOpen} doc={legalDoc} onClose={() => setLegalOpen(false)} />
-      </main>
+        {/* The example alert: what SentrIA says, sector by sector (examples,
+            labelled as such). */}
+        <SectorShowcase
+          tx={tx}
+          className="mt-6 w-full max-w-[34rem] rounded-[34px] p-5 shadow-[0_24px_70px_rgb(20_20_18/0.22)] sm:p-6"
+        />
+
+        <ul className="mt-6 grid max-w-[34rem] grid-cols-3 gap-5 border-t border-border pt-5">
+          {promises.map((title, index) => (
+            <li key={title}>
+              <span className="relative inline-block pb-2.5 font-heading text-[30px] font-light leading-none tabular-nums" aria-hidden="true">
+                {String(index + 1).padStart(2, "0")}
+                <span className="absolute bottom-0 left-0.5 h-[3px] w-5 rounded-full bg-brand" />
+              </span>
+              <p className="mt-2.5 text-sm font-bold leading-snug">{title}</p>
+            </li>
+          ))}
+        </ul>
+      </aside>
+
+      <p className="order-3 px-5 pb-6 text-center text-xs text-muted-foreground lg:col-span-2 lg:px-10 lg:pb-5 lg:text-right">
+        <button type="button" data-testid="auth-footer-privacy" onClick={() => openLegal("privacy")} className="underline underline-offset-2 hover:text-foreground">
+          {tx("Confidentialité", "Privacy")}
+        </button>
+        {" · "}
+        <button type="button" data-testid="auth-footer-terms" onClick={() => openLegal("terms")} className="underline underline-offset-2 hover:text-foreground">
+          {tx("Conditions", "Terms")}
+        </button>
+      </p>
+
+      <LegalDialog open={legalOpen} doc={legalDoc} onClose={() => setLegalOpen(false)} />
     </div>
   )
 }

@@ -247,7 +247,7 @@ const token = (b, name) => (b.match(new RegExp('--' + name + ':\\s*([^;]+);')) |
     const startsFrench = stored !== 'en';
     if (toggle) { await p.getByRole('group', { name: /Language|Langue/ }).getByRole('button', { name: toggle.toUpperCase() }).click(); await p.waitForTimeout(300); }
     const french = toggle ? toggle === 'fr' : startsFrench;
-    await p.getByRole('button', { name: french ? 'Créer un compte' : 'Create one' }).click(); await p.waitForTimeout(300);
+    await p.getByRole('tab', { name: french ? 'Créer un compte' : 'Create account' }).click(); await p.waitForTimeout(300);
     await p.fill('#auth-name', 'Afi'); await p.fill('#auth-username', 'afi_sud'); await p.fill('#auth-company', 'Clinique Sud'); await p.fill('#auth-email', 'afi@clinique.bj'); await p.fill('#auth-password', 'longenough1'); await p.waitForTimeout(900); await p.locator('#auth-terms').check();
     await p.getByRole('button', { name: french ? /Créer mon compte/ : /Create my account/ }).click(); await p.waitForTimeout(900);
     const call = log.find(l => l.path === '/auth/v1/signup');

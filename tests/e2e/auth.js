@@ -105,7 +105,7 @@ const signIn = async (p, email, pw) => { await p.fill('#auth-email', email); awa
 
   console.log('== 9 sign up');
   { const db = newDb(); const { p, log, ctx } = await fresh(db); await p.goto(APP); await p.waitForTimeout(800);
-    await p.getByRole('button', { name: 'Create one' }).click();
+    await p.getByRole('tab', { name: 'Create account' }).click();
     pass(/Let's protect your operations together/.test(await text(p)), 'sign-up form');
     await p.fill('#auth-name', 'Afi'); await p.fill('#auth-username', 'afi_sud'); await p.fill('#auth-company', 'Clinique Sud'); await p.fill('#auth-email', 'afi@clinique.bj'); await p.fill('#auth-password', 'short');
     await p.getByRole('button', { name: /Create my account/ }).click(); await p.waitForTimeout(400);
@@ -115,7 +115,7 @@ const signIn = async (p, email, pw) => { await p.fill('#auth-email', email); awa
     const su = log.find(l => l.path === '/auth/v1/signup');
     pass(su && su.body.data.company_name === 'Clinique Sud' && su.body.data.full_name === 'Afi' && su.body.data.username === 'afi_sud', 'name + username + company sent as metadata');
     pass(/Open the email sent to afi@clinique\.bj/.test(await text(p)), 'check-your-email notice');
-    await p.getByRole('button', { name: 'Create one' }).click();
+    await p.getByRole('tab', { name: 'Create account' }).click();
     await p.fill('#auth-name', 'A'); await p.fill('#auth-username', 'ama2'); await p.fill('#auth-company', 'B'); await p.fill('#auth-email', 'ama@pharma.bj'); await p.fill('#auth-password', 'longenough1'); await p.locator('#auth-terms').check();
     await p.getByRole('button', { name: /Create my account/ }).click(); await p.waitForTimeout(800);
     const existing = await text(p);

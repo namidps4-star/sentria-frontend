@@ -218,7 +218,7 @@ const ALERTS = Array.from({ length: 14 }, (_, k) => ({ id: k, equipment: `Med ${
     pass(/\bt-modal\b/.test(d.card) && /\bis-open\b/.test(d.card) && d.op === '1', `${label}: the sign-out confirm is .t-modal.is-open, fully shown`);
     pass(/\bt-modal-backdrop\b/.test(d.back) && /\bis-open\b/.test(d.back) && d.bop === '1', `${label}: and its backdrop faded in with it`);
     await p.evaluate(() => { window.__gone2 = null; const t0 = performance.now(); const i = setInterval(() => { if (!document.querySelector('[role="alertdialog"]')) { window.__gone2 = Math.round(performance.now() - t0); clearInterval(i); } }, 5); });
-    await p.getByRole('alertdialog').getByRole('button', { name: 'Cancel' }).click({ timeout: 1000 });
+    await p.getByRole('alertdialog').getByRole('button', { name: 'Stay signed in' }).click({ timeout: 1000 });
     await p.waitForTimeout(600);
     const g = await p.evaluate(() => window.__gone2);
     pass(g !== null && g < (reduced ? 150 : 450), `${label}: Cancel works at once, and the dialog is gone ${g} ms later`);
