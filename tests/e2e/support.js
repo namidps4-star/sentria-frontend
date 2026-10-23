@@ -350,6 +350,8 @@ const EXPOSE = { 'access-control-expose-headers': 'Retry-After' };
     await p.locator('#support-message').fill('Something is wrong with the fridge alerts'); await p.waitForTimeout(100);
     await p.locator('#support-message').press('Control+Enter'); await p.waitForTimeout(700);
     pass(p._posts.length === 1 && await p.locator('[data-support-done]').count() === 1, 'Ctrl+Enter sends it');
+    await p.locator('[data-support-another]').click(); await p.waitForTimeout(200);
+    pass(await p.locator('[data-support-done]').count() === 0 && await p.locator('#support-message').inputValue() === '', 'Send another: back to an empty form');
     pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
     await ctx.close(); }
 

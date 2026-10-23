@@ -230,17 +230,21 @@ function SupportBody({
         )}
       >
         {sent ? (
-          <div data-support-done="" role="status" className="flex flex-col items-start gap-3 p-4">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-brand-foreground">
-              <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
-            </span>
+          <div data-support-done="" role="status">
+            <div className="squircle relative overflow-hidden rounded-[24px] bg-brand p-6 text-brand-foreground" style={{ borderRadius: 24 }}>
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--ink)] text-brand">
+                <CheckCircle2 className="h-7 w-7" aria-hidden="true" />
+              </span>
 
-            <div>
-              <h3 id="support-title" className="font-heading text-lg font-bold text-foreground">
+              <h3
+                id="support-title"
+                className="relative mt-5 inline-block pb-3 font-heading text-[40px] font-light leading-none tracking-tight"
+              >
                 {tx("Message envoyé", "Message sent")}
+                <span className="absolute bottom-0 left-0.5 h-1 w-7 rounded-full bg-[var(--ink)]" aria-hidden="true" />
               </h3>
 
-              <p className="mt-1 text-sm leading-6 text-muted-foreground">
+              <p className="mt-2.5 text-sm leading-6 opacity-75">
                 {tx(
                   "Merci. Si une réponse est utile, elle arrivera par email.",
                   "Thank you. If a reply helps, it will come by email."
@@ -248,13 +252,26 @@ function SupportBody({
               </p>
             </div>
 
-            <div className="mt-2 flex w-full justify-end">
+            <div className="flex gap-2.5 px-1.5 pb-1.5 pt-3.5">
+              <button
+                type="button"
+                data-support-another=""
+                onClick={() => {
+                  setMessage("")
+                  setProblem("")
+                  setSent(false)
+                }}
+                className="h-11 flex-1 rounded-full bg-muted text-sm font-bold text-foreground transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {tx("Envoyer un autre", "Send another")}
+              </button>
+
               <button
                 type="button"
                 autoFocus
                 onClick={onClose}
                 data-support-close=""
-                className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-11 flex-1 rounded-full bg-foreground text-sm font-bold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {tx("Fermer", "Close")}
               </button>
