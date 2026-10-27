@@ -79,6 +79,7 @@ const RECS = ALERTS.map(a => ({ ...a, recommended_action: 'ACT ' + a.equipment, 
     await p.screenshot({ path: 'guideparts-tracking.png' });
     await next(p); pass(await tourStep(p) === 'part-tracking-owner', 'second step: an owner on every task');
     await next(p); pass(await tourStep(p) === 'part-tracking-outcome' && /What happened\?/.test(await tour(p).innerText()), 'third step: What happened?');
+    await next(p); pass(await tourStep(p) === 'part-tracking-swaps' && /A swap is a task like the others/.test(await tour(p).innerText()), 'a pharmacy gets a fourth step: branch swaps (tests/e2e/guideswaps.js)');
     await p.getByRole('button', { name: 'Done', exact: true }).click(); await p.waitForTimeout(500);
     pass(await tour(p).count() === 0, 'Done on the last step closes the tour: one part, then back to work');
     pass((await seenOf(p)).join() === 'tracking', 'and the part is remembered as seen');

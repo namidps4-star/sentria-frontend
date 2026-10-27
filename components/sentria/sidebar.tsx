@@ -463,7 +463,7 @@ export function Sidebar({
                     <button
                       type="button"
                       data-testid="swaps-open"
-                      data-nav-swaps=""
+                      data-nav="swaps"
                       onClick={() => {
                         swaps.onOpen()
                         onClose()
