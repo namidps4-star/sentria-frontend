@@ -140,6 +140,7 @@ export const PRICES: Record<string, [number, number]> = {
   NGN: [20_000, 60_000],
   GHS: [250, 750],
   KES: [2_500, 7_500],
+  UGX: [75_000, 225_000],
   TZS: [50_000, 150_000],
   CDF: [50_000, 150_000],
   MAD: [250, 750],
