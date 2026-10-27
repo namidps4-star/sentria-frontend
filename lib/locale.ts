@@ -309,6 +309,12 @@ export const COUNTRIES: Country[] = [
     timezoneId: "eat",
   },
   {
+    code: "UG",
+    name: localized("Ouganda", "Uganda"),
+    currency: { code: "UGX", symbol: "USh" },
+    timezoneId: "eat",
+  },
+  {
     code: "MA",
     name: localized("Maroc", "Morocco"),
     currency: { code: "MAD", symbol: "DH" },
