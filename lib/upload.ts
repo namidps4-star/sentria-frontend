@@ -1,4 +1,5 @@
 import { track } from "./analytics"
+import { announceAlertsUpdated } from "./alerts-event"
 import { withActiveSite } from "./api"
 import { supabase } from "./supabase"
 import { uploadTeach, type UploadTeach } from "./upload-problem"
@@ -124,6 +125,10 @@ export async function runUpload(
     console.error("[SentrIA] upload failed:", error)
     final = { phase: "failed", fileName, message: networkError }
   }
+
+  // Every view that shows the data's age or the alerts reads them again: the
+  // sidebar's status, the account card and the dashboard (lib/freshness.ts).
+  if (final.phase === "done") announceAlertsUpdated()
 
   // Only the outcome is counted: never the file, its name or what was in it.
   if (final.phase === "done" || final.phase === "refused" || final.phase === "failed") {

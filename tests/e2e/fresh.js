@@ -21,7 +21,7 @@ function loadFreshness() {
   const src = fs.readFileSync(path.join(ROOT, 'lib', 'freshness.ts'), 'utf8');
   const js = ts.transpileModule(src, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
   const mod = { exports: {} };
-  new Function('require', 'module', 'exports', js)(id => id === 'react' ? { useCallback: f => f, useEffect() {}, useState: v => [v, () => {}] } : id === '@/lib/api' ? { API_BASE: '', apiFetch: async () => ({ ok: false }) } : require(id), mod, mod.exports);
+  new Function('require', 'module', 'exports', js)(id => id === 'react' ? { useCallback: f => f, useEffect() {}, useState: v => [v, () => {}] } : id === '@/lib/api' ? { API_BASE: '', apiFetch: async () => ({ ok: false }) } : id === '@/lib/alerts-event' ? { ALERTS_UPDATED_EVENT: 'sentria_alerts_updated' } : require(id), mod, mod.exports);
   return mod.exports;
 }
 const NOW = new Date('2026-10-01T12:00:00Z').getTime();
