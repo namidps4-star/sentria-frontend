@@ -51,7 +51,7 @@ import { cn } from "@/lib/utils"
 import { usePresence } from "@/lib/use-presence"
 import { assessFreshness, isZeroFigure, useFreshness } from "@/lib/freshness"
 import { readList } from "@/lib/answer"
-import { BranchSwapsCard } from "./branch-swaps-card"
+import { BranchSwapsButton } from "./branch-swaps-card"
 import { FreshnessNote } from "./freshness-note"
 import { NotMeasuredFigure, SourceNotice } from "./not-measured"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
@@ -3493,8 +3493,8 @@ export function DashboardView({
         </button>
       </div>
 
-      {/* F-BRANCHSWAP: stock this site should send to another branch. Silent when there is none. */}
-      <BranchSwapsCard
+      {/* F-BRANCHSWAP: a small button, only when this site has stock to send to another branch. */}
+      <BranchSwapsButton
         alerts={alerts.filter((a) => (filterSector === "all" || a.sector === filterSector) && matchesActivity(a))}
       />
 

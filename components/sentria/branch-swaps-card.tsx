@@ -7,15 +7,17 @@ import { readCompanyName } from "@/lib/company"
 import { fetchAssignments, fetchContractors, saveAssignment, type Assignment, type Contractor } from "@/lib/crm"
 import { fieldUrl, makeFieldLink } from "@/lib/field-link"
 import { useTx, type Tx } from "@/lib/i18n"
-import { ArrowRight, Check, Send } from "@/lib/icons"
+import { ArrowRight, Check, Send, X } from "@/lib/icons"
 import { formatAmount } from "@/lib/locale"
 import { enterAt } from "@/lib/motion"
 import { useCanSeeAmounts } from "@/lib/use-plan"
+import { usePresence } from "@/lib/use-presence"
 import { cn } from "@/lib/utils"
 import { StatusTag } from "./status-tag"
 
 /* Branch swaps (F-BRANCHSWAP), on the Dashboard: stock that will expire at this site and sells
- * at another. One row per swap, with where it stands: found, assigned to a
+ * at another. The Dashboard shows only a small button, and only when a swap is
+ * needed; the card opens from it in a sheet (BranchSwapsButton, below). One row per swap, with where it stands: found, assigned to a
  * person, answered. A swap is a task like any other: it is tracked under the
  * key the board and the calendar use, and the person answers from the same
  * field link ("I'll take it", "I can't"). The card is silent when this site
@@ -49,7 +51,7 @@ function unitPrice(swap: Swap, tx: Tx): string | null {
 
 type LinkState = { kind: "making" } | { kind: "ready"; url: string; copied: boolean; days: number } | { kind: "error"; message: string }
 
-export function BranchSwapsCard({ alerts }: { alerts: SwapAlert[] }) {
+export function BranchSwapsCard({ alerts, embedded = false }: { alerts: SwapAlert[]; embedded?: boolean }) {
   const tx = useTx()
   const canSeeAmounts = useCanSeeAmounts()
   const swaps = useMemo(() => swapsFrom(alerts), [alerts])
@@ -154,8 +156,12 @@ export function BranchSwapsCard({ alerts }: { alerts: SwapAlert[] }) {
   const figure = showMoney ? formatAmount(totals.value ?? 0, "", tx) : String(totals.count)
 
   return (
-    <section data-testid="branch-swaps" className="t-enter squircle rounded-[28px] bg-card p-5 shadow-sm sm:p-6" style={enterAt(1)}>
-      <h2 className="font-heading text-xl font-semibold tracking-tight">{tx("Échanges entre pharmacies", "Branch swaps")}</h2>
+    <section
+      data-testid="branch-swaps"
+      className={embedded ? "p-3 sm:p-4" : "t-enter squircle rounded-[28px] bg-card p-5 shadow-sm sm:p-6"}
+      style={embedded ? undefined : enterAt(1)}
+    >
+      <h2 id="branch-swaps-title" className="font-heading text-xl font-semibold tracking-tight">{tx("Échanges entre pharmacies", "Branch swaps")}</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         {tx("Du stock de ce site qui va expirer ici et se vend dans une autre pharmacie.", "Stock at this site that will expire here and sells at another branch.")}
       </p>
@@ -378,5 +384,80 @@ function Step({
         <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{children}</p>
       </div>
     </li>
+  )
+}
+
+/** The only trace of branch swaps on the Dashboard: a small button, there only
+ *  when this site has a swap to send. It opens the card in a sheet, so the
+ *  page stays quiet the rest of the time. Reads nothing from the server until
+ *  the sheet is open. */
+export function BranchSwapsButton({ alerts }: { alerts: SwapAlert[] }) {
+  const tx = useTx()
+  const count = useMemo(() => swapsFrom(alerts).length, [alerts])
+  const [open, setOpen] = useState(false)
+  const sheet = usePresence(open, "--modal-close-dur")
+
+  useEffect(() => {
+    if (!open) return
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false)
+    }
+
+    window.addEventListener("keydown", onKey)
+
+    return () => window.removeEventListener("keydown", onKey)
+  }, [open])
+
+  if (count === 0) return null
+
+  return (
+    <div className="flex justify-end">
+      <button
+        type="button"
+        data-testid="swaps-open"
+        onClick={() => setOpen(true)}
+        aria-haspopup="dialog"
+        className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-1.5 text-xs font-semibold transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {tx("Échanges entre pharmacies", "Branch swaps")}
+        <span className="rounded-full bg-foreground px-1.5 py-0.5 text-[10px] leading-none text-background" aria-label={tx(`${count} à faire`, `${count} to do`)}>
+          {count}
+        </span>
+      </button>
+
+      {sheet.present && (
+        <div
+          className={cn("fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 t-modal-backdrop", sheet.className)}
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setOpen(false)
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="branch-swaps-title"
+            data-testid="swaps-sheet"
+            style={{ borderRadius: 32 }}
+            className={cn(
+              "relative max-h-[calc(100dvh-2rem)] w-full max-w-3xl overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden squircle rounded-[32px] border border-border bg-card p-2 shadow-2xl t-modal",
+              sheet.className
+            )}
+          >
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              data-testid="swaps-close"
+              aria-label={tx("Fermer", "Close")}
+              autoFocus
+              className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-muted text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <BranchSwapsCard alerts={alerts} embedded />
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
