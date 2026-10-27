@@ -69,10 +69,12 @@ export type BranchManagersProps = {
   onRemove: (person: Contractor) => void
   onMoveToSite: (person: Contractor, siteId: string) => void
   onOpenBranch: (siteId: string) => void
+  /** An employee reads the board: no add, no edit, no branch to open (F-TEAMROLES). */
+  readOnly: boolean
 }
 
 export function BranchManagers(props: BranchManagersProps) {
-  const { sites, contractors, loaded, swaps, canSeeAmounts, sheet, onAdd } = props
+  const { sites, contractors, loaded, swaps, canSeeAmounts, sheet, onAdd, readOnly } = props
   const tx = useTx()
   const [filter, setFilter] = useState<Filter>("all")
   const board = buildBoard(sites, contractors, swaps)
@@ -142,19 +144,21 @@ export function BranchManagers(props: BranchManagersProps) {
               ))}
             </div>
 
-            <button
-              type="button"
-              data-testid="add-manager"
-              onClick={() => onAdd()}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-accent px-6 sm:h-[52px] text-[15px] font-semibold text-accent-foreground transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              {tx("Ajouter un responsable d'agence", "Add a branch manager")}
-            </button>
+            {!readOnly && (
+              <button
+                type="button"
+                data-testid="add-manager"
+                onClick={() => onAdd()}
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-accent px-6 sm:h-[52px] text-[15px] font-semibold text-accent-foreground transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                {tx("Ajouter un responsable d'agence", "Add a branch manager")}
+              </button>
+            )}
           </div>
         </div>
 
-        {presence.present && (
+        {presence.present && !readOnly && (
           <>
             <div
               data-testid="manager-scrim"
@@ -205,6 +209,7 @@ export function BranchManagers(props: BranchManagersProps) {
               onRemove={props.onRemove}
               onMoveToSite={props.onMoveToSite}
               onOpenBranch={props.onOpenBranch}
+              readOnly={props.readOnly}
             />
           ))}
         </ul>
@@ -239,19 +244,23 @@ export function BranchManagers(props: BranchManagersProps) {
               {tx(`${names(board.missing.map((l) => l.name), tx)} ne peuvent pas encore échanger`, `${names(board.missing.map((l) => l.name), tx)} cannot swap yet`)}
             </p>
             <p className="mt-1 text-sm text-[#141414]/75">
-              {tx("Ajoutez un responsable à chacune : elle rejoint le réseau.", "Add a manager to each and they join the network.")}
+              {readOnly
+                ? tx("Le propriétaire du compte ajoute les responsables.", "The account owner adds the managers.")
+                : tx("Ajoutez un responsable à chacune : elle rejoint le réseau.", "Add a manager to each and they join the network.")}
             </p>
           </div>
 
-          <button
-            type="button"
-            data-testid="add-managers"
-            onClick={() => onAdd(board.missing[0]?.siteId)}
-            className="inline-flex items-center gap-2 rounded-full bg-[#141414] px-5 py-3 text-sm font-semibold text-[#f4f4ee] transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            {tx("Ajouter des responsables", "Add managers")}
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              data-testid="add-managers"
+              onClick={() => onAdd(board.missing[0]?.siteId)}
+              className="inline-flex items-center gap-2 rounded-full bg-[#141414] px-5 py-3 text-sm font-semibold text-[#f4f4ee] transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              {tx("Ajouter des responsables", "Add managers")}
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -269,6 +278,7 @@ function PersonCard({
   onRemove,
   onMoveToSite,
   onOpenBranch,
+  readOnly,
 }: {
   person: Contractor
   line: BranchLine | null
@@ -280,6 +290,7 @@ function PersonCard({
   onRemove: BranchManagersProps["onRemove"]
   onMoveToSite: BranchManagersProps["onMoveToSite"]
   onOpenBranch: BranchManagersProps["onOpenBranch"]
+  readOnly: boolean
 }) {
   const tx = useTx()
   const [menu, setMenu] = useState(false)
@@ -319,15 +330,17 @@ function PersonCard({
         )}
         <span aria-hidden="true">&bull;</span>
         <span className="shrink-0">{tx(`${person.open_assignments} en cours`, `${person.open_assignments} open`)}</span>
-        <button
-          type="button"
-          onClick={() => setMenu((v) => !v)}
-          aria-expanded={menu}
-          aria-label={tx(`Options pour ${person.name}`, `Options for ${person.name}`)}
-          className="ml-auto rounded-full p-1 hover:bg-[#141414]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
-        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={() => setMenu((v) => !v)}
+            aria-expanded={menu}
+            aria-label={tx(`Options pour ${person.name}`, `Options for ${person.name}`)}
+            className="ml-auto rounded-full p-1 hover:bg-[#141414]/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+          </button>
+        )}
       </div>
 
       {menu && (
@@ -368,17 +381,20 @@ function PersonCard({
           <div className="min-w-0 flex-1">
             <p className="truncate font-heading text-[13px] font-bold leading-tight">{line.name}</p>
           </div>
-          <button
-            type="button"
-            data-testid="open-branch"
-            onClick={() => onOpenBranch(line.siteId)}
-            aria-label={tx(`Ouvrir ${line.name}`, `Open ${line.name}`)}
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#ffffffd0] text-[#141414] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-          </button>
+          {/* The switch to a branch's dashboard is the boss's alone. */}
+          {!readOnly && (
+            <button
+              type="button"
+              data-testid="open-branch"
+              onClick={() => onOpenBranch(line.siteId)}
+              aria-label={tx(`Ouvrir ${line.name}`, `Open ${line.name}`)}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#ffffffd0] text-[#141414] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </button>
+          )}
         </div>
-      ) : (
+      ) : readOnly ? null : (
         <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
           <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
           <select

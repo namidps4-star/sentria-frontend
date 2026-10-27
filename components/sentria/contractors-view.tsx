@@ -133,7 +133,8 @@ export function ContractorsView({
   useEffect(() => {
     setIsHealth(readSectors().includes("health"))
   }, [])
-  const branchMode = canFile && companySites.length > 1 && isHealth
+  // An employee reads the same board; the boss alone changes it (readOnly).
+  const branchMode = sitesMode === "server" && companySites.length > 1 && isHealth
   const canSeeAmounts = useCanSeeAmounts()
   const branchSwaps = useBranchSwaps({
     lang: tx("fr", "en"),
@@ -194,7 +195,7 @@ export function ContractorsView({
   }, [companyName])
 
   async function submit() {
-    if (!form.name.trim() || busy) return
+    if (employee || !form.name.trim() || busy) return
 
     // A number the app cannot text is refused here, in the reader's language,
     // before it reaches the server (which checks again).
@@ -239,7 +240,7 @@ export function ContractorsView({
     contractor: Contractor,
     availability: Availability
   ) {
-    if (busy || contractor.availability === availability) return
+    if (employee || busy || contractor.availability === availability) return
 
     /* Optimistic, then corrected by the reload. A rejected change is
        said out loud rather than left on screen looking applied. */
@@ -261,7 +262,7 @@ export function ContractorsView({
   }
 
   async function moveToSite(contractor: Contractor, siteId: string) {
-    if (busy) return
+    if (employee || busy) return
 
     setContractors((current) =>
       current.map((person) => (person.id === contractor.id ? { ...person, site_id: siteId || null } : person))
@@ -278,7 +279,7 @@ export function ContractorsView({
      refuses it too). The dialog stays mounted through its close animation,
      so the person it is about is kept until then. */
   function remove(contractor: Contractor) {
-    if (busy) return
+    if (employee || busy) return
 
     setLeaving(contractor)
     setLeavingOpen(true)
@@ -530,6 +531,7 @@ export function ContractorsView({
             onSubmit: submit,
             onClose: closeSheet,
           }}
+          readOnly={employee}
           onAdd={(siteId) => {
             setForm((f) => ({ ...f, site_id: siteId ?? f.site_id }))
             setAdding(true)
@@ -576,7 +578,7 @@ export function ContractorsView({
         icon={UsersRound}
         eyebrow={companyName || tx("Équipe terrain", "Field team")}
         title={tx("Qui peut être envoyé maintenant ?", "Who can be sent out right now?")}
-        action={{ label: tx("Ajouter un intervenant", "Add a contractor"), icon: Plus, onClick: () => setAdding(true) }}
+        action={employee ? undefined : { label: tx("Ajouter un intervenant", "Add a contractor"), icon: Plus, onClick: () => setAdding(true) }}
         progress={{
           share: contractors.length ? declaredAvailable / contractors.length : 0,
           label: tx(`${declaredAvailable} se disent dispo`, `${declaredAvailable} say they are free`),
@@ -591,7 +593,9 @@ export function ContractorsView({
           !loaded
             ? tx("Je charge votre équipe…", "Loading your team…")
             : contractors.length === 0
-              ? tx(
+              ? employee
+                ? tx("Personne n'est encore enregistré sur ce site.", "Nobody is on file for this site yet.")
+                : tx(
                   "Personne n'est encore enregistré. Ajoutez un intervenant pour pouvoir lui confier des priorités.",
                   "Nobody is on file yet. Add a contractor so priorities can be handed to them."
                 )
@@ -623,7 +627,7 @@ export function ContractorsView({
         )}
 
         {/* ADD */}
-        {addForm ?? (
+        {!employee && (addForm ?? (
           <button
             type="button"
             onClick={() => setAdding(true)}
@@ -632,7 +636,7 @@ export function ContractorsView({
             <Plus className="h-4 w-4" aria-hidden="true" />
             {tx("Ajouter un intervenant", "Add a contractor")}
           </button>
-        )}
+        ))}
       </AskHeader>
 
       {/* Texts drafted when someone was removed; shows nothing when empty. */}
@@ -767,6 +771,7 @@ export function ContractorsView({
                             </div>
                           </div>
 
+                          {!employee && (
                           <button
                             type="button"
                             onClick={() => remove(person)}
@@ -778,6 +783,7 @@ export function ContractorsView({
                           >
                             <Trash2 className="h-4 w-4" aria-hidden="true" />
                           </button>
+                          )}
                         </div>
 
                         {(person.phone || person.email) && (
@@ -850,6 +856,7 @@ export function ContractorsView({
                           </span>
                         </div>
 
+                        {!employee && (
                         <div className="mt-4 flex items-center gap-1 border-t border-border pt-4">
                           <div
                             className="flex items-center gap-1"
@@ -882,6 +889,7 @@ export function ContractorsView({
                             })}
                           </div>
                         </div>
+                        )}
 
                         {canFile && (
                           <label className="mt-3 flex items-center gap-2 text-[10px] font-semibold text-muted-foreground">
