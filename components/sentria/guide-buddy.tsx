@@ -255,7 +255,7 @@ export function GuideBuddy({
       const selector = selectorFor(s)
       const missing = selector !== null && targets[selector] === null
 
-      if (missing && s.nav && narrow) {
+      if (missing && s.nav && narrow && !s.needsRow) {
         out.push(s)
         continue
       }

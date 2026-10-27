@@ -1,4 +1,4 @@
-// The Report's Branch swaps card: stock this site should send to another branch, where each swap stands, and the link to the person.
+// The Dashboard's Branch swaps card: stock this site should send to another branch, where each swap stands, and the link to the person.
 const { LAUNCH, APP_URL } = require('./env');
 const { chromium } = require('playwright');
 const { signedIn } = require('./auth-mock');
@@ -21,8 +21,8 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
 
 (async () => {
   const b = await chromium.launch(LAUNCH);
-  const open = async ({ alerts = [AMOX, ORS, MET, OTHER], assignments = [], contractors = [MARY], vw = 1440, theme = 'light', lang = 'en', plan = 'business' } = {}) => {
-    const p = await b.newPage({ viewport: { width: vw, height: 900 }, locale: 'en-US' });
+  const open = async ({ alerts = [AMOX, ORS, MET, OTHER], assignments = [], contractors = [MARY], vw = 1440, vh = 900, theme = 'light', lang = 'en', plan = 'business', reveal = true } = {}) => {
+    const p = await b.newPage({ viewport: { width: vw, height: vh }, locale: 'en-US' });
     p._errs = []; p._calls = []; p._puts = []; p._rows = assignments.slice();
     p.on('pageerror', e => p._errs.push(e.message));
     await p.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: APP_URL }).catch(() => {});
@@ -41,9 +41,49 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
     await p.addInitScript(ls => { if (!sessionStorage.x) { sessionStorage.x = 1; localStorage.clear(); Object.entries(ls).forEach(([k, v]) => localStorage.setItem(k, v)); } }, { ...LS, sentria_theme: theme, sentria_language: lang });
     await signedIn(p, 'u', 'a@b.c', { plan }); await p.goto(APP_URL); await p.waitForTimeout(1800);
     if (vw < 1024) { await p.getByRole('button', { name: /menu/i }).first().click(); await p.waitForTimeout(300); }
-    await p.locator('aside nav button', { hasText: lang === 'fr' ? 'Rapport' : 'Report' }).click(); await p.waitForTimeout(1800);
+    await p.locator('aside nav button', { hasText: 'Dashboard' }).click(); await p.waitForTimeout(1800);
+    if (reveal) {
+      if (vw < 1024) { await p.getByRole('button', { name: /menu/i }).first().click(); await p.waitForTimeout(400); }
+      if (await p.getByTestId('swaps-open').count()) { await p.getByTestId('swaps-open').click(); await p.waitForTimeout(700); }
+    }
     return p;
   };
+
+  console.log('== a sidebar row with the number of actions, until it is opened');
+  let q = await open({ reveal: false });
+  const row0 = q.locator('aside').getByTestId('swaps-open');
+  pass(await row0.count() === 1 && /Branch swaps\s*3/.test((await row0.innerText()).replace(/\s+/g, ' ')), 'a row in the sidebar says Branch swaps with the number of swaps still to do');
+  pass(await q.getByTestId('branch-swaps').count() === 0 && await q.getByTestId('swap-row').count() === 0, 'nothing is added to the Dashboard page');
+  pass(await q.locator('main').getByTestId('swaps-open').count() === 0, 'and no button in the page itself');
+  pass(!q._calls.includes('GET /contractors'), 'the row reads no people until it is opened');
+  const nav = q.locator('aside nav');
+  pass(await nav.evaluate(n => n.scrollHeight <= n.clientHeight + 1), 'the whole sidebar fits at 900 px high, nothing to scroll');
+  await q.screenshot({ path: 'branchswaps-sidebar.png' });
+  await row0.click(); await q.waitForTimeout(700);
+  pass(await q.getByTestId('swaps-sheet').isVisible() && await q.getByTestId('swap-row').count() === 3, 'the row opens the card in a sheet');
+  pass(await q.getByRole('dialog').count() === 1 && await q.getByTestId('swaps-close').isVisible(), 'it is a dialog with a close button');
+  await q.keyboard.press('Escape'); await q.waitForTimeout(600);
+  pass(await q.getByTestId('swaps-sheet').count() === 0, 'Escape closes it');
+  await row0.click(); await q.waitForTimeout(600);
+  await q.getByTestId('swaps-close').click(); await q.waitForTimeout(600);
+  pass(await q.getByTestId('swaps-sheet').count() === 0, 'the close button closes it');
+  await row0.click(); await q.waitForTimeout(600);
+  await q.mouse.click(5, 5); await q.waitForTimeout(600);
+  pass(await q.getByTestId('swaps-sheet').count() === 0, 'a click outside closes it');
+  pass(q._errs.length === 0, 'no page errors ' + q._errs.join('|'));
+  await q.close();
+  q = await open({ alerts: [OTHER], reveal: false });
+  pass(await q.getByTestId('swaps-open').count() === 0, 'no swap needed: no row at all');
+  await q.close();
+  q = await open({ vh: 700, reveal: false });
+  const nav7 = q.locator('aside nav');
+  pass(await q.locator('aside').getByTestId('swaps-open').count() === 1 && await nav7.evaluate(n => n.scrollHeight <= n.clientHeight + 1), 'the sidebar still fits, rows shrunk, at 700 px high: ' + await nav7.evaluate(n => n.scrollHeight + '/' + n.clientHeight));
+  await q.screenshot({ path: 'branchswaps-sidebar-700.png' });
+  await q.close();
+  q = await open({ vh: 600, reveal: false });
+  const nav6 = q.locator('aside nav');
+  pass(await nav6.evaluate(n => n.scrollHeight <= n.clientHeight + 1), 'and at 600 px high: ' + await nav6.evaluate(n => n.scrollHeight + '/' + n.clientHeight));
+  await q.close();
 
   console.log('== three swaps, nobody on them yet');
   let p = await open();
@@ -59,6 +99,17 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   pass(await rows.nth(0).getAttribute('data-stage') === 'waiting' && /Waiting/.test(first) && /Nobody yet/.test(first), 'nobody on it: waiting');
   pass(await rows.nth(0).getByTestId('swap-person').count() === 1 && /Mary Atieno/.test(await rows.nth(0).getByTestId('swap-person').innerText()), 'a manager can be picked');
   await card.scrollIntoViewIfNeeded(); await card.screenshot({ path: 'branchswaps-light.png' });
+  const lines = card.getByTestId('ticket-line');
+  const lt = (await card.getByTestId('swaps-ticket').innerText()).replace(/\s+/g, ' ');
+  pass(await lines.count() === 3 && /20 × 380 KES/.test(lt) && /35 × 90 KES/.test(lt) && /52 × 60 KES/.test(lt), 'the ticket lists every swap with units times unit price: ' + lt);
+  pass(/Send before 16 Nov/.test(lt), 'the ticket names the soonest day to send by');
+  const price = (await card.getByTestId('swap-price').allInnerTexts()).map(x => x.replace(/\s+/g, ' '));
+  pass(price.length === 3 && /Unit price 380 KES Units × 20 7,600 KES/.test(price[0]), 'each row works out unit price times units to the line total: ' + price[0]);
+  const ticketBox = await card.getByTestId('swaps-ticket').boundingBox();
+  await p.evaluate(() => window.scrollBy(0, 0));
+  await card.getByTestId('swaps-ticket').scrollIntoViewIfNeeded(); await p.evaluate(() => window.scrollBy(0, -140)); await p.waitForTimeout(200);
+  await card.getByTestId('swaps-ticket').screenshot({ path: 'branchswaps-ticket-light.png' });
+  pass(ticketBox && ticketBox.width > 600, 'the ticket spans the card');
 
   console.log('== send the link');
   await rows.nth(0).getByTestId('swap-send').click(); await p.waitForTimeout(900);
@@ -85,7 +136,14 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   pass(await r2.nth(2).getAttribute('data-stage') === 'done' && /Done/.test(await r2.nth(2).innerText()), 'a done swap reads Done');
   pass(await r2.nth(1).getAttribute('data-stage') === 'waiting', 'a task with nobody on it (after "I can\'t") reads Waiting again');
   const ticket = (await p.getByTestId('swaps-ticket').innerText()).replace(/\s+/g, ' ');
+  pass(/Branch swaps\s*1/.test((await p.locator('aside').getByTestId('swaps-open').innerText()).replace(/\s+/g, ' ')), 'the sidebar counts only the swaps still to do (one taken, one done, one open)');
   pass(/Taken (\d+)%/i.test(ticket) && Number((ticket.match(/Taken (\d+)%/i) || [])[1]) === Math.round((10720 / 13870) * 100), 'the bar is the share of the money already taken or done: ' + ticket);
+  await p.close();
+
+  console.log('== a unit price that does not divide evenly');
+  p = await open({ alerts: [swap(4, 'Metformin 500mg · Nairobi -> Mombasa', 'Metformin 500mg', 35, 31, 2630)] });
+  const odd = (await p.getByTestId('swap-price').innerText()).replace(/\s+/g, ' ');
+  pass(/Unit price ≈ 75 KES/.test(odd) && /2,630 KES/.test(odd), 'a rounded unit price carries a ≈: ' + odd);
   await p.close();
 
   console.log('== nothing to send');
@@ -107,6 +165,7 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   p = await open({ plan: 'decouverte' });
   const lite = (await p.getByTestId('branch-swaps').innerText()).replace(/\s+/g, ' ');
   pass(!/KES/.test(lite) && /To send/i.test(lite), 'no money on the card, the ticket counts swaps: ' + lite.slice(0, 80));
+  pass(await p.getByTestId('swap-price').count() === 0, 'no price block without amounts');
   await p.close();
 
   console.log('== French, dark, and 390 px');
@@ -115,11 +174,18 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   pass(/Échanges entre pharmacies/.test(fr) && /Repéré/.test(fr) && /Confié/.test(fr) && /Réponse/.test(fr) && /En attente/.test(fr), 'every heading is French');
   pass(!/Branch swaps|Waiting for|Nobody yet/.test(fr), 'no English left in French');
   await p.getByTestId('branch-swaps').scrollIntoViewIfNeeded(); await p.getByTestId('branch-swaps').screenshot({ path: 'branchswaps-dark-fr.png' });
+  await p.getByTestId('swaps-ticket').scrollIntoViewIfNeeded(); await p.evaluate(() => window.scrollBy(0, -140)); await p.waitForTimeout(200);
+  await p.getByTestId('swaps-ticket').screenshot({ path: 'branchswaps-ticket-dark-fr.png' });
+  pass(/Prix unitaire/.test(await p.getByTestId('branch-swaps').innerText()) && /À envoyer avant le/.test(fr), 'unit price and send-before are French');
   await p.close();
 
   p = await open({ vw: 390 });
   pass(await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'no sideways scroll at 390 px');
   pass(await p.getByTestId('branch-swaps').evaluate(el => el.querySelectorAll('*').length > 0 && ![...el.querySelectorAll('*')].some(n => n.scrollWidth > n.clientWidth + 1 && getComputedStyle(n).overflowX !== 'visible')), 'nothing inside the card scrolls or is cut');
+  await p.getByTestId('swaps-ticket').scrollIntoViewIfNeeded(); await p.evaluate(() => window.scrollBy(0, -140)); await p.waitForTimeout(200);
+  await p.getByTestId('swaps-ticket').screenshot({ path: 'branchswaps-ticket-390.png' });
+  const ys = await p.getByTestId('swap-row').first().locator('ol > li').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().top)));
+  pass(ys.length === 3 && ys[0] < ys[1] && ys[1] < ys[2], 'at 390 px the steps stack down a rail: ' + ys);
   await p.getByTestId('branch-swaps').scrollIntoViewIfNeeded();
   await p.screenshot({ path: 'branchswaps-390.png', fullPage: false });
   await p.close();

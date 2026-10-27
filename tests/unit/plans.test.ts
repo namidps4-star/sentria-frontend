@@ -33,3 +33,13 @@ describe("plans", () => {
     expect(trialDaysLeft(null, now)).toBe(0)
   })
 })
+
+describe("every country has its own price", () => {
+  it("prices in the currency of each country in the table, so nobody falls back to dollars by mistake", async () => {
+    const { COUNTRIES } = await import("@/lib/locale")
+    const { PRICES } = await import("@/lib/plans")
+    const missing = COUNTRIES.map((c) => c.currency.code).filter((code) => !PRICES[code])
+
+    expect(missing).toEqual([])
+  })
+})

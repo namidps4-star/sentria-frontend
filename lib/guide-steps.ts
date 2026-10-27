@@ -47,6 +47,9 @@ export type GuideStep = {
   /** The block only exists once data is in. Without it the step is dropped
    *  and one "after your first import" step stands in for all of them. */
   needsData?: boolean
+  /** The menu row exists only in some accounts (a pharmacy with a swap to send): dropped when it is not there,
+   *  on a phone too, where the menu is a drawer and a missing item is otherwise assumed to be inside it. */
+  needsRow?: boolean
 }
 
 export function guideSteps(tx: Tx): GuideStep[] {
@@ -99,6 +102,31 @@ export function guideSteps(tx: Tx): GuideStep[] {
       ],
     },
     {
+      id: "swaps",
+      pose: "point",
+      nav: "swaps",
+      needsRow: true,
+      title: tx("Échanges entre pharmacies", "Branch swaps"),
+      body: tx(
+        "Du stock qui va expirer dans une pharmacie mais qui se vend dans une autre. Le chiffre dit combien d'échanges attendent encore quelqu'un.",
+        "Stock that will expire at one pharmacy but sells at another. The number says how many swaps still wait for someone.",
+      ),
+      example: tx(
+        "Exemple : 20 Amoxicilline de Nairobi vont à Mombasa avant d'expirer. Choisissez un responsable et envoyez-lui le lien : il touche « Reçu, j'y vais » ou « Je ne peux pas ».",
+        "Example: 20 Amoxicillin at Nairobi go to Mombasa before they expire. Pick a manager and send them the link: they tap \"Got it, on my way\" or \"I can't do this\".",
+      ),
+      bullets: [
+        tx(
+          "Repéré, Confié, Réponse : où en est chaque échange.",
+          "Found, Assigned, Answered: where each swap stands.",
+        ),
+        tx(
+          "Le chiffre ne compte que les échanges sans responsable ou sans réponse.",
+          "The number counts only the swaps with nobody on them or no answer yet.",
+        ),
+      ],
+    },
+    {
       id: "sites",
       pose: "point",
       nav: "sites",
@@ -146,12 +174,12 @@ export function guideSteps(tx: Tx): GuideStep[] {
       nav: "report",
       title: tx("Rapport", "Report"),
       body: tx(
-        "Un résumé de la semaine que vous pouvez partager.",
-        "A summary of the week you can share.",
+        "La semaine racontée en une page : ce qui vous attend, ce qui revient, le plan. Les chiffres derrière sont sur le deuxième onglet.",
+        "The week told on one page: what needs you, what keeps coming back, the plan. The figures behind it are on the second tab.",
       ),
       example: tx(
-        "Exemple : envoyez-le à votre responsable le lundi.",
-        "Example: send it to your manager on Monday.",
+        "Exemple : exportez-le en PDF et envoyez-le à votre responsable le lundi.",
+        "Example: export it as a PDF and send it to your manager on Monday.",
       ),
     },
     {
@@ -214,10 +242,15 @@ export function deepSteps(tx: Tx, context: DeepContext): GuideStep[] {
       anchor: "kpis",
       needsData: true,
       title: tx("Les quatre cartes du haut", "The four cards at the top"),
-      body: tx(
-        "Chaque carte compte une chose pour votre activité. Le petit trait montre les derniers jours et l'étiquette compare avec avant.",
-        "Each card counts one thing for your activity. The small line shows the last days and the tag compares with before.",
-      ),
+      body: context.sectors?.includes("health")
+        ? tx(
+            "Pour la santé : ruptures critiques compte les stocks critiques (à commander maintenant), stocks bas les stocks sous leur minimum, médicaments concernés les produits qui ont une alerte, et chaîne du froid les ruptures de froid. Les péremptions et les transferts entre agences ne sont pas comptés dans les stocks. Le petit trait montre les derniers jours.",
+            "For health: critical stockouts counts critical stock (order now), low stock the stock below its minimum, medicines affected the products with an alert, and cold chain the cold chain breaks. Expiry alerts and branch swaps are not counted as stock. The small line shows the last days.",
+          )
+        : tx(
+            "Chaque carte compte une chose pour votre activité. Le petit trait montre les derniers jours et l'étiquette compare avec avant.",
+            "Each card counts one thing for your activity. The small line shows the last days and the tag compares with before.",
+          ),
       example: tx(
         "Exemple : si la carte la plus grave monte, ouvrez les alertes derrière elle en premier.",
         "Example: if the most serious card goes up, open the alerts behind it first.",
@@ -410,7 +443,9 @@ export function partCards(tx: Tx): PartCard[] {
   ]
 }
 
-function trackingSteps(tx: Tx): GuideStep[] {
+function trackingSteps(tx: Tx, context: DeepContext): GuideStep[] {
+  const pharmacy = !!context.sectors?.includes("health")
+
   return [
     {
       id: "part-tracking-board",
@@ -447,10 +482,30 @@ function trackingSteps(tx: Tx): GuideStep[] {
         "From 3 answers, SentrIA adjusts the confidence of the next alerts of that kind (Pro and up).",
       ),
     },
+    ...(pharmacy
+      ? [
+          {
+            id: "part-tracking-swaps",
+            pose: "wave" as const,
+            view: "tracking" as const,
+            title: tx("Les échanges entre pharmacies", "Branch swaps"),
+            body: tx(
+              "Un échange est une tâche comme les autres : du stock qui va expirer dans une pharmacie et qui se vend dans une autre. Quand il y en a un, une ligne « Échanges entre pharmacies » apparaît dans le menu, avec le nombre à traiter.",
+              "A swap is a task like the others: stock that will expire at one pharmacy and sells at another. When there is one, a \"Branch swaps\" row appears in the menu, with how many are to do.",
+            ),
+            example: tx(
+              "Exemple : ouvrez la ligne, choisissez un responsable, envoyez le lien. Sa réponse met l'échange à jour ici.",
+              "Example: open the row, pick a manager, send the link. Their answer updates the swap here.",
+            ),
+          },
+        ]
+      : []),
   ]
 }
 
-function sitesSteps(tx: Tx): GuideStep[] {
+function sitesSteps(tx: Tx, context: DeepContext): GuideStep[] {
+  const pharmacy = !!context.sectors?.includes("health")
+
   return [
     {
       id: "part-sites-list",
@@ -483,6 +538,23 @@ function sitesSteps(tx: Tx): GuideStep[] {
         "In Settings, invite a person in charge of one site. They see that site only.",
       ),
     },
+    ...(pharmacy
+      ? [
+          {
+            id: "part-sites-swaps",
+            pose: "cheer" as const,
+            title: tx("Plusieurs pharmacies", "Several pharmacies"),
+            body: tx(
+              "Importez le fichier de stock de chaque pharmacie sur son propre site. SentrIA les compare : du stock qui va expirer ici et se vend ailleurs devient un échange à envoyer.",
+              "Import each pharmacy's stock file on its own site. SentrIA compares them: stock that will expire here and sells elsewhere becomes a swap to send.",
+            ),
+            example: tx(
+              "Il faut au moins deux sites, chacun avec un fichier récent.",
+              "It needs at least two sites, each with a recent file.",
+            ),
+          },
+        ]
+      : []),
   ]
 }
 
@@ -491,8 +563,8 @@ export function partSteps(id: PartId, tx: Tx, context: DeepContext, queued = fal
   let steps: GuideStep[]
 
   if (id === "menu") steps = guideSteps(tx)
-  else if (id === "tracking") steps = trackingSteps(tx)
-  else if (id === "sites") steps = sitesSteps(tx)
+  else if (id === "tracking") steps = trackingSteps(tx, context)
+  else if (id === "sites") steps = sitesSteps(tx, context)
   else {
     const deep = deepSteps(tx, context)
     const cut = deep.findIndex((s) => s.id === "deep-import")

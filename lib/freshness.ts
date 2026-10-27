@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { API_BASE, apiFetch } from "@/lib/api"
+import { ALERTS_UPDATED_EVENT } from "@/lib/alerts-event"
 
 export type FreshnessEntry = {
   sector: string
@@ -37,6 +38,10 @@ export type FreshnessData = {
 export const UNKNOWN_FRESHNESS: FreshnessData = { persisted: false, staleAfterDays: 7, entries: [] }
 
 const DAY = 86_400_000
+
+/** Sent when the department on screen changes, so the sidebar's data status
+ *  reads the new department's stamp. */
+export const DEPARTMENT_CHANGED_EVENT = "sentria_department_changed"
 
 export type StaleSector = { sector: string; ageDays: number; lastUploadAt: string }
 
@@ -130,8 +135,12 @@ async function fetchFreshness(): Promise<FreshnessData> {
   }
 }
 
-/** The account's stamps, read on mount and again when `refresh` is called
- *  (after an upload). Unknown until the first answer. */
+/** The account's stamps. Every instance (the sidebar's status, the account
+ *  card, the dashboard) is read on mount and again whenever an upload finishes
+ *  anywhere in the app (`announceAlertsUpdated`, sent by `runUpload`). Without
+ *  that, an instance mounted before the upload kept the old stamp until a
+ *  reload: "10 days" after a file uploaded this morning. Unknown until the
+ *  first answer. */
 export function useFreshness() {
   const [data, setData] = useState<FreshnessData>(UNKNOWN_FRESHNESS)
 
@@ -141,11 +150,18 @@ export function useFreshness() {
 
   useEffect(() => {
     let cancelled = false
-    fetchFreshness().then((next) => {
-      if (!cancelled) setData(next)
-    })
+    const load = () => {
+      fetchFreshness().then((next) => {
+        if (!cancelled) setData(next)
+      })
+    }
+
+    load()
+    window.addEventListener(ALERTS_UPDATED_EVENT, load)
+
     return () => {
       cancelled = true
+      window.removeEventListener(ALERTS_UPDATED_EVENT, load)
     }
   }, [])
 

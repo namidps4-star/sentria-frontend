@@ -4,7 +4,7 @@ import { asRecord, type AlertParams } from "@/lib/value-at-risk"
 
 /* Branch swaps (F-BRANCHSWAP): stock that will expire at one pharmacy branch
  * and sells at another. The backend raises `health.branch.swap` on the branch
- * that holds the stock, so the alerts the Report reads for a site are the
+ * that holds the stock, so the alerts the Dashboard reads for a site are the
  * swaps that site should send. Everything here is read from those alerts and
  * from the task they are tracked under; nothing is guessed. */
 

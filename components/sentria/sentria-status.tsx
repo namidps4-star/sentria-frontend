@@ -9,8 +9,9 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 
 import { X } from "@/lib/icons"
-import { readSectors, activityLabel } from "@/lib/activities"
-import { assessFreshness, useFreshness } from "@/lib/freshness"
+import { readSectors, activityLabel, normalizeOpsType } from "@/lib/activities"
+import { SITES_CHANGED_EVENT } from "@/lib/active-site"
+import { assessFreshness, DEPARTMENT_CHANGED_EVENT, useFreshness } from "@/lib/freshness"
 import { useTx } from "@/lib/i18n"
 import { sectorLabel } from "@/lib/priorities"
 import { agoLabel } from "@/lib/relative-time"
@@ -18,6 +19,23 @@ import { usePresence } from "@/lib/use-presence"
 import { cn } from "@/lib/utils"
 
 import { RoboBody, RoboHead, type Mood } from "./robo-mood"
+
+/** The department the dashboard shows: the onboarding id it is saved under
+ *  (a pharmacy, a clinic), or for logistics the operation type. The upload
+ *  stamps its department the same way (lib/freshness.ts, scope_of). */
+function departmentOnScreen(): string[] {
+  try {
+    const department = localStorage.getItem("sentria_business_type")
+
+    if (department) return [department]
+
+    const ops = localStorage.getItem("sentria_ops_type")
+
+    return ops ? [ops, normalizeOpsType(ops) ?? ops] : []
+  } catch {
+    return []
+  }
+}
 
 const MOOD_COLOR: Record<Mood, string> = {
   fresh: "var(--brand)",
@@ -36,12 +54,29 @@ export function SentriaStatus({
   const tx = useTx()
   const { data } = useFreshness()
   const [sectors, setSectors] = useState<string[]>([])
+  // The department on screen: only its stamp speaks. Another department's
+  // data going quiet is not this dashboard's business.
+  const [scopes, setScopes] = useState<string[]>([])
 
   useEffect(() => {
-    setSectors(readSectors())
+    const read = () => {
+      setSectors(readSectors())
+      setScopes(departmentOnScreen())
+    }
+
+    read()
+    window.addEventListener(DEPARTMENT_CHANGED_EVENT, read)
+    window.addEventListener(SITES_CHANGED_EVENT, read)
+    window.addEventListener("storage", read)
+
+    return () => {
+      window.removeEventListener(DEPARTMENT_CHANGED_EVENT, read)
+      window.removeEventListener(SITES_CHANGED_EVENT, read)
+      window.removeEventListener("storage", read)
+    }
   }, [])
 
-  const assessment = assessFreshness(data, sectors)
+  const assessment = assessFreshness(data, sectors, scopes)
   const mood: Mood = assessment.kind
   const color = MOOD_COLOR[mood]
 

@@ -49,7 +49,7 @@ import {
 } from "@/lib/chart-series"
 import { cn } from "@/lib/utils"
 import { usePresence } from "@/lib/use-presence"
-import { assessFreshness, isZeroFigure, useFreshness } from "@/lib/freshness"
+import { assessFreshness, DEPARTMENT_CHANGED_EVENT, isZeroFigure, useFreshness } from "@/lib/freshness"
 import { readList } from "@/lib/answer"
 import { FreshnessNote } from "./freshness-note"
 import { NotMeasuredFigure, SourceNotice } from "./not-measured"
@@ -65,7 +65,7 @@ import { Skeleton } from "./skeleton"
 import { AlertIcon } from "./alert-icon"
 import { PriorityTrack } from "./priority-track"
 import { priorityRows } from "@/lib/priority-counts"
-import { HEALTH_PRIORITY_CATEGORY, healthCategoryOf, healthRows, type PriorityRow } from "@/lib/health-priorities"
+import { HEALTH_PRIORITY_CATEGORY, healthCategoryOf, healthRows, medicineOf, type PriorityRow } from "@/lib/health-priorities"
 import { enterAt } from "@/lib/motion"
 import { announceAlertsUpdated } from "@/lib/alerts-event"
 import { useSites, useSiteVersion } from "@/lib/sites"
@@ -346,6 +346,11 @@ const SUBTYPE_CHART_TITLES: Record<string, Localized> = {
     "Alertes réseau · 7 jours", "Network alerts · 7 days"),
 }
 
+/* The Health tiles' tests (the same families the priorities panel counts). */
+const healthStockCritical = (x: Alert) => healthCategoryOf(x) === "stock" && x.severity === "CRITICAL"
+const healthStockLow = (x: Alert) => healthCategoryOf(x) === "stock" && x.severity === "WARNING"
+const healthColdChain = (x: Alert) => healthCategoryOf(x) === "cold"
+
 const KEY_FAMILY_LABELS: Record<string, Localized> = {
   stock: localized("Stock", "Stock"),
   reorder: localized("Réappro", "Reorder"),
@@ -528,40 +533,34 @@ const SECTOR_META: Record<
   },
 
   health: {
+    // Each card counts what its label says, with the same test its line uses.
+    // Stock alerts are the stock family (stock, reorder, critical supply), so
+    // an expiry or a branch swap is never counted as a stockout or a low stock.
     kpis: (a) => [
       {
         label: localized("Ruptures critiques", "Critical stockouts"),
-        value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
-        ),
-        match: (x) => x.severity === "CRITICAL",
+        value: String(a.filter(healthStockCritical).length),
+        match: healthStockCritical,
         delta: localized("Commander maintenant", "Order now"),
         up: false,
       },
       {
         label: localized("Stocks bas", "Low stock"),
-        value: String(
-          a.filter((x) => x.severity === "WARNING").length
-        ),
-        match: (x) => x.severity === "WARNING",
+        value: String(a.filter(healthStockLow).length),
+        match: healthStockLow,
         delta: localized("À surveiller", "To watch"),
         up: true,
       },
       {
         label: localized("Médicaments concernés", "Medicines affected"),
-        value: String(new Set(a.map((x) => x.equipment)).size),
+        value: String(new Set(a.map(medicineOf)).size),
         delta: localized("Produits", "Products"),
         up: true,
       },
       {
         label: localized("Alertes chaîne froid", "Cold chain alerts"),
-        value: String(
-          a.filter(
-            (x) =>
-              x.message.toLowerCase().includes("froid") ||
-              x.message.toLowerCase().includes("cold")
-          ).length
-        ),
+        value: String(a.filter(healthColdChain).length),
+        match: healthColdChain,
         delta: localized("Urgence", "Urgent"),
         up: false,
       },
@@ -1828,6 +1827,8 @@ export function DashboardView({
     } else {
       localStorage.setItem("sentria_business_type", activityId)
       setBusinessType(activityId)
+      // The sidebar's data status follows the department on screen (lib/freshness.ts).
+      window.dispatchEvent(new Event(DEPARTMENT_CHANGED_EVENT))
     }
 
     setLogisticsPriority(null)

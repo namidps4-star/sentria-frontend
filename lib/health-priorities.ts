@@ -44,6 +44,14 @@ export function healthCategoryOf(a: HealthAlert): HealthCategory | null {
   return null
 }
 
+/** The medicine an alert is about. A branch swap is named "Product · From -> To"
+ *  (its equipment name), so only the product part counts as the medicine. */
+export function medicineOf(a: { equipment: string; alert_key?: string | null }): string {
+  if (a.alert_key === "health.branch.swap") return a.equipment.split(" · ")[0].trim()
+
+  return a.equipment
+}
+
 export type PriorityRow = {
   id: string
   /** null: this priority has no figure (nothing counts it yet). */
