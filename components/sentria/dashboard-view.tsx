@@ -49,7 +49,7 @@ import {
 } from "@/lib/chart-series"
 import { cn } from "@/lib/utils"
 import { usePresence } from "@/lib/use-presence"
-import { assessFreshness, isZeroFigure, useFreshness } from "@/lib/freshness"
+import { assessFreshness, DEPARTMENT_CHANGED_EVENT, isZeroFigure, useFreshness } from "@/lib/freshness"
 import { readList } from "@/lib/answer"
 import { FreshnessNote } from "./freshness-note"
 import { NotMeasuredFigure, SourceNotice } from "./not-measured"
@@ -1827,6 +1827,8 @@ export function DashboardView({
     } else {
       localStorage.setItem("sentria_business_type", activityId)
       setBusinessType(activityId)
+      // The sidebar's data status follows the department on screen (lib/freshness.ts).
+      window.dispatchEvent(new Event(DEPARTMENT_CHANGED_EVENT))
     }
 
     setLogisticsPriority(null)

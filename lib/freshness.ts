@@ -39,6 +39,10 @@ export const UNKNOWN_FRESHNESS: FreshnessData = { persisted: false, staleAfterDa
 
 const DAY = 86_400_000
 
+/** Sent when the department on screen changes, so the sidebar's data status
+ *  reads the new department's stamp. */
+export const DEPARTMENT_CHANGED_EVENT = "sentria_department_changed"
+
 export type StaleSector = { sector: string; ageDays: number; lastUploadAt: string }
 
 export type Assessment = {
