@@ -1,6 +1,7 @@
 "use client"
 
 import { AskHeader } from "./ask-header"
+import { BranchManagers } from "./branch-managers"
 import { useEffect, useState } from "react"
 import {
   AlertTriangle,
@@ -38,7 +39,10 @@ import { SmsDraftsCard } from "./sms-drafts-card"
 import { checkPhone, defaultPhoneCountry } from "@/lib/phone"
 import { roleSuggestions } from "@/lib/roles"
 import { useIsEmployee } from "@/lib/role"
-import { useSites } from "@/lib/sites"
+import { useSites, chooseSite } from "@/lib/sites"
+import { readSectors } from "@/lib/activities"
+import { useBranchSwaps } from "@/lib/use-branch-swaps"
+import { useCanSeeAmounts } from "@/lib/use-plan"
 
 /* --------------------------------------------------------------------------
  * The people who can be sent out, and whether they are free.
@@ -112,6 +116,7 @@ export function ContractorsView({
     role: "",
     phone: "",
     email: "",
+    site_id: "",
   })
 
   const [leaving, setLeaving] = useState<Contractor | null>(null)
@@ -122,6 +127,20 @@ export function ContractorsView({
   const employee = useIsEmployee()
   const { mode: sitesMode, sites: companySites } = useSites()
   const canFile = !employee && sitesMode === "server" && companySites.length > 0
+  // A pharmacy company with several branches gets the branch board (F-BRANCHBOARD):
+  // one manager per branch, in the branch's colour, with the swaps each one has.
+  const [isHealth, setIsHealth] = useState(false)
+  useEffect(() => {
+    setIsHealth(readSectors().includes("health"))
+  }, [])
+  const branchMode = canFile && companySites.length > 1 && isHealth
+  const canSeeAmounts = useCanSeeAmounts()
+  const branchSwaps = useBranchSwaps({
+    lang: tx("fr", "en"),
+    siteIds: companySites.map((site) => site.id),
+    enabled: branchMode,
+    refresh: 0,
+  })
 
   const [availabilityFilter, setAvailabilityFilter] =
     useState<Availability | null>(null)
@@ -190,7 +209,7 @@ export function ContractorsView({
 
     const result = await createContractor(companyName, {
       name: form.name,
-      role: form.role || undefined,
+      role: branchMode ? "Branch manager" : form.role || undefined,
       phone: phone.kind === "valid" ? phone.e164 : undefined,
       email: form.email || undefined,
     })
@@ -204,7 +223,14 @@ export function ContractorsView({
 
     setError(null)
     setTried(false)
-    setForm({ name: "", role: "", phone: "", email: "" })
+    // The API files a new person under the site shown; a branch manager goes to the branch picked.
+    if (branchMode && form.site_id && result.data.site_id !== form.site_id) {
+      const filed = await updateContractor(result.data.id, { site_id: form.site_id })
+
+      if (!filed.ok) setError(px(filed.detail))
+    }
+
+    setForm({ name: "", role: "", phone: "", email: "", site_id: "" })
     setAdding(false)
     await reload()
   }
@@ -347,6 +373,187 @@ export function ContractorsView({
     )
   }
 
+  const addForm = adding ? (
+<form
+            onSubmit={(event) => {
+              event.preventDefault()
+              submit()
+            }}
+            className="rounded-[22px] bg-card p-4 shadow-sm"
+          >
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {branchMode && (
+                <label className="block sm:col-span-2">
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                    {tx("Agence", "Branch")}
+                  </span>
+
+                  <select
+                    data-testid="manager-branch"
+                    value={form.site_id}
+                    onChange={(e) => setForm((f) => ({ ...f, site_id: e.target.value }))}
+                    required
+                    className="mt-1.5 w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm outline-none focus:border-ring"
+                  >
+                    <option value="">{tx("Choisir l'agence", "Choose the branch")}</option>
+                    {companySites.map((site) => (
+                      <option key={site.id} value={site.id}>
+                        {site.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              <label className="block">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                  {tx("Nom", "Name")}
+                </span>
+
+                <input
+                  value={form.name}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, name: e.target.value }))
+                  }
+                  placeholder={tx("Ex. Kofi Adjoyi", "e.g. Kofi Adjoyi")}
+                  autoComplete="name"
+                  required
+                  className="mt-1.5 w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm outline-none focus:border-ring"
+                />
+              </label>
+
+              {!branchMode && <label className="block">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                  {tx("Fonction", "Role")}
+                </span>
+
+                <input
+                  value={form.role}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, role: e.target.value }))
+                  }
+                  list="contractor-roles"
+                  autoComplete="off"
+                  placeholder={tx("Ex. Grutier", "e.g. Crane operator")}
+                  className="mt-1.5 w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm outline-none focus:border-ring"
+                />
+
+                {/* The roles this team already uses (F-ROLE). Suggestions
+                    only: any other text is still a valid role. */}
+                <datalist id="contractor-roles" data-role-suggestions="">
+                  {roleSuggestions(contractors).map((role) => (
+                    <option key={role} value={role} />
+                  ))}
+                </datalist>
+              </label>}
+
+              <PhoneField
+                value={form.phone}
+                onChange={(phone) => setForm((f) => ({ ...f, phone }))}
+                submitted={tried}
+              />
+
+              <label className="block">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                  {tx("Email", "Email")}
+                </span>
+
+                <input
+                  value={form.email}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, email: e.target.value }))
+                  }
+                  placeholder={tx("nom@exemple.com", "name@example.com")}
+                  autoComplete="email"
+                  className="mt-1.5 w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm outline-none focus:border-ring"
+                />
+              </label>
+            </div>
+
+            <p className="mt-3 text-[10px] leading-4 text-muted-foreground">
+              {tx(
+                "Seuls les comptes de votre entreprise voient ces coordonnées.",
+                "Only your company's accounts can see these contact details."
+              )}
+            </p>
+
+            <div className="mt-4 flex items-center gap-2">
+              <button
+                type="submit"
+                disabled={!form.name.trim() || busy || (branchMode && !form.site_id)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                {busy ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <Check className="h-4 w-4" aria-hidden="true" />
+                )}
+                {tx("Enregistrer", "Save")}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setAdding(false)
+                  setTried(false)
+                  setForm({ name: "", role: "", phone: "", email: "", site_id: "" })
+                }}
+                className="rounded-xl border border-border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                {tx("Annuler", "Cancel")}
+              </button>
+            </div>
+          </form>
+  ) : null
+
+  if (branchMode) {
+    return (
+      <div className="space-y-6">
+        {error && (
+          <p role="alert" className="rounded-2xl border border-destructive/30 bg-destructive/[0.06] px-4 py-3 text-xs leading-5">
+            <span className="inline-flex items-center gap-1.5 font-semibold text-destructive">
+              <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+              {tx("Opération refusée.", "The operation was refused.")}
+            </span>{" "}
+            {error}
+          </p>
+        )}
+
+        {addForm}
+
+        <SmsDraftsCard />
+
+        <BranchManagers
+          sites={companySites.map((site) => ({ id: site.id, name: site.name }))}
+          contractors={contractors}
+          loaded={loaded}
+          swaps={branchSwaps}
+          canSeeAmounts={canSeeAmounts}
+          onAdd={(siteId) => {
+            setForm((f) => ({ ...f, site_id: siteId ?? f.site_id }))
+            setAdding(true)
+          }}
+          onSetAvailability={setAvailability}
+          onRemove={remove}
+          onMoveToSite={moveToSite}
+          onOpenBranch={(id) => {
+            chooseSite(id)
+            onNavigate?.("dashboard")
+          }}
+        />
+
+        <HandoverDialog
+          contractor={leaving}
+          open={leavingOpen}
+          people={contractors}
+          tx={tx}
+          onClose={() => setLeavingOpen(false)}
+          onChanged={reload}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* The Ask SentrIA layout, as on Calendar: lime card (who is
@@ -403,115 +610,7 @@ export function ContractorsView({
         )}
 
         {/* ADD */}
-        {adding ? (
-          <form
-            onSubmit={(event) => {
-              event.preventDefault()
-              submit()
-            }}
-            className="rounded-[22px] bg-card p-4 shadow-sm"
-          >
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="block">
-                <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                  {tx("Nom", "Name")}
-                </span>
-
-                <input
-                  value={form.name}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, name: e.target.value }))
-                  }
-                  placeholder={tx("Ex. Kofi Adjoyi", "e.g. Kofi Adjoyi")}
-                  autoComplete="name"
-                  required
-                  className="mt-1.5 w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm outline-none focus:border-ring"
-                />
-              </label>
-
-              <label className="block">
-                <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                  {tx("Fonction", "Role")}
-                </span>
-
-                <input
-                  value={form.role}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, role: e.target.value }))
-                  }
-                  list="contractor-roles"
-                  autoComplete="off"
-                  placeholder={tx("Ex. Grutier", "e.g. Crane operator")}
-                  className="mt-1.5 w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm outline-none focus:border-ring"
-                />
-
-                {/* The roles this team already uses (F-ROLE). Suggestions
-                    only: any other text is still a valid role. */}
-                <datalist id="contractor-roles" data-role-suggestions="">
-                  {roleSuggestions(contractors).map((role) => (
-                    <option key={role} value={role} />
-                  ))}
-                </datalist>
-              </label>
-
-              <PhoneField
-                value={form.phone}
-                onChange={(phone) => setForm((f) => ({ ...f, phone }))}
-                submitted={tried}
-              />
-
-              <label className="block">
-                <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                  {tx("Email", "Email")}
-                </span>
-
-                <input
-                  value={form.email}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, email: e.target.value }))
-                  }
-                  placeholder={tx("nom@exemple.com", "name@example.com")}
-                  autoComplete="email"
-                  className="mt-1.5 w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm outline-none focus:border-ring"
-                />
-              </label>
-            </div>
-
-            <p className="mt-3 text-[10px] leading-4 text-muted-foreground">
-              {tx(
-                "Seuls les comptes de votre entreprise voient ces coordonnées.",
-                "Only your company's accounts can see these contact details."
-              )}
-            </p>
-
-            <div className="mt-4 flex items-center gap-2">
-              <button
-                type="submit"
-                disabled={!form.name.trim() || busy}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground transition-opacity hover:opacity-90 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                {busy ? (
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                ) : (
-                  <Check className="h-4 w-4" aria-hidden="true" />
-                )}
-                {tx("Enregistrer", "Save")}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setAdding(false)
-                  setTried(false)
-                  setForm({ name: "", role: "", phone: "", email: "" })
-                }}
-                className="rounded-xl border border-border px-4 py-2.5 text-sm font-semibold transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                {tx("Annuler", "Cancel")}
-              </button>
-            </div>
-          </form>
-        ) : (
+        {addForm ?? (
           <button
             type="button"
             onClick={() => setAdding(true)}
