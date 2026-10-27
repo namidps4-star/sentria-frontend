@@ -27,10 +27,12 @@ import { cn } from "@/lib/utils"
 import { StatusTag } from "./status-tag"
 import { WeekCard } from "./week-card"
 import { BriefingCard } from "./briefing-card"
+import { BranchSwapsCard } from "./branch-swaps-card"
 import { AccountFreshnessNote, useAccountFreshness } from "./account-freshness"
 import { SourceNotice } from "./not-measured"
 import { localized, resolve, useTx, type Localized } from "@/lib/i18n"
 import { useLatestRead } from "@/lib/latest-read"
+import type { SwapAlert } from "@/lib/branch-swaps"
 
 // ---------------------------------------------------------------------------
 // Types
@@ -917,6 +919,11 @@ export function ReportView({ data }: { data?: ReportData }) {
                   stale={freshness.kind === "stale"}
                   staleDays={freshness.stale.length ? Math.max(...freshness.stale.map((s) => s.ageDays)) : null}
                 />
+              </div>
+
+              {/* F-BRANCHSWAP: stock this site should send to another branch. Silent when there is none. */}
+              <div className="t-enter" style={enterAt(0.6)}>
+                <BranchSwapsCard alerts={scopedAlerts as SwapAlert[]} />
               </div>
 
               {/* F-REPORT: the week in the numbers the Monday email sends. */}
