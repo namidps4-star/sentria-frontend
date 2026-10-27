@@ -17,6 +17,7 @@ export function PhoneField({
   onChange,
   submitted = false,
   inputClassName,
+  hideLabel = false,
 }: {
   value: string
   onChange: (value: string) => void
@@ -24,6 +25,8 @@ export function PhoneField({
    *  field was never left. */
   submitted?: boolean
   inputClassName?: string
+  /** The caller draws its own label beside the field: keep this one for screen readers only. */
+  hideLabel?: boolean
 }) {
   const tx = useTx()
   const [country] = useState(() => defaultPhoneCountry())
@@ -47,7 +50,7 @@ export function PhoneField({
   return (
     <div className="block">
       <label className="block">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        <span className={cn("text-[10px] font-medium uppercase tracking-wider text-muted-foreground", hideLabel && "sr-only")}>
           {tx("Téléphone", "Phone")}
         </span>
 
@@ -66,7 +69,8 @@ export function PhoneField({
           aria-describedby={showError ? errorId : undefined}
           data-phone-input=""
           className={cn(
-            "mt-1.5 w-full rounded-xl border bg-card px-3.5 py-2.5 text-sm outline-none focus:border-ring",
+            "w-full rounded-xl border bg-card px-3.5 py-2.5 text-sm outline-none focus:border-ring",
+            !hideLabel && "mt-1.5",
             showError ? "border-destructive" : "border-border",
             inputClassName
           )}

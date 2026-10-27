@@ -1,25 +1,32 @@
 "use client"
 
-import { useState, type CSSProperties } from "react"
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react"
 
-import { ArrowRight, ArrowUpRight, MapPin, MoreHorizontal, Phone, Plus, Trash2 } from "@/lib/icons"
+import { ArrowRight, ArrowUpRight, Check, Loader2, Mail, MapPin, MoreHorizontal, Phone, Plus, Trash2 } from "@/lib/icons"
 
 import { branchCode, buildBoard, shortAmount, stakeOf, type BranchLine, type BranchSite } from "@/lib/branch-board"
 import type { Swap } from "@/lib/branch-swaps"
 import { AVAILABILITY_LABEL, type Availability, type Contractor } from "@/lib/crm"
 import { resolve, useTx, type Tx } from "@/lib/i18n"
+import { usePresence } from "@/lib/use-presence"
 import { cn } from "@/lib/utils"
 
+import { PhoneField } from "./phone-field"
 import { SectorTag } from "./sector-tag"
 import { StatusTag, type TagTone } from "./status-tag"
 
 /* The Field team page for a company with several branches (F-BRANCHBOARD):
- * a black banner (who runs the branches, in numbers), one card per person in
- * their branch's colour, and a lime band for the branches nobody runs. The
- * view owns the data and the saves; this draws them. */
+ * a big banner pinned at the top (who runs the branches, in numbers), one card
+ * per person in their branch's colour, and a lime band for the branches nobody
+ * runs. The add form is a sheet that hangs from the banner's bottom edge, so
+ * it opens below the banner and never over it. The view owns the data and the
+ * saves; this draws them. */
 
 const AVAILABILITY_ORDER: Availability[] = ["available", "busy", "off"]
 const AVAILABILITY_TAG: Record<Availability, TagTone> = { available: "success", busy: "warning", off: "danger" }
+
+/** The amber the banner's "needs a manager" labels use: the banner is dark in every theme. */
+const NEEDS_MANAGER = "text-[oklch(0.85_0.13_75)]"
 
 type Filter = "all" | Availability | "nomanager"
 
@@ -33,6 +40,20 @@ function tint(line: Pick<BranchLine, "hue"> | null): CSSProperties {
   return { "--b": line ? `var(--branch-${line.hue})` : "var(--muted)" } as CSSProperties
 }
 
+export type ManagerForm = { name: string; phone: string; email: string; site_id: string }
+
+/** The add form: the view keeps its values and its save, the board draws it. */
+export type ManagerSheet = {
+  open: boolean
+  form: ManagerForm
+  busy: boolean
+  /** Save was pressed: show a bad phone number even if the field was never left. */
+  tried: boolean
+  onChange: (patch: Partial<ManagerForm>) => void
+  onSubmit: () => void
+  onClose: () => void
+}
+
 export type BranchManagersProps = {
   sites: BranchSite[]
   contractors: Contractor[]
@@ -40,6 +61,9 @@ export type BranchManagersProps = {
   /** The swaps each branch sends, or null while they are not read (or could not be). */
   swaps: Record<string, Swap[]> | null
   canSeeAmounts: boolean
+  sheet: ManagerSheet
+  /** Notices that belong under the banner: a refused save, the drafted texts. */
+  children?: ReactNode
   onAdd: (siteId?: string) => void
   onSetAvailability: (person: Contractor, value: Availability) => void
   onRemove: (person: Contractor) => void
@@ -48,7 +72,7 @@ export type BranchManagersProps = {
 }
 
 export function BranchManagers(props: BranchManagersProps) {
-  const { sites, contractors, loaded, swaps, canSeeAmounts, onAdd } = props
+  const { sites, contractors, loaded, swaps, canSeeAmounts, sheet, onAdd } = props
   const tx = useTx()
   const [filter, setFilter] = useState<Filter>("all")
   const board = buildBoard(sites, contractors, swaps)
@@ -57,6 +81,7 @@ export function BranchManagers(props: BranchManagersProps) {
   const everyone = [...board.lines.flatMap((l) => l.people.map((p) => ({ person: p, line: l as BranchLine | null }))), ...board.unfiled.map((p) => ({ person: p, line: null as BranchLine | null }))]
   const shown = everyone.filter(({ person }) => filter === "all" || (filter !== "nomanager" && person.availability === filter))
   const showStrip = board.missing.length > 0 && (filter === "all" || filter === "nomanager")
+  const presence = usePresence(sheet.open, "--modal-close-dur")
 
   function pill(active: boolean) {
     return cn(
@@ -65,43 +90,86 @@ export function BranchManagers(props: BranchManagersProps) {
     )
   }
 
+  const touched = Boolean(sheet.form.name.trim() || sheet.form.phone.trim() || sheet.form.email.trim())
+
   return (
     <div className="space-y-5" data-testid="branch-board">
-      {/* BANNER */}
-      <div
-        data-testid="branch-banner"
-        className="squircle t-enter flex flex-col gap-5 rounded-3xl bg-sidebar-shell p-6 text-sidebar-foreground md:flex-row md:items-center md:justify-between md:p-8"
-      >
-        <div className="min-w-0">
-          <SectorTag size="md" />
-          <h2 className="mt-3 text-balance font-heading text-2xl font-bold leading-tight md:text-3xl">
-            {tx("Qui dirige chaque agence ?", "Who runs each branch?")}
-          </h2>
-        </div>
+      {/* BANNER: pinned. The page scrolls under it, and the form hangs from its bottom edge. */}
+      <div data-testid="branch-pin" className="sticky -top-4 z-30 -mx-4 -mt-4 bg-canvas px-4 pb-3 pt-4 lg:-top-8 lg:-mx-8 lg:-mt-8 lg:px-8 lg:pb-4 lg:pt-8">
+        <div
+          data-testid="branch-banner"
+          className="squircle t-enter grid gap-x-10 gap-y-5 rounded-[34px] bg-sidebar-shell p-5 text-sidebar-foreground sm:gap-y-6 sm:p-6 lg:grid-cols-[1fr_auto] lg:items-end lg:p-8"
+        >
+          <div className="min-w-0">
+            <SectorTag size="md" />
+            <h2 className="mt-3 text-balance font-heading text-[28px] font-semibold leading-[1.05] tracking-tight lg:text-[38px]">
+              {tx("Qui dirige chaque agence ?", "Who runs each branch?")}
+            </h2>
 
-        <div className="flex flex-wrap items-center gap-y-4">
-          {[
-            { label: tx("Agences couvertes", "Branches covered"), value: loaded ? `${board.covered} / ${sites.length}` : "–", id: "covered" },
-            { label: tx("Sans responsable", "No manager"), value: loaded ? String(board.missing.length) : "–", id: "missing" },
-            { label: tx("Transferts en attente", "Swaps waiting"), value: swapsWaiting === null ? "–" : String(swapsWaiting), id: "swaps" },
-          ].map((stat) => (
-            <div key={stat.id} data-testid={`banner-${stat.id}`} className="border-l border-sidebar-foreground/15 px-5">
-              <p className="font-heading text-3xl font-extrabold leading-none tabular-nums">{stat.value}</p>
-              <p className="mt-1.5 text-xs text-sidebar-foreground/60">{stat.label}</p>
+            <ul data-testid="branch-meter" className="mt-5 grid max-w-[640px] grid-cols-[repeat(auto-fit,minmax(88px,1fr))] gap-x-2 gap-y-3 sm:mt-6 lg:mt-7">
+              {board.lines.map((line) => {
+                const missing = loaded && line.people.length === 0
+
+                return (
+                  <li key={line.siteId} data-testid="meter-segment" data-missing={missing} style={tint(line)} className="min-w-0">
+                    <span
+                      className={cn(
+                        "block h-2 rounded-full",
+                        missing ? "border-[1.5px] border-dashed border-sidebar-foreground/45" : loaded ? "bg-[var(--b)]" : "bg-sidebar-foreground/15"
+                      )}
+                    />
+                    <span className={cn("mt-2 block truncate text-xs max-sm:sr-only", missing ? NEEDS_MANAGER : "text-sidebar-foreground/65")} title={line.name}>
+                      {line.name}
+                      {missing && <span className="sr-only">{tx(", sans responsable", ", no manager")}</span>}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+
+          <div className="flex min-w-0 flex-col gap-5 lg:items-end lg:gap-6">
+            <div className="flex">
+              {[
+                { label: tx("Agences couvertes", "Branches covered"), value: loaded ? `${board.covered} / ${sites.length}` : "–", id: "covered", warn: false },
+                { label: tx("Sans responsable", "No manager"), value: loaded ? String(board.missing.length) : "–", id: "missing", warn: loaded && board.missing.length > 0 },
+                { label: tx("Transferts en attente", "Swaps waiting"), value: swapsWaiting === null ? "–" : String(swapsWaiting), id: "swaps", warn: false },
+              ].map((stat) => (
+                <div key={stat.id} data-testid={`banner-${stat.id}`} className="min-w-0 border-l border-sidebar-foreground/15 px-4 first:border-l-0 first:pl-0 lg:px-5 lg:first:pl-5">
+                  <p className={cn("font-heading text-2xl font-semibold leading-none tabular-nums lg:text-[30px]", stat.warn && NEEDS_MANAGER)}>{stat.value}</p>
+                  <p className="mt-2 text-xs text-sidebar-foreground/60">{stat.label}</p>
+                </div>
+              ))}
             </div>
-          ))}
 
-          <button
-            type="button"
-            data-testid="add-manager"
-            onClick={() => onAdd()}
-            className="ml-5 inline-flex items-center gap-2 rounded-full bg-accent px-5 py-3 text-sm font-semibold text-accent-foreground transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            {tx("Ajouter un responsable d'agence", "Add a branch manager")}
-          </button>
+            <button
+              type="button"
+              data-testid="add-manager"
+              onClick={() => onAdd()}
+              className="inline-flex h-12 items-center justify-center gap-2 rounded-full bg-accent px-6 sm:h-[52px] text-[15px] font-semibold text-accent-foreground transition-transform hover:scale-[1.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              {tx("Ajouter un responsable d'agence", "Add a branch manager")}
+            </button>
+          </div>
         </div>
+
+        {presence.present && (
+          <>
+            <div
+              data-testid="manager-scrim"
+              aria-hidden="true"
+              onMouseDown={() => {
+                if (!touched) sheet.onClose()
+              }}
+              className={cn("fixed inset-0 -z-10 bg-black/35 t-modal-backdrop", presence.className)}
+            />
+            <AddManagerSheet sheet={sheet} board={board.lines} className={presence.className} />
+          </>
+        )}
       </div>
+
+      {props.children}
 
       {/* FILTERS */}
       <div className="flex flex-wrap items-center gap-2">
@@ -372,5 +440,148 @@ function SwapStub({ line, stake, swapsRead, canSeeAmounts }: { line: BranchLine;
         </p>
       )}
     </div>
+  )
+}
+
+function AddManagerSheet({ sheet, board, className }: { sheet: ManagerSheet; board: BranchLine[]; className: string }) {
+  const tx = useTx()
+  const { form } = sheet
+  const ready = form.name.trim().length > 0 && form.site_id !== "" && !sheet.busy
+  const row = "flex min-h-[54px] items-center gap-3.5"
+  const label = "flex w-[92px] shrink-0 items-center gap-2 text-[13px] font-medium"
+  const bare = "min-w-0 flex-1 border-0 bg-transparent px-0 py-0 text-sm outline-none placeholder:text-muted-foreground/70 focus:border-0"
+
+  function keys(event: KeyboardEvent) {
+    if (event.key === "Escape") sheet.onClose()
+  }
+
+  // The sheet hangs from the pinned banner, so its room is what is left of the screen below it:
+  // a short screen scrolls the sheet, never the page behind it.
+  const ref = useRef<HTMLFormElement>(null)
+  useEffect(() => {
+    function fit() {
+      const el = ref.current
+      if (el) el.style.maxHeight = `${Math.max(240, window.innerHeight - el.getBoundingClientRect().top - 16)}px`
+    }
+    fit()
+    window.addEventListener("resize", fit)
+    return () => window.removeEventListener("resize", fit)
+  }, [])
+
+  return (
+    <form
+      ref={ref}
+      data-testid="manager-sheet"
+      role="dialog"
+      aria-label={tx("Ajouter un responsable d'agence", "Add a branch manager")}
+      onKeyDown={keys}
+      onSubmit={(event) => {
+        event.preventDefault()
+        if (ready) sheet.onSubmit()
+      }}
+      className={cn(
+        "squircle t-modal absolute inset-x-4 top-full mx-auto w-[560px] max-w-[calc(100%-2rem)] origin-top overflow-y-auto rounded-[26px] border border-border bg-card text-card-foreground shadow-2xl lg:inset-x-8 lg:max-w-[calc(100%-4rem)]",
+        className
+      )}
+    >
+      <div className="px-6 pb-3.5 pt-5">
+        <input
+          data-testid="manager-name"
+          autoFocus
+          value={form.name}
+          onChange={(event) => sheet.onChange({ name: event.target.value })}
+          placeholder={tx("Nom du responsable", "Manager name")}
+          aria-label={tx("Nom", "Name")}
+          autoComplete="name"
+          required
+          className="w-full border-0 bg-transparent font-heading text-[22px] font-semibold tracking-tight outline-none placeholder:text-muted-foreground/50"
+        />
+      </div>
+
+      <div className="divide-y divide-border border-t border-border px-6 py-1.5">
+        <div className={cn(row, "max-sm:flex-col max-sm:items-start max-sm:gap-0 max-sm:pt-3")}>
+          <span className={label}>
+            <MapPin className="h-4 w-4 opacity-70" aria-hidden="true" />
+            {tx("Agence", "Branch")}
+          </span>
+          <div data-testid="manager-branch" role="radiogroup" aria-label={tx("Agence", "Branch")} className="flex flex-wrap gap-1.5 py-2.5">
+            {board.map((line) => {
+              const on = form.site_id === line.siteId
+              const lead = line.people[0]?.name.split(/\s+/)[0]
+
+              return (
+                <button
+                  key={line.siteId}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  data-testid="branch-option"
+                  data-site={line.siteId}
+                  onClick={() => sheet.onChange({ site_id: line.siteId })}
+                  style={tint(line)}
+                  className={cn(
+                    "inline-flex h-8 items-center gap-2 rounded-full border pl-1.5 pr-3 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    on ? "border-foreground bg-foreground text-background" : "border-border text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--b)] text-[8px] font-extrabold text-[#141414]">{branchCode(line.name)}</span>
+                  {line.name}
+                  {lead && <span className="text-[11px] opacity-70 max-sm:hidden">{lead}</span>}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className={row}>
+          <span className={label}>
+            <Phone className="h-4 w-4 opacity-70" aria-hidden="true" />
+            {tx("Téléphone", "Phone")}
+          </span>
+          <div className="min-w-0 flex-1 py-2">
+            <PhoneField value={form.phone} onChange={(phone) => sheet.onChange({ phone })} submitted={sheet.tried} hideLabel inputClassName={bare} />
+          </div>
+        </div>
+
+        <div className={row}>
+          <span className={label}>
+            <Mail className="h-4 w-4 opacity-70" aria-hidden="true" />
+            Email
+          </span>
+          <input
+            type="email"
+            value={form.email}
+            onChange={(event) => sheet.onChange({ email: event.target.value })}
+            placeholder={tx("Facultatif", "Optional")}
+            autoComplete="email"
+            aria-label="Email"
+            className={bare}
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border py-3.5 pl-6 pr-4">
+        <p className="min-w-0 flex-1 basis-48 text-xs text-muted-foreground">
+          {tx("Seuls les comptes de votre entreprise voient ces coordonnées.", "Only your company's accounts can see these contact details.")}
+        </p>
+        <button
+          type="button"
+          data-testid="manager-cancel"
+          onClick={sheet.onClose}
+          className="h-10 rounded-full px-4 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {tx("Annuler", "Cancel")}
+        </button>
+        <button
+          type="submit"
+          data-testid="manager-save"
+          disabled={!ready}
+          className="inline-flex h-10 items-center gap-2 rounded-full bg-foreground px-5 text-sm font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          {sheet.busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Check className="h-4 w-4" aria-hidden="true" />}
+          {tx("Ajouter le responsable", "Add manager")}
+        </button>
+      </div>
+    </form>
   )
 }

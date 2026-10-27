@@ -507,28 +507,29 @@ export function ContractorsView({
   ) : null
 
   if (branchMode) {
+    function closeSheet() {
+      setAdding(false)
+      setTried(false)
+      setForm({ name: "", role: "", phone: "", email: "", site_id: "" })
+    }
+
     return (
       <div className="space-y-6">
-        {error && (
-          <p role="alert" className="rounded-2xl border border-destructive/30 bg-destructive/[0.06] px-4 py-3 text-xs leading-5">
-            <span className="inline-flex items-center gap-1.5 font-semibold text-destructive">
-              <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
-              {tx("Opération refusée.", "The operation was refused.")}
-            </span>{" "}
-            {error}
-          </p>
-        )}
-
-        {addForm}
-
-        <SmsDraftsCard />
-
         <BranchManagers
           sites={companySites.map((site) => ({ id: site.id, name: site.name }))}
           contractors={contractors}
           loaded={loaded}
           swaps={branchSwaps}
           canSeeAmounts={canSeeAmounts}
+          sheet={{
+            open: adding,
+            form: { name: form.name, phone: form.phone, email: form.email, site_id: form.site_id },
+            busy,
+            tried,
+            onChange: (patch) => setForm((f) => ({ ...f, ...patch })),
+            onSubmit: submit,
+            onClose: closeSheet,
+          }}
           onAdd={(siteId) => {
             setForm((f) => ({ ...f, site_id: siteId ?? f.site_id }))
             setAdding(true)
@@ -540,7 +541,19 @@ export function ContractorsView({
             chooseSite(id)
             onNavigate?.("dashboard")
           }}
-        />
+        >
+          {error && (
+            <p role="alert" className="rounded-2xl border border-destructive/30 bg-destructive/[0.06] px-4 py-3 text-xs leading-5">
+              <span className="inline-flex items-center gap-1.5 font-semibold text-destructive">
+                <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                {tx("Opération refusée.", "The operation was refused.")}
+              </span>{" "}
+              {error}
+            </p>
+          )}
+
+          <SmsDraftsCard />
+        </BranchManagers>
 
         <HandoverDialog
           contractor={leaving}
