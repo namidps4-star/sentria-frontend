@@ -9,11 +9,12 @@ import { fieldUrl, makeFieldLink } from "@/lib/field-link"
 import { useTx, type Tx } from "@/lib/i18n"
 import { ArrowRight, Check, Send } from "@/lib/icons"
 import { formatAmount } from "@/lib/locale"
+import { enterAt } from "@/lib/motion"
 import { useCanSeeAmounts } from "@/lib/use-plan"
 import { cn } from "@/lib/utils"
 import { StatusTag } from "./status-tag"
 
-/* Branch swaps (F-BRANCHSWAP): stock that will expire at this site and sells
+/* Branch swaps (F-BRANCHSWAP), on the Dashboard: stock that will expire at this site and sells
  * at another. One row per swap, with where it stands: found, assigned to a
  * person, answered. A swap is a task like any other: it is tracked under the
  * key the board and the calendar use, and the person answers from the same
@@ -153,7 +154,7 @@ export function BranchSwapsCard({ alerts }: { alerts: SwapAlert[] }) {
   const figure = showMoney ? formatAmount(totals.value ?? 0, "", tx) : String(totals.count)
 
   return (
-    <section data-testid="branch-swaps" className="squircle rounded-[28px] bg-card p-5 shadow-sm sm:p-6">
+    <section data-testid="branch-swaps" className="t-enter squircle rounded-[28px] bg-card p-5 shadow-sm sm:p-6" style={enterAt(1)}>
       <h2 className="font-heading text-xl font-semibold tracking-tight">{tx("Échanges entre pharmacies", "Branch swaps")}</h2>
       <p className="mt-1 text-sm text-muted-foreground">
         {tx("Du stock de ce site qui va expirer ici et se vend dans une autre pharmacie.", "Stock at this site that will expire here and sells at another branch.")}

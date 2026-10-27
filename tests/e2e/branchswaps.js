@@ -1,4 +1,4 @@
-// The Report's Branch swaps card: stock this site should send to another branch, where each swap stands, and the link to the person.
+// The Dashboard's Branch swaps card: stock this site should send to another branch, where each swap stands, and the link to the person.
 const { LAUNCH, APP_URL } = require('./env');
 const { chromium } = require('playwright');
 const { signedIn } = require('./auth-mock');
@@ -41,7 +41,7 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
     await p.addInitScript(ls => { if (!sessionStorage.x) { sessionStorage.x = 1; localStorage.clear(); Object.entries(ls).forEach(([k, v]) => localStorage.setItem(k, v)); } }, { ...LS, sentria_theme: theme, sentria_language: lang });
     await signedIn(p, 'u', 'a@b.c', { plan }); await p.goto(APP_URL); await p.waitForTimeout(1800);
     if (vw < 1024) { await p.getByRole('button', { name: /menu/i }).first().click(); await p.waitForTimeout(300); }
-    await p.locator('aside nav button', { hasText: lang === 'fr' ? 'Rapport' : 'Report' }).click(); await p.waitForTimeout(1800);
+    await p.locator('aside nav button', { hasText: 'Dashboard' }).click(); await p.waitForTimeout(1800);
     return p;
   };
 
