@@ -1,5 +1,6 @@
 "use client"
 
+import { readRoleView } from "./view-as"
 import { useEffect, useState } from "react"
 
 import { PLAN_UPDATED_EVENT } from "@/lib/plans"
@@ -14,6 +15,9 @@ import { PLAN_UPDATED_EVENT } from "@/lib/plans"
 export const ROLE_KEY = "sentria_role"
 
 export function readIsEmployee(): boolean {
+  // The founder's employee preview (lib/view-as.ts) reads the app as an employee would.
+  if (readRoleView()?.role === "employee") return true
+
   try {
     return localStorage.getItem(ROLE_KEY) === "employee"
   } catch {

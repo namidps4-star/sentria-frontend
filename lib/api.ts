@@ -1,6 +1,6 @@
 import { activeSiteId } from "./active-site"
 import { normalizeApiBase } from "@/lib/api-base"
-import { readViewAs } from "@/lib/view-as"
+import { readRoleView, readViewAs } from "@/lib/view-as"
 import { supabase } from "./supabase"
 
 /**
@@ -104,6 +104,13 @@ export async function apiFetch(
   const viewing = typeof window === "undefined" ? null : readViewAs()
 
   if (viewing) headers.set("X-View-As", viewing.company_id)
+
+  // The founder's preview of the boss or an employee (lib/view-as.ts). The server
+  // checks the staff member; a company user can never send these.
+  const preview = typeof window === "undefined" ? null : readRoleView()
+
+  if (preview?.role === "boss") headers.set("X-View-As-Owner", "1")
+  if (preview?.role === "employee") headers.set("X-View-As-Employee", preview.sites.join(","))
 
   const [url, options] = forActiveSite(input, init)
 

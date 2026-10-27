@@ -1,5 +1,6 @@
 "use client"
 
+import { readRoleView } from "@/lib/view-as"
 import { useSiteVersion } from "@/lib/sites"
 import { useIsEmployee } from "@/lib/role"
 import { useState, useEffect, useMemo, useRef } from "react"
@@ -129,7 +130,9 @@ export function AppShell({
   // the flag itself on every admin call.
   const employee = useIsEmployee()
   const [isAdmin, setIsAdmin] = useState(false)
-  useEffect(() => setIsAdmin(readAccountPlan().isAdmin), [])
+  // While the founder previews the boss or an employee, the staff pages are not
+  // shown: the screen reads as that person would (lib/view-as.ts).
+  useEffect(() => setIsAdmin(readAccountPlan().isAdmin && !readRoleView()), [])
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [showOnboarding, setShowOnboarding] = useState(false)

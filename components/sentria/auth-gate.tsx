@@ -13,6 +13,7 @@ import { supabase } from "@/lib/supabase"
 import { USERNAME_UPDATED_EVENT } from "./username-card"
 import { AppShell } from "./app-shell"
 import { AuthScreen } from "./auth-screen"
+import { setRoleView, setViewAs } from "@/lib/view-as"
 
 type State =
   | { kind: "loading" }
@@ -150,6 +151,9 @@ export function AuthGate() {
     // Save the last changes while still signed in, then sign out.
     await stopSync.current?.()
     stopSync.current = null
+    // A view or a preview of another person ends with the account, not in the next one.
+    setViewAs(null)
+    setRoleView(null)
     await supabase?.auth.signOut().catch((error) => {
       console.error("Sign-out failed:", error)
     })

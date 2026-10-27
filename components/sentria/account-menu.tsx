@@ -1,5 +1,6 @@
 "use client"
 
+import { RoleSwitch } from "./role-switch"
 import { useEffect, useRef, useState } from "react"
 import { ChevronDown, ChevronRight, MapPin, Plus, User } from "@/lib/icons"
 import { requestAddSiteOnOpen } from "@/lib/active-site"
@@ -361,6 +362,8 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
               })()}
             </div>
           )}
+
+          <RoleSwitch />
 
           <div className="mt-2 flex gap-2 border-t border-border pt-2.5">
             <button
