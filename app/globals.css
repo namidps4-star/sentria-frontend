@@ -597,6 +597,14 @@
    border-radius, never use it alone. */
 .squircle { corner-shape: squircle; }
 
+/* The Branch swaps ticket: a torn, zigzag bottom edge. Only the edge is cut,
+   so the notches and the colours stay on tokens. */
+.swap-ticket {
+  --s: 14px;
+  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / var(--s) 100%;
+  mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / var(--s) 100%;
+}
+
 /* Header row of a data table. Unlayered on purpose: it must beat the
    utility classes (bg-card, text-muted-foreground) already on each head. */
 .table-head { background: var(--table-head-bg); }

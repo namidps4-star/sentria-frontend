@@ -59,6 +59,17 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   pass(await rows.nth(0).getAttribute('data-stage') === 'waiting' && /Waiting/.test(first) && /Nobody yet/.test(first), 'nobody on it: waiting');
   pass(await rows.nth(0).getByTestId('swap-person').count() === 1 && /Mary Atieno/.test(await rows.nth(0).getByTestId('swap-person').innerText()), 'a manager can be picked');
   await card.scrollIntoViewIfNeeded(); await card.screenshot({ path: 'branchswaps-light.png' });
+  const lines = card.getByTestId('ticket-line');
+  const lt = (await card.getByTestId('swaps-ticket').innerText()).replace(/\s+/g, ' ');
+  pass(await lines.count() === 3 && /20 × 380 KES/.test(lt) && /35 × 90 KES/.test(lt) && /52 × 60 KES/.test(lt), 'the ticket lists every swap with units times unit price: ' + lt);
+  pass(/Send before 16 Nov/.test(lt), 'the ticket names the soonest day to send by');
+  const price = (await card.getByTestId('swap-price').allInnerTexts()).map(x => x.replace(/\s+/g, ' '));
+  pass(price.length === 3 && /Unit price 380 KES Units × 20 7,600 KES/.test(price[0]), 'each row works out unit price times units to the line total: ' + price[0]);
+  const ticketBox = await card.getByTestId('swaps-ticket').boundingBox();
+  await p.evaluate(() => window.scrollBy(0, 0));
+  await card.getByTestId('swaps-ticket').scrollIntoViewIfNeeded(); await p.evaluate(() => window.scrollBy(0, -140)); await p.waitForTimeout(200);
+  await card.getByTestId('swaps-ticket').screenshot({ path: 'branchswaps-ticket-light.png' });
+  pass(ticketBox && ticketBox.width > 600, 'the ticket spans the card');
 
   console.log('== send the link');
   await rows.nth(0).getByTestId('swap-send').click(); await p.waitForTimeout(900);
@@ -88,6 +99,12 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   pass(/Taken (\d+)%/i.test(ticket) && Number((ticket.match(/Taken (\d+)%/i) || [])[1]) === Math.round((10720 / 13870) * 100), 'the bar is the share of the money already taken or done: ' + ticket);
   await p.close();
 
+  console.log('== a unit price that does not divide evenly');
+  p = await open({ alerts: [swap(4, 'Metformin 500mg · Nairobi -> Mombasa', 'Metformin 500mg', 35, 31, 2630)] });
+  const odd = (await p.getByTestId('swap-price').innerText()).replace(/\s+/g, ' ');
+  pass(/Unit price ≈ 75 KES/.test(odd) && /2,630 KES/.test(odd), 'a rounded unit price carries a ≈: ' + odd);
+  await p.close();
+
   console.log('== nothing to send');
   p = await open({ alerts: [OTHER] });
   pass(await p.getByTestId('branch-swaps').count() === 0, 'no swap alert: no card');
@@ -107,6 +124,7 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   p = await open({ plan: 'decouverte' });
   const lite = (await p.getByTestId('branch-swaps').innerText()).replace(/\s+/g, ' ');
   pass(!/KES/.test(lite) && /To send/i.test(lite), 'no money on the card, the ticket counts swaps: ' + lite.slice(0, 80));
+  pass(await p.getByTestId('swap-price').count() === 0, 'no price block without amounts');
   await p.close();
 
   console.log('== French, dark, and 390 px');
@@ -115,11 +133,18 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   pass(/Échanges entre pharmacies/.test(fr) && /Repéré/.test(fr) && /Confié/.test(fr) && /Réponse/.test(fr) && /En attente/.test(fr), 'every heading is French');
   pass(!/Branch swaps|Waiting for|Nobody yet/.test(fr), 'no English left in French');
   await p.getByTestId('branch-swaps').scrollIntoViewIfNeeded(); await p.getByTestId('branch-swaps').screenshot({ path: 'branchswaps-dark-fr.png' });
+  await p.getByTestId('swaps-ticket').scrollIntoViewIfNeeded(); await p.evaluate(() => window.scrollBy(0, -140)); await p.waitForTimeout(200);
+  await p.getByTestId('swaps-ticket').screenshot({ path: 'branchswaps-ticket-dark-fr.png' });
+  pass(/Prix unitaire/.test(await p.getByTestId('branch-swaps').innerText()) && /À envoyer avant le/.test(fr), 'unit price and send-before are French');
   await p.close();
 
   p = await open({ vw: 390 });
   pass(await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'no sideways scroll at 390 px');
   pass(await p.getByTestId('branch-swaps').evaluate(el => el.querySelectorAll('*').length > 0 && ![...el.querySelectorAll('*')].some(n => n.scrollWidth > n.clientWidth + 1 && getComputedStyle(n).overflowX !== 'visible')), 'nothing inside the card scrolls or is cut');
+  await p.getByTestId('swaps-ticket').scrollIntoViewIfNeeded(); await p.evaluate(() => window.scrollBy(0, -140)); await p.waitForTimeout(200);
+  await p.getByTestId('swaps-ticket').screenshot({ path: 'branchswaps-ticket-390.png' });
+  const ys = await p.getByTestId('swap-row').first().locator('ol > li').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().top)));
+  pass(ys.length === 3 && ys[0] < ys[1] && ys[1] < ys[2], 'at 390 px the steps stack down a rail: ' + ys);
   await p.getByTestId('branch-swaps').scrollIntoViewIfNeeded();
   await p.screenshot({ path: 'branchswaps-390.png', fullPage: false });
   await p.close();
