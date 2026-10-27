@@ -242,10 +242,15 @@ export function deepSteps(tx: Tx, context: DeepContext): GuideStep[] {
       anchor: "kpis",
       needsData: true,
       title: tx("Les quatre cartes du haut", "The four cards at the top"),
-      body: tx(
-        "Chaque carte compte une chose pour votre activité. Le petit trait montre les derniers jours et l'étiquette compare avec avant.",
-        "Each card counts one thing for your activity. The small line shows the last days and the tag compares with before.",
-      ),
+      body: context.sectors?.includes("health")
+        ? tx(
+            "Pour la santé : ruptures critiques compte les stocks critiques (à commander maintenant), stocks bas les stocks sous leur minimum, médicaments concernés les produits qui ont une alerte, et chaîne du froid les ruptures de froid. Les péremptions et les transferts entre agences ne sont pas comptés dans les stocks. Le petit trait montre les derniers jours.",
+            "For health: critical stockouts counts critical stock (order now), low stock the stock below its minimum, medicines affected the products with an alert, and cold chain the cold chain breaks. Expiry alerts and branch swaps are not counted as stock. The small line shows the last days.",
+          )
+        : tx(
+            "Chaque carte compte une chose pour votre activité. Le petit trait montre les derniers jours et l'étiquette compare avec avant.",
+            "Each card counts one thing for your activity. The small line shows the last days and the tag compares with before.",
+          ),
       example: tx(
         "Exemple : si la carte la plus grave monte, ouvrez les alertes derrière elle en premier.",
         "Example: if the most serious card goes up, open the alerts behind it first.",
