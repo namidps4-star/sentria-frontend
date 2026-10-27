@@ -11,8 +11,10 @@ import { API_BASE, apiFetch } from "@/lib/api"
 import { useCompanyIdentity } from "@/lib/company"
 import { fetchAssignments, taskKeyFor } from "@/lib/crm"
 import { useT, useTx, type MessageKey } from "@/lib/i18n"
+import { useSwapFeed } from "@/lib/use-swap-feed"
 import { withOurSector } from "@/lib/sector"
 import { DocumentLanguage } from "./document-language"
+import { BranchSwapsSheet } from "./branch-swaps-card"
 import { Sidebar } from "./sidebar"
 import { ViewAsBanner } from "./view-as-banner"
 import type { ViewKey } from "./types"
@@ -277,6 +279,12 @@ export function AppShell({
     }
   }, [lang, companyName, view, bellRefresh])
 
+  /* Branch swaps (F-BRANCHSWAP): the sidebar row and its sheet. The count is
+     the swaps that still need someone; the row shows only when this site has
+     a swap to send. Read again with the bell (page change, upload, link sent). */
+  const swapFeed = useSwapFeed({ lang, companyName, refresh: bellRefresh, site: shownSite, view })
+  const [swapsOpen, setSwapsOpen] = useState(false)
+
   const unreadCount = useMemo(() => {
     const since = Date.parse(seenAt)
 
@@ -372,7 +380,10 @@ export function AppShell({
         username={username}
         onSignOut={onSignOut}
         isAdmin={isAdmin}
+        swaps={swapFeed.total > 0 ? { open: swapFeed.open, total: swapFeed.total, onOpen: () => setSwapsOpen(true) } : undefined}
       />
+
+      <BranchSwapsSheet open={swapsOpen && swapFeed.total > 0} alerts={swapFeed.alerts} onClose={() => setSwapsOpen(false)} />
 
       <div
         className={[

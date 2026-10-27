@@ -21,8 +21,8 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
 
 (async () => {
   const b = await chromium.launch(LAUNCH);
-  const open = async ({ alerts = [AMOX, ORS, MET, OTHER], assignments = [], contractors = [MARY], vw = 1440, theme = 'light', lang = 'en', plan = 'business', reveal = true } = {}) => {
-    const p = await b.newPage({ viewport: { width: vw, height: 900 }, locale: 'en-US' });
+  const open = async ({ alerts = [AMOX, ORS, MET, OTHER], assignments = [], contractors = [MARY], vw = 1440, vh = 900, theme = 'light', lang = 'en', plan = 'business', reveal = true } = {}) => {
+    const p = await b.newPage({ viewport: { width: vw, height: vh }, locale: 'en-US' });
     p._errs = []; p._calls = []; p._puts = []; p._rows = assignments.slice();
     p.on('pageerror', e => p._errs.push(e.message));
     await p.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: APP_URL }).catch(() => {});
@@ -42,34 +42,47 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
     await signedIn(p, 'u', 'a@b.c', { plan }); await p.goto(APP_URL); await p.waitForTimeout(1800);
     if (vw < 1024) { await p.getByRole('button', { name: /menu/i }).first().click(); await p.waitForTimeout(300); }
     await p.locator('aside nav button', { hasText: 'Dashboard' }).click(); await p.waitForTimeout(1800);
-    if (reveal && await p.getByTestId('swaps-open').count()) { await p.getByTestId('swaps-open').click(); await p.waitForTimeout(700); }
+    if (reveal) {
+      if (vw < 1024) { await p.getByRole('button', { name: /menu/i }).first().click(); await p.waitForTimeout(400); }
+      if (await p.getByTestId('swaps-open').count()) { await p.getByTestId('swaps-open').click(); await p.waitForTimeout(700); }
+    }
     return p;
   };
 
-  console.log('== only a small button, until it is opened');
+  console.log('== a sidebar row with the number of actions, until it is opened');
   let q = await open({ reveal: false });
-  const btn = q.getByTestId('swaps-open');
-  pass(await btn.count() === 1 && /Branch swaps\s*3/.test((await btn.innerText()).replace(/\s+/g, ' ')), 'one small button with the number of swaps');
-  pass(await q.getByTestId('branch-swaps').count() === 0 && await q.getByTestId('swap-row').count() === 0, 'no card on the Dashboard until it is opened');
-  pass(!q._calls.includes('GET /contractors') || q._calls.filter(c => c === 'GET /contractors').length === 1, 'the button reads no tasks or people');
-  const box = await btn.boundingBox();
-  pass(box && box.height < 40 && box.width < 260, 'it is small: ' + (box && Math.round(box.width) + 'x' + Math.round(box.height)));
-  await q.screenshot({ path: 'branchswaps-button.png' });
-  await btn.click(); await q.waitForTimeout(700);
-  pass(await q.getByTestId('swaps-sheet').isVisible() && await q.getByTestId('swap-row').count() === 3, 'the button opens the card in a sheet');
+  const row0 = q.locator('aside').getByTestId('swaps-open');
+  pass(await row0.count() === 1 && /Branch swaps\s*3/.test((await row0.innerText()).replace(/\s+/g, ' ')), 'a row in the sidebar says Branch swaps with the number of swaps still to do');
+  pass(await q.getByTestId('branch-swaps').count() === 0 && await q.getByTestId('swap-row').count() === 0, 'nothing is added to the Dashboard page');
+  pass(await q.locator('main').getByTestId('swaps-open').count() === 0, 'and no button in the page itself');
+  pass(!q._calls.includes('GET /contractors'), 'the row reads no people until it is opened');
+  const nav = q.locator('aside nav');
+  pass(await nav.evaluate(n => n.scrollHeight <= n.clientHeight + 1), 'the whole sidebar fits at 900 px high, nothing to scroll');
+  await q.screenshot({ path: 'branchswaps-sidebar.png' });
+  await row0.click(); await q.waitForTimeout(700);
+  pass(await q.getByTestId('swaps-sheet').isVisible() && await q.getByTestId('swap-row').count() === 3, 'the row opens the card in a sheet');
   pass(await q.getByRole('dialog').count() === 1 && await q.getByTestId('swaps-close').isVisible(), 'it is a dialog with a close button');
   await q.keyboard.press('Escape'); await q.waitForTimeout(600);
   pass(await q.getByTestId('swaps-sheet').count() === 0, 'Escape closes it');
-  await btn.click(); await q.waitForTimeout(600);
+  await row0.click(); await q.waitForTimeout(600);
   await q.getByTestId('swaps-close').click(); await q.waitForTimeout(600);
   pass(await q.getByTestId('swaps-sheet').count() === 0, 'the close button closes it');
-  await btn.click(); await q.waitForTimeout(600);
+  await row0.click(); await q.waitForTimeout(600);
   await q.mouse.click(5, 5); await q.waitForTimeout(600);
   pass(await q.getByTestId('swaps-sheet').count() === 0, 'a click outside closes it');
   pass(q._errs.length === 0, 'no page errors ' + q._errs.join('|'));
   await q.close();
   q = await open({ alerts: [OTHER], reveal: false });
-  pass(await q.getByTestId('swaps-open').count() === 0, 'no swap needed: no button at all');
+  pass(await q.getByTestId('swaps-open').count() === 0, 'no swap needed: no row at all');
+  await q.close();
+  q = await open({ vh: 700, reveal: false });
+  const nav7 = q.locator('aside nav');
+  pass(await q.locator('aside').getByTestId('swaps-open').count() === 1 && await nav7.evaluate(n => n.scrollHeight <= n.clientHeight + 1), 'the sidebar still fits, rows shrunk, at 700 px high: ' + await nav7.evaluate(n => n.scrollHeight + '/' + n.clientHeight));
+  await q.screenshot({ path: 'branchswaps-sidebar-700.png' });
+  await q.close();
+  q = await open({ vh: 600, reveal: false });
+  const nav6 = q.locator('aside nav');
+  pass(await nav6.evaluate(n => n.scrollHeight <= n.clientHeight + 1), 'and at 600 px high: ' + await nav6.evaluate(n => n.scrollHeight + '/' + n.clientHeight));
   await q.close();
 
   console.log('== three swaps, nobody on them yet');
@@ -123,6 +136,7 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   pass(await r2.nth(2).getAttribute('data-stage') === 'done' && /Done/.test(await r2.nth(2).innerText()), 'a done swap reads Done');
   pass(await r2.nth(1).getAttribute('data-stage') === 'waiting', 'a task with nobody on it (after "I can\'t") reads Waiting again');
   const ticket = (await p.getByTestId('swaps-ticket').innerText()).replace(/\s+/g, ' ');
+  pass(/Branch swaps\s*1/.test((await p.locator('aside').getByTestId('swaps-open').innerText()).replace(/\s+/g, ' ')), 'the sidebar counts only the swaps still to do (one taken, one done, one open)');
   pass(/Taken (\d+)%/i.test(ticket) && Number((ticket.match(/Taken (\d+)%/i) || [])[1]) === Math.round((10720 / 13870) * 100), 'the bar is the share of the money already taken or done: ' + ticket);
   await p.close();
 

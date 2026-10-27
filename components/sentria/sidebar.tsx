@@ -16,6 +16,7 @@ import { useSites } from "@/lib/sites"
 import { usePresence } from "@/lib/use-presence"
 import { cn } from "@/lib/utils"
 import {
+  ArrowLeftRight,
   LayoutDashboard,
   SquareKanban,
   CalendarDays,
@@ -66,6 +67,8 @@ interface SidebarProps {
   isAdmin?: boolean
   /** Opens the first-use tour again (ONB-GUIDE), from the Help dialog. */
   onStartTour?: () => void
+  /** Branch swaps (F-BRANCHSWAP): a row under Operations while this site has a swap to send. `open` is how many still need someone. */
+  swaps?: { open: number; total: number; onOpen: () => void }
 }
 
 type SidebarItem = {
@@ -173,6 +176,7 @@ export function Sidebar({
   onSignOut,
   isAdmin = false,
   onStartTour,
+  swaps,
 }: SidebarProps) {
   const t = useT()
   const held = useSites()
@@ -453,6 +457,49 @@ export function Sidebar({
                       </button>
                     )
                   })}
+
+                  {/* Branch swaps: only while this site has stock to send to another branch. */}
+                  {swaps && section.title === "sidebar.section.operations" && (
+                    <button
+                      type="button"
+                      data-testid="swaps-open"
+                      data-nav-swaps=""
+                      onClick={() => {
+                        swaps.onOpen()
+                        onClose()
+                      }}
+                      aria-haspopup="dialog"
+                      aria-label={tx(
+                        `Échanges entre pharmacies, ${swaps.open} à faire`,
+                        `Branch swaps, ${swaps.open} to do`
+                      )}
+                      className={[
+                        "group relative flex h-11 min-h-[26px] w-full shrink items-center rounded-xl text-sidebar-foreground/65 transition-all duration-200 hover:bg-accent/10 hover:text-accent [@media(max-height:820px)]:h-9",
+                        collapsed ? "justify-center px-0" : "gap-3 px-3 text-left",
+                        SIDEBAR_FOCUS,
+                      ].join(" ")}
+                    >
+                      <ArrowLeftRight className="h-[18px] w-[18px] shrink-0 transition-colors group-hover:text-accent" strokeWidth={1.8} aria-hidden="true" />
+                      {!collapsed && (
+                        <span className="truncate text-sm font-medium">{tx("Échanges entre pharmacies", "Branch swaps")}</span>
+                      )}
+                      <span
+                        data-testid="swaps-count"
+                        className={[
+                          "flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-bold leading-none text-accent-foreground",
+                          collapsed ? "absolute right-1 top-1 h-4 min-w-4 px-1 text-[10px]" : "ml-auto",
+                        ].join(" ")}
+                        aria-hidden="true"
+                      >
+                        {swaps.open}
+                      </span>
+                      {collapsed && (
+                        <span className="pointer-events-none absolute left-full top-1/2 z-[100] ml-3 -translate-y-1/2 translate-x-1 whitespace-nowrap rounded-lg border border-sidebar-border bg-sidebar-shell px-3 py-2 text-xs font-medium text-sidebar-foreground opacity-0 shadow-lg transition-all duration-150 group-hover:translate-x-0 group-hover:opacity-100">
+                          {tx("Échanges entre pharmacies", "Branch swaps")}
+                        </span>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
