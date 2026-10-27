@@ -90,7 +90,7 @@ const picked = async (p, key) => sel(p, key).evaluate(s => s.options[s.selectedI
   {
     const { ctx, p, errs, calls } = await open(b);
     await trash(p, 'Awa Diop').click(); await p.waitForTimeout(500);
-    pass(await dlg(p).isVisible() && /Awa Diop has 3 open tasks/.test(await dlg(p).innerText()), 'the dialog names the person and how many open tasks');
+    pass(await dlg(p).isVisible() && /Awa Diop/.test(await dlg(p).innerText()) && /3\s+open tasks/.test(await dlg(p).innerText()), 'the dialog names the person and how many open tasks');
     pass(calls.plan.join() === 'c1' && calls.remove.length === 0 && calls.apply.length === 0, 'the tasks were read; nothing was removed');
     const t = await row(p, A).innerText();
     pass(/CRANE-02/.test(t) && /Crane cycles critical/.test(t), 'a task shows its asset and what the alert says');
@@ -154,21 +154,22 @@ const picked = async (p, key) => sel(p, key).evaluate(s => s.options[s.selectedI
     pass(sent.lang === 'en' && JSON.stringify(sent.moves) === JSON.stringify([{ task_key: A, contractor_ids: ['c3'] }, { task_key: B, contractor_ids: ['c6'] }, { task_key: C, contractor_ids: [] }]), `it sends each task with its person (${JSON.stringify(sent.moves)})`);
     const done = await p.locator('[data-handover-done]').innerText();
     pass(/Awa Diop was removed/.test(await dlg(p).innerText()) && /2 tasks handed over/.test(done), 'the result says who was removed and how many tasks moved');
-    pass(/Now with nobody: SOLO-7/.test(await p.locator('[data-handover-left]').innerText()), 'the task left with nobody is named');
-    const rows = p.locator('[data-handover] [data-sms-draft]');
-    pass(await rows.count() === 2, 'one drafted text per person who gained a task');
-    pass(/Mia Lopez, you now handle Awa Diop's tasks: CRANE-02 \(Oct 10\)/.test(await rows.first().locator('[data-sms-body]').innerText()), 'the text names the task and the due date');
-    const send = rows.first().locator('[data-sms-send]');
-    pass(await send.isDisabled() && /SMS not yet active/.test(await send.innerText()), 'Send is there, off, and says SMS is not active yet');
-    pass(/Fix the number/.test(await rows.first().innerText()) && !/Fix the number/.test(await rows.nth(1).innerText()), 'a number that cannot be texted is flagged on its row only');
-    await rows.first().locator('[data-sms-copy]').click(); await p.waitForTimeout(250);
-    pass((await p.evaluate(() => navigator.clipboard.readText())).startsWith('SentrIA: Mia Lopez') && /Copied/.test(await rows.first().locator('[data-sms-copy]').innerText()), 'Copy puts the text on the clipboard');
-    const kept = await p.evaluate(() => JSON.parse(localStorage.getItem('sentria_sms_drafts') || '[]'));
-    pass(kept.length === 2 && kept[0].from === 'Awa Diop' && kept[0].body.startsWith('SentrIA: '), 'the texts are kept in the browser');
+    pass(/Yao Koffi[\s\S]*CRANE-02/.test(done) && /Mia Lopez[\s\S]*QUAI-1/.test(done), 'the timeline names who took which task');
+    pass(/No one for now[\s\S]*SOLO-7/.test(await p.locator('[data-handover-left]').innerText()), 'the task left with nobody is named');
+    pass(/2 texts ready/.test(await dlg(p).innerText()) && /SMS sending is not live yet/.test(await dlg(p).innerText()), 'the footer says how many texts are ready, and that SMS is not live');
     await p.locator('[data-handover-close]').click(); await p.waitForTimeout(500);
     pass(await dlg(p).count() === 0 && await trash(p, 'Awa Diop').count() === 0, 'closed; the list was reloaded without Awa');
+    const kept = await p.evaluate(() => JSON.parse(localStorage.getItem('sentria_sms_drafts') || '[]'));
+    pass(kept.length === 2 && kept[0].from === 'Awa Diop' && kept[0].body.startsWith('SentrIA: '), 'the texts are kept in the browser');
     const card = p.locator('[data-sms-drafts]');
     pass(await card.isVisible() && /Messages ready \(2\)/.test(await card.innerText()) && /SMS not yet active/.test(await card.innerText()), 'the Contractors page lists the waiting texts');
+    const mia = card.locator('[data-sms-draft]').filter({ hasText: 'Mia Lopez' });
+    pass(/you now handle Awa Diop's tasks: CRANE-02 \(Oct 10\)/.test(await mia.locator('[data-sms-body]').innerText()), 'the text names the task and the due date');
+    const send = mia.locator('[data-sms-send]');
+    pass(await send.isDisabled() && /SMS not yet active/.test(await send.innerText()), 'Send is there, off, and says SMS is not active yet');
+    pass(/Fix the number/.test(await mia.innerText()) && !/Fix the number/.test(await card.locator('[data-sms-draft]').filter({ hasText: 'Yao Koffi' }).innerText()), 'a number that cannot be texted is flagged on its row only');
+    await mia.locator('[data-sms-copy]').click(); await p.waitForTimeout(250);
+    pass((await p.evaluate(() => navigator.clipboard.readText())).startsWith('SentrIA: Mia Lopez') && /Copied/.test(await mia.locator('[data-sms-copy]').innerText()), 'Copy puts the text on the clipboard');
     await p.reload(); await p.waitForTimeout(1600); await goToContractors(p, 'en', 1440);
     pass(await p.locator('[data-sms-drafts] [data-sms-draft]').count() === 2, 'they are still there after a reload');
     await p.locator('[data-sms-drafts] [data-sms-discard]').first().click(); await p.waitForTimeout(200);
@@ -183,7 +184,7 @@ const picked = async (p, key) => sel(p, key).evaluate(s => s.options[s.selectedI
     const { ctx, p, calls } = await open(b);
     await trash(p, 'Zed Nobody').click(); await p.waitForTimeout(500);
     const t = await dlg(p).innerText();
-    pass(/Remove Zed Nobody\?/.test(t) && /No open task/.test(t) && !(await p.locator('[data-handover-suggest]').count()), 'it asks "Remove Zed Nobody?", with no task list');
+    pass(/Zed Nobody/.test(t) && /No open task/.test(t) && !(await p.locator('[data-handover-suggest]').count()), 'it names Zed Nobody and says there is no open task, with no task list');
     pass(calls.remove.length === 0, 'asking removes nothing');
     await confirmBtn(p).click(); await p.waitForTimeout(800);
     pass(calls.remove.join() === 'c9' && calls.apply.length === 0, 'Remove calls the plain delete, not the hand-over');
@@ -232,18 +233,18 @@ const picked = async (p, key) => sel(p, key).evaluate(s => s.options[s.selectedI
     const { ctx, p, calls } = await open(b, { lang: 'fr' });
     await trash(p, 'Awa Diop', 'fr').click(); await p.waitForTimeout(500);
     const t = await dlg(p).innerText();
-    pass(/Awa Diop a 3 tâches ouvertes/.test(t) && /Proposer une répartition/.test(t) && /Choisir moi-même/.test(t), 'title and the two ways to fill it');
+    pass(/Awa Diop/.test(t) && /3\s+tâches ouvertes/.test(t) && /Proposer une répartition/.test(t) && /Choisir moi-même/.test(t), 'name, count and the two ways to fill it');
     pass(/Critique/.test(await row(p, A).innerText()) && /Échéance 10 oct\. 2026/.test(await row(p, A).innerText()) && /Sans échéance/.test(await row(p, C).innerText()), 'priority and deadline in French');
     await p.locator('[data-handover-suggest]').click(); await p.waitForTimeout(150);
     pass(/Suggéré/.test(await row(p, A).locator('[data-handover-facts]').innerText()) && /Même fonction/.test(await row(p, A).locator('[data-handover-facts]').innerText()), 'the reasons in French');
     pass(/Personne pour l'instant/.test(await picked(p, C)) && /Cette tâche restera sans personne/.test(await row(p, C).innerText()), 'a task left to nobody, in French');
     await confirmBtn(p).click(); await p.waitForTimeout(900);
     pass(calls.apply[0].lang === 'fr', 'the request asks for French texts');
-    const r = p.locator('[data-handover] [data-sms-draft]').first();
-    pass(/vous reprenez les tâches de Awa Diop/.test(await r.locator('[data-sms-body]').innerText()) && /Envoyer · SMS pas encore actif/.test(await r.locator('[data-sms-send]').innerText()), 'the text and the off Send button in French');
-    pass(/a été retiré/.test(await dlg(p).innerText()) && /Sans personne maintenant : SOLO-7/.test(await p.locator('[data-handover-left]').innerText()), 'the result in French');
+    pass(/a été retiré/.test(await dlg(p).innerText()) && /Personne pour l'instant[\s\S]*SOLO-7/.test(await p.locator('[data-handover-left]').innerText()) && /2 textes prêts/.test(await dlg(p).innerText()), 'the result in French');
     await p.locator('[data-handover-close]').click(); await p.waitForTimeout(500);
     pass(/Messages prêts \(2\)/.test(await p.locator('[data-sms-drafts]').innerText()), 'the page card in French');
+    const r = p.locator('[data-sms-drafts] [data-sms-draft]').first();
+    pass(/vous reprenez les tâches de Awa Diop/.test(await r.locator('[data-sms-body]').innerText()) && /Envoyer · SMS pas encore actif/.test(await r.locator('[data-sms-send]').innerText()), 'the text and the off Send button in French');
     await ctx.close();
   }
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type CSSProperties } from "react"
 import {
   AlertTriangle,
   CalendarDays,
@@ -10,6 +10,7 @@ import {
   Trash2,
 } from "@/lib/icons"
 
+import { hueOf } from "@/lib/branch-board"
 import {
   AVAILABILITY_LABEL,
   applyHandover,
@@ -27,20 +28,20 @@ import { resolve, type Localized, type Tx } from "@/lib/i18n"
 import { addSmsDrafts, type SmsDraft } from "@/lib/sms-drafts"
 import { usePresence } from "@/lib/use-presence"
 import { cn } from "@/lib/utils"
-import { SmsDraftRow } from "./sms-drafts-card"
 import { StatusTag, type TagTone } from "./status-tag"
 
 /* --------------------------------------------------------------------------
  * Removing a contractor who still holds open tasks (F-CDELETE).
  *
- * The trash button used to remove someone on the spot and leave their tasks
- * pointing at nobody. Now it opens this: every open task they hold, with its
- * priority and deadline, and a person to take each one over. Two ways to fill
- * it in. "Suggest" asks the API's ranking (same role, free, lightest load, no
- * clash of deadlines) and pre-fills each task; "Choose myself" leaves them
- * empty. Either way each task can be edited, and nothing happens until the
- * person confirms. Then each person who gained a task gets a drafted text,
- * kept (lib/sms-drafts.ts) because texting is not live yet.
+ * The trash button opens this. On the left: who is leaving, how many open
+ * tasks they hold, and what happens once it is confirmed. On the right: each
+ * task, with a person to take it over. "Suggest" asks the API's ranking (same
+ * role, free, lightest load, no clash of deadlines) and fills every task;
+ * "Choose myself" leaves them empty. Nothing happens until the person confirms.
+ *
+ * After the hand-over, a timeline shows who took what and what is left with
+ * nobody. The drafted texts stay on the Contractors page (lib/sms-drafts.ts),
+ * because texting is not live yet.
  * -------------------------------------------------------------------------- */
 
 /** A task the person chose to leave with nobody. */
@@ -53,8 +54,54 @@ const PRIORITY_TONE: Record<AssignmentPriority, TagTone> = {
   low: "neutral",
 }
 
+/** One person who takes tasks over, and the tasks they take. */
+type Receiver = { id: string; name: string; tasks: HandoverTask[] }
+
+type Done = {
+  result: HandoverResult
+  drafts: SmsDraft[]
+  receivers: Receiver[]
+  left: HandoverTask[]
+}
+
 function norm(value: string | null | undefined): string {
   return (value ?? "").split(/\s+/).filter(Boolean).join(" ").toLowerCase()
+}
+
+function initialsOf(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0].toUpperCase())
+    .join("")
+}
+
+/** The people who take tasks over, each with their tasks, in the order first chosen. */
+function receiversOf(
+  tasks: HandoverTask[],
+  picks: Record<string, string>,
+  byId: Map<string, Contractor>
+): Receiver[] {
+  const groups = new Map<string, Receiver>()
+
+  for (const task of tasks) {
+    const pick = picks[task.task_key]
+
+    if (!pick || pick === NONE) continue
+
+    const group = groups.get(pick) ?? {
+      id: pick,
+      name: byId.get(pick)?.name ?? pick,
+      tasks: [],
+    }
+
+    group.tasks.push(task)
+    groups.set(pick, group)
+  }
+
+  return [...groups.values()]
 }
 
 export function HandoverDialog({
@@ -132,11 +179,7 @@ function HandoverBody({
   const [mode, setMode] = useState<"suggested" | "manual" | null>(null)
   const [saving, setSaving] = useState(false)
   const [problem, setProblem] = useState<string | null>(null)
-  const [done, setDone] = useState<{
-    result: HandoverResult
-    drafts: SmsDraft[]
-    left: string[]
-  } | null>(null)
+  const [done, setDone] = useState<Done | null>(null)
 
   const savingRef = useRef(false)
 
@@ -185,6 +228,46 @@ function HandoverBody({
   const tasks = plan?.tasks ?? []
   const decided = tasks.filter((task) => picks[task.task_key]).length
   const allDecided = tasks.length > 0 && decided === tasks.length
+  const receivers = receiversOf(tasks, picks, byId)
+  const nobodyCount = tasks.filter((task) => picks[task.task_key] === NONE).length
+
+  /* What the person will read once they confirm, from the choices so far. */
+  const after: string[] = []
+
+  if (plan && tasks.length > 0) {
+    if (!allDecided) {
+      after.push(tx("Choisissez qui reprend chaque tâche pour voir le résultat.", "Choose who takes each task to see the result."))
+    }
+
+    for (const receiver of receivers) {
+      const n = receiver.tasks.length
+
+      after.push(
+        tx(
+          `${receiver.name} reprend ${n} tâche${n > 1 ? "s" : ""}.`,
+          `${receiver.name} takes over ${n} task${n > 1 ? "s" : ""}.`
+        )
+      )
+    }
+
+    if (nobodyCount > 0) {
+      after.push(
+        tx(
+          `${nobodyCount} tâche${nobodyCount > 1 ? "s" : ""} resteront sans personne.`,
+          `${nobodyCount} task${nobodyCount > 1 ? "s" : ""} will be left with nobody.`
+        )
+      )
+    }
+
+    if (receivers.length > 0) {
+      after.push(
+        tx(
+          "Un texte sera préparé pour chacune. L'envoi SMS n'est pas encore actif.",
+          "A text will be drafted for each. SMS sending is not live yet."
+        )
+      )
+    }
+  }
 
   function suggestAll() {
     if (!plan) return
@@ -326,7 +409,8 @@ function HandoverBody({
     setDone({
       result: result.data,
       drafts,
-      left: plan.tasks.filter((task) => left.has(task.task_key)).map(describe),
+      receivers: receiversOf(plan.tasks, picks, byId),
+      left: plan.tasks.filter((task) => left.has(task.task_key)),
     })
 
     onChanged()
@@ -334,12 +418,159 @@ function HandoverBody({
 
   const title = done
     ? tx(`${contractor.name} a été retiré`, `${contractor.name} was removed`)
-    : plan && plan.tasks.length > 0
-      ? tx(
-          `${contractor.name} a ${plan.tasks.length} tâche${plan.tasks.length > 1 ? "s" : ""} ouverte${plan.tasks.length > 1 ? "s" : ""}`,
-          `${contractor.name} has ${plan.tasks.length} open task${plan.tasks.length > 1 ? "s" : ""}`
-        )
-      : tx(`Retirer ${contractor.name} ?`, `Remove ${contractor.name}?`)
+    : tx(`Retirer ${contractor.name} ?`, `Remove ${contractor.name}?`)
+
+  const roleLine = [
+    contractor.role,
+    px(AVAILABILITY_LABEL[contractor.availability]),
+  ]
+    .filter(Boolean)
+    .join(" · ")
+
+  if (done) {
+    const { result, drafts } = done
+    const n = drafts.length
+
+    return (
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="handover-title"
+        data-handover=""
+        className={cn(
+          "squircle w-full max-w-[600px] max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-[30px] border border-border bg-card p-6 text-card-foreground shadow-2xl t-modal [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:p-7",
+          className
+        )}
+      >
+        <div data-handover-done="">
+          <h3 id="handover-title" className="font-heading text-[22px] font-bold leading-tight">
+            {title}
+          </h3>
+
+          <p className="mt-1 text-sm text-muted-foreground">
+            {result.handed_over > 0
+              ? tx(
+                  `${result.handed_over} tâche${result.handed_over > 1 ? "s ont" : " a"} changé de main.`,
+                  `${result.handed_over} task${result.handed_over > 1 ? "s" : ""} handed over.`
+                )
+              : tx("Aucune tâche n'a changé de main.", "No task was handed over.")}
+          </p>
+
+          <ol className="mt-6">
+            <li
+              className="relative grid grid-cols-[32px_1fr] gap-x-3.5 pb-4"
+              style={{ "--c": "var(--muted)" } as CSSProperties}
+            >
+              <span aria-hidden="true" className="absolute bottom-0 left-[15px] top-8 w-0.5 bg-[var(--c)]" />
+              <span
+                aria-hidden="true"
+                className="relative flex h-8 w-8 items-center justify-center rounded-full bg-[var(--c)] text-[11px] font-bold text-card"
+              >
+                {initialsOf(contractor.name)}
+              </span>
+              <div className="min-w-0 pt-1.5">
+                <p className="font-heading text-[15px] font-semibold text-muted-foreground line-through decoration-1">
+                  {contractor.name}
+                </p>
+                <div className="mt-1">
+                  <StatusTag tone="neutral" size="xs" icon={false}>
+                    {tx("Retiré", "Removed")}
+                  </StatusTag>
+                </div>
+              </div>
+            </li>
+
+            {done.receivers.map((receiver, index) => (
+              <li
+                key={receiver.id}
+                className="relative grid grid-cols-[32px_1fr] gap-x-3.5 pb-4"
+                style={{ "--c": `var(--branch-${hueOf(index)})` } as CSSProperties}
+              >
+                <span aria-hidden="true" className="absolute bottom-0 left-[15px] top-8 w-0.5 bg-[var(--c)]" />
+                <span
+                  aria-hidden="true"
+                  className="relative flex h-8 w-8 items-center justify-center rounded-full bg-[var(--c)] text-[11px] font-bold text-[#141414]"
+                >
+                  {initialsOf(receiver.name)}
+                </span>
+                <div className="min-w-0 pt-1">
+                  <div className="flex flex-wrap items-baseline gap-x-2">
+                    <p className="font-heading text-[15px] font-bold">{receiver.name}</p>
+                    <span className="text-xs text-muted-foreground">
+                      {tx(
+                        `${receiver.tasks.length} tâche${receiver.tasks.length > 1 ? "s" : ""}`,
+                        `${receiver.tasks.length} task${receiver.tasks.length > 1 ? "s" : ""}`
+                      )}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {receiver.tasks.map((task) => (
+                      <StatusTag key={task.task_key} tone={PRIORITY_TONE[task.priority] ?? "neutral"} size="xs" icon={false}>
+                        {describe(task)}
+                      </StatusTag>
+                    ))}
+                  </div>
+                </div>
+              </li>
+            ))}
+
+            {done.left.length > 0 && (
+              <li
+                data-handover-left=""
+                className="relative grid grid-cols-[32px_1fr] gap-x-3.5"
+                style={{ "--c": "var(--warning)" } as CSSProperties}
+              >
+                <span
+                  aria-hidden="true"
+                  className="flex h-8 w-8 items-center justify-center rounded-full border-[1.5px] border-dashed border-[var(--c)] text-[var(--c)]"
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 pt-1">
+                  <p className="font-heading text-[15px] font-bold">
+                    {tx("Personne pour l'instant", "No one for now")}
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {done.left.map((task) => (
+                      <StatusTag key={task.task_key} tone="neutral" size="xs" icon={false}>
+                        {describe(task)}
+                      </StatusTag>
+                    ))}
+                  </div>
+                </div>
+              </li>
+            )}
+          </ol>
+        </div>
+
+        <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-border pt-5">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            {n > 0 && (
+              <StatusTag tone="success" size="xs" icon={false}>
+                {tx(`${n} texte${n > 1 ? "s" : ""} prêt${n > 1 ? "s" : ""}`, `${n} text${n > 1 ? "s" : ""} ready`)}
+              </StatusTag>
+            )}
+            <span>
+              {tx(
+                "L'envoi SMS n'est pas encore actif. Les textes sont sur la page Intervenants.",
+                "SMS sending is not live yet. The texts are on the Contractors page."
+              )}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            autoFocus
+            onClick={onClose}
+            data-handover-close=""
+            className="h-10 rounded-full bg-brand px-5 text-sm font-semibold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {tx("Terminé", "Done")}
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -348,376 +579,326 @@ function HandoverBody({
       aria-labelledby="handover-title"
       data-handover=""
       className={cn(
-        "max-h-[calc(100dvh-2rem)] w-full max-w-2xl overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden rounded-3xl border border-border bg-card p-5 shadow-2xl t-modal sm:p-6",
+        "squircle w-full max-w-[760px] max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-[30px] border border-border bg-card text-card-foreground shadow-2xl t-modal [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className
       )}
     >
-      <h3 id="handover-title" className="font-heading text-lg font-bold text-foreground">
-        {title}
-      </h3>
-
-      {load.state === "loading" && (
-        <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground" role="status">
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          {tx("Je regarde ses tâches en cours…", "Checking their open tasks…")}
-        </p>
-      )}
-
-      {load.state === "error" && (
-        <div className="mt-4 space-y-4">
-          <p
-            role="alert"
-            className="rounded-2xl border border-destructive/30 bg-destructive/[0.06] px-4 py-3 text-xs leading-5"
-          >
-            <span className="inline-flex items-center gap-1.5 font-semibold text-destructive">
-              <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
-              {tx("Impossible de lire ses tâches.", "Their tasks could not be read.")}
-            </span>{" "}
-            {load.text}
+      <div className="flex flex-col md:flex-row">
+        <aside className="flex flex-col gap-5 bg-sidebar-shell p-6 text-sidebar-foreground md:w-[260px] md:shrink-0">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/65">
+            {tx("Retirer de l'équipe", "Remove from the team")}
           </p>
 
-          <p className="text-xs leading-5 text-muted-foreground">
-            {tx(
-              "Rien n'a été retiré. Réessayez dans un instant.",
-              "Nothing was removed. Try again in a moment."
-            )}
-          </p>
-        </div>
-      )}
-
-      {plan && !done && plan.tasks.length === 0 && (
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          {tx(
-            "Aucune tâche ouverte. Cette personne quitte la liste. Ses tâches passées gardent son nom.",
-            "No open task. They leave the list. Their past tasks keep their name."
-          )}
-        </p>
-      )}
-
-      {plan && !done && plan.tasks.length > 0 && (
-        <>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            {tx(
-              "Choisissez qui reprend chacune, puis retirez la personne. Rien ne change avant la confirmation.",
-              "Choose who takes each one over, then remove them. Nothing changes until you confirm."
-            )}
-          </p>
-
-          <div
-            role="group"
-            aria-label={tx("Comment remplir la liste", "How to fill in the list")}
-            className="mt-4 flex flex-wrap gap-2"
-          >
-            <button
-              type="button"
-              onClick={suggestAll}
-              aria-pressed={mode === "suggested"}
-              data-handover-suggest=""
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                mode === "suggested"
-                  ? "bg-brand text-[#141414]"
-                  : "border border-border text-foreground hover:bg-muted"
-              )}
+          <div className="flex items-center gap-3">
+            <span
+              aria-hidden="true"
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand font-heading text-base font-bold text-brand-foreground"
             >
-              <Sparkles className="h-4 w-4" aria-hidden="true" />
-              {tx("Proposer une répartition", "Suggest a handover")}
-            </button>
-
-            <button
-              type="button"
-              onClick={chooseMyself}
-              aria-pressed={mode === "manual"}
-              data-handover-manual=""
-              className={cn(
-                "rounded-full px-4 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                mode === "manual"
-                  ? "bg-brand text-[#141414]"
-                  : "border border-border text-foreground hover:bg-muted"
-              )}
-            >
-              {tx("Choisir moi-même", "Choose myself")}
-            </button>
+              {initialsOf(contractor.name)}
+            </span>
+            <div className="min-w-0">
+              <h3 id="handover-title" className="truncate font-heading text-xl font-bold leading-tight">
+                {contractor.name}
+              </h3>
+              <p className="mt-0.5 truncate text-xs text-sidebar-foreground/65">{roleLine}</p>
+            </div>
           </div>
 
-          <ul className="mt-4 space-y-3">
-            {plan.tasks.map((task) => {
-              const pick = picks[task.task_key] ?? ""
-              const eligible = others.filter(
-                (person) => !task.co_holders.includes(person.id)
-              )
-              const person = pick && pick !== NONE ? byId.get(pick) : undefined
-              const ranked = person
-                ? task.candidates.find((candidate) => candidate.id === person.id)
-                : undefined
-
-              const roleMatch = person
-                ? ranked
-                  ? ranked.role_match
-                  : !!norm(person.role) && norm(person.role) === norm(contractor.role)
-                : false
-              const availability: Availability | null = person
-                ? (ranked?.availability ?? person.availability)
-                : null
-              const open = person
-                ? (ranked?.open ?? person.open_assignments)
-                : 0
-              const clashes = ranked?.conflicts ?? 0
-              const selectId = `handover-${task.task_key}`
-
-              return (
-                <li
-                  key={task.task_key}
-                  data-handover-task={task.task_key}
-                  className="rounded-2xl border border-border bg-background p-4"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="font-heading text-sm font-bold">{describe(task)}</p>
-
-                      {task.message && (
-                        <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-muted-foreground">
-                          {task.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap gap-1.5">
-                      <StatusTag tone={PRIORITY_TONE[task.priority] ?? "neutral"} size="xs">
-                        <span data-handover-priority="">{priorityLabel(task.priority, tx)}</span>
-                      </StatusTag>
-
-                      <StatusTag tone="neutral" size="xs" icon={CalendarDays}>
-                        <span data-handover-deadline="">{deadlineLabel(task.deadline, tx)}</span>
-                      </StatusTag>
-                    </div>
-                  </div>
-
-                  <label htmlFor={selectId} className="mt-3 block">
-                    <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                      {tx("Reprise par", "Taken over by")}
-                    </span>
-
-                    <select
-                      id={selectId}
-                      value={pick}
-                      onChange={(event) =>
-                        setPicks((current) => ({
-                          ...current,
-                          [task.task_key]: event.target.value,
-                        }))
-                      }
-                      className="mt-1.5 w-full rounded-xl border border-border bg-card px-3 py-2.5 text-sm outline-none transition-colors focus:border-ring"
-                    >
-                      <option value="" disabled>
-                        {tx("Choisir…", "Choose…")}
-                      </option>
-
-                      {eligible.map((candidate) => (
-                        <option key={candidate.id} value={candidate.id}>
-                          {candidate.name}
-                          {candidate.role ? ` · ${candidate.role}` : ""}
-                          {candidate.availability === "off"
-                            ? ` (${px(AVAILABILITY_LABEL.off)})`
-                            : ""}
-                        </option>
-                      ))}
-
-                      <option value={NONE}>
-                        {tx("Personne pour l'instant", "No one for now")}
-                      </option>
-                    </select>
-                  </label>
-
-                  {task.co_holders.length > 0 && (
-                    <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
-                      {tx("Aussi sur cette tâche : ", "Also on this task: ")}
-                      {task.co_holders
-                        .map((id) => byId.get(id)?.name)
-                        .filter(Boolean)
-                        .join(", ")}
-                    </p>
-                  )}
-
-                  {person && availability && (
-                    <div data-handover-facts="" className="mt-2 flex flex-wrap gap-1.5">
-                      {pick === task.suggested && (
-                        <StatusTag tone="brand" size="xs" icon={Sparkles}>
-                          {tx("Suggéré", "Suggested")}
-                        </StatusTag>
-                      )}
-
-                      {roleMatch && (
-                        <StatusTag tone="success" size="xs" icon={false}>
-                          {tx("Même fonction", "Same role")}
-                        </StatusTag>
-                      )}
-
-                      <StatusTag
-                        tone={availability === "available" ? "success" : availability === "busy" ? "warning" : "neutral"}
-                        size="xs"
-                        icon={false}
-                      >
-                        {px(AVAILABILITY_LABEL[availability])}
-                      </StatusTag>
-
-                      <StatusTag tone="neutral" size="xs" icon={false}>
-                        {open === 0
-                          ? tx("Rien en cours", "Nothing open")
-                          : tx(
-                              `${open} tâche${open > 1 ? "s" : ""} en cours`,
-                              `${open} open task${open > 1 ? "s" : ""}`
-                            )}
-                      </StatusTag>
-
-                      {clashes > 0 && (
-                        <StatusTag tone="warning" size="xs" icon={AlertTriangle}>
-                          {tx(
-                            `Échéance proche de ${clashes} autre${clashes > 1 ? "s" : ""}`,
-                            `Due near ${clashes} other${clashes > 1 ? "s" : ""}`
-                          )}
-                        </StatusTag>
-                      )}
-                    </div>
-                  )}
-
-                  {pick === NONE && task.co_holders.length === 0 && (
-                    <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
-                      {tx(
-                        "Cette tâche restera sans personne.",
-                        "This task will be left with nobody."
-                      )}
-                    </p>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        </>
-      )}
-
-      {done && (
-        <div className="mt-3 space-y-4" data-handover-done="">
-          <p className="text-sm leading-6 text-muted-foreground">
-            {done.result.handed_over > 0
-              ? tx(
-                  `${done.result.handed_over} tâche${done.result.handed_over > 1 ? "s ont" : " a"} changé de main.`,
-                  `${done.result.handed_over} task${done.result.handed_over > 1 ? "s" : ""} handed over.`
-                )
-              : tx("Aucune tâche n'a changé de main.", "No task was handed over.")}
-          </p>
-
-          {done.left.length > 0 && (
-            <p
-              data-handover-left=""
-              className="flex items-start gap-2 rounded-2xl border border-[var(--tag-warning-bd)] bg-[var(--tag-warning-bg)] px-4 py-3 text-xs leading-5 text-[var(--tag-warning-fg)]"
-            >
-              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-              <span>
-                {tx("Sans personne maintenant : ", "Now with nobody: ")}
-                {done.left.join(", ")}
-              </span>
+          <div className="hidden md:block">
+            <p className="font-heading text-4xl font-bold leading-none tabular-nums text-brand">
+              {plan ? tasks.length : "–"}
             </p>
-          )}
+            <p className="mt-1.5 text-xs text-sidebar-foreground/75">
+              {tx("tâches ouvertes à reprendre", "open tasks to hand over")}
+            </p>
+          </div>
 
-          {done.drafts.length > 0 && (
-            <div>
-              <h4 className="font-heading text-sm font-bold">
-                {tx("Messages prêts", "Messages ready")}
-              </h4>
-
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                {tx(
-                  "L'envoi SMS n'est pas encore actif. Les textes sont gardés sur la page Intervenants.",
-                  "SMS sending is not live yet. The texts are kept on the Contractors page."
-                )}
+          {plan && (
+            <div className="hidden border-t border-sidebar-foreground/15 pt-4 md:block">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/65">
+                {tx("Après la confirmation", "After you confirm")}
               </p>
-
-              <ul className="mt-3 space-y-3">
-                {done.drafts.map((draft) => (
-                  <SmsDraftRow key={draft.id} draft={draft} />
-                ))}
+              <ul className="mt-2.5 space-y-2 text-sm leading-snug">
+                {tasks.length === 0 ? (
+                  <li>
+                    {tx(
+                      "Cette personne quitte la liste. Ses tâches passées gardent son nom.",
+                      "They leave the list. Their past tasks keep their name."
+                    )}
+                  </li>
+                ) : (
+                  after.map((line) => <li key={line}>{line}</li>)
+                )}
               </ul>
             </div>
           )}
-        </div>
-      )}
 
-      {problem && (
-        <p
-          role="alert"
-          data-handover-problem=""
-          className="mt-4 rounded-2xl border border-destructive/30 bg-destructive/[0.06] px-4 py-3 text-xs leading-5 text-destructive"
-        >
-          {problem}
-        </p>
-      )}
-
-      <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
-        {plan && !done && plan.tasks.length > 0 && (
-          <span className="mr-auto text-xs text-muted-foreground" data-handover-count="">
-            {tx(
-              `${decided} sur ${tasks.length} choisies`,
-              `${decided} of ${tasks.length} chosen`
-            )}
-          </span>
-        )}
-
-        {done ? (
-          <button
-            type="button"
-            autoFocus
-            onClick={onClose}
-            data-handover-close=""
-            className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-[#141414] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {tx("Terminé", "Done")}
-          </button>
-        ) : (
-          <>
-            <button
-              type="button"
-              autoFocus
-              onClick={onClose}
-              disabled={saving}
-              data-handover-cancel=""
-              className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed"
-            >
-              {tx("Annuler", "Cancel")}
-            </button>
-
-            {load.state === "error" && (
-              <button
-                type="button"
-                onClick={reload}
-                className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-[#141414] transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                {tx("Réessayer", "Try again")}
-              </button>
-            )}
-
-            {plan && (
+          {plan && (
+            <div className="mt-auto grid gap-2">
               <button
                 type="button"
                 onClick={confirm}
-                disabled={saving || (plan.tasks.length > 0 && !allDecided)}
+                disabled={saving || (tasks.length > 0 && !allDecided)}
                 data-handover-confirm=""
-                className="inline-flex items-center gap-1.5 rounded-full bg-destructive px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-brand px-5 text-sm font-semibold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {saving ? (
                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                ) : plan.tasks.length > 0 ? (
+                ) : tasks.length > 0 ? (
                   <Check className="h-4 w-4" aria-hidden="true" />
                 ) : (
                   <Trash2 className="h-4 w-4" aria-hidden="true" />
                 )}
-                {plan.tasks.length > 0
+                {tasks.length > 0
                   ? tx("Confirmer et retirer", "Confirm and remove")
                   : tx("Retirer", "Remove")}
               </button>
-            )}
-          </>
-        )}
+
+              <button
+                type="button"
+                autoFocus
+                onClick={onClose}
+                disabled={saving}
+                data-handover-cancel=""
+                className="h-10 rounded-full text-sm font-semibold text-sidebar-foreground/70 transition-colors hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed"
+              >
+                {tx("Annuler", "Cancel")}
+              </button>
+            </div>
+          )}
+
+          {load.state === "error" && (
+            <button
+              type="button"
+              autoFocus
+              onClick={onClose}
+              data-handover-cancel=""
+              className="mt-auto h-10 rounded-full text-sm font-semibold text-sidebar-foreground/70 transition-colors hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {tx("Annuler", "Cancel")}
+            </button>
+          )}
+        </aside>
+
+        <div className="flex min-w-0 flex-1 flex-col gap-4 p-6">
+          {load.state === "loading" && (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              {tx("Je regarde ses tâches en cours…", "Checking their open tasks…")}
+            </p>
+          )}
+
+          {load.state === "error" && (
+            <div className="space-y-4">
+              <p
+                role="alert"
+                className="rounded-2xl border border-destructive/30 bg-destructive/[0.06] px-4 py-3 text-xs leading-5"
+              >
+                <span className="inline-flex items-center gap-1.5 font-semibold text-destructive">
+                  <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                  {tx("Impossible de lire ses tâches.", "Their tasks could not be read.")}
+                </span>{" "}
+                {load.text}
+              </p>
+
+              <p className="text-xs leading-5 text-muted-foreground">
+                {tx(
+                  "Rien n'a été retiré. Réessayez dans un instant.",
+                  "Nothing was removed. Try again in a moment."
+                )}
+              </p>
+
+              <button
+                type="button"
+                onClick={reload}
+                className="h-10 rounded-full bg-brand px-5 text-sm font-semibold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {tx("Réessayer", "Try again")}
+              </button>
+            </div>
+          )}
+
+          {plan && tasks.length === 0 && (
+            <p className="text-sm leading-6 text-muted-foreground">
+              {tx(
+                "Aucune tâche ouverte. Cette personne quitte la liste.",
+                "No open task. They leave the list."
+              )}
+            </p>
+          )}
+
+          {plan && tasks.length > 0 && (
+            <>
+              <p className="text-sm leading-6 text-muted-foreground">
+                {tx(
+                  "Choisissez qui reprend chacune, puis retirez la personne. Rien ne change avant la confirmation.",
+                  "Choose who takes each one over, then remove them. Nothing changes until you confirm."
+                )}
+              </p>
+
+              <div role="group" aria-label={tx("Comment remplir la liste", "How to fill in the list")} className="flex w-full rounded-full bg-muted p-1 sm:inline-flex sm:w-auto sm:self-start">
+                <button
+                  type="button"
+                  onClick={suggestAll}
+                  aria-pressed={mode === "suggested"}
+                  data-handover-suggest=""
+                  className={cn(
+                    "inline-flex h-9 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-none sm:px-4",
+                    mode === "suggested" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <Sparkles className="h-4 w-4" aria-hidden="true" />
+                  {tx("Proposer une répartition", "Suggest a handover")}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={chooseMyself}
+                  aria-pressed={mode === "manual"}
+                  data-handover-manual=""
+                  className={cn(
+                    "h-9 flex-1 whitespace-nowrap rounded-full px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-none sm:px-4",
+                    mode === "manual" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {tx("Choisir moi-même", "Choose myself")}
+                </button>
+              </div>
+
+              <ul className="divide-y divide-border border-y border-border">
+                {tasks.map((task) => {
+                  const pick = picks[task.task_key] ?? ""
+                  const eligible = others.filter((person) => !task.co_holders.includes(person.id))
+                  const person = pick && pick !== NONE ? byId.get(pick) : undefined
+                  const ranked = person ? task.candidates.find((candidate) => candidate.id === person.id) : undefined
+
+                  const roleMatch = person
+                    ? ranked
+                      ? ranked.role_match
+                      : !!norm(person.role) && norm(person.role) === norm(contractor.role)
+                    : false
+                  const availability: Availability | null = person ? (ranked?.availability ?? person.availability) : null
+                  const open = person ? (ranked?.open ?? person.open_assignments) : 0
+                  const clashes = ranked?.conflicts ?? 0
+                  const selectId = `handover-${task.task_key}`
+
+                  const facts: string[] = []
+
+                  if (person && availability) {
+                    if (pick === task.suggested) facts.push(tx("Suggéré", "Suggested"))
+                    if (roleMatch) facts.push(tx("Même fonction", "Same role"))
+                    facts.push(px(AVAILABILITY_LABEL[availability]))
+                    facts.push(
+                      open === 0
+                        ? tx("Rien en cours", "Nothing open")
+                        : tx(`${open} tâche${open > 1 ? "s" : ""} en cours`, `${open} open task${open > 1 ? "s" : ""}`)
+                    )
+                    if (clashes > 0) {
+                      facts.push(
+                        tx(
+                          `Échéance proche de ${clashes} autre${clashes > 1 ? "s" : ""}`,
+                          `Due near ${clashes} other${clashes > 1 ? "s" : ""}`
+                        )
+                      )
+                    }
+                  }
+
+                  return (
+                    <li
+                      key={task.task_key}
+                      data-handover-task={task.task_key}
+                      className="grid gap-3 py-4 sm:grid-cols-[1fr_16rem] sm:items-start"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-heading text-[15px] font-bold leading-snug">{describe(task)}</p>
+
+                        {task.message && (
+                          <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-muted-foreground">{task.message}</p>
+                        )}
+
+                        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                          <StatusTag tone={PRIORITY_TONE[task.priority] ?? "neutral"} size="xs" icon={false}>
+                            <span data-handover-priority="">{priorityLabel(task.priority, tx)}</span>
+                          </StatusTag>
+
+                          <StatusTag tone="neutral" size="xs" icon={CalendarDays}>
+                            <span data-handover-deadline="">{deadlineLabel(task.deadline, tx)}</span>
+                          </StatusTag>
+                        </div>
+
+                        {task.co_holders.length > 0 && (
+                          <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
+                            {tx("Aussi sur cette tâche : ", "Also on this task: ")}
+                            {task.co_holders
+                              .map((id) => byId.get(id)?.name)
+                              .filter(Boolean)
+                              .join(", ")}
+                          </p>
+                        )}
+
+                        {facts.length > 0 && (
+                          <p data-handover-facts="" className="mt-2 text-xs leading-5 text-muted-foreground">
+                            {facts.join(" · ")}
+                          </p>
+                        )}
+
+                        {pick === NONE && task.co_holders.length === 0 && (
+                          <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
+                            {tx("Cette tâche restera sans personne.", "This task will be left with nobody.")}
+                          </p>
+                        )}
+                      </div>
+
+                      <label htmlFor={selectId} className="block">
+                        <span className="sr-only">{tx("Reprise par", "Taken over by")}</span>
+
+                        <select
+                          id={selectId}
+                          value={pick}
+                          onChange={(event) =>
+                            setPicks((current) => ({
+                              ...current,
+                              [task.task_key]: event.target.value,
+                            }))
+                          }
+                          className="h-10 w-full rounded-full border border-border bg-background px-4 text-sm outline-none transition-colors focus:border-ring"
+                        >
+                          <option value="" disabled>
+                            {tx("Choisir…", "Choose…")}
+                          </option>
+
+                          {eligible.map((candidate) => (
+                            <option key={candidate.id} value={candidate.id}>
+                              {candidate.name}
+                              {candidate.role ? ` · ${candidate.role}` : ""}
+                              {candidate.availability === "off" ? ` (${px(AVAILABILITY_LABEL.off)})` : ""}
+                            </option>
+                          ))}
+
+                          <option value={NONE}>{tx("Personne pour l'instant", "No one for now")}</option>
+                        </select>
+                      </label>
+                    </li>
+                  )
+                })}
+              </ul>
+
+              <p data-handover-count="" className="text-xs text-muted-foreground">
+                {tx(`${decided} sur ${tasks.length} choisies`, `${decided} of ${tasks.length} chosen`)}
+              </p>
+            </>
+          )}
+
+          {problem && (
+            <p
+              role="alert"
+              data-handover-problem=""
+              className="rounded-2xl border border-destructive/30 bg-destructive/[0.06] px-4 py-3 text-xs leading-5 text-destructive"
+            >
+              {problem}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   )
