@@ -383,10 +383,10 @@ export function AppShell({
         username={username}
         onSignOut={onSignOut}
         isAdmin={isAdmin}
-        swaps={swapFeed.total > 0 ? { open: swapFeed.open, total: swapFeed.total, onOpen: () => setSwapsOpen(true) } : undefined}
+        swaps={swapFeed.total + swapFeed.incoming.length > 0 ? { open: swapFeed.open, total: swapFeed.total, onOpen: () => setSwapsOpen(true) } : undefined}
       />
 
-      <BranchSwapsSheet open={swapsOpen && swapFeed.total > 0} alerts={swapFeed.alerts} onClose={() => setSwapsOpen(false)} />
+      <BranchSwapsSheet open={swapsOpen && swapFeed.total + swapFeed.incoming.length > 0} alerts={swapFeed.alerts} incoming={swapFeed.incoming} onClose={() => setSwapsOpen(false)} />
 
       <div
         className={[

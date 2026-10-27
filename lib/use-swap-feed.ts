@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { inAccountScope, readSectors } from "@/lib/activities"
 import { readList } from "@/lib/answer"
 import { API_BASE, apiFetch } from "@/lib/api"
+import { activeSiteId } from "@/lib/active-site"
 import { SWAP_KEY, stageOf, swapsFrom, type SwapAlert } from "@/lib/branch-swaps"
 import { fetchAssignments } from "@/lib/crm"
 import { withOurSector } from "@/lib/sector"
@@ -16,9 +17,10 @@ import { withOurSector } from "@/lib/sector"
  * is not "no swap"), and is read again whenever `refresh` changes: a page
  * change, an upload, a link sent. */
 
-export type SwapFeed = { alerts: SwapAlert[]; open: number; total: number }
+/* `incoming` are the swaps other branches send to the site on screen (F-SWAPIN): read only here, the sending branch acts. */
+export type SwapFeed = { alerts: SwapAlert[]; open: number; total: number; incoming: SwapAlert[] }
 
-const NONE: SwapFeed = { alerts: [], open: 0, total: 0 }
+const NONE: SwapFeed = { alerts: [], open: 0, total: 0, incoming: [] }
 
 export function useSwapFeed({ lang, companyName, refresh, site, view }: { lang: string; companyName: string; refresh: number; site: unknown; view: string }): SwapFeed {
   const [feed, setFeed] = useState<SwapFeed>(NONE)
@@ -33,11 +35,17 @@ export function useSwapFeed({ lang, companyName, refresh, site, view }: { lang: 
     }
 
     async function load() {
-      const [answer, assignments] = await Promise.all([
+      const siteId = activeSiteId()
+      const [answer, assignments, incomingAnswer] = await Promise.all([
         apiFetch(`${API_BASE}/alerts?lang=${lang}`)
           .then((r) => readList<SwapAlert & { sector?: string | null; business_type?: string | null }>(r, "alerts"))
           .catch(() => ({ ok: false as const, reason: "network" })),
         companyName ? fetchAssignments(companyName) : Promise.resolve(null),
+        siteId
+          ? apiFetch(`${API_BASE}/swaps/incoming?lang=${lang}&site_id=${encodeURIComponent(siteId)}`)
+              .then((r) => readList<SwapAlert>(r, "alerts"))
+              .catch(() => ({ ok: false as const, reason: "network" }))
+          : Promise.resolve(null),
       ])
 
       if (cancelled || !answer.ok) return
@@ -53,9 +61,12 @@ export function useSwapFeed({ lang, companyName, refresh, site, view }: { lang: 
       const rows = inAccountScope(answer.rows.map(withOurSector), readSectors(), businessType).filter((a) => a.alert_key === SWAP_KEY)
       const swaps = swapsFrom(rows)
 
+      // A failed read keeps the incoming swaps held before: a failed read is not "none".
+      const incoming = (current: SwapFeed) => (incomingAnswer === null ? [] : incomingAnswer.ok ? incomingAnswer.rows : current.incoming)
+
       if (assignments === null || !assignments.ok) {
         // The tasks could not be read: every swap counts as open, never as handled.
-        setFeed({ alerts: rows, open: swaps.length, total: swaps.length })
+        setFeed((current) => ({ alerts: rows, open: swaps.length, total: swaps.length, incoming: incoming(current) }))
 
         return
       }
@@ -67,7 +78,7 @@ export function useSwapFeed({ lang, companyName, refresh, site, view }: { lang: 
         return stage === "waiting" || stage === "with"
       }).length
 
-      setFeed({ alerts: rows, open, total: swaps.length })
+      setFeed((current) => ({ alerts: rows, open, total: swaps.length, incoming: incoming(current) }))
     }
 
     load().catch(() => {

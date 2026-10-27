@@ -392,7 +392,42 @@ function Step({
 /** The card in a sheet, opened from the sidebar (the shell owns `open`). Reads
  *  nothing from the server until it is open. Escape, the close button or a
  *  click outside closes it. */
-export function BranchSwapsSheet({ open, alerts, onClose }: { open: boolean; alerts: SwapAlert[]; onClose: () => void }) {
+/* Swaps other branches send to this one (F-SWAPIN): read only. The receiver
+ * sees what is coming, by when it must sell, and the value where the plan
+ * shows amounts; the sending branch does the work. */
+function IncomingSwaps({ swaps }: { swaps: Swap[] }) {
+  const tx = useTx()
+  const canSeeAmounts = useCanSeeAmounts()
+
+  if (swaps.length === 0) return null
+
+  return (
+    <section data-testid="incoming-swaps" className="squircle mb-3 rounded-[24px] bg-muted/60 p-4 sm:p-5">
+      <h3 className="font-heading text-base font-semibold">{tx("Arrive dans cette agence", "Coming into this branch")}</h3>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {tx("Les autres agences les envoient. Rien à faire ici : l'agence qui les envoie s'en occupe.", "Other branches send these. Nothing to do here: the sending branch handles them.")}
+      </p>
+
+      <ul className="mt-3 divide-y divide-border">
+        {swaps.map((swap) => (
+          <li key={swap.taskKey} data-testid="incoming-line" className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2.5 text-sm">
+            <span className="min-w-0">
+              <span className="font-semibold">{swap.product}</span>{" "}
+              <span className="text-muted-foreground">{tx(`de ${swap.fromSite}`, `from ${swap.fromSite}`)}</span>
+            </span>
+            <span className="tabular-nums text-muted-foreground">
+              {tx(`${swap.units} unités`, `${swap.units} units`)}
+              {canSeeAmounts && swap.value !== null && ` · ${formatAmount(swap.value, swap.currency, tx)}`}
+              {swap.expiry && ` · ${tx("avant le", "before")} ${dayLabel(swap.expiry, tx)}`}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+export function BranchSwapsSheet({ open, alerts, incoming, onClose }: { open: boolean; alerts: SwapAlert[]; incoming: SwapAlert[]; onClose: () => void }) {
   const tx = useTx()
   const sheet = usePresence(open, "--modal-close-dur")
 
@@ -438,6 +473,7 @@ export function BranchSwapsSheet({ open, alerts, onClose }: { open: boolean; ale
         >
           <X className="h-4 w-4" aria-hidden="true" />
         </button>
+        <IncomingSwaps swaps={swapsFrom(incoming)} />
         <BranchSwapsCard alerts={alerts} embedded />
       </div>
     </div>
