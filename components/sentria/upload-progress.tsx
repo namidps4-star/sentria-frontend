@@ -30,7 +30,7 @@ export function UploadProgress({ state, compact = false }: { state: UploadState;
 
   const sending = state.phase === "sending"
   const analysing = state.phase === "analysing"
-  const finished = state.phase === "done" || state.phase === "refused" || state.phase === "failed"
+  const finished = state.phase === "done" || state.phase === "refused" || state.phase === "failed" || state.phase === "matching"
   const knownPct = sending ? state.sentPct : 100
   const sentPct = knownPct ?? 0
   const since = sending ? state.sendingSince : analysing ? state.analysingSince : undefined
@@ -143,6 +143,20 @@ export function UploadProgress({ state, compact = false }: { state: UploadState;
         </div>
       )}
 
+      {state.phase === "matching" && state.missing && state.fileColumns && state.retry && (
+        <div className="space-y-2">
+          <p className="text-sm font-bold">{tx("Fichier non envoyé", "Nothing sent yet")}</p>
+          {state.message && <p className="text-sm">{state.message}</p>}
+          <MatchColumns
+            missing={state.missing}
+            fileColumns={state.fileColumns}
+            teach={state.teach}
+            suggested={state.suggested}
+            retry={state.retry}
+          />
+        </div>
+      )}
+
       {state.phase === "refused" && state.missing && state.fileColumns && state.retry && (
         <MatchColumns
           missing={state.missing}
@@ -163,16 +177,20 @@ function MatchColumns({
   missing,
   fileColumns,
   teach,
+  suggested,
   retry,
 }: {
   missing: string[][]
   fileColumns: string[]
   teach?: UploadTeach
+  suggested?: Record<string, string>
   retry: NonNullable<UploadState["retry"]>
 }) {
   const tx = useTx()
   const names = missing.map((group) => group[0])
-  const [choice, setChoice] = useState<Record<string, string>>({})
+  const [choice, setChoice] = useState<Record<string, string>>(() =>
+    Object.fromEntries(Object.entries(suggested ?? {}).filter(([name, column]) => names.includes(name) && fileColumns.includes(column)))
+  )
   const ready = names.every((name) => choice[name])
   const taken = new Set(Object.values(choice))
 

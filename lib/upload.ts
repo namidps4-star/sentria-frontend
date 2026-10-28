@@ -8,7 +8,9 @@ import { uploadTeach, type UploadTeach } from "./upload-problem"
  *  reports bytes sent); `analysing` is the server checking the columns
  *  and running the checks, which it can't report on, so the screen shows
  *  elapsed seconds rather than an invented percentage. */
-export type UploadPhase = "idle" | "sending" | "analysing" | "done" | "refused" | "failed"
+/** `matching`: the server checked the file before anything was sent, and its
+ *  columns need matching first. Nothing has been sent yet. */
+export type UploadPhase = "idle" | "sending" | "analysing" | "matching" | "done" | "refused" | "failed"
 
 export type UploadState = {
   phase: UploadPhase
@@ -33,6 +35,9 @@ export type UploadState = {
   missing?: string[][]
   /** The file's own column names, to pick from when matching by hand. */
   fileColumns?: string[]
+  /** The server's best guess for each missing name, from a clear spelling match.
+   *  Shown already chosen; the user confirms or changes each one. */
+  suggested?: Record<string, string>
   /** Runs the import again with the columns the user matched by hand. */
   retry?: (mapping: Record<string, string>) => Promise<UploadState>
 }
@@ -106,6 +111,62 @@ export function uploadSummary(body: unknown): { rows: number; alerts: number; fa
   return { rows: n(b.rows_processed), alerts: n(b.alerts_fired), failedSaves: n(b.saves_failed) }
 }
 
+/** The server's suggested matching, when it sent one. */
+function suggestedMatching(body: unknown): Record<string, string> {
+  const raw = (body as { suggested_mapping?: unknown } | null)?.suggested_mapping
+  if (!raw || typeof raw !== "object") return {}
+  return Object.fromEntries(
+    Object.entries(raw as Record<string, unknown>).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string"
+    )
+  )
+}
+
+/** Asks the server to check the file without saving it (check_only). Returns
+ *  the state to show when the file must not be sent as it is, or undefined
+ *  when it can be sent. */
+async function checkBeforeSending(
+  url: string,
+  file: File,
+  set: (state: UploadState) => void,
+  refusal: (body: unknown) => string,
+  networkError: string
+): Promise<UploadState | undefined> {
+  const form = new FormData()
+  form.append("file", file)
+  const checkUrl = `${url}${url.includes("?") ? "&" : "?"}check_only=true`
+
+  let answer: UploadResponse
+  try {
+    answer = await uploadWithProgress(checkUrl, form, () => {})
+  } catch {
+    return { phase: "failed", fileName: file.name, message: networkError }
+  }
+
+  const { status, body } = answer
+  if (status === 200) {
+    if ((body as { outcome?: unknown } | null)?.outcome !== "refused") return undefined
+    const missing = columnsMissing(body)
+    if (errorCode(body) === "upload_columns_missing" && missing) {
+      return {
+        phase: "matching",
+        fileName: file.name,
+        message: refusal(body),
+        teach: uploadTeach(body) ?? undefined,
+        missing: missing.missing,
+        fileColumns: missing.fileColumns,
+        suggested: suggestedMatching(body),
+        retry: (choice) => runUpload(url, file, set, refusal, networkError, choice, missing),
+      }
+    }
+    return { phase: "refused", fileName: file.name, message: refusal(body), teach: uploadTeach(body) ?? undefined }
+  }
+  if (status === 422 || status === 403 || status === 400) {
+    return { phase: "refused", fileName: file.name, message: refusal(body), teach: uploadTeach(body) ?? undefined }
+  }
+  return { phase: "failed", fileName: file.name, message: `${networkError} (HTTP ${status})` }
+}
+
 /** Runs one import and reports each stage through `set`. Resolves with
  *  the final state; never throws. `refusal` turns a 422/403 body into
  *  the message to show (uploadProblemMessage). `mapping` matches the
@@ -120,6 +181,18 @@ export async function runUpload(
   mapping?: Record<string, string>,
   context?: MissingColumns
 ): Promise<UploadState> {
+  // The first attempt checks the columns before anything is sent, so a
+  // file that needs matching is matched first, not refused after the upload.
+  if (!mapping) {
+    // The check is the server reading the columns: the panel shows that stage.
+    set({ phase: "analysing", fileName: file.name, analysingSince: Date.now() })
+    const before = await checkBeforeSending(url, file, set, refusal, networkError)
+    if (before) {
+      set(before)
+      return before
+    }
+  }
+
   const form = new FormData()
   form.append("file", file)
   if (mapping) form.append("mapping", JSON.stringify(mapping))

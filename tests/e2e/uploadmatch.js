@@ -19,6 +19,8 @@ const REFUSED = {
   example: { header: ['medicine_name', 'stock_qty'], row: ['Paracetamol 500mg', '120'] },
 };
 const DONE = { rows_processed: 3, alerts_fired: 1, saves_failed: 0 };
+// The check-only answer (api/main.py with check_only=true, pipeline/upload_check.py preflight_body).
+const PREFLIGHT = { ...REFUSED, success: false, outcome: 'refused', suggested_mapping: {} };
 
 (async () => {
   const browser = await chromium.launch(LAUNCH);
@@ -29,6 +31,7 @@ const DONE = { rows_processed: 3, alerts_fired: 1, saves_failed: 0 };
       const u = new URL(r.request().url());
       if (u.pathname === '/upload') {
         const body = r.request().postData() || '';
+        if (u.searchParams.get('check_only') === 'true') return r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(PREFLIGHT) });
         p._posts.push(body);
         const mapped = /name="mapping"/.test(body);
         if (!mapped) return r.fulfill({ status: 422, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(REFUSED) });
