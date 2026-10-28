@@ -1,0 +1,1862 @@
+{
+  "backend_commit": "45e8b06e5d7e6ba2c7b6dd578c00f70e56ae7ad7",
+  "date_formats": [
+    "%Y-%m-%d",
+    "%d/%m/%Y",
+    "%m/%d/%Y",
+    "%Y/%m/%d",
+    "%d-%m-%Y"
+  ],
+  "yes_words": {
+    "alerts": [
+      "1",
+      "o",
+      "oui",
+      "true",
+      "y",
+      "yes"
+    ],
+    "port_flow": [
+      "1",
+      "1.0",
+      "o",
+      "oui",
+      "true",
+      "x",
+      "y",
+      "yes"
+    ]
+  },
+  "no_words": [
+    "0",
+    "0.0",
+    "false",
+    "no",
+    "n",
+    "non"
+  ],
+  "single_store": [
+    [
+      "retail",
+      null
+    ],
+    [
+      "retail",
+      "epicerie-proximite"
+    ],
+    [
+      "retail",
+      "supermarche-hypermarche"
+    ]
+  ],
+  "messages": {
+    "empty": {
+      "fr": "Le fichier ne contient aucune ligne de données.",
+      "en": "The file has no data rows."
+    },
+    "missing": {
+      "fr": "Ce fichier ne correspond pas à l'activité choisie. Colonnes manquantes : {missing}. Colonnes attendues : {sample}.",
+      "en": "This file doesn't match the chosen activity. Missing columns: {missing}. Expected columns: {sample}."
+    },
+    "no_usable_rows": {
+      "fr": "Les colonnes sont là, mais aucune ligne n'est assez remplie pour être analysée. Chaque ligne a besoin d'une valeur pour : {required}.",
+      "en": "The columns are there, but no row is filled in enough to analyse. Each row needs a value for: {required}."
+    },
+    "chain_file": {
+      "fr": "Ce fichier contient {n} magasins (colonne store_id). Cette activité est un seul magasin : importez-le dans une chaîne de magasins.",
+      "en": "This file holds {n} stores (store_id column). This activity is a single shop: import it under a store chain."
+    }
+  },
+  "specs": [
+    {
+      "key": {
+        "sector": "health",
+        "business_type": "pharmacie"
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "medicine_name"
+        ],
+        [
+          "stock_qty"
+        ]
+      ],
+      "sample": [
+        "medicine_name",
+        "stock_qty",
+        "min_stock",
+        "sales_last_30_days",
+        "unit_cost",
+        "expiry_date"
+      ],
+      "types": {
+        "medicine_name": {
+          "type": "text",
+          "basis": "read"
+        },
+        "stock_qty": {
+          "type": "number",
+          "basis": "read"
+        },
+        "min_stock": {
+          "type": "number",
+          "basis": "read"
+        },
+        "sales_last_30_days": {
+          "type": "number",
+          "basis": "read"
+        },
+        "unit_cost": {
+          "type": "number",
+          "basis": "read"
+        },
+        "expiry_date": {
+          "type": "date",
+          "basis": "read"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "health",
+        "business_type": "veterinaire"
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "medicine_name"
+        ],
+        [
+          "stock_qty"
+        ]
+      ],
+      "sample": [
+        "medicine_name",
+        "category",
+        "batch_number",
+        "stock_qty",
+        "min_stock",
+        "sales_last_30_days",
+        "unit_cost",
+        "expiry_date",
+        "fridge_temp",
+        "bought_on_credit"
+      ],
+      "types": {
+        "medicine_name": {
+          "type": "text",
+          "basis": "read"
+        },
+        "stock_qty": {
+          "type": "number",
+          "basis": "read"
+        },
+        "category": {
+          "type": "text",
+          "basis": "name"
+        },
+        "batch_number": {
+          "type": "text",
+          "basis": "name"
+        },
+        "min_stock": {
+          "type": "number",
+          "basis": "read"
+        },
+        "sales_last_30_days": {
+          "type": "number",
+          "basis": "read"
+        },
+        "unit_cost": {
+          "type": "number",
+          "basis": "read"
+        },
+        "expiry_date": {
+          "type": "date",
+          "basis": "read"
+        },
+        "fridge_temp": {
+          "type": "number",
+          "basis": "name"
+        },
+        "bought_on_credit": {
+          "type": "yesno",
+          "basis": "read"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "health",
+        "business_type": "laboratoire"
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "reagent_name",
+          "medicine_name"
+        ],
+        [
+          "stock_qty"
+        ]
+      ],
+      "sample": [
+        "reagent_name",
+        "stock_qty",
+        "unit_cost",
+        "expiry_date"
+      ],
+      "types": {
+        "reagent_name": {
+          "type": "text",
+          "basis": "name"
+        },
+        "medicine_name": {
+          "type": "text",
+          "basis": "read"
+        },
+        "stock_qty": {
+          "type": "number",
+          "basis": "read"
+        },
+        "unit_cost": {
+          "type": "number",
+          "basis": "read"
+        },
+        "expiry_date": {
+          "type": "date",
+          "basis": "read"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "health",
+        "business_type": "clinique-hopital"
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "item_name",
+          "medicine_name"
+        ],
+        [
+          "stock_qty",
+          "fridge_temp"
+        ]
+      ],
+      "sample": [
+        "item_name",
+        "category",
+        "stock_qty",
+        "min_stock",
+        "unit_cost",
+        "fridge_temp",
+        "expiry_date"
+      ],
+      "types": {
+        "item_name": {
+          "type": "text",
+          "basis": "name"
+        },
+        "medicine_name": {
+          "type": "text",
+          "basis": "read"
+        },
+        "stock_qty": {
+          "type": "number",
+          "basis": "read"
+        },
+        "fridge_temp": {
+          "type": "number",
+          "basis": "name"
+        },
+        "category": {
+          "type": "text",
+          "basis": "name"
+        },
+        "min_stock": {
+          "type": "number",
+          "basis": "read"
+        },
+        "unit_cost": {
+          "type": "number",
+          "basis": "read"
+        },
+        "expiry_date": {
+          "type": "date",
+          "basis": "read"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "health",
+        "business_type": "grossiste-pharma"
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "pharmacy_id",
+          "pharmacy_name"
+        ],
+        [
+          "product_name",
+          "medicine_name"
+        ],
+        [
+          "qty_shipped_last_period",
+          "qty_shipped"
+        ]
+      ],
+      "sample": [
+        "pharmacy_id",
+        "pharmacy_name",
+        "product_name",
+        "qty_shipped_last_period",
+        "qty_reordered_this_period",
+        "days_since_last_shipment",
+        "unit_cost"
+      ],
+      "types": {
+        "pharmacy_id": {
+          "type": "text",
+          "basis": "name"
+        },
+        "pharmacy_name": {
+          "type": "text",
+          "basis": "name"
+        },
+        "product_name": {
+          "type": "text",
+          "basis": "read"
+        },
+        "medicine_name": {
+          "type": "text",
+          "basis": "read"
+        },
+        "qty_shipped_last_period": {
+          "type": "number",
+          "basis": "name"
+        },
+        "qty_shipped": {
+          "type": "number",
+          "basis": "name"
+        },
+        "qty_reordered_this_period": {
+          "type": "number",
+          "basis": "name"
+        },
+        "days_since_last_shipment": {
+          "type": "number",
+          "basis": "name"
+        },
+        "unit_cost": {
+          "type": "number",
+          "basis": "read"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "industry",
+        "business_type": null
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "Product ID",
+          "equipment_id"
+        ],
+        [
+          "Torque [Nm]",
+          "Tool wear [min]",
+          "Rotational speed [rpm]",
+          "rpm",
+          "Process temperature [K]",
+          "temperature",
+          "pressure",
+          "production_rate",
+          "last_maintenance_date",
+          "defect_rate",
+          "food_temp",
+          "hygiene_control_passed",
+          "min_cook_temp"
+        ]
+      ],
+      "sample": [
+        "Product ID",
+        "Torque [Nm]",
+        "Tool wear [min]",
+        "Rotational speed [rpm]"
+      ],
+      "types": {
+        "Product ID": {
+          "type": "text",
+          "basis": "name"
+        },
+        "equipment_id": {
+          "type": "text",
+          "basis": "read"
+        },
+        "Torque [Nm]": {
+          "type": "number",
+          "basis": "name"
+        },
+        "Tool wear [min]": {
+          "type": "number",
+          "basis": "name"
+        },
+        "Rotational speed [rpm]": {
+          "type": "number",
+          "basis": "name"
+        },
+        "rpm": {
+          "type": "number",
+          "basis": "name"
+        },
+        "Process temperature [K]": {
+          "type": "number",
+          "basis": "name"
+        },
+        "temperature": {
+          "type": "number",
+          "basis": "name"
+        },
+        "pressure": {
+          "type": "number",
+          "basis": "name"
+        },
+        "production_rate": {
+          "type": "number",
+          "basis": "read"
+        },
+        "last_maintenance_date": {
+          "type": "date",
+          "basis": "name"
+        },
+        "defect_rate": {
+          "type": "number",
+          "basis": "name"
+        },
+        "food_temp": {
+          "type": "number",
+          "basis": "read"
+        },
+        "hygiene_control_passed": {
+          "type": "boolean",
+          "basis": "read"
+        },
+        "min_cook_temp": {
+          "type": "number",
+          "basis": "name"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "industry",
+        "business_type": "usine-production"
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "Product ID",
+          "equipment_id"
+        ],
+        [
+          "Torque [Nm]",
+          "Tool wear [min]",
+          "Rotational speed [rpm]",
+          "rpm",
+          "Process temperature [K]",
+          "temperature",
+          "pressure",
+          "production_rate",
+          "last_maintenance_date",
+          "defect_rate",
+          "food_temp",
+          "hygiene_control_passed",
+          "min_cook_temp"
+        ]
+      ],
+      "sample": [
+        "Product ID",
+        "Torque [Nm]",
+        "Tool wear [min]",
+        "Rotational speed [rpm]",
+        "production_rate",
+        "target_rate",
+        "last_maintenance_date"
+      ],
+      "types": {
+        "Product ID": {
+          "type": "text",
+          "basis": "name"
+        },
+        "equipment_id": {
+          "type": "text",
+          "basis": "read"
+        },
+        "Torque [Nm]": {
+          "type": "number",
+          "basis": "name"
+        },
+        "Tool wear [min]": {
+          "type": "number",
+          "basis": "name"
+        },
+        "Rotational speed [rpm]": {
+          "type": "number",
+          "basis": "name"
+        },
+        "rpm": {
+          "type": "number",
+          "basis": "name"
+        },
+        "Process temperature [K]": {
+          "type": "number",
+          "basis": "name"
+        },
+        "temperature": {
+          "type": "number",
+          "basis": "name"
+        },
+        "pressure": {
+          "type": "number",
+          "basis": "name"
+        },
+        "production_rate": {
+          "type": "number",
+          "basis": "read"
+        },
+        "last_maintenance_date": {
+          "type": "date",
+          "basis": "name"
+        },
+        "defect_rate": {
+          "type": "number",
+          "basis": "name"
+        },
+        "food_temp": {
+          "type": "number",
+          "basis": "read"
+        },
+        "hygiene_control_passed": {
+          "type": "boolean",
+          "basis": "read"
+        },
+        "min_cook_temp": {
+          "type": "number",
+          "basis": "name"
+        },
+        "target_rate": {
+          "type": "number",
+          "basis": "read"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "industry",
+        "business_type": "atelier-soustraitance"
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "Product ID",
+          "equipment_id"
+        ],
+        [
+          "Torque [Nm]",
+          "Tool wear [min]",
+          "Rotational speed [rpm]",
+          "rpm",
+          "Process temperature [K]",
+          "temperature",
+          "pressure",
+          "production_rate",
+          "last_maintenance_date",
+          "defect_rate",
+          "food_temp",
+          "hygiene_control_passed",
+          "min_cook_temp"
+        ]
+      ],
+      "sample": [
+        "Product ID",
+        "Torque [Nm]",
+        "Tool wear [min]",
+        "Rotational speed [rpm]",
+        "last_maintenance_date"
+      ],
+      "types": {
+        "Product ID": {
+          "type": "text",
+          "basis": "name"
+        },
+        "equipment_id": {
+          "type": "text",
+          "basis": "read"
+        },
+        "Torque [Nm]": {
+          "type": "number",
+          "basis": "name"
+        },
+        "Tool wear [min]": {
+          "type": "number",
+          "basis": "name"
+        },
+        "Rotational speed [rpm]": {
+          "type": "number",
+          "basis": "name"
+        },
+        "rpm": {
+          "type": "number",
+          "basis": "name"
+        },
+        "Process temperature [K]": {
+          "type": "number",
+          "basis": "name"
+        },
+        "temperature": {
+          "type": "number",
+          "basis": "name"
+        },
+        "pressure": {
+          "type": "number",
+          "basis": "name"
+        },
+        "production_rate": {
+          "type": "number",
+          "basis": "read"
+        },
+        "last_maintenance_date": {
+          "type": "date",
+          "basis": "name"
+        },
+        "defect_rate": {
+          "type": "number",
+          "basis": "name"
+        },
+        "food_temp": {
+          "type": "number",
+          "basis": "read"
+        },
+        "hygiene_control_passed": {
+          "type": "boolean",
+          "basis": "read"
+        },
+        "min_cook_temp": {
+          "type": "number",
+          "basis": "name"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "industry",
+        "business_type": "usine-agroalimentaire"
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "Product ID",
+          "equipment_id"
+        ],
+        [
+          "Torque [Nm]",
+          "Tool wear [min]",
+          "Rotational speed [rpm]",
+          "rpm",
+          "Process temperature [K]",
+          "temperature",
+          "pressure",
+          "production_rate",
+          "last_maintenance_date",
+          "defect_rate",
+          "food_temp",
+          "hygiene_control_passed",
+          "min_cook_temp"
+        ]
+      ],
+      "sample": [
+        "Product ID",
+        "food_temp",
+        "max_food_temp",
+        "hygiene_control_passed",
+        "production_rate",
+        "target_rate"
+      ],
+      "types": {
+        "Product ID": {
+          "type": "text",
+          "basis": "name"
+        },
+        "equipment_id": {
+          "type": "text",
+          "basis": "read"
+        },
+        "Torque [Nm]": {
+          "type": "number",
+          "basis": "name"
+        },
+        "Tool wear [min]": {
+          "type": "number",
+          "basis": "name"
+        },
+        "Rotational speed [rpm]": {
+          "type": "number",
+          "basis": "name"
+        },
+        "rpm": {
+          "type": "number",
+          "basis": "name"
+        },
+        "Process temperature [K]": {
+          "type": "number",
+          "basis": "name"
+        },
+        "temperature": {
+          "type": "number",
+          "basis": "name"
+        },
+        "pressure": {
+          "type": "number",
+          "basis": "name"
+        },
+        "production_rate": {
+          "type": "number",
+          "basis": "read"
+        },
+        "last_maintenance_date": {
+          "type": "date",
+          "basis": "name"
+        },
+        "defect_rate": {
+          "type": "number",
+          "basis": "name"
+        },
+        "food_temp": {
+          "type": "number",
+          "basis": "read"
+        },
+        "hygiene_control_passed": {
+          "type": "boolean",
+          "basis": "read"
+        },
+        "min_cook_temp": {
+          "type": "number",
+          "basis": "name"
+        },
+        "max_food_temp": {
+          "type": "number",
+          "basis": "read"
+        },
+        "target_rate": {
+          "type": "number",
+          "basis": "read"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "agriculture",
+        "business_type": null
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "product_name"
+        ],
+        [
+          "days_in_storage",
+          "storage_temp",
+          "scheduled_pickup",
+          "actual_pickup"
+        ]
+      ],
+      "sample": [
+        "product_name",
+        "days_in_storage",
+        "storage_temp"
+      ],
+      "types": {
+        "product_name": {
+          "type": "text",
+          "basis": "read"
+        },
+        "days_in_storage": {
+          "type": "number",
+          "basis": "read"
+        },
+        "storage_temp": {
+          "type": "number",
+          "basis": "name"
+        },
+        "scheduled_pickup": {
+          "type": "date",
+          "basis": "read"
+        },
+        "actual_pickup": {
+          "type": "date",
+          "basis": "read"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "agriculture",
+        "business_type": "silo-stockage"
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "product_name"
+        ],
+        [
+          "days_in_storage",
+          "storage_temp",
+          "scheduled_pickup",
+          "actual_pickup"
+        ]
+      ],
+      "sample": [
+        "product_name",
+        "days_in_storage",
+        "storage_temp",
+        "max_storage_temp"
+      ],
+      "types": {
+        "product_name": {
+          "type": "text",
+          "basis": "read"
+        },
+        "days_in_storage": {
+          "type": "number",
+          "basis": "read"
+        },
+        "storage_temp": {
+          "type": "number",
+          "basis": "name"
+        },
+        "scheduled_pickup": {
+          "type": "date",
+          "basis": "read"
+        },
+        "actual_pickup": {
+          "type": "date",
+          "basis": "read"
+        },
+        "max_storage_temp": {
+          "type": "number",
+          "basis": "read"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "agriculture",
+        "business_type": "cooperative-agricole"
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "product_name"
+        ],
+        [
+          "days_in_storage",
+          "storage_temp",
+          "scheduled_pickup",
+          "actual_pickup"
+        ]
+      ],
+      "sample": [
+        "member_id",
+        "product_name",
+        "days_in_storage",
+        "spare_capacity_kg",
+        "qty",
+        "unit_cost"
+      ],
+      "types": {
+        "product_name": {
+          "type": "text",
+          "basis": "read"
+        },
+        "days_in_storage": {
+          "type": "number",
+          "basis": "read"
+        },
+        "storage_temp": {
+          "type": "number",
+          "basis": "name"
+        },
+        "scheduled_pickup": {
+          "type": "date",
+          "basis": "read"
+        },
+        "actual_pickup": {
+          "type": "date",
+          "basis": "read"
+        },
+        "member_id": {
+          "type": "text",
+          "basis": "read"
+        },
+        "spare_capacity_kg": {
+          "type": "number",
+          "basis": "name"
+        },
+        "qty": {
+          "type": "number",
+          "basis": "read"
+        },
+        "unit_cost": {
+          "type": "number",
+          "basis": "read"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "transportation",
+        "business_type": null
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "truck_id"
+        ],
+        [
+          "engine_temp",
+          "fuel_level",
+          "mileage_km",
+          "last_service_km",
+          "oil_level",
+          "tire_age_months",
+          "scheduled_arrival",
+          "actual_arrival",
+          "cargo_temp",
+          "cost_per_km",
+          "days_used_this_month",
+          "days_rented_this_month"
+        ]
+      ],
+      "sample": [
+        "truck_id",
+        "mileage_km",
+        "last_service_km",
+        "engine_temp",
+        "fuel_level"
+      ],
+      "types": {
+        "truck_id": {
+          "type": "text",
+          "basis": "name"
+        },
+        "engine_temp": {
+          "type": "number",
+          "basis": "name"
+        },
+        "fuel_level": {
+          "type": "number",
+          "basis": "name"
+        },
+        "mileage_km": {
+          "type": "number",
+          "basis": "name"
+        },
+        "last_service_km": {
+          "type": "number",
+          "basis": "name"
+        },
+        "oil_level": {
+          "type": "number",
+          "basis": "name"
+        },
+        "tire_age_months": {
+          "type": "number",
+          "basis": "name"
+        },
+        "scheduled_arrival": {
+          "type": "date",
+          "basis": "name"
+        },
+        "actual_arrival": {
+          "type": "date",
+          "basis": "name"
+        },
+        "cargo_temp": {
+          "type": "number",
+          "basis": "name"
+        },
+        "cost_per_km": {
+          "type": "number",
+          "basis": "name"
+        },
+        "days_used_this_month": {
+          "type": "number",
+          "basis": "name"
+        },
+        "days_rented_this_month": {
+          "type": "number",
+          "basis": "name"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "logistics",
+        "business_type": null
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "equipment_id"
+        ],
+        [
+          "daily_cycles",
+          "hydraulic_pressure",
+          "fuel_level",
+          "avg_wait_hours",
+          "temperature",
+          "last_service_date"
+        ]
+      ],
+      "sample": [
+        "equipment_id",
+        "daily_cycles",
+        "hydraulic_pressure",
+        "fuel_level"
+      ],
+      "types": {
+        "equipment_id": {
+          "type": "text",
+          "basis": "read"
+        },
+        "daily_cycles": {
+          "type": "number",
+          "basis": "name"
+        },
+        "hydraulic_pressure": {
+          "type": "number",
+          "basis": "name"
+        },
+        "fuel_level": {
+          "type": "number",
+          "basis": "name"
+        },
+        "avg_wait_hours": {
+          "type": "number",
+          "basis": "name"
+        },
+        "temperature": {
+          "type": "number",
+          "basis": "name"
+        },
+        "last_service_date": {
+          "type": "date",
+          "basis": "name"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "logistics",
+        "business_type": "port-conteneurs"
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "equipment_id",
+          "vessel_id",
+          "declaration_id"
+        ],
+        [
+          "daily_cycles",
+          "hydraulic_pressure",
+          "fuel_level",
+          "avg_wait_hours",
+          "temperature",
+          "last_service_date",
+          "eta",
+          "eta_drift_hours",
+          "berth_window_end",
+          "hours_in_customs",
+          "free_time_hours_left",
+          "docs_missing",
+          "inspection_flag"
+        ]
+      ],
+      "sample": [
+        "equipment_id",
+        "daily_cycles",
+        "max_cycles",
+        "avg_wait_hours",
+        "vessel_id",
+        "eta_initial",
+        "eta",
+        "berth_window_start",
+        "berth_window_end",
+        "containers_aboard",
+        "declaration_id",
+        "container_id",
+        "hours_in_customs",
+        "docs_missing",
+        "inspection_flag",
+        "free_time_hours_left"
+      ],
+      "types": {
+        "equipment_id": {
+          "type": "text",
+          "basis": "read"
+        },
+        "vessel_id": {
+          "type": "text",
+          "basis": "name"
+        },
+        "declaration_id": {
+          "type": "text",
+          "basis": "name"
+        },
+        "daily_cycles": {
+          "type": "number",
+          "basis": "name"
+        },
+        "hydraulic_pressure": {
+          "type": "number",
+          "basis": "name"
+        },
+        "fuel_level": {
+          "type": "number",
+          "basis": "name"
+        },
+        "avg_wait_hours": {
+          "type": "number",
+          "basis": "name"
+        },
+        "temperature": {
+          "type": "number",
+          "basis": "name"
+        },
+        "last_service_date": {
+          "type": "date",
+          "basis": "name"
+        },
+        "eta": {
+          "type": "date",
+          "basis": "name"
+        },
+        "eta_drift_hours": {
+          "type": "number",
+          "basis": "name"
+        },
+        "berth_window_end": {
+          "type": "date",
+          "basis": "name"
+        },
+        "hours_in_customs": {
+          "type": "number",
+          "basis": "read"
+        },
+        "free_time_hours_left": {
+          "type": "number",
+          "basis": "read"
+        },
+        "docs_missing": {
+          "type": "number",
+          "basis": "read"
+        },
+        "inspection_flag": {
+          "type": "flag",
+          "basis": "read"
+        },
+        "max_cycles": {
+          "type": "number",
+          "basis": "name"
+        },
+        "eta_initial": {
+          "type": "date",
+          "basis": "name"
+        },
+        "berth_window_start": {
+          "type": "date",
+          "basis": "name"
+        },
+        "containers_aboard": {
+          "type": "number",
+          "basis": "read"
+        },
+        "container_id": {
+          "type": "text",
+          "basis": "read"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "logistics",
+        "business_type": "transport"
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "truck_id"
+        ],
+        [
+          "engine_temp",
+          "fuel_level",
+          "mileage_km",
+          "last_service_km",
+          "oil_level",
+          "tire_age_months"
+        ]
+      ],
+      "sample": [
+        "truck_id",
+        "mileage_km",
+        "last_service_km",
+        "engine_temp",
+        "fuel_level"
+      ],
+      "types": {
+        "truck_id": {
+          "type": "text",
+          "basis": "name"
+        },
+        "engine_temp": {
+          "type": "number",
+          "basis": "name"
+        },
+        "fuel_level": {
+          "type": "number",
+          "basis": "name"
+        },
+        "mileage_km": {
+          "type": "number",
+          "basis": "name"
+        },
+        "last_service_km": {
+          "type": "number",
+          "basis": "name"
+        },
+        "oil_level": {
+          "type": "number",
+          "basis": "name"
+        },
+        "tire_age_months": {
+          "type": "number",
+          "basis": "name"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "energy",
+        "business_type": null
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "generator_id",
+          "site_id"
+        ],
+        [
+          "fuel_level_pct",
+          "coolant_temp",
+          "output_kw",
+          "load_pct",
+          "oil_pressure",
+          "runtime_hours"
+        ]
+      ],
+      "sample": [
+        "generator_id",
+        "fuel_level_pct",
+        "coolant_temp"
+      ],
+      "types": {
+        "generator_id": {
+          "type": "text",
+          "basis": "name"
+        },
+        "site_id": {
+          "type": "text",
+          "basis": "read"
+        },
+        "fuel_level_pct": {
+          "type": "number",
+          "basis": "read"
+        },
+        "coolant_temp": {
+          "type": "number",
+          "basis": "name"
+        },
+        "output_kw": {
+          "type": "number",
+          "basis": "name"
+        },
+        "load_pct": {
+          "type": "number",
+          "basis": "read"
+        },
+        "oil_pressure": {
+          "type": "number",
+          "basis": "name"
+        },
+        "runtime_hours": {
+          "type": "number",
+          "basis": "name"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "energy",
+        "business_type": "centrale-production"
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "generator_id",
+          "site_id"
+        ],
+        [
+          "fuel_level_pct",
+          "coolant_temp",
+          "output_kw",
+          "load_pct",
+          "oil_pressure",
+          "runtime_hours"
+        ]
+      ],
+      "sample": [
+        "generator_id",
+        "output_kw",
+        "rated_kw",
+        "fuel_level_pct",
+        "coolant_temp"
+      ],
+      "types": {
+        "generator_id": {
+          "type": "text",
+          "basis": "name"
+        },
+        "site_id": {
+          "type": "text",
+          "basis": "read"
+        },
+        "fuel_level_pct": {
+          "type": "number",
+          "basis": "read"
+        },
+        "coolant_temp": {
+          "type": "number",
+          "basis": "name"
+        },
+        "output_kw": {
+          "type": "number",
+          "basis": "name"
+        },
+        "load_pct": {
+          "type": "number",
+          "basis": "read"
+        },
+        "oil_pressure": {
+          "type": "number",
+          "basis": "name"
+        },
+        "runtime_hours": {
+          "type": "number",
+          "basis": "name"
+        },
+        "rated_kw": {
+          "type": "number",
+          "basis": "read"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "energy",
+        "business_type": "distribution-energetique"
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "generator_id",
+          "site_id"
+        ],
+        [
+          "fuel_level_pct",
+          "coolant_temp",
+          "output_kw",
+          "load_pct",
+          "oil_pressure",
+          "runtime_hours"
+        ]
+      ],
+      "sample": [
+        "site_id",
+        "generator_id",
+        "fuel_level_pct",
+        "load_pct",
+        "rated_kw"
+      ],
+      "types": {
+        "generator_id": {
+          "type": "text",
+          "basis": "name"
+        },
+        "site_id": {
+          "type": "text",
+          "basis": "read"
+        },
+        "fuel_level_pct": {
+          "type": "number",
+          "basis": "read"
+        },
+        "coolant_temp": {
+          "type": "number",
+          "basis": "name"
+        },
+        "output_kw": {
+          "type": "number",
+          "basis": "name"
+        },
+        "load_pct": {
+          "type": "number",
+          "basis": "read"
+        },
+        "oil_pressure": {
+          "type": "number",
+          "basis": "name"
+        },
+        "runtime_hours": {
+          "type": "number",
+          "basis": "name"
+        },
+        "rated_kw": {
+          "type": "number",
+          "basis": "read"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "retail",
+        "business_type": null
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "product_name",
+          "sku",
+          "store_id"
+        ],
+        [
+          "stock_qty",
+          "sales_last_30_days",
+          "sales_last_7_days",
+          "expiry_date",
+          "last_sale_date",
+          "shrinkage_rate",
+          "foot_traffic",
+          "pos_downtime_minutes"
+        ]
+      ],
+      "sample": [
+        "product_name",
+        "stock_qty",
+        "min_stock",
+        "unit_cost"
+      ],
+      "types": {
+        "product_name": {
+          "type": "text",
+          "basis": "read"
+        },
+        "sku": {
+          "type": "text",
+          "basis": "name"
+        },
+        "store_id": {
+          "type": "text",
+          "basis": "read"
+        },
+        "stock_qty": {
+          "type": "number",
+          "basis": "read"
+        },
+        "sales_last_30_days": {
+          "type": "number",
+          "basis": "read"
+        },
+        "sales_last_7_days": {
+          "type": "number",
+          "basis": "name"
+        },
+        "expiry_date": {
+          "type": "date",
+          "basis": "read"
+        },
+        "last_sale_date": {
+          "type": "date",
+          "basis": "name"
+        },
+        "shrinkage_rate": {
+          "type": "number",
+          "basis": "name"
+        },
+        "foot_traffic": {
+          "type": "number",
+          "basis": "name"
+        },
+        "pos_downtime_minutes": {
+          "type": "number",
+          "basis": "name"
+        },
+        "min_stock": {
+          "type": "number",
+          "basis": "read"
+        },
+        "unit_cost": {
+          "type": "number",
+          "basis": "read"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "retail",
+        "business_type": "supermarche-hypermarche"
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "product_name",
+          "sku",
+          "store_id"
+        ],
+        [
+          "stock_qty",
+          "sales_last_30_days",
+          "sales_last_7_days",
+          "expiry_date",
+          "last_sale_date",
+          "shrinkage_rate",
+          "foot_traffic",
+          "pos_downtime_minutes"
+        ]
+      ],
+      "sample": [
+        "product_name",
+        "stock_qty",
+        "min_stock",
+        "unit_cost",
+        "expiry_date",
+        "last_sale_date",
+        "sales_last_30_days"
+      ],
+      "types": {
+        "product_name": {
+          "type": "text",
+          "basis": "read"
+        },
+        "sku": {
+          "type": "text",
+          "basis": "name"
+        },
+        "store_id": {
+          "type": "text",
+          "basis": "read"
+        },
+        "stock_qty": {
+          "type": "number",
+          "basis": "read"
+        },
+        "sales_last_30_days": {
+          "type": "number",
+          "basis": "read"
+        },
+        "sales_last_7_days": {
+          "type": "number",
+          "basis": "name"
+        },
+        "expiry_date": {
+          "type": "date",
+          "basis": "read"
+        },
+        "last_sale_date": {
+          "type": "date",
+          "basis": "name"
+        },
+        "shrinkage_rate": {
+          "type": "number",
+          "basis": "name"
+        },
+        "foot_traffic": {
+          "type": "number",
+          "basis": "name"
+        },
+        "pos_downtime_minutes": {
+          "type": "number",
+          "basis": "name"
+        },
+        "min_stock": {
+          "type": "number",
+          "basis": "read"
+        },
+        "unit_cost": {
+          "type": "number",
+          "basis": "read"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "retail",
+        "business_type": "epicerie-proximite"
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "product_name",
+          "sku",
+          "store_id"
+        ],
+        [
+          "stock_qty",
+          "sales_last_30_days",
+          "sales_last_7_days",
+          "expiry_date",
+          "last_sale_date",
+          "shrinkage_rate",
+          "foot_traffic",
+          "pos_downtime_minutes"
+        ]
+      ],
+      "sample": [
+        "product_name",
+        "stock_qty",
+        "min_stock",
+        "unit_cost",
+        "last_sale_date",
+        "sales_last_30_days"
+      ],
+      "types": {
+        "product_name": {
+          "type": "text",
+          "basis": "read"
+        },
+        "sku": {
+          "type": "text",
+          "basis": "name"
+        },
+        "store_id": {
+          "type": "text",
+          "basis": "read"
+        },
+        "stock_qty": {
+          "type": "number",
+          "basis": "read"
+        },
+        "sales_last_30_days": {
+          "type": "number",
+          "basis": "read"
+        },
+        "sales_last_7_days": {
+          "type": "number",
+          "basis": "name"
+        },
+        "expiry_date": {
+          "type": "date",
+          "basis": "read"
+        },
+        "last_sale_date": {
+          "type": "date",
+          "basis": "name"
+        },
+        "shrinkage_rate": {
+          "type": "number",
+          "basis": "name"
+        },
+        "foot_traffic": {
+          "type": "number",
+          "basis": "name"
+        },
+        "pos_downtime_minutes": {
+          "type": "number",
+          "basis": "name"
+        },
+        "min_stock": {
+          "type": "number",
+          "basis": "read"
+        },
+        "unit_cost": {
+          "type": "number",
+          "basis": "read"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "retail",
+        "business_type": "chaine-magasins"
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "store_id"
+        ],
+        [
+          "product_name",
+          "sku"
+        ],
+        [
+          "stock_qty"
+        ]
+      ],
+      "sample": [
+        "store_id",
+        "product_name",
+        "stock_qty",
+        "min_stock",
+        "sales_last_30_days",
+        "unit_cost"
+      ],
+      "types": {
+        "store_id": {
+          "type": "text",
+          "basis": "read"
+        },
+        "product_name": {
+          "type": "text",
+          "basis": "read"
+        },
+        "sku": {
+          "type": "text",
+          "basis": "name"
+        },
+        "stock_qty": {
+          "type": "number",
+          "basis": "read"
+        },
+        "min_stock": {
+          "type": "number",
+          "basis": "read"
+        },
+        "sales_last_30_days": {
+          "type": "number",
+          "basis": "read"
+        },
+        "unit_cost": {
+          "type": "number",
+          "basis": "read"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "retail",
+        "business_type": "grossiste-distributeur"
+      },
+      "alias_of": null,
+      "required": [
+        [
+          "client_name",
+          "client_id"
+        ],
+        [
+          "order_date",
+          "amount",
+          "order_amount",
+          "outstanding_balance"
+        ]
+      ],
+      "sample": [
+        "client_name",
+        "order_date",
+        "amount",
+        "outstanding_balance"
+      ],
+      "types": {
+        "client_name": {
+          "type": "text",
+          "basis": "read"
+        },
+        "client_id": {
+          "type": "text",
+          "basis": "name"
+        },
+        "order_date": {
+          "type": "date",
+          "basis": "read"
+        },
+        "amount": {
+          "type": "number",
+          "basis": "read"
+        },
+        "order_amount": {
+          "type": "number",
+          "basis": "name"
+        },
+        "outstanding_balance": {
+          "type": "number",
+          "basis": "read"
+        }
+      }
+    },
+    {
+      "key": {
+        "sector": "health",
+        "business_type": null
+      },
+      "alias_of": "health/pharmacie",
+      "required": [
+        [
+          "medicine_name"
+        ],
+        [
+          "stock_qty"
+        ]
+      ],
+      "sample": [
+        "medicine_name",
+        "stock_qty",
+        "min_stock",
+        "sales_last_30_days",
+        "unit_cost",
+        "expiry_date"
+      ],
+      "types": {
+        "medicine_name": {
+          "type": "text",
+          "basis": "read"
+        },
+        "stock_qty": {
+          "type": "number",
+          "basis": "read"
+        },
+        "min_stock": {
+          "type": "number",
+          "basis": "read"
+        },
+        "sales_last_30_days": {
+          "type": "number",
+          "basis": "read"
+        },
+        "unit_cost": {
+          "type": "number",
+          "basis": "read"
+        },
+        "expiry_date": {
+          "type": "date",
+          "basis": "read"
+        }
+      }
+    }
+  ]
+}

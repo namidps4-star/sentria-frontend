@@ -5,6 +5,8 @@ import { AlertTriangle, Check, FileDown, FileUp, Loader2, SearchCheck } from "@/
 
 import { useTx } from "@/lib/i18n"
 import type { UploadState } from "@/lib/upload"
+import { fieldLabel } from "@/lib/upload-fields"
+import { setUploadPanel } from "@/lib/upload-panel"
 import { templateCsv, type UploadTeach } from "@/lib/upload-problem"
 import { cn } from "@/lib/utils"
 
@@ -30,7 +32,8 @@ export function UploadProgress({ state, compact = false }: { state: UploadState;
 
   const sending = state.phase === "sending"
   const analysing = state.phase === "analysing"
-  const finished = state.phase === "done" || state.phase === "refused" || state.phase === "failed"
+  const matching = state.phase === "matching"
+  const finished = state.phase === "done" || state.phase === "refused" || state.phase === "failed" || matching
   const knownPct = sending ? state.sentPct : 100
   const sentPct = knownPct ?? 0
   const since = sending ? state.sendingSince : analysing ? state.analysingSince : undefined
@@ -64,7 +67,7 @@ export function UploadProgress({ state, compact = false }: { state: UploadState;
 
   return (
     <div className={cn("w-full", !compact && "space-y-4")} aria-live="polite">
-      {!compact && state.fileName && (
+      {!compact && state.fileName && state.phase !== "matching" && state.phase !== "refused" && (
         <p className="truncate text-sm font-medium" title={state.fileName}>{state.fileName}</p>
       )}
 
@@ -145,9 +148,14 @@ export function UploadProgress({ state, compact = false }: { state: UploadState;
 
       {state.phase === "refused" && state.missing && state.fileColumns && state.retry && (
         <MatchColumns
+          fileName={state.fileName}
+          rows={state.rows}
+          expected={state.expected ?? []}
+          required={state.required ?? []}
           missing={state.missing}
           fileColumns={state.fileColumns}
-          teach={state.teach}
+          suggested={state.suggested}
+          confidence={state.confidence}
           retry={state.retry}
         />
       )}
@@ -157,52 +165,155 @@ export function UploadProgress({ state, compact = false }: { state: UploadState;
   )
 }
 
-/** Matches the file's own columns to the names it is missing, then runs the
- *  import again with that matching (the `mapping` sent to /upload). */
-function MatchColumns({
+/** The matching screen. One row per field, the server's suggestion already chosen,
+ *  a status for each, and Import off until every required field has a column. Nothing
+ *  has been sent when it shows; Import sends the file with the matching (`mapping`). */
+/** The fields the stock alerts read, and the one the expiry alerts read. */
+const STOCK_FIELDS = ["min_stock", "sales_last_30_days"]
+
+export function MatchColumns({
+  fileName,
+  rows,
+  expected,
+  required,
   missing,
   fileColumns,
-  teach,
+  suggested,
+  confidence,
   retry,
 }: {
+  fileName?: string
+  rows?: number
+  expected: string[]
+  required: string[]
   missing: string[][]
   fileColumns: string[]
-  teach?: UploadTeach
+  suggested?: Record<string, string>
+  confidence?: Record<string, "exact" | "close">
   retry: NonNullable<UploadState["retry"]>
 }) {
   const tx = useTx()
-  const names = missing.map((group) => group[0])
-  const [choice, setChoice] = useState<Record<string, string>>({})
-  const ready = names.every((name) => choice[name])
+  const names = expected.length > 0 ? expected : missing.map((group) => group[0])
+  const requiredNames = required.length > 0 ? required : missing.map((group) => group[0])
+  const [choice, setChoice] = useState<Record<string, string>>(() => {
+    const start: Record<string, string> = {}
+    for (const name of names) {
+      if (fileColumns.includes(name)) start[name] = name
+      else if (suggested?.[name] && fileColumns.includes(suggested[name])) start[name] = suggested[name]
+    }
+    return start
+  })
+
+  // A column the user picked is confirmed, so it is recognised like an exact match.
+  const [confirmed, setConfirmed] = useState<Record<string, boolean>>({})
+  const statusOf = (name: string): "ok" | "check" | "missing" | "recommended" => {
+    const column = choice[name]
+    if (!column) return requiredNames.includes(name) ? "missing" : "recommended"
+    return column === name || confidence?.[name] === "exact" || confirmed[name] ? "ok" : "check"
+  }
+  const recognised = names.filter((name) => statusOf(name) === "ok").length
+  const questions = names.filter((name) => statusOf(name) === "check" || statusOf(name) === "missing").length
+  const ready = requiredNames.every((name) => choice[name])
+  // The upload needs only the required fields, but the alerts need the others: say what a gap costs.
+  const unmatchedRecommended = names.filter((name) => !requiredNames.includes(name) && !choice[name])
+  // What the banner says is blocked, and which alerts a gap switches off.
+  const blocking = requiredNames.filter((name) => !choice[name]).map((name) => fieldLabel(name, tx))
+  const stockOff = names.some((name) => STOCK_FIELDS.includes(name) && !choice[name])
+  const expiryOff = names.some((name) => name === "expiry_date" && !choice[name])
   const taken = new Set(Object.values(choice))
+  const count = (value: number) => value.toLocaleString(tx("fr-FR", "en-GB"))
+
+  const fileLabel =
+    fileName && rows !== undefined
+      ? `${fileName} · ${count(rows)} ${tx(rows === 1 ? "ligne" : "lignes", rows === 1 ? "row" : "rows")}`
+      : fileName ?? ""
+  const importLabel =
+    rows !== undefined ? tx(`Importer ${count(rows)} lignes`, `Import ${count(rows)} rows`) : tx("Importer le fichier", "Import the file")
 
   return (
-    <section className="mt-5 flex flex-col gap-4" data-testid="upload-match">
+    <section className="mt-2 flex flex-col gap-5" data-testid="upload-match">
       <div>
-        <p className="font-heading text-2xl font-semibold leading-tight tracking-tight">
+        {fileLabel && (
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{fileLabel}</p>
+        )}
+        <p className="mt-1 font-heading text-3xl font-semibold leading-tight tracking-tight">
           {tx("Associez vos colonnes.", "Match your columns.")}
         </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {tx("Pour chaque champ, la colonne de votre fichier.", "For each field, the column in your file.")}
+        <p className="mt-2 text-sm text-muted-foreground">
+          {tx(
+            `SentrIA a reconnu ${recognised} champ${recognised === 1 ? "" : "s"}. Il reste ${questions} question${questions === 1 ? "" : "s"}.`,
+            `SentrIA recognised ${recognised} field${recognised === 1 ? "" : "s"}. ${questions} question${questions === 1 ? "" : "s"} left.`
+          )}
         </p>
       </div>
 
-      <ul className="flex flex-col border-y border-border">
+      <div data-testid="upload-banner" className="rounded-3xl bg-[var(--ink)] px-5 py-4 text-white">
+        <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-brand">
+          {tx("Avant l'import", "Before you import")}
+        </p>
+        <p className="mt-1 font-heading text-xl font-semibold tracking-tight">
+          {blocking.length > 0
+            ? tx(
+                `Associez ${blocking.length} colonne${blocking.length > 1 ? "s" : ""} pour continuer`,
+                `Match ${blocking.length} column${blocking.length > 1 ? "s" : ""} to continue`
+              )
+            : tx("Prêt à importer", "Ready to import")}
+        </p>
+        <dl className="mt-3 grid grid-cols-1 gap-3 border-t border-white/20 pt-3 text-sm sm:grid-cols-3">
+          <div>
+            <dt className="text-[11px] font-bold uppercase tracking-[0.06em] text-brand">{tx("Bloque", "Blocks")}</dt>
+            <dd className="mt-1">{blocking.length > 0 ? blocking.join(", ") : tx("Rien", "Nothing")}</dd>
+          </div>
+          <div>
+            <dt className="text-[11px] font-bold uppercase tracking-[0.06em] text-brand">{tx("Alertes stock", "Stock alerts")}</dt>
+            <dd className="mt-1">{stockOff ? tx("Désactivées", "Off") : tx("Activées", "On")}</dd>
+          </div>
+          <div>
+            <dt className="text-[11px] font-bold uppercase tracking-[0.06em] text-brand">{tx("Alertes péremption", "Expiry alerts")}</dt>
+            <dd className="mt-1">{expiryOff ? tx("Désactivées", "Off") : tx("Activées", "On")}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div className="hidden grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto] gap-4 text-[11px] font-bold uppercase tracking-[0.06em] text-muted-foreground sm:grid">
+        <span>{tx("Champ", "Field")}</span>
+        <span>{tx("Colonne de votre fichier", "Column in your file")}</span>
+        <span className="text-right">{tx("Statut", "Status")}</span>
+      </div>
+
+      <ul className="flex flex-col divide-y divide-border border-y border-border">
         {names.map((name) => {
-          const why = teach?.explain.find((item) => item.column === name)?.why
+          const label = fieldLabel(name, tx)
+          const status = statusOf(name)
+          const tone =
+            status === "ok"
+              ? "bg-brand/30 text-foreground"
+              : status === "check"
+                ? "bg-muted text-foreground ring-1 ring-border"
+                : status === "missing"
+                  ? "bg-destructive/15 text-destructive"
+                  : "bg-brand/10 text-foreground ring-1 ring-border"
+          const text =
+            status === "ok"
+              ? tx("Reconnu", "Recognised")
+              : status === "check"
+                ? tx("À vérifier", "To check")
+                : status === "missing"
+                  ? tx("Manquant", "Missing")
+                  : tx("Recommandé", "Recommended")
 
           return (
-            <li key={name} className="flex flex-col gap-2 border-b border-border py-3 last:border-b-0">
-              <div>
-                <p className="text-sm font-bold">{name}</p>
-                {why && <p className="text-xs text-muted-foreground">{why}</p>}
-              </div>
+            <li key={name} className="grid grid-cols-1 gap-2 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto] sm:items-center sm:gap-4">
+              <p className="font-heading text-lg font-semibold leading-tight">{label}</p>
               <select
-                aria-label={name}
+                aria-label={label}
                 data-testid={`match-${name}`}
                 value={choice[name] ?? ""}
-                onChange={(event) => setChoice((current) => ({ ...current, [name]: event.target.value }))}
-                className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onChange={(event) => {
+                  setChoice((current) => ({ ...current, [name]: event.target.value }))
+                  setConfirmed((current) => ({ ...current, [name]: true }))
+                }}
+                className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="">{tx("Choisir une colonne", "Choose a column")}</option>
                 {fileColumns
@@ -213,20 +324,44 @@ function MatchColumns({
                     </option>
                   ))}
               </select>
+              <span
+                data-testid={`status-${name}`}
+                className={cn("justify-self-start rounded-full px-3 py-1 text-xs font-semibold sm:justify-self-end", tone)}
+              >
+                {text}
+              </span>
             </li>
           )
         })}
       </ul>
 
-      <button
-        type="button"
-        data-testid="upload-match-submit"
-        disabled={!ready}
-        onClick={() => void retry(choice)}
-        className="h-12 rounded-full bg-brand text-sm font-bold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-      >
-        {tx("Importer avec ces colonnes", "Import with these columns")}
-      </button>
+      {unmatchedRecommended.length > 0 && (
+        <p role="status" className="text-sm text-muted-foreground">
+          {tx(
+            "Sans ces colonnes, certaines alertes (stock, péremption) ne se déclencheront pas.",
+            "Without these columns, some alerts (stock, expiry) won't fire."
+          )}
+        </p>
+      )}
+
+      <div className="flex items-center gap-4">
+        <button
+          type="button"
+          onClick={() => setUploadPanel({ open: false })}
+          className="shrink-0 text-sm font-semibold underline underline-offset-4 hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {tx("Annuler", "Cancel")}
+        </button>
+        <button
+          type="button"
+          data-testid="upload-match-submit"
+          disabled={!ready}
+          onClick={() => void retry(choice)}
+          className="h-12 flex-1 rounded-full bg-brand text-sm font-bold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
+        >
+          {importLabel}
+        </button>
+      </div>
     </section>
   )
 }

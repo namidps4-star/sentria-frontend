@@ -1,0 +1,20 @@
+{
+  "example": true,
+  "export": "EXAMPLE stock list (invented headers, not a real export)",
+  "client": "EXAMPLE client label",
+  "sector": "health",
+  "business_type": "pharmacie",
+  "source_headers": ["Item", "On hand", "Reorder level", "Unit price", "Best before", "Remarks"],
+  "columns": {
+    "Item": "medicine_name",
+    "On hand": {"to": "stock_qty", "strip_unit": true},
+    "Reorder level": "min_stock",
+    "Unit price": "unit_cost",
+    "Best before": {"to": "expiry_date", "date_in": "%b-%y", "month_end": true}
+  },
+  "assumptions": [
+    "On hand carries a unit after the number (for example '42 pcs'); strip_unit removes it.",
+    "Best before is a month and year ('Mar-27') and means the last day of that month.",
+    "Remarks is a free-text column the backend does not read; it has no entry."
+  ]
+}

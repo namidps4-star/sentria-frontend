@@ -19,6 +19,8 @@ const REFUSED = {
   example: { header: ['medicine_name', 'stock_qty'], row: ['Paracetamol 500mg', '120'] },
 };
 const DONE = { rows_processed: 3, alerts_fired: 1, saves_failed: 0 };
+// The check-only answer (api/main.py with check_only=true, pipeline/upload_check.py preflight_body).
+const PREFLIGHT = { ...REFUSED, success: false, outcome: 'refused', suggested_mapping: {} };
 
 (async () => {
   const browser = await chromium.launch(LAUNCH);
@@ -29,6 +31,7 @@ const DONE = { rows_processed: 3, alerts_fired: 1, saves_failed: 0 };
       const u = new URL(r.request().url());
       if (u.pathname === '/upload') {
         const body = r.request().postData() || '';
+        if (u.searchParams.get('check_only') === 'true') return r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(PREFLIGHT) });
         p._posts.push(body);
         const mapped = /name="mapping"/.test(body);
         if (!mapped) return r.fulfill({ status: 422, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(REFUSED) });
@@ -53,7 +56,7 @@ const DONE = { rows_processed: 3, alerts_fired: 1, saves_failed: 0 };
     pass(await p.getByTestId('match-medicine_name').isVisible() && await p.getByTestId('match-stock_qty').isVisible(), 'one dropdown per missing field');
     const options = await p.getByTestId('match-medicine_name').locator('option').allInnerTexts();
     pass(options.includes('product') && options.includes('quantity') && options.includes('sales_last_30_days'), "the dropdown lists the file's own columns");
-    pass(/every alert points to it/.test(await match.innerText()), 'each field keeps its plain reason');
+    pass(/Recognised|To check|Missing/.test(await p.getByTestId('status-medicine_name').innerText()), 'each field shows its status');
     const submit = p.getByTestId('upload-match-submit');
     pass(await submit.isDisabled(), 'Import stays off until every field has a column');
     await p.getByTestId('match-medicine_name').selectOption('product');
@@ -81,7 +84,7 @@ const DONE = { rows_processed: 3, alerts_fired: 1, saves_failed: 0 };
   console.log('== French, dark and phone');
   { const { p, ctx } = await open({ lang: 'fr', theme: 'dark' });
     pass(/Associez vos colonnes/.test(await p.getByTestId('upload-match').innerText()), 'French headline');
-    pass(/Importer avec ces colonnes/.test(await p.getByTestId('upload-match-submit').innerText()), 'French button');
+    pass(/Importer le fichier/.test(await p.getByTestId('upload-match-submit').innerText()), 'French button');
     await p.screenshot({ path: 'uploadmatch-dark.png' });
     await ctx.close(); }
   { const { p, ctx } = await open({ vw: 390 });

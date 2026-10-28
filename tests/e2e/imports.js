@@ -14,6 +14,8 @@ const panelText = p => p.evaluate(() => document.querySelector('[role=dialog][ar
     const p = await browser.newPage({ viewport: { width: 1440, height: 900 }, locale: 'en-US' });
     p._errors = []; p.on('pageerror', e => p._errors.push(e.message)); p._uploads = [];
     await p.route(/onrender\.com\//, async r => { const u = new URL(r.request().url());
+      // The pre-send check (check_only) answers at once: the file is accepted unless a test says otherwise.
+      if (u.pathname === '/upload' && u.searchParams.get('check_only') === 'true') return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, outcome: 'accepted', file_columns: [], suggested_mapping: {} }) });
       if (u.pathname === '/upload') { p._uploads.push({ bt: u.searchParams.get('business_type'), auth: r.request().headers()['authorization'] }); return onUpload(r, u); }
       r.fulfill({ status: 200, contentType: 'application/json', body: u.pathname === '/alerts' ? '[]' : '{"recommendations":[],"assignments":[],"contractors":[]}' }); });
     await p.addInitScript(ls => { if (!sessionStorage.x) { sessionStorage.x = 1; localStorage.clear(); for (const [k, v] of Object.entries(ls)) localStorage.setItem(k, v); } }, { sentria_language: 'en', ...(ls || {}) });
