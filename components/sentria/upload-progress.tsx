@@ -203,14 +203,16 @@ export function MatchColumns({
 
   // A column the user picked is confirmed, so it is recognised like an exact match.
   const [confirmed, setConfirmed] = useState<Record<string, boolean>>({})
-  const statusOf = (name: string): "ok" | "check" | "missing" | "optional" => {
+  const statusOf = (name: string): "ok" | "check" | "missing" | "recommended" => {
     const column = choice[name]
-    if (!column) return requiredNames.includes(name) ? "missing" : "optional"
+    if (!column) return requiredNames.includes(name) ? "missing" : "recommended"
     return column === name || confidence?.[name] === "exact" || confirmed[name] ? "ok" : "check"
   }
   const recognised = names.filter((name) => statusOf(name) === "ok").length
   const questions = names.filter((name) => statusOf(name) === "check" || statusOf(name) === "missing").length
   const ready = requiredNames.every((name) => choice[name])
+  // The upload needs only the required fields, but the alerts need the others: say what a gap costs.
+  const unmatchedRecommended = names.filter((name) => !requiredNames.includes(name) && !choice[name])
   const taken = new Set(Object.values(choice))
   const count = (value: number) => value.toLocaleString(tx("fr-FR", "en-GB"))
 
@@ -249,7 +251,7 @@ export function MatchColumns({
                 ? "bg-muted text-foreground ring-1 ring-border"
                 : status === "missing"
                   ? "bg-destructive/15 text-destructive"
-                  : "bg-muted text-muted-foreground"
+                  : "bg-brand/10 text-foreground ring-1 ring-border"
           const text =
             status === "ok"
               ? tx("Reconnu", "Recognised")
@@ -257,7 +259,7 @@ export function MatchColumns({
                 ? tx("À vérifier", "To check")
                 : status === "missing"
                   ? tx("Manquant", "Missing")
-                  : tx("Optionnel", "Optional")
+                  : tx("Recommandé", "Recommended")
 
           return (
             <li key={name} className="grid grid-cols-1 gap-2 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto] sm:items-center sm:gap-4">
@@ -291,6 +293,15 @@ export function MatchColumns({
           )
         })}
       </ul>
+
+      {unmatchedRecommended.length > 0 && (
+        <p role="status" className="text-sm text-muted-foreground">
+          {tx(
+            "Sans ces colonnes, certaines alertes (stock, péremption) ne se déclencheront pas.",
+            "Without these columns, some alerts (stock, expiry) won't fire."
+          )}
+        </p>
+      )}
 
       <div className="flex items-center gap-4">
         <button
