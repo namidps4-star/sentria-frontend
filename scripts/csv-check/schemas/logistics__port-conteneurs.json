@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "key": "logistics/port-conteneurs",
+  "sector": "logistics",
+  "activity": "port-conteneurs",
+  "alias_of": null,
+  "single_store": false,
+  "required": [
+    [
+      "equipment_id",
+      "vessel_id",
+      "declaration_id"
+    ],
+    [
+      "daily_cycles",
+      "hydraulic_pressure",
+      "fuel_level",
+      "avg_wait_hours",
+      "temperature",
+      "last_service_date",
+      "eta",
+      "eta_drift_hours",
+      "berth_window_end",
+      "hours_in_customs",
+      "free_time_hours_left",
+      "docs_missing",
+      "inspection_flag"
+    ]
+  ],
+  "sample": [
+    "equipment_id",
+    "daily_cycles",
+    "max_cycles",
+    "avg_wait_hours",
+    "vessel_id",
+    "eta_initial",
+    "eta",
+    "berth_window_start",
+    "berth_window_end",
+    "containers_aboard",
+    "declaration_id",
+    "container_id",
+    "hours_in_customs",
+    "docs_missing",
+    "inspection_flag",
+    "free_time_hours_left"
+  ],
+  "types": {
+    "equipment_id": "text",
+    "vessel_id": "text",
+    "declaration_id": "text",
+    "daily_cycles": "number",
+    "hydraulic_pressure": "number",
+    "fuel_level": "number",
+    "avg_wait_hours": "number",
+    "temperature": "number",
+    "last_service_date": "date",
+    "eta": "date",
+    "eta_drift_hours": "number",
+    "berth_window_end": "date",
+    "hours_in_customs": "number",
+    "free_time_hours_left": "number",
+    "docs_missing": "number",
+    "inspection_flag": "flag",
+    "max_cycles": "number",
+    "eta_initial": "date",
+    "berth_window_start": "date",
+    "containers_aboard": "number",
+    "container_id": "text"
+  },
+  "type_basis": {
+    "equipment_id": "read",
+    "vessel_id": "name",
+    "declaration_id": "name",
+    "daily_cycles": "name",
+    "hydraulic_pressure": "name",
+    "fuel_level": "name",
+    "avg_wait_hours": "name",
+    "temperature": "name",
+    "last_service_date": "name",
+    "eta": "name",
+    "eta_drift_hours": "name",
+    "berth_window_end": "name",
+    "hours_in_customs": "read",
+    "free_time_hours_left": "read",
+    "docs_missing": "read",
+    "inspection_flag": "read",
+    "max_cycles": "name",
+    "eta_initial": "name",
+    "berth_window_start": "name",
+    "containers_aboard": "read",
+    "container_id": "read"
+  },
+  "date_formats": [
+    "%Y-%m-%d",
+    "%d/%m/%Y",
+    "%m/%d/%Y",
+    "%Y/%m/%d",
+    "%d-%m-%Y"
+  ],
+  "yes_words": {
+    "alerts": [
+      "1",
+      "o",
+      "oui",
+      "true",
+      "y",
+      "yes"
+    ],
+    "port_flow": [
+      "1",
+      "1.0",
+      "o",
+      "oui",
+      "true",
+      "x",
+      "y",
+      "yes"
+    ]
+  },
+  "no_words": [
+    "0",
+    "0.0",
+    "false",
+    "no",
+    "n",
+    "non"
+  ],
+  "source": {
+    "backend_commit": "45e8b06e5d7e6ba2c7b6dd578c00f70e56ae7ad7",
+    "spec": "pipeline/upload_check.py SPECS",
+    "date_formats": "pipeline/alerts.py _parse_date",
+    "yes_words": "pipeline/alerts.py, pipeline/port_flow.py literal tuples"
+  }
+}

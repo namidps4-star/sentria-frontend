@@ -1,0 +1,22 @@
+{
+  "client": "EXAMPLE pharmacy (invented headers, not a real client)",
+  "sector": "health",
+  "activity": "pharmacie",
+  "source_headers": [
+    "Article",
+    "Qte stock",
+    "Seuil",
+    "Ventes 30 j",
+    "Prix achat",
+    "Peremption",
+    "Notes"
+  ],
+  "columns": {
+    "Article": {"name": "medicine_name"},
+    "Qte stock": {"name": "stock_qty", "strip_unit": true},
+    "Seuil": {"name": "min_stock"},
+    "Ventes 30 j": {"name": "sales_last_30_days"},
+    "Prix achat": {"name": "unit_cost"},
+    "Peremption": {"name": "expiry_date", "date_in": "%d.%m.%Y"}
+  }
+}

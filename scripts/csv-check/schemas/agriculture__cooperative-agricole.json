@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "key": "agriculture/cooperative-agricole",
+  "sector": "agriculture",
+  "activity": "cooperative-agricole",
+  "alias_of": null,
+  "single_store": false,
+  "required": [
+    [
+      "product_name"
+    ],
+    [
+      "days_in_storage",
+      "storage_temp",
+      "scheduled_pickup",
+      "actual_pickup"
+    ]
+  ],
+  "sample": [
+    "member_id",
+    "product_name",
+    "days_in_storage",
+    "spare_capacity_kg",
+    "qty",
+    "unit_cost"
+  ],
+  "types": {
+    "product_name": "text",
+    "days_in_storage": "number",
+    "storage_temp": "number",
+    "scheduled_pickup": "date",
+    "actual_pickup": "date",
+    "member_id": "text",
+    "spare_capacity_kg": "number",
+    "qty": "number",
+    "unit_cost": "number"
+  },
+  "type_basis": {
+    "product_name": "read",
+    "days_in_storage": "read",
+    "storage_temp": "name",
+    "scheduled_pickup": "read",
+    "actual_pickup": "read",
+    "member_id": "read",
+    "spare_capacity_kg": "name",
+    "qty": "read",
+    "unit_cost": "read"
+  },
+  "date_formats": [
+    "%Y-%m-%d",
+    "%d/%m/%Y",
+    "%m/%d/%Y",
+    "%Y/%m/%d",
+    "%d-%m-%Y"
+  ],
+  "yes_words": {
+    "alerts": [
+      "1",
+      "o",
+      "oui",
+      "true",
+      "y",
+      "yes"
+    ],
+    "port_flow": [
+      "1",
+      "1.0",
+      "o",
+      "oui",
+      "true",
+      "x",
+      "y",
+      "yes"
+    ]
+  },
+  "no_words": [
+    "0",
+    "0.0",
+    "false",
+    "no",
+    "n",
+    "non"
+  ],
+  "source": {
+    "backend_commit": "45e8b06e5d7e6ba2c7b6dd578c00f70e56ae7ad7",
+    "spec": "pipeline/upload_check.py SPECS",
+    "date_formats": "pipeline/alerts.py _parse_date",
+    "yes_words": "pipeline/alerts.py, pipeline/port_flow.py literal tuples"
+  }
+}

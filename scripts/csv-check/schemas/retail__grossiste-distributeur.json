@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "key": "retail/grossiste-distributeur",
+  "sector": "retail",
+  "activity": "grossiste-distributeur",
+  "alias_of": null,
+  "single_store": false,
+  "required": [
+    [
+      "client_name",
+      "client_id"
+    ],
+    [
+      "order_date",
+      "amount",
+      "order_amount",
+      "outstanding_balance"
+    ]
+  ],
+  "sample": [
+    "client_name",
+    "order_date",
+    "amount",
+    "outstanding_balance"
+  ],
+  "types": {
+    "client_name": "text",
+    "client_id": "text",
+    "order_date": "date",
+    "amount": "number",
+    "order_amount": "number",
+    "outstanding_balance": "number"
+  },
+  "type_basis": {
+    "client_name": "read",
+    "client_id": "name",
+    "order_date": "read",
+    "amount": "read",
+    "order_amount": "name",
+    "outstanding_balance": "read"
+  },
+  "date_formats": [
+    "%Y-%m-%d",
+    "%d/%m/%Y",
+    "%m/%d/%Y",
+    "%Y/%m/%d",
+    "%d-%m-%Y"
+  ],
+  "yes_words": {
+    "alerts": [
+      "1",
+      "o",
+      "oui",
+      "true",
+      "y",
+      "yes"
+    ],
+    "port_flow": [
+      "1",
+      "1.0",
+      "o",
+      "oui",
+      "true",
+      "x",
+      "y",
+      "yes"
+    ]
+  },
+  "no_words": [
+    "0",
+    "0.0",
+    "false",
+    "no",
+    "n",
+    "non"
+  ],
+  "source": {
+    "backend_commit": "45e8b06e5d7e6ba2c7b6dd578c00f70e56ae7ad7",
+    "spec": "pipeline/upload_check.py SPECS",
+    "date_formats": "pipeline/alerts.py _parse_date",
+    "yes_words": "pipeline/alerts.py, pipeline/port_flow.py literal tuples"
+  }
+}

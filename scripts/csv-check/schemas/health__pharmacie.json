@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "key": "health/pharmacie",
+  "sector": "health",
+  "activity": "pharmacie",
+  "alias_of": null,
+  "single_store": false,
+  "required": [
+    [
+      "medicine_name"
+    ],
+    [
+      "stock_qty"
+    ]
+  ],
+  "sample": [
+    "medicine_name",
+    "stock_qty",
+    "min_stock",
+    "sales_last_30_days",
+    "unit_cost",
+    "expiry_date"
+  ],
+  "types": {
+    "medicine_name": "text",
+    "stock_qty": "number",
+    "min_stock": "number",
+    "sales_last_30_days": "number",
+    "unit_cost": "number",
+    "expiry_date": "date"
+  },
+  "type_basis": {
+    "medicine_name": "read",
+    "stock_qty": "read",
+    "min_stock": "read",
+    "sales_last_30_days": "read",
+    "unit_cost": "read",
+    "expiry_date": "read"
+  },
+  "date_formats": [
+    "%Y-%m-%d",
+    "%d/%m/%Y",
+    "%m/%d/%Y",
+    "%Y/%m/%d",
+    "%d-%m-%Y"
+  ],
+  "yes_words": {
+    "alerts": [
+      "1",
+      "o",
+      "oui",
+      "true",
+      "y",
+      "yes"
+    ],
+    "port_flow": [
+      "1",
+      "1.0",
+      "o",
+      "oui",
+      "true",
+      "x",
+      "y",
+      "yes"
+    ]
+  },
+  "no_words": [
+    "0",
+    "0.0",
+    "false",
+    "no",
+    "n",
+    "non"
+  ],
+  "source": {
+    "backend_commit": "45e8b06e5d7e6ba2c7b6dd578c00f70e56ae7ad7",
+    "spec": "pipeline/upload_check.py SPECS",
+    "date_formats": "pipeline/alerts.py _parse_date",
+    "yes_words": "pipeline/alerts.py, pipeline/port_flow.py literal tuples"
+  }
+}

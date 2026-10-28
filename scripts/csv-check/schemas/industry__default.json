@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "key": "industry/default",
+  "sector": "industry",
+  "activity": null,
+  "alias_of": null,
+  "single_store": false,
+  "required": [
+    [
+      "Product ID",
+      "equipment_id"
+    ],
+    [
+      "Torque [Nm]",
+      "Tool wear [min]",
+      "Rotational speed [rpm]",
+      "rpm",
+      "Process temperature [K]",
+      "temperature",
+      "pressure",
+      "production_rate",
+      "last_maintenance_date",
+      "defect_rate",
+      "food_temp",
+      "hygiene_control_passed",
+      "min_cook_temp"
+    ]
+  ],
+  "sample": [
+    "Product ID",
+    "Torque [Nm]",
+    "Tool wear [min]",
+    "Rotational speed [rpm]"
+  ],
+  "types": {
+    "Product ID": "text",
+    "equipment_id": "text",
+    "Torque [Nm]": "number",
+    "Tool wear [min]": "number",
+    "Rotational speed [rpm]": "number",
+    "rpm": "number",
+    "Process temperature [K]": "number",
+    "temperature": "number",
+    "pressure": "number",
+    "production_rate": "number",
+    "last_maintenance_date": "date",
+    "defect_rate": "number",
+    "food_temp": "number",
+    "hygiene_control_passed": "boolean",
+    "min_cook_temp": "number"
+  },
+  "type_basis": {
+    "Product ID": "name",
+    "equipment_id": "read",
+    "Torque [Nm]": "name",
+    "Tool wear [min]": "name",
+    "Rotational speed [rpm]": "name",
+    "rpm": "name",
+    "Process temperature [K]": "name",
+    "temperature": "name",
+    "pressure": "name",
+    "production_rate": "read",
+    "last_maintenance_date": "name",
+    "defect_rate": "name",
+    "food_temp": "read",
+    "hygiene_control_passed": "read",
+    "min_cook_temp": "name"
+  },
+  "date_formats": [
+    "%Y-%m-%d",
+    "%d/%m/%Y",
+    "%m/%d/%Y",
+    "%Y/%m/%d",
+    "%d-%m-%Y"
+  ],
+  "yes_words": {
+    "alerts": [
+      "1",
+      "o",
+      "oui",
+      "true",
+      "y",
+      "yes"
+    ],
+    "port_flow": [
+      "1",
+      "1.0",
+      "o",
+      "oui",
+      "true",
+      "x",
+      "y",
+      "yes"
+    ]
+  },
+  "no_words": [
+    "0",
+    "0.0",
+    "false",
+    "no",
+    "n",
+    "non"
+  ],
+  "source": {
+    "backend_commit": "45e8b06e5d7e6ba2c7b6dd578c00f70e56ae7ad7",
+    "spec": "pipeline/upload_check.py SPECS",
+    "date_formats": "pipeline/alerts.py _parse_date",
+    "yes_words": "pipeline/alerts.py, pipeline/port_flow.py literal tuples"
+  }
+}

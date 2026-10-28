@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "key": "logistics/default",
+  "sector": "logistics",
+  "activity": null,
+  "alias_of": null,
+  "single_store": false,
+  "required": [
+    [
+      "equipment_id"
+    ],
+    [
+      "daily_cycles",
+      "hydraulic_pressure",
+      "fuel_level",
+      "avg_wait_hours",
+      "temperature",
+      "last_service_date"
+    ]
+  ],
+  "sample": [
+    "equipment_id",
+    "daily_cycles",
+    "hydraulic_pressure",
+    "fuel_level"
+  ],
+  "types": {
+    "equipment_id": "text",
+    "daily_cycles": "number",
+    "hydraulic_pressure": "number",
+    "fuel_level": "number",
+    "avg_wait_hours": "number",
+    "temperature": "number",
+    "last_service_date": "date"
+  },
+  "type_basis": {
+    "equipment_id": "read",
+    "daily_cycles": "name",
+    "hydraulic_pressure": "name",
+    "fuel_level": "name",
+    "avg_wait_hours": "name",
+    "temperature": "name",
+    "last_service_date": "name"
+  },
+  "date_formats": [
+    "%Y-%m-%d",
+    "%d/%m/%Y",
+    "%m/%d/%Y",
+    "%Y/%m/%d",
+    "%d-%m-%Y"
+  ],
+  "yes_words": {
+    "alerts": [
+      "1",
+      "o",
+      "oui",
+      "true",
+      "y",
+      "yes"
+    ],
+    "port_flow": [
+      "1",
+      "1.0",
+      "o",
+      "oui",
+      "true",
+      "x",
+      "y",
+      "yes"
+    ]
+  },
+  "no_words": [
+    "0",
+    "0.0",
+    "false",
+    "no",
+    "n",
+    "non"
+  ],
+  "source": {
+    "backend_commit": "45e8b06e5d7e6ba2c7b6dd578c00f70e56ae7ad7",
+    "spec": "pipeline/upload_check.py SPECS",
+    "date_formats": "pipeline/alerts.py _parse_date",
+    "yes_words": "pipeline/alerts.py, pipeline/port_flow.py literal tuples"
+  }
+}

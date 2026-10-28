@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "key": "health/grossiste-pharma",
+  "sector": "health",
+  "activity": "grossiste-pharma",
+  "alias_of": null,
+  "single_store": false,
+  "required": [
+    [
+      "pharmacy_id",
+      "pharmacy_name"
+    ],
+    [
+      "product_name",
+      "medicine_name"
+    ],
+    [
+      "qty_shipped_last_period",
+      "qty_shipped"
+    ]
+  ],
+  "sample": [
+    "pharmacy_id",
+    "pharmacy_name",
+    "product_name",
+    "qty_shipped_last_period",
+    "qty_reordered_this_period",
+    "days_since_last_shipment",
+    "unit_cost"
+  ],
+  "types": {
+    "pharmacy_id": "text",
+    "pharmacy_name": "text",
+    "product_name": "text",
+    "medicine_name": "text",
+    "qty_shipped_last_period": "number",
+    "qty_shipped": "number",
+    "qty_reordered_this_period": "number",
+    "days_since_last_shipment": "number",
+    "unit_cost": "number"
+  },
+  "type_basis": {
+    "pharmacy_id": "name",
+    "pharmacy_name": "name",
+    "product_name": "read",
+    "medicine_name": "read",
+    "qty_shipped_last_period": "name",
+    "qty_shipped": "name",
+    "qty_reordered_this_period": "name",
+    "days_since_last_shipment": "name",
+    "unit_cost": "read"
+  },
+  "date_formats": [
+    "%Y-%m-%d",
+    "%d/%m/%Y",
+    "%m/%d/%Y",
+    "%Y/%m/%d",
+    "%d-%m-%Y"
+  ],
+  "yes_words": {
+    "alerts": [
+      "1",
+      "o",
+      "oui",
+      "true",
+      "y",
+      "yes"
+    ],
+    "port_flow": [
+      "1",
+      "1.0",
+      "o",
+      "oui",
+      "true",
+      "x",
+      "y",
+      "yes"
+    ]
+  },
+  "no_words": [
+    "0",
+    "0.0",
+    "false",
+    "no",
+    "n",
+    "non"
+  ],
+  "source": {
+    "backend_commit": "45e8b06e5d7e6ba2c7b6dd578c00f70e56ae7ad7",
+    "spec": "pipeline/upload_check.py SPECS",
+    "date_formats": "pipeline/alerts.py _parse_date",
+    "yes_words": "pipeline/alerts.py, pipeline/port_flow.py literal tuples"
+  }
+}

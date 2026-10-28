@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "key": "energy/centrale-production",
+  "sector": "energy",
+  "activity": "centrale-production",
+  "alias_of": null,
+  "single_store": false,
+  "required": [
+    [
+      "generator_id",
+      "site_id"
+    ],
+    [
+      "fuel_level_pct",
+      "coolant_temp",
+      "output_kw",
+      "load_pct",
+      "oil_pressure",
+      "runtime_hours"
+    ]
+  ],
+  "sample": [
+    "generator_id",
+    "output_kw",
+    "rated_kw",
+    "fuel_level_pct",
+    "coolant_temp"
+  ],
+  "types": {
+    "generator_id": "text",
+    "site_id": "text",
+    "fuel_level_pct": "number",
+    "coolant_temp": "number",
+    "output_kw": "number",
+    "load_pct": "number",
+    "oil_pressure": "number",
+    "runtime_hours": "number",
+    "rated_kw": "number"
+  },
+  "type_basis": {
+    "generator_id": "name",
+    "site_id": "read",
+    "fuel_level_pct": "read",
+    "coolant_temp": "name",
+    "output_kw": "name",
+    "load_pct": "read",
+    "oil_pressure": "name",
+    "runtime_hours": "name",
+    "rated_kw": "read"
+  },
+  "date_formats": [
+    "%Y-%m-%d",
+    "%d/%m/%Y",
+    "%m/%d/%Y",
+    "%Y/%m/%d",
+    "%d-%m-%Y"
+  ],
+  "yes_words": {
+    "alerts": [
+      "1",
+      "o",
+      "oui",
+      "true",
+      "y",
+      "yes"
+    ],
+    "port_flow": [
+      "1",
+      "1.0",
+      "o",
+      "oui",
+      "true",
+      "x",
+      "y",
+      "yes"
+    ]
+  },
+  "no_words": [
+    "0",
+    "0.0",
+    "false",
+    "no",
+    "n",
+    "non"
+  ],
+  "source": {
+    "backend_commit": "45e8b06e5d7e6ba2c7b6dd578c00f70e56ae7ad7",
+    "spec": "pipeline/upload_check.py SPECS",
+    "date_formats": "pipeline/alerts.py _parse_date",
+    "yes_words": "pipeline/alerts.py, pipeline/port_flow.py literal tuples"
+  }
+}

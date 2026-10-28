@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "key": "retail/supermarche-hypermarche",
+  "sector": "retail",
+  "activity": "supermarche-hypermarche",
+  "alias_of": null,
+  "single_store": true,
+  "required": [
+    [
+      "product_name",
+      "sku",
+      "store_id"
+    ],
+    [
+      "stock_qty",
+      "sales_last_30_days",
+      "sales_last_7_days",
+      "expiry_date",
+      "last_sale_date",
+      "shrinkage_rate",
+      "foot_traffic",
+      "pos_downtime_minutes"
+    ]
+  ],
+  "sample": [
+    "product_name",
+    "stock_qty",
+    "min_stock",
+    "unit_cost",
+    "expiry_date",
+    "last_sale_date",
+    "sales_last_30_days"
+  ],
+  "types": {
+    "product_name": "text",
+    "sku": "text",
+    "store_id": "text",
+    "stock_qty": "number",
+    "sales_last_30_days": "number",
+    "sales_last_7_days": "number",
+    "expiry_date": "date",
+    "last_sale_date": "date",
+    "shrinkage_rate": "number",
+    "foot_traffic": "number",
+    "pos_downtime_minutes": "number",
+    "min_stock": "number",
+    "unit_cost": "number"
+  },
+  "type_basis": {
+    "product_name": "read",
+    "sku": "name",
+    "store_id": "read",
+    "stock_qty": "read",
+    "sales_last_30_days": "read",
+    "sales_last_7_days": "name",
+    "expiry_date": "read",
+    "last_sale_date": "name",
+    "shrinkage_rate": "name",
+    "foot_traffic": "name",
+    "pos_downtime_minutes": "name",
+    "min_stock": "read",
+    "unit_cost": "read"
+  },
+  "date_formats": [
+    "%Y-%m-%d",
+    "%d/%m/%Y",
+    "%m/%d/%Y",
+    "%Y/%m/%d",
+    "%d-%m-%Y"
+  ],
+  "yes_words": {
+    "alerts": [
+      "1",
+      "o",
+      "oui",
+      "true",
+      "y",
+      "yes"
+    ],
+    "port_flow": [
+      "1",
+      "1.0",
+      "o",
+      "oui",
+      "true",
+      "x",
+      "y",
+      "yes"
+    ]
+  },
+  "no_words": [
+    "0",
+    "0.0",
+    "false",
+    "no",
+    "n",
+    "non"
+  ],
+  "source": {
+    "backend_commit": "45e8b06e5d7e6ba2c7b6dd578c00f70e56ae7ad7",
+    "spec": "pipeline/upload_check.py SPECS",
+    "date_formats": "pipeline/alerts.py _parse_date",
+    "yes_words": "pipeline/alerts.py, pipeline/port_flow.py literal tuples"
+  }
+}

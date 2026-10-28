@@ -1,0 +1,105 @@
+{
+  "schema_version": 1,
+  "key": "transportation/default",
+  "sector": "transportation",
+  "activity": null,
+  "alias_of": null,
+  "single_store": false,
+  "required": [
+    [
+      "truck_id"
+    ],
+    [
+      "engine_temp",
+      "fuel_level",
+      "mileage_km",
+      "last_service_km",
+      "oil_level",
+      "tire_age_months",
+      "scheduled_arrival",
+      "actual_arrival",
+      "cargo_temp",
+      "cost_per_km",
+      "days_used_this_month",
+      "days_rented_this_month"
+    ]
+  ],
+  "sample": [
+    "truck_id",
+    "mileage_km",
+    "last_service_km",
+    "engine_temp",
+    "fuel_level"
+  ],
+  "types": {
+    "truck_id": "text",
+    "engine_temp": "number",
+    "fuel_level": "number",
+    "mileage_km": "number",
+    "last_service_km": "number",
+    "oil_level": "number",
+    "tire_age_months": "number",
+    "scheduled_arrival": "date",
+    "actual_arrival": "date",
+    "cargo_temp": "number",
+    "cost_per_km": "number",
+    "days_used_this_month": "number",
+    "days_rented_this_month": "number"
+  },
+  "type_basis": {
+    "truck_id": "name",
+    "engine_temp": "name",
+    "fuel_level": "name",
+    "mileage_km": "name",
+    "last_service_km": "name",
+    "oil_level": "name",
+    "tire_age_months": "name",
+    "scheduled_arrival": "name",
+    "actual_arrival": "name",
+    "cargo_temp": "name",
+    "cost_per_km": "name",
+    "days_used_this_month": "name",
+    "days_rented_this_month": "name"
+  },
+  "date_formats": [
+    "%Y-%m-%d",
+    "%d/%m/%Y",
+    "%m/%d/%Y",
+    "%Y/%m/%d",
+    "%d-%m-%Y"
+  ],
+  "yes_words": {
+    "alerts": [
+      "1",
+      "o",
+      "oui",
+      "true",
+      "y",
+      "yes"
+    ],
+    "port_flow": [
+      "1",
+      "1.0",
+      "o",
+      "oui",
+      "true",
+      "x",
+      "y",
+      "yes"
+    ]
+  },
+  "no_words": [
+    "0",
+    "0.0",
+    "false",
+    "no",
+    "n",
+    "non"
+  ],
+  "source": {
+    "backend_commit": "45e8b06e5d7e6ba2c7b6dd578c00f70e56ae7ad7",
+    "spec": "pipeline/upload_check.py SPECS",
+    "date_formats": "pipeline/alerts.py _parse_date",
+    "yes_words": "pipeline/alerts.py, pipeline/port_flow.py literal tuples"
+  }
+}
