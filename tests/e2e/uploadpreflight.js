@@ -74,6 +74,14 @@ const CORS = { 'access-control-allow-origin': '*' };
     pass(p._sent.length === 1, 'the changed matching is sent');
     await ctx.close(); }
 
+  console.log('== Back closes the matching screen');
+  { const { p, ctx } = await open();
+    pass(await p.getByTestId('upload-match').count() === 1, 'the matching screen is open');
+    await p.getByRole('button', { name: 'Back', exact: true }).click(); await p.waitForTimeout(400);
+    pass(await p.getByTestId('upload-match').count() === 0, 'Back closes it');
+    pass(p._sent.length === 0, 'nothing was sent');
+    await ctx.close(); }
+
   console.log('== a file that passes the check is sent straight away');
   { const { p, ctx } = await open({ preflight: ACCEPTED });
     pass(await p.getByTestId('upload-match').count() === 0, 'no matching step');

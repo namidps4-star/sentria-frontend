@@ -146,7 +146,7 @@ export function UploadProgress({ state, compact = false }: { state: UploadState;
         </div>
       )}
 
-      {(state.phase === "matching" || state.phase === "refused") && state.missing && state.fileColumns && state.retry && (
+      {state.phase === "refused" && state.missing && state.fileColumns && state.retry && (
         <MatchColumns
           fileName={state.fileName}
           rows={state.rows}
@@ -168,7 +168,7 @@ export function UploadProgress({ state, compact = false }: { state: UploadState;
 /** The matching screen. One row per field, the server's suggestion already chosen,
  *  a status for each, and Import off until every required field has a column. Nothing
  *  has been sent when it shows; Import sends the file with the matching (`mapping`). */
-function MatchColumns({
+export function MatchColumns({
   fileName,
   rows,
   expected,
