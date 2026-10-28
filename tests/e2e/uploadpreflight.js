@@ -69,6 +69,7 @@ const CORS = { 'access-control-allow-origin': '*' };
   console.log('== the user changes a suggestion');
   { const { p, ctx } = await open();
     await p.getByTestId('match-stock_qty').selectOption('sales_last_30_days');
+    pass(await p.getByTestId('status-stock_qty').innerText() === 'Recognised', 'a column the user picks is recognised');
     await p.getByTestId('upload-match-submit').click(); await p.waitForTimeout(1200);
     pass(p._sent.length === 1, 'the changed matching is sent');
     await ctx.close(); }

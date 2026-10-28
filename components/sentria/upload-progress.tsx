@@ -201,10 +201,12 @@ function MatchColumns({
     return start
   })
 
+  // A column the user picked is confirmed, so it is recognised like an exact match.
+  const [confirmed, setConfirmed] = useState<Record<string, boolean>>({})
   const statusOf = (name: string): "ok" | "check" | "missing" | "optional" => {
     const column = choice[name]
     if (!column) return requiredNames.includes(name) ? "missing" : "optional"
-    return column === name || confidence?.[name] === "exact" ? "ok" : "check"
+    return column === name || confidence?.[name] === "exact" || confirmed[name] ? "ok" : "check"
   }
   const recognised = names.filter((name) => statusOf(name) === "ok").length
   const questions = names.filter((name) => statusOf(name) === "check" || statusOf(name) === "missing").length
@@ -264,7 +266,10 @@ function MatchColumns({
                 aria-label={label}
                 data-testid={`match-${name}`}
                 value={choice[name] ?? ""}
-                onChange={(event) => setChoice((current) => ({ ...current, [name]: event.target.value }))}
+                onChange={(event) => {
+                  setChoice((current) => ({ ...current, [name]: event.target.value }))
+                  setConfirmed((current) => ({ ...current, [name]: true }))
+                }}
                 className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="">{tx("Choisir une colonne", "Choose a column")}</option>
