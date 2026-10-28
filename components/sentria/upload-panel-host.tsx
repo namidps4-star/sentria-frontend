@@ -29,7 +29,7 @@ function UploadPanelDialog({ title, state, busy }: Pick<UploadPanel, "title" | "
       aria-modal="true"
       aria-label={tx("Import de données", "Data import")}
     >
-      <div className={cn("w-full max-w-md rounded-3xl border border-border bg-card p-6 text-card-foreground shadow-2xl t-modal", enter)}>
+      <div className={cn("max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-3xl border border-border bg-card p-6 text-card-foreground shadow-2xl t-modal", enter)}>
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {tx("Import", "Import")}
           {title ? ` · ${title}` : ""}

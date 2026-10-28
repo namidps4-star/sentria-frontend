@@ -26,8 +26,8 @@ const CORS = { 'access-control-allow-origin': '*' };
 
 (async () => {
   const browser = await chromium.launch(LAUNCH);
-  const open = async ({ preflight = NEEDS_MATCHING, lang = 'en', theme = 'light', vw = 1440 } = {}) => {
-    const ctx = await browser.newContext({ viewport: { width: vw, height: 900 }, locale: 'en-US' });
+  const open = async ({ preflight = NEEDS_MATCHING, lang = 'en', theme = 'light', vw = 1440, vh = 900 } = {}) => {
+    const ctx = await browser.newContext({ viewport: { width: vw, height: vh }, locale: 'en-US' });
     const p = await ctx.newPage(); p._errors = []; p._sent = []; p._checks = 0;
     p.on('pageerror', e => p._errors.push(e.message));
     await p.route(/onrender\.com\//, r => {
@@ -76,6 +76,22 @@ const CORS = { 'access-control-allow-origin': '*' };
     pass(await p.getByTestId('upload-match').count() === 0, 'no matching step');
     pass(p._sent.length === 1 && !p._sent[0].mapped, 'one plain upload is sent');
     pass(/Import complete/.test(await dialog(p).innerText()), 'Import complete');
+    await ctx.close(); }
+
+  console.log('== a short screen: the card scrolls, its bar hidden, and Import stays reachable');
+  { const { p, ctx } = await open({ vh: 520 });
+    const card = await p.evaluate(() => {
+      let node = document.querySelector('[data-testid="upload-match-submit"]');
+      while (node && getComputedStyle(node).overflowY !== 'auto') node = node.parentElement;
+      if (!node) return null;
+      const style = getComputedStyle(node);
+      return { overflowY: style.overflowY, scrollbarWidth: style.scrollbarWidth, scrollable: node.scrollHeight > node.clientHeight };
+    });
+    pass(card && card.overflowY === 'auto' && card.scrollable, 'the card scrolls when it is taller than the screen ' + JSON.stringify(card));
+    pass(card && card.scrollbarWidth === 'none', 'its bar is hidden');
+    await p.getByTestId('upload-match-submit').scrollIntoViewIfNeeded();
+    pass(await p.getByTestId('upload-match-submit').isVisible(), 'the Import button can be reached');
+    await p.screenshot({ path: 'uploadpreflight-short.png' });
     await ctx.close(); }
 
   console.log('== French, dark and phone');

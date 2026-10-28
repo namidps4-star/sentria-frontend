@@ -30,7 +30,8 @@ export function UploadProgress({ state, compact = false }: { state: UploadState;
 
   const sending = state.phase === "sending"
   const analysing = state.phase === "analysing"
-  const finished = state.phase === "done" || state.phase === "refused" || state.phase === "failed" || state.phase === "matching"
+  const matching = state.phase === "matching"
+  const finished = state.phase === "done" || state.phase === "refused" || state.phase === "failed" || matching
   const knownPct = sending ? state.sentPct : 100
   const sentPct = knownPct ?? 0
   const since = sending ? state.sendingSince : analysing ? state.analysingSince : undefined
@@ -68,8 +69,10 @@ export function UploadProgress({ state, compact = false }: { state: UploadState;
         <p className="truncate text-sm font-medium" title={state.fileName}>{state.fileName}</p>
       )}
 
-      {!finished && (
+      {/* The matching step is part of this same upload screen: the stages stay visible, with the check done. */}
+      {(!finished || matching) && (
         <>
+          {!finished && (
           <div
             className="h-2 w-full overflow-hidden rounded-full bg-muted"
             role="progressbar"
@@ -84,25 +87,32 @@ export function UploadProgress({ state, compact = false }: { state: UploadState;
               <div className="h-full w-1/3 animate-[sentria-indeterminate_1.2s_ease-in-out_infinite] rounded-full bg-foreground motion-reduce:w-full motion-reduce:animate-none motion-reduce:opacity-40" />
             )}
           </div>
+          )}
 
           <ol className={cn("flex flex-col gap-3", compact && "mt-3")}>
             {stage(
               sending,
-              !sending,
+              !sending && !matching,
               FileUp,
               tx("Envoi du fichier", "Sending the file"),
               sending
                 ? knownPct !== undefined
                   ? `${sentPct} %`
                   : tx(`En cours · ${seconds} s`, `Working · ${seconds} s`)
-                : tx("Envoyé", "Sent")
+                : matching
+                  ? tx("Pas encore envoyé", "Not sent yet")
+                  : tx("Envoyé", "Sent")
             )}
             {stage(
               analysing,
-              false,
+              matching,
               SearchCheck,
               tx("Vérification des colonnes et analyse", "Checking the columns and analysing"),
-              analysing ? tx(`En cours · ${seconds} s`, `Working · ${seconds} s`) : tx("En attente", "Waiting")
+              analysing
+                ? tx(`En cours · ${seconds} s`, `Working · ${seconds} s`)
+                : matching
+                  ? tx("Terminé", "Done")
+                  : tx("En attente", "Waiting")
             )}
           </ol>
         </>
