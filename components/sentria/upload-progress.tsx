@@ -168,6 +168,9 @@ export function UploadProgress({ state, compact = false }: { state: UploadState;
 /** The matching screen. One row per field, the server's suggestion already chosen,
  *  a status for each, and Import off until every required field has a column. Nothing
  *  has been sent when it shows; Import sends the file with the matching (`mapping`). */
+/** The fields the stock alerts read, and the one the expiry alerts read. */
+const STOCK_FIELDS = ["min_stock", "sales_last_30_days"]
+
 export function MatchColumns({
   fileName,
   rows,
@@ -213,6 +216,10 @@ export function MatchColumns({
   const ready = requiredNames.every((name) => choice[name])
   // The upload needs only the required fields, but the alerts need the others: say what a gap costs.
   const unmatchedRecommended = names.filter((name) => !requiredNames.includes(name) && !choice[name])
+  // What the banner says is blocked, and which alerts a gap switches off.
+  const blocking = requiredNames.filter((name) => !choice[name]).map((name) => fieldLabel(name, tx))
+  const stockOff = names.some((name) => STOCK_FIELDS.includes(name) && !choice[name])
+  const expiryOff = names.some((name) => name === "expiry_date" && !choice[name])
   const taken = new Set(Object.values(choice))
   const count = (value: number) => value.toLocaleString(tx("fr-FR", "en-GB"))
 
@@ -238,6 +245,40 @@ export function MatchColumns({
             `SentrIA recognised ${recognised} field${recognised === 1 ? "" : "s"}. ${questions} question${questions === 1 ? "" : "s"} left.`
           )}
         </p>
+      </div>
+
+      <div data-testid="upload-banner" className="rounded-3xl bg-[var(--ink)] px-5 py-4 text-white">
+        <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-brand">
+          {tx("Avant l'import", "Before you import")}
+        </p>
+        <p className="mt-1 font-heading text-xl font-semibold tracking-tight">
+          {blocking.length > 0
+            ? tx(
+                `Associez ${blocking.length} colonne${blocking.length > 1 ? "s" : ""} pour continuer`,
+                `Match ${blocking.length} column${blocking.length > 1 ? "s" : ""} to continue`
+              )
+            : tx("Prêt à importer", "Ready to import")}
+        </p>
+        <dl className="mt-3 grid grid-cols-1 gap-3 border-t border-white/20 pt-3 text-sm sm:grid-cols-3">
+          <div>
+            <dt className="text-[11px] font-bold uppercase tracking-[0.06em] text-brand">{tx("Bloque", "Blocks")}</dt>
+            <dd className="mt-1">{blocking.length > 0 ? blocking.join(", ") : tx("Rien", "Nothing")}</dd>
+          </div>
+          <div>
+            <dt className="text-[11px] font-bold uppercase tracking-[0.06em] text-brand">{tx("Alertes stock", "Stock alerts")}</dt>
+            <dd className="mt-1">{stockOff ? tx("Désactivées", "Off") : tx("Activées", "On")}</dd>
+          </div>
+          <div>
+            <dt className="text-[11px] font-bold uppercase tracking-[0.06em] text-brand">{tx("Alertes péremption", "Expiry alerts")}</dt>
+            <dd className="mt-1">{expiryOff ? tx("Désactivées", "Off") : tx("Activées", "On")}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div className="hidden grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto] gap-4 text-[11px] font-bold uppercase tracking-[0.06em] text-muted-foreground sm:grid">
+        <span>{tx("Champ", "Field")}</span>
+        <span>{tx("Colonne de votre fichier", "Column in your file")}</span>
+        <span className="text-right">{tx("Statut", "Status")}</span>
       </div>
 
       <ul className="flex flex-col divide-y divide-border border-y border-border">
