@@ -56,7 +56,7 @@ const PREFLIGHT = { ...REFUSED, success: false, outcome: 'refused', suggested_ma
     pass(await p.getByTestId('match-medicine_name').isVisible() && await p.getByTestId('match-stock_qty').isVisible(), 'one dropdown per missing field');
     const options = await p.getByTestId('match-medicine_name').locator('option').allInnerTexts();
     pass(options.includes('product') && options.includes('quantity') && options.includes('sales_last_30_days'), "the dropdown lists the file's own columns");
-    pass(/every alert points to it/.test(await match.innerText()), 'each field keeps its plain reason');
+    pass(/Recognised|To check|Missing/.test(await p.getByTestId('status-medicine_name').innerText()), 'each field shows its status');
     const submit = p.getByTestId('upload-match-submit');
     pass(await submit.isDisabled(), 'Import stays off until every field has a column');
     await p.getByTestId('match-medicine_name').selectOption('product');
@@ -84,7 +84,7 @@ const PREFLIGHT = { ...REFUSED, success: false, outcome: 'refused', suggested_ma
   console.log('== French, dark and phone');
   { const { p, ctx } = await open({ lang: 'fr', theme: 'dark' });
     pass(/Associez vos colonnes/.test(await p.getByTestId('upload-match').innerText()), 'French headline');
-    pass(/Importer avec ces colonnes/.test(await p.getByTestId('upload-match-submit').innerText()), 'French button');
+    pass(/Importer le fichier/.test(await p.getByTestId('upload-match-submit').innerText()), 'French button');
     await p.screenshot({ path: 'uploadmatch-dark.png' });
     await ctx.close(); }
   { const { p, ctx } = await open({ vw: 390 });

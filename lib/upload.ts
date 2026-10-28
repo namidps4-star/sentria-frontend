@@ -38,6 +38,11 @@ export type UploadState = {
   /** The server's best guess for each missing name, from a clear spelling match.
    *  Shown already chosen; the user confirms or changes each one. */
   suggested?: Record<string, string>
+  /** How sure each guess is: "exact" when the names read alike, otherwise "close". */
+  confidence?: Record<string, "exact" | "close">
+  /** The names the import expects and requires (the matching screen). */
+  expected?: string[]
+  required?: string[]
   /** Runs the import again with the columns the user matched by hand. */
   retry?: (mapping: Record<string, string>) => Promise<UploadState>
 }
@@ -112,6 +117,20 @@ export function uploadSummary(body: unknown): { rows: number; alerts: number; fa
 }
 
 /** The server's suggested matching, when it sent one. */
+function confidenceOf(body: unknown): Record<string, "exact" | "close"> {
+  const raw = (body as { confidence?: unknown } | null)?.confidence
+  if (!raw || typeof raw !== "object") return {}
+  return Object.fromEntries(
+    Object.entries(raw as Record<string, unknown>).filter(
+      (entry): entry is [string, "exact" | "close"] => entry[1] === "exact" || entry[1] === "close"
+    )
+  )
+}
+
+function stringList(value: unknown): string[] {
+  return Array.isArray(value) && value.every((v) => typeof v === "string") ? (value as string[]) : []
+}
+
 function suggestedMatching(body: unknown): Record<string, string> {
   const raw = (body as { suggested_mapping?: unknown } | null)?.suggested_mapping
   if (!raw || typeof raw !== "object") return {}
@@ -156,6 +175,10 @@ async function checkBeforeSending(
         missing: missing.missing,
         fileColumns: missing.fileColumns,
         suggested: suggestedMatching(body),
+        confidence: confidenceOf(body),
+        rows: typeof (body as { rows?: unknown }).rows === "number" ? (body as { rows: number }).rows : undefined,
+        expected: stringList((body as { expected?: unknown }).expected),
+        required: stringList((body as { required?: unknown }).required),
         retry: (choice) => runUpload(url, file, set, refusal, networkError, choice, missing),
       }
     }

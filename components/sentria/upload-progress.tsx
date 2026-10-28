@@ -5,6 +5,8 @@ import { AlertTriangle, Check, FileDown, FileUp, Loader2, SearchCheck } from "@/
 
 import { useTx } from "@/lib/i18n"
 import type { UploadState } from "@/lib/upload"
+import { fieldLabel } from "@/lib/upload-fields"
+import { setUploadPanel } from "@/lib/upload-panel"
 import { templateCsv, type UploadTeach } from "@/lib/upload-problem"
 import { cn } from "@/lib/utils"
 
@@ -65,14 +67,12 @@ export function UploadProgress({ state, compact = false }: { state: UploadState;
 
   return (
     <div className={cn("w-full", !compact && "space-y-4")} aria-live="polite">
-      {!compact && state.fileName && (
+      {!compact && state.fileName && state.phase !== "matching" && state.phase !== "refused" && (
         <p className="truncate text-sm font-medium" title={state.fileName}>{state.fileName}</p>
       )}
 
-      {/* The matching step is part of this same upload screen: the stages stay visible, with the check done. */}
-      {(!finished || matching) && (
+      {!finished && (
         <>
-          {!finished && (
           <div
             className="h-2 w-full overflow-hidden rounded-full bg-muted"
             role="progressbar"
@@ -87,32 +87,25 @@ export function UploadProgress({ state, compact = false }: { state: UploadState;
               <div className="h-full w-1/3 animate-[sentria-indeterminate_1.2s_ease-in-out_infinite] rounded-full bg-foreground motion-reduce:w-full motion-reduce:animate-none motion-reduce:opacity-40" />
             )}
           </div>
-          )}
 
           <ol className={cn("flex flex-col gap-3", compact && "mt-3")}>
             {stage(
               sending,
-              !sending && !matching,
+              !sending,
               FileUp,
               tx("Envoi du fichier", "Sending the file"),
               sending
                 ? knownPct !== undefined
                   ? `${sentPct} %`
                   : tx(`En cours · ${seconds} s`, `Working · ${seconds} s`)
-                : matching
-                  ? tx("Pas encore envoyé", "Not sent yet")
-                  : tx("Envoyé", "Sent")
+                : tx("Envoyé", "Sent")
             )}
             {stage(
               analysing,
-              matching,
+              false,
               SearchCheck,
               tx("Vérification des colonnes et analyse", "Checking the columns and analysing"),
-              analysing
-                ? tx(`En cours · ${seconds} s`, `Working · ${seconds} s`)
-                : matching
-                  ? tx("Terminé", "Done")
-                  : tx("En attente", "Waiting")
+              analysing ? tx(`En cours · ${seconds} s`, `Working · ${seconds} s`) : tx("En attente", "Waiting")
             )}
           </ol>
         </>
@@ -153,25 +146,16 @@ export function UploadProgress({ state, compact = false }: { state: UploadState;
         </div>
       )}
 
-      {state.phase === "matching" && state.missing && state.fileColumns && state.retry && (
-        <div className="space-y-2">
-          <p className="text-sm font-bold">{tx("Fichier non envoyé", "Nothing sent yet")}</p>
-          {state.message && <p className="text-sm">{state.message}</p>}
-          <MatchColumns
-            missing={state.missing}
-            fileColumns={state.fileColumns}
-            teach={state.teach}
-            suggested={state.suggested}
-            retry={state.retry}
-          />
-        </div>
-      )}
-
-      {state.phase === "refused" && state.missing && state.fileColumns && state.retry && (
+      {(state.phase === "matching" || state.phase === "refused") && state.missing && state.fileColumns && state.retry && (
         <MatchColumns
+          fileName={state.fileName}
+          rows={state.rows}
+          expected={state.expected ?? []}
+          required={state.required ?? []}
           missing={state.missing}
           fileColumns={state.fileColumns}
-          teach={state.teach}
+          suggested={state.suggested}
+          confidence={state.confidence}
           retry={state.retry}
         />
       )}
@@ -181,56 +165,107 @@ export function UploadProgress({ state, compact = false }: { state: UploadState;
   )
 }
 
-/** Matches the file's own columns to the names it is missing, then runs the
- *  import again with that matching (the `mapping` sent to /upload). */
+/** The matching screen. One row per field, the server's suggestion already chosen,
+ *  a status for each, and Import off until every required field has a column. Nothing
+ *  has been sent when it shows; Import sends the file with the matching (`mapping`). */
 function MatchColumns({
+  fileName,
+  rows,
+  expected,
+  required,
   missing,
   fileColumns,
-  teach,
   suggested,
+  confidence,
   retry,
 }: {
+  fileName?: string
+  rows?: number
+  expected: string[]
+  required: string[]
   missing: string[][]
   fileColumns: string[]
-  teach?: UploadTeach
   suggested?: Record<string, string>
+  confidence?: Record<string, "exact" | "close">
   retry: NonNullable<UploadState["retry"]>
 }) {
   const tx = useTx()
-  const names = missing.map((group) => group[0])
-  const [choice, setChoice] = useState<Record<string, string>>(() =>
-    Object.fromEntries(Object.entries(suggested ?? {}).filter(([name, column]) => names.includes(name) && fileColumns.includes(column)))
-  )
-  const ready = names.every((name) => choice[name])
+  const names = expected.length > 0 ? expected : missing.map((group) => group[0])
+  const requiredNames = required.length > 0 ? required : missing.map((group) => group[0])
+  const [choice, setChoice] = useState<Record<string, string>>(() => {
+    const start: Record<string, string> = {}
+    for (const name of names) {
+      if (fileColumns.includes(name)) start[name] = name
+      else if (suggested?.[name] && fileColumns.includes(suggested[name])) start[name] = suggested[name]
+    }
+    return start
+  })
+
+  const statusOf = (name: string): "ok" | "check" | "missing" | "optional" => {
+    const column = choice[name]
+    if (!column) return requiredNames.includes(name) ? "missing" : "optional"
+    return column === name || confidence?.[name] === "exact" ? "ok" : "check"
+  }
+  const recognised = names.filter((name) => statusOf(name) === "ok").length
+  const questions = names.filter((name) => statusOf(name) === "check" || statusOf(name) === "missing").length
+  const ready = requiredNames.every((name) => choice[name])
   const taken = new Set(Object.values(choice))
+  const count = (value: number) => value.toLocaleString(tx("fr-FR", "en-GB"))
+
+  const fileLabel =
+    fileName && rows !== undefined
+      ? `${fileName} · ${count(rows)} ${tx(rows === 1 ? "ligne" : "lignes", rows === 1 ? "row" : "rows")}`
+      : fileName ?? ""
+  const importLabel =
+    rows !== undefined ? tx(`Importer ${count(rows)} lignes`, `Import ${count(rows)} rows`) : tx("Importer le fichier", "Import the file")
 
   return (
-    <section className="mt-5 flex flex-col gap-4" data-testid="upload-match">
+    <section className="mt-2 flex flex-col gap-5" data-testid="upload-match">
       <div>
-        <p className="font-heading text-2xl font-semibold leading-tight tracking-tight">
+        {fileLabel && (
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{fileLabel}</p>
+        )}
+        <p className="mt-1 font-heading text-3xl font-semibold leading-tight tracking-tight">
           {tx("Associez vos colonnes.", "Match your columns.")}
         </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {tx("Pour chaque champ, la colonne de votre fichier.", "For each field, the column in your file.")}
+        <p className="mt-2 text-sm text-muted-foreground">
+          {tx(
+            `SentrIA a reconnu ${recognised} champ${recognised === 1 ? "" : "s"}. Il reste ${questions} question${questions === 1 ? "" : "s"}.`,
+            `SentrIA recognised ${recognised} field${recognised === 1 ? "" : "s"}. ${questions} question${questions === 1 ? "" : "s"} left.`
+          )}
         </p>
       </div>
 
-      <ul className="flex flex-col border-y border-border">
+      <ul className="flex flex-col divide-y divide-border border-y border-border">
         {names.map((name) => {
-          const why = teach?.explain.find((item) => item.column === name)?.why
+          const label = fieldLabel(name, tx)
+          const status = statusOf(name)
+          const tone =
+            status === "ok"
+              ? "bg-brand/30 text-foreground"
+              : status === "check"
+                ? "bg-muted text-foreground ring-1 ring-border"
+                : status === "missing"
+                  ? "bg-destructive/15 text-destructive"
+                  : "bg-muted text-muted-foreground"
+          const text =
+            status === "ok"
+              ? tx("Reconnu", "Recognised")
+              : status === "check"
+                ? tx("À vérifier", "To check")
+                : status === "missing"
+                  ? tx("Manquant", "Missing")
+                  : tx("Optionnel", "Optional")
 
           return (
-            <li key={name} className="flex flex-col gap-2 border-b border-border py-3 last:border-b-0">
-              <div>
-                <p className="text-sm font-bold">{name}</p>
-                {why && <p className="text-xs text-muted-foreground">{why}</p>}
-              </div>
+            <li key={name} className="grid grid-cols-1 gap-2 py-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)_auto] sm:items-center sm:gap-4">
+              <p className="font-heading text-lg font-semibold leading-tight">{label}</p>
               <select
-                aria-label={name}
+                aria-label={label}
                 data-testid={`match-${name}`}
                 value={choice[name] ?? ""}
                 onChange={(event) => setChoice((current) => ({ ...current, [name]: event.target.value }))}
-                className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <option value="">{tx("Choisir une colonne", "Choose a column")}</option>
                 {fileColumns
@@ -241,20 +276,35 @@ function MatchColumns({
                     </option>
                   ))}
               </select>
+              <span
+                data-testid={`status-${name}`}
+                className={cn("justify-self-start rounded-full px-3 py-1 text-xs font-semibold sm:justify-self-end", tone)}
+              >
+                {text}
+              </span>
             </li>
           )
         })}
       </ul>
 
-      <button
-        type="button"
-        data-testid="upload-match-submit"
-        disabled={!ready}
-        onClick={() => void retry(choice)}
-        className="h-12 rounded-full bg-brand text-sm font-bold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-      >
-        {tx("Importer avec ces colonnes", "Import with these columns")}
-      </button>
+      <div className="flex items-center gap-4">
+        <button
+          type="button"
+          onClick={() => setUploadPanel({ open: false })}
+          className="shrink-0 text-sm font-semibold underline underline-offset-4 hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          {tx("Annuler", "Cancel")}
+        </button>
+        <button
+          type="button"
+          data-testid="upload-match-submit"
+          disabled={!ready}
+          onClick={() => void retry(choice)}
+          className="h-12 flex-1 rounded-full bg-brand text-sm font-bold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
+        >
+          {importLabel}
+        </button>
+      </div>
     </section>
   )
 }

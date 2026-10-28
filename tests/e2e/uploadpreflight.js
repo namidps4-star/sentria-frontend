@@ -14,6 +14,7 @@ const NEEDS_MATCHING = {
   message: "This file doesn't match the chosen activity. Missing columns: medicine_name, stock_qty.",
   missing: [['medicine_name'], ['stock_qty']], expected: ['medicine_name', 'stock_qty'], looks_like: [],
   file_columns: FILE_COLUMNS, suggested_mapping: { medicine_name: 'product', stock_qty: 'quantity' },
+  confidence: { medicine_name: 'close', stock_qty: 'close' }, rows: 3, expected: ['medicine_name', 'stock_qty'], required: ['medicine_name', 'stock_qty'],
   explain: [
     { column: 'medicine_name', alternatives: ['medicine_name'], more_alternatives: 0, why: "The medicine's name: every alert points to it.", example: 'Paracetamol 500mg' },
     { column: 'stock_qty', alternatives: ['stock_qty'], more_alternatives: 0, why: "The quantity in stock: without it we can't see a stock-out coming.", example: '120' },
@@ -53,10 +54,11 @@ const CORS = { 'access-control-allow-origin': '*' };
   { const { p, ctx } = await open();
     pass(await p.getByTestId('upload-match').isVisible(), 'the matching step shows');
     pass(p._checks >= 1 && p._sent.length === 0, 'the file was checked and nothing was sent yet');
-    pass(/Nothing sent yet/.test(await dialog(p).innerText()), 'says nothing was sent');
+    pass(await p.getByTestId('status-medicine_name').innerText() === 'To check', 'a suggestion that is not an exact match says To check');
+    pass(/Import 3 rows/.test(await p.getByTestId('upload-match-submit').innerText()), 'the button names the rows in the file');
     pass(await p.getByTestId('match-medicine_name').inputValue() === 'product' && await p.getByTestId('match-stock_qty').inputValue() === 'quantity', 'the suggestions are already chosen');
     pass(await p.getByTestId('upload-match-submit').isEnabled(), 'Import is on, because every field has a column');
-    pass(await p.getByTestId('upload-match').count() === 1 && /Missing columns/.test(await dialog(p).innerText()), 'the reason is shown');
+    pass(await p.getByTestId('upload-match').count() === 1 && /Match your columns/.test(await p.getByTestId('upload-match').innerText()), 'the headline is shown');
     await p.screenshot({ path: 'uploadpreflight-light.png' });
     await p.getByTestId('upload-match-submit').click(); await p.waitForTimeout(1200);
     pass(p._sent.length === 1 && p._sent[0].mapped, 'after confirming, one upload is sent with the matching');
@@ -79,7 +81,7 @@ const CORS = { 'access-control-allow-origin': '*' };
     await ctx.close(); }
 
   console.log('== a short screen: the card scrolls, its bar hidden, and Import stays reachable');
-  { const { p, ctx } = await open({ vh: 520 });
+  { const { p, ctx } = await open({ vh: 360 });
     const card = await p.evaluate(() => {
       let node = document.querySelector('[data-testid="upload-match-submit"]');
       while (node && getComputedStyle(node).overflowY !== 'auto') node = node.parentElement;
@@ -96,8 +98,9 @@ const CORS = { 'access-control-allow-origin': '*' };
 
   console.log('== French, dark and phone');
   { const { p, ctx } = await open({ lang: 'fr', theme: 'dark' });
-    pass(/Fichier non envoyé/.test(await p.locator('body').innerText()), 'French: nothing sent yet');
+    pass(/Importer 3 lignes/.test(await p.getByTestId('upload-match-submit').innerText()), 'French: the button names the rows');
     pass(/Associez vos colonnes/.test(await p.getByTestId('upload-match').innerText()), 'French headline');
+    pass(/SentrIA a reconnu/.test(await p.getByTestId('upload-match').innerText()), 'French subtitle counts the fields');
     await p.screenshot({ path: 'uploadpreflight-dark.png' });
     await ctx.close(); }
   { const { p, ctx } = await open({ vw: 390 });

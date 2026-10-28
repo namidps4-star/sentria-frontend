@@ -29,7 +29,7 @@ function UploadPanelDialog({ title, state, busy }: Pick<UploadPanel, "title" | "
       aria-modal="true"
       aria-label={tx("Import de données", "Data import")}
     >
-      <div className={cn("max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-3xl border border-border bg-card p-6 text-card-foreground shadow-2xl t-modal", enter)}>
+      <div className={cn("max-h-[calc(100dvh-2rem)] w-full overflow-y-auto rounded-3xl border border-border bg-card p-6 text-card-foreground shadow-2xl t-modal", state.phase === "matching" ? "max-w-2xl" : "max-w-md", enter)}>
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {tx("Import", "Import")}
           {title ? ` · ${title}` : ""}
@@ -37,7 +37,7 @@ function UploadPanelDialog({ title, state, busy }: Pick<UploadPanel, "title" | "
         <div className="mt-3">
           <UploadProgress state={state} />
         </div>
-        {!busy && (
+        {!busy && state.phase !== "matching" && (
           <button
             type="button"
             autoFocus
