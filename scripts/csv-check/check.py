@@ -257,6 +257,9 @@ def main():
     for key, examples in problems.items():
         print(f"  {key}: {len(examples)}  e.g. {'; '.join(examples[:SHOW])}")
 
+    if args.write and missing:
+        print(f"\nNot written: required columns are missing ({', '.join(missing)}). Add them first.")
+        return 1
     if args.write:
         with open(args.write, "w", newline="", encoding="utf-8") as fh:
             writer = csv.DictWriter(fh, fieldnames=list(columns))

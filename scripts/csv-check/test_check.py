@@ -62,6 +62,21 @@ class Mappings(unittest.TestCase):
         self.assertTrue(any("headers differ" in p for p in problems))
 
 
+class WriteGuard(unittest.TestCase):
+    def test_no_clean_file_when_a_required_column_is_missing(self):
+        import subprocess, sys, tempfile
+        with tempfile.TemporaryDirectory() as d:
+            src = os.path.join(d, "in.csv")
+            with open(src, "w", encoding="utf-8") as fh:
+                fh.write("medicine_name,stock_qty\nA,1\n")
+            out = os.path.join(d, "out.csv")
+            result = subprocess.run([sys.executable, os.path.join(HERE, "check.py"), src,
+                                     "--schema", "pharmacie", "--write", out], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 1)
+            self.assertFalse(os.path.exists(out))
+            self.assertIn("Not written", result.stdout)
+
+
 class SchemaDrift(unittest.TestCase):
     """The schema must list the same required columns as the app's list (lib/csv-columns.ts)."""
 
