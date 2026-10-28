@@ -28,7 +28,17 @@ export type UploadState = {
   message?: string
   /** On a refusal for missing columns: what each is for, with examples. */
   teach?: UploadTeach
+  /** On a refusal for missing columns: each missing name's accepted spellings
+   *  (the first one is the name the file's column is matched to). */
+  missing?: string[][]
+  /** The file's own column names, to pick from when matching by hand. */
+  fileColumns?: string[]
+  /** Runs the import again with the columns the user matched by hand. */
+  retry?: (mapping: Record<string, string>) => Promise<UploadState>
 }
+
+/** What a missing-columns refusal carries over into the retry. */
+type MissingColumns = { missing: string[][]; fileColumns: string[] }
 
 export type UploadResponse = { status: number; body: unknown }
 
@@ -74,6 +84,21 @@ export async function uploadWithProgress(
   })
 }
 
+function errorCode(body: unknown): string | undefined {
+  const b = (body ?? {}) as { error_code?: unknown; detail?: { error_code?: unknown } }
+  const code = b.error_code ?? b.detail?.error_code
+  return typeof code === "string" ? code : undefined
+}
+
+/** The missing names and the file's columns, from a 422 for missing columns. */
+function columnsMissing(body: unknown): MissingColumns | undefined {
+  const b = (body ?? {}) as { missing?: unknown; file_columns?: unknown }
+  const isNames = (v: unknown): v is string[] => Array.isArray(v) && v.every((n) => typeof n === "string")
+  if (!Array.isArray(b.missing) || !b.missing.every(isNames) || b.missing.length === 0) return undefined
+  if (!isNames(b.file_columns)) return undefined
+  return { missing: b.missing as string[][], fileColumns: b.file_columns }
+}
+
 /** Rows and alerts from a successful /upload answer. */
 export function uploadSummary(body: unknown): { rows: number; alerts: number; failedSaves: number } {
   const b = (body ?? {}) as Record<string, unknown>
@@ -83,16 +108,21 @@ export function uploadSummary(body: unknown): { rows: number; alerts: number; fa
 
 /** Runs one import and reports each stage through `set`. Resolves with
  *  the final state; never throws. `refusal` turns a 422/403 body into
- *  the message to show (uploadProblemMessage). */
+ *  the message to show (uploadProblemMessage). `mapping` matches the
+ *  file's columns to the missing names by hand (a retry after a
+ *  missing-columns refusal). */
 export async function runUpload(
   url: string,
   file: File,
   set: (state: UploadState) => void,
   refusal: (body: unknown) => string,
-  networkError: string
+  networkError: string,
+  mapping?: Record<string, string>,
+  context?: MissingColumns
 ): Promise<UploadState> {
   const form = new FormData()
   form.append("file", file)
+  if (mapping) form.append("mapping", JSON.stringify(mapping))
 
   const fileName = file.name
   const sendingSince = Date.now()
@@ -113,8 +143,15 @@ export async function runUpload(
       else if (!analysing) set({ phase: "sending", fileName, sendingSince, sentPct: pct })
     })
 
-    if (status === 422 || status === 403) {
-      final = { phase: "refused", fileName, message: refusal(body), teach: uploadTeach(body) ?? undefined }
+    if (status === 422 || status === 403 || (status === 400 && errorCode(body) === "mapping_invalid")) {
+      const missing = errorCode(body) === "upload_columns_missing" ? columnsMissing(body) : context
+      final = {
+        phase: "refused",
+        fileName,
+        message: refusal(body),
+        teach: uploadTeach(body) ?? undefined,
+        ...(missing ? { missing: missing.missing, fileColumns: missing.fileColumns, retry: (choice) => runUpload(url, file, set, refusal, networkError, choice, missing) } : {}),
+      }
     } else if (status < 200 || status >= 300) {
       final = { phase: "failed", fileName, message: `${networkError} (HTTP ${status})` }
     } else {

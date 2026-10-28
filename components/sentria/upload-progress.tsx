@@ -143,8 +143,91 @@ export function UploadProgress({ state, compact = false }: { state: UploadState;
         </div>
       )}
 
+      {state.phase === "refused" && state.missing && state.fileColumns && state.retry && (
+        <MatchColumns
+          missing={state.missing}
+          fileColumns={state.fileColumns}
+          teach={state.teach}
+          retry={state.retry}
+        />
+      )}
+
       {state.phase === "refused" && state.teach && <HowToFix teach={state.teach} />}
     </div>
+  )
+}
+
+/** Matches the file's own columns to the names it is missing, then runs the
+ *  import again with that matching (the `mapping` sent to /upload). */
+function MatchColumns({
+  missing,
+  fileColumns,
+  teach,
+  retry,
+}: {
+  missing: string[][]
+  fileColumns: string[]
+  teach?: UploadTeach
+  retry: NonNullable<UploadState["retry"]>
+}) {
+  const tx = useTx()
+  const names = missing.map((group) => group[0])
+  const [choice, setChoice] = useState<Record<string, string>>({})
+  const ready = names.every((name) => choice[name])
+  const taken = new Set(Object.values(choice))
+
+  return (
+    <section className="mt-5 flex flex-col gap-4" data-testid="upload-match">
+      <div>
+        <p className="font-heading text-2xl font-semibold leading-tight tracking-tight">
+          {tx("Associez vos colonnes.", "Match your columns.")}
+        </p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {tx("Pour chaque champ, la colonne de votre fichier.", "For each field, the column in your file.")}
+        </p>
+      </div>
+
+      <ul className="flex flex-col border-y border-border">
+        {names.map((name) => {
+          const why = teach?.explain.find((item) => item.column === name)?.why
+
+          return (
+            <li key={name} className="flex flex-col gap-2 border-b border-border py-3 last:border-b-0">
+              <div>
+                <p className="text-sm font-bold">{name}</p>
+                {why && <p className="text-xs text-muted-foreground">{why}</p>}
+              </div>
+              <select
+                aria-label={name}
+                data-testid={`match-${name}`}
+                value={choice[name] ?? ""}
+                onChange={(event) => setChoice((current) => ({ ...current, [name]: event.target.value }))}
+                className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="">{tx("Choisir une colonne", "Choose a column")}</option>
+                {fileColumns
+                  .filter((column) => column === choice[name] || !taken.has(column))
+                  .map((column) => (
+                    <option key={column} value={column}>
+                      {column}
+                    </option>
+                  ))}
+              </select>
+            </li>
+          )
+        })}
+      </ul>
+
+      <button
+        type="button"
+        data-testid="upload-match-submit"
+        disabled={!ready}
+        onClick={() => void retry(choice)}
+        className="h-12 rounded-full bg-brand text-sm font-bold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+      >
+        {tx("Importer avec ces colonnes", "Import with these columns")}
+      </button>
+    </section>
   )
 }
 
