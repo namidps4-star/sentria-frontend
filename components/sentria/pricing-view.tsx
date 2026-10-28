@@ -23,8 +23,29 @@ import {
 import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 
+import {
+  BILLING_OFF,
+  fetchBillingStatus,
+  openBillingPortal,
+  startCheckout,
+  type BillingFailure,
+  type BillingResult,
+  type BillingStatus,
+} from "@/lib/billing"
 import { CapabilityMatrix } from "./capability-matrix"
 import { StatusTag } from "./status-tag"
+
+/* What a failed payment step says (BILL-STRIPE). */
+const BILLING_FAILURE: Record<BillingFailure, Localized> = {
+  not_configured: { fr: "Le paiement en ligne n'est pas encore activé.", en: "Online payment is not switched on yet." },
+  on_request: { fr: "L'offre Entreprise se fait sur devis : contactez-nous.", en: "Entreprise is on request: contact us." },
+  no_yearly: { fr: "Pas encore de paiement annuel pour cette offre.", en: "No yearly payment for this plan yet." },
+  no_customer: { fr: "Aucun abonnement à gérer pour l'instant.", en: "No subscription to manage yet." },
+  owner_only: { fr: "Seul le propriétaire du compte peut changer d'offre.", en: "Only the account owner can change the plan." },
+  unavailable: { fr: "Stripe ne répond pas. Réessayez dans un instant.", en: "Stripe is not answering. Try again in a moment." },
+  unreachable: { fr: "Le serveur est injoignable. Vérifiez la connexion.", en: "The server cannot be reached. Check the connection." },
+  other: { fr: "Le paiement n'a pas pu s'ouvrir.", en: "The payment could not open." },
+}
 
 const TAGLINES: Record<PlanId, Localized> = {
   decouverte: { fr: "Pour découvrir SentrIA sur un département.", en: "Try SentrIA on one department." },
@@ -123,6 +144,10 @@ export function PricingView() {
   const { currency } = useLocale()
   const [annual, setAnnual] = useState(false)
   const [account, setAccount] = useState<AccountPlan | null>(null)
+  const [billing, setBilling] = useState<BillingStatus>(BILLING_OFF)
+  const [busy, setBusy] = useState<string | null>(null)
+  const [failure, setFailure] = useState<BillingFailure | null>(null)
+  const [returned, setReturned] = useState<"done" | "cancelled" | null>(null)
 
   useEffect(() => {
     const sync = () => setAccount(readAccountPlan())
@@ -130,6 +155,47 @@ export function PricingView() {
     window.addEventListener(PLAN_UPDATED_EVENT, sync)
     return () => window.removeEventListener(PLAN_UPDATED_EVENT, sync)
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    fetchBillingStatus().then((status) => {
+      if (!cancelled) setBilling(status)
+    })
+
+    // Back from Stripe: say what happened once, then put the address back.
+    const back = new URLSearchParams(window.location.search).get("billing")
+
+    if (back === "done" || back === "cancelled") {
+      setReturned(back)
+      const url = new URL(window.location.href)
+      url.searchParams.delete("billing")
+      window.history.replaceState(window.history.state, "", url.toString())
+    }
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  /* Opens a Stripe page. The plan itself changes only when Stripe tells the
+     API the payment went through, so nothing is marked paid here. */
+  async function goTo(key: string, open: () => Promise<BillingResult>) {
+    if (busy) return
+
+    setBusy(key)
+    setFailure(null)
+
+    const answer = await open()
+
+    if (answer.ok) {
+      window.location.assign(answer.url)
+      return
+    }
+
+    setBusy(null)
+    setFailure(answer.reason)
+  }
 
   const locale = tx("fr-FR", "en-GB")
   const priced = PRICES[currency.code] ? currency.code : PRICE_FALLBACK_CURRENCY
@@ -201,6 +267,17 @@ export function PricingView() {
               </StatusTag>
             </div>
           )}
+          {/* Back from Stripe: said at the top, where the page opens. */}
+          {returned && (
+            <p role="status" data-testid="billing-returned" className="mt-5 rounded-2xl bg-card px-4 py-2.5 text-sm shadow-sm">
+              {returned === "done"
+                ? tx(
+                    "Paiement reçu. Votre offre change dans la minute ; rechargez la page pour la voir.",
+                    "Payment received. Your plan changes within a minute; reload the page to see it."
+                  )
+                : tx("Paiement annulé. Rien n'a changé.", "Payment cancelled. Nothing changed.")}
+            </p>
+          )}
         </header>
 
         {/* Plans */}
@@ -210,6 +287,9 @@ export function PricingView() {
             const current = account?.effective === plan
             const included = account ? atLeast(account.effective, plan) : false
             const { main, per } = price(plan)
+            // Sold online: Pro and Business, by the boss, with a yearly price when yearly is shown.
+            const buyable =
+              billing.canBuy && !current && !included && (plan === "pro" || plan === "business") && (!annual || billing.yearly[plan] === true)
 
             return (
               <section
@@ -259,32 +339,73 @@ export function PricingView() {
                     <span className="text-xl">{main}</span>
                     {per && <span className={cn("ml-1 text-sm font-semibold", look.muted)}>{per}</span>}
                   </p>
-                  <span
-                    className={cn(
-                      "rounded-full px-4 py-2 text-xs font-bold",
-                      look.button,
-                      (current || included) && "opacity-60"
-                    )}
-                  >
-                    {current
-                      ? tx("Actuelle", "Current")
-                      : included
-                        ? tx("Incluse", "Included")
-                        : plan === "entreprise"
-                          ? tx("Nous contacter", "Contact us")
-                          : tx("Bientôt", "Soon")}
-                  </span>
+                  {buyable ? (
+                    <button
+                      type="button"
+                      data-testid={`buy-${plan}`}
+                      onClick={() => void goTo(plan, () => startCheckout(plan, annual ? "year" : "month"))}
+                      disabled={busy !== null}
+                      className={cn(
+                        "rounded-full px-4 py-2 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60",
+                        look.button
+                      )}
+                    >
+                      {busy === plan ? tx("Ouverture…", "Opening…") : tx("Choisir", "Choose")}
+                    </button>
+                  ) : (
+                    <span
+                      className={cn(
+                        "rounded-full px-4 py-2 text-xs font-bold",
+                        look.button,
+                        (current || included) && "opacity-60"
+                      )}
+                    >
+                      {current
+                        ? tx("Actuelle", "Current")
+                        : included
+                          ? tx("Incluse", "Included")
+                          : plan === "entreprise"
+                            ? tx("Nous contacter", "Contact us")
+                            : tx("Bientôt", "Soon")}
+                    </span>
+                  )}
                 </div>
               </section>
             )
           })}
         </div>
 
+        {(failure || billing.portal) && (
+          <div className="t-enter -mt-4 flex flex-col items-center gap-3 text-center" style={enterAt(1.4)}>
+            {failure && (
+              <p role="alert" data-testid="billing-failure" className="text-sm font-semibold text-destructive">
+                {resolve(BILLING_FAILURE[failure], tx)}
+              </p>
+            )}
+            {billing.portal && (
+              <button
+                type="button"
+                data-testid="billing-portal"
+                onClick={() => void goTo("portal", openBillingPortal)}
+                disabled={busy !== null}
+                className="rounded-full border border-border bg-card px-5 py-2.5 text-sm font-semibold shadow-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+              >
+                {busy === "portal" ? tx("Ouverture…", "Opening…") : tx("Gérer mon abonnement", "Manage my subscription")}
+              </button>
+            )}
+          </div>
+        )}
+
         <p className="t-enter -mt-4 text-center text-xs text-muted-foreground" style={enterAt(1.6)}>
-          {tx(
-            "Le paiement en ligne (carte et mobile money) arrive bientôt.",
-            "Online payment (card and mobile money) is coming soon."
-          )}
+          {billing.enabled
+            ? tx(
+                "Paiement par carte avec Stripe. Votre offre change dès que Stripe confirme le paiement.",
+                "Card payment with Stripe. Your plan changes once Stripe confirms the payment."
+              )
+            : tx(
+                "Le paiement en ligne (carte et mobile money) arrive bientôt.",
+                "Online payment (card and mobile money) is coming soon."
+              )}
         </p>
 
         {/* SentrIA Intelligence + add-ons */}

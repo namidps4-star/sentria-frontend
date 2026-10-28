@@ -122,6 +122,10 @@ export function AppShell({
   const t = useT()
 
   const [view, setView] = useState<ViewKey>("dashboard")
+  // Back from Stripe (BILL-STRIPE): the Plans page says what happened.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("billing")) setView("pricing")
+  }, [])
   useEffect(() => track({ name: "view_opened", view }), [view])
   // The site shown (F-SITESCOPE): a change of site starts every page again,
   // so each one reads that site's own settings and data.
