@@ -30,6 +30,7 @@ const PEOPLE = [
       if (req.method() === 'OPTIONS') return r.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } });
       if (req.method() !== 'GET' && u.pathname.startsWith('/contractors')) p._writes.push(`${req.method()} ${u.pathname}`);
       if (u.pathname === '/sites') return send({ sites, persisted: true, max_sites: 50 });
+      if (u.pathname === '/branches') return send({ branches: SITES.map(x => ({ id: x.id, name: x.name })) });
       if (u.pathname === '/alerts') return send([]);
       if (u.pathname === '/contractors' && req.method() === 'GET') return send({ contractors: people });
       if (u.pathname === '/assignments') return send({ assignments: [] });
@@ -78,16 +79,15 @@ const PEOPLE = [
   await q.getByTestId('branch-board').scrollIntoViewIfNeeded(); await q.screenshot({ path: 'managerrights-employee-390-dark-fr.png' });
   await q.close();
 
-  console.log('== the employee of one branch: a flat list, read only');
-  q = await open({ role: 'employee', sites: [SITES[0]], people: [PEOPLE[0]] });
-  pass(await q.getByTestId('branch-board').count() === 0, 'one branch: the usual list, not the board');
-  pass(await q.getByRole('button', { name: /Add a contractor/ }).count() === 0, 'no Add a contractor button');
-  pass(await q.getByRole('button', { name: /^Remove / }).count() === 0, 'no remove button on a person');
-  pass(await q.getByRole('group', { name: /availability/ }).count() === 0, 'no availability buttons to change');
-  pass(await q.getByRole('combobox').count() === 0 || await q.locator('select[data-testid="contractor-site"]').count() === 0, 'no site select on a person');
-  pass(await q.getByText('Mary Atieno').count() === 1, 'the person is still listed');
-  await q.screenshot({ path: 'managerrights-employee-flat-light.png' });
+  console.log('== the employee of one branch: the same board as the boss');
+  q = await open({ role: 'employee', sites: [SITES[0]], people: PEOPLE });
+  pass(await q.getByTestId('branch-board').count() === 1, 'one branch of the account: still the board, every branch');
+  pass(await q.getByTestId('manager-card').count() === 3 && await q.getByTestId('banner-covered').innerText().then(t => /2 \/ 3/.test(t)), 'the same numbers as the boss: 2 of 3 covered');
+  pass(await q.getByText('Swaps not loaded').count() >= 1 && (await q.getByTestId('banner-swaps').innerText()).startsWith('–'), 'swaps are not loaded for an employee: a dash, never a zero');
+  pass(await q.getByTestId('add-manager').count() === 0 && await q.getByTestId('open-branch').count() === 0, 'and no controls');
+  await q.screenshot({ path: 'managerrights-employee-one-branch-light.png' });
   pass(q._writes.length === 0, 'no write sent');
+  pass(q._errs.length === 0, 'no page errors ' + q._errs.join('|'));
   await q.close();
 
   console.log('== the boss, one branch: the same list stays editable');

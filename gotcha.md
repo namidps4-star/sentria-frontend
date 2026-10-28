@@ -259,7 +259,7 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 
 ## Employees in the app (F-TEAMROLES)
 **Problem:** An employee must not get the site switcher or the owner's controls, and a hidden button is not a lock.
-**Reality:** `accounts.role` is read at sign-in into `sentria_role` (`lib/role.ts`, `useIsEmployee`). For an employee the account menu is a plain label, the Sites page and its sidebar entry are gone, and Settings has no Team card, export or delete. The Team card (`team-card.tsx`) lets the boss invite one person to one site by email. The API enforces all of it (`owner_only`, `site_unknown`), so this only hides what would fail. An employee sees their site's contractors and tasks, and cannot add, edit or remove a contractor (F-MANAGERRIGHTS). The dashboard's department tabs are the account's own settings.
+**Reality:** `accounts.role` is read at sign-in into `sentria_role` (`lib/role.ts`, `useIsEmployee`). For an employee the account menu is a plain label, the Sites page and its sidebar entry are gone, and Settings has no Team card, export or delete. The Team card (`team-card.tsx`) lets the boss invite one person to one site by email. The API enforces all of it (`owner_only`, `site_unknown`), so this only hides what would fail. An employee reads the whole team and every branch's name (`/contractors`, `/branches`), and its tasks cut to their site, and cannot add, edit or remove a contractor (F-MANAGERRIGHTS). The dashboard's department tabs are the account's own settings.
 **Rule:** Hide owner-only UI with `useIsEmployee()`, and put the real check in the API first.
 
 ## New contractors and tasks carry the site shown (F-TEAMROLES step 2)
@@ -382,3 +382,8 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Problem:** A branch that sends nothing had no Branch swaps row, so the swaps coming to it were never shown.
 **Reality:** `lib/use-swap-feed.ts` reads `/swaps/incoming?site_id=` for the active site (`activeSiteId()`) with the alerts and tasks. `total` stays the outgoing count; `incoming` holds the receiver's list, and the row shows when either is above zero. `BranchSwapsSheet` lists the incoming swaps first, read only (`IncomingSwaps` in `branch-swaps-card.tsx`): product, sending branch, units, expiry, and the value only when `useCanSeeAmounts()`. A failed read keeps the incoming swaps held before.
 **Rule:** Incoming is read only. Nothing here sends or assigns a receiving swap; the sending branch does that. `tests/e2e/incomingswaps.js` guards it.
+
+## The Field team board is the same for the boss and an employee (F-MANAGERRIGHTS)
+**Problem:** An employee with one allowed branch got the flat list, while the boss got the board with every branch, so the two pages did not match.
+**Reality:** `contractors-view.tsx` takes the branch list from `GET /branches` for an employee (names only), and from `useSites()` for the boss. An employee's board is read only. Swap figures are not read for an employee: `useBranchSwaps` is off and the board says "Swaps not loaded" with a dash, never a zero, because the API cuts other branches' alerts to their own site.
+**Rule:** Same layout for both; only the controls and the swap figures differ. `tests/e2e/managerrights.js` guards it.

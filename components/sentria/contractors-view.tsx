@@ -40,6 +40,8 @@ import { checkPhone, defaultPhoneCountry } from "@/lib/phone"
 import { roleSuggestions } from "@/lib/roles"
 import { useIsEmployee } from "@/lib/role"
 import { useSites, chooseSite } from "@/lib/sites"
+import { readList } from "@/lib/answer"
+import { API_BASE, apiFetch } from "@/lib/api"
 import { readSectors } from "@/lib/activities"
 import { useBranchSwaps } from "@/lib/use-branch-swaps"
 import { useCanSeeAmounts } from "@/lib/use-plan"
@@ -125,7 +127,28 @@ export function ContractorsView({
   const [roleFilter, setRoleFilter] = useState<string | null>(null)
   // The boss files each person under a site; an employee's list is already that site's.
   const employee = useIsEmployee()
-  const { mode: sitesMode, sites: companySites } = useSites()
+  const { mode: sitesMode, sites: ownSites } = useSites()
+  // An employee reads every branch's name, so the board is the same as the boss's (F-MANAGERRIGHTS).
+  const [allBranches, setAllBranches] = useState<{ id: string; name: string }[] | null>(null)
+  useEffect(() => {
+    if (!employee) return
+
+    let cancelled = false
+
+    apiFetch(`${API_BASE}/branches`)
+      .then((r) => readList<{ id: string; name: string }>(r, "branches"))
+      .then((answer) => {
+        if (!cancelled && answer.ok) setAllBranches(answer.rows)
+      })
+      .catch(() => {
+        /* keep the branches this account can use */
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [employee])
+  const companySites = employee && allBranches ? allBranches : ownSites
   const canFile = !employee && sitesMode === "server" && companySites.length > 0
   // A pharmacy company with several branches gets the branch board (F-BRANCHBOARD):
   // one manager per branch, in the branch's colour, with the swaps each one has.
@@ -139,7 +162,8 @@ export function ContractorsView({
   const branchSwaps = useBranchSwaps({
     lang: tx("fr", "en"),
     siteIds: companySites.map((site) => site.id),
-    enabled: branchMode,
+    // An employee cannot read the other branches' swaps, so the board shows them as not loaded.
+    enabled: branchMode && !employee,
     refresh: 0,
   })
 

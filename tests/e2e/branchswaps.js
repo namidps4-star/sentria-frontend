@@ -102,7 +102,8 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   const lines = card.getByTestId('ticket-line');
   const lt = (await card.getByTestId('swaps-ticket').innerText()).replace(/\s+/g, ' ');
   pass(await lines.count() === 3 && /20 × 380 KES/.test(lt) && /35 × 90 KES/.test(lt) && /52 × 60 KES/.test(lt), 'the ticket lists every swap with units times unit price: ' + lt);
-  pass(/Send before 16 Nov/.test(lt), 'the ticket names the soonest day to send by');
+  const shortDay = iso => new Date(`${iso}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  pass(lt.includes(`Send before ${shortDay(day(20))}`), 'the ticket names the soonest day to send by');
   const price = (await card.getByTestId('swap-price').allInnerTexts()).map(x => x.replace(/\s+/g, ' '));
   pass(price.length === 3 && /Unit price 380 KES Units × 20 7,600 KES/.test(price[0]), 'each row works out unit price times units to the line total: ' + price[0]);
   const ticketBox = await card.getByTestId('swaps-ticket').boundingBox();
