@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { Fragment, useEffect, useMemo, useState } from "react"
 import {
   AlertTriangle,
   CalendarClock,
@@ -29,7 +29,7 @@ import {
   type Contractor,
 } from "@/lib/crm"
 import { sectorLabel } from "@/lib/priorities"
-import { localized, useTx, type Localized } from "@/lib/i18n"
+import { localized, useTx, type Localized, type Tx } from "@/lib/i18n"
 import { AccountFreshnessNote, useAccountFreshness } from "./account-freshness"
 import { SourceNotice } from "./not-measured"
 import { SectorTag } from "./sector-tag"
@@ -453,12 +453,7 @@ export function CalendarView() {
 
   const monthYear = currentMonth.getFullYear()
 
-  const dayLabelFormatter = new Intl.DateTimeFormat(weekLabel, { weekday: "short" })
   const dayLabelShort = new Intl.DateTimeFormat(weekLabel, { weekday: "narrow" })
-  const timeFormatter = new Intl.DateTimeFormat(weekLabel, {
-    hour: "2-digit",
-    minute: "2-digit",
-  })
 
   const today = startOfDay(new Date())
 
@@ -1074,7 +1069,7 @@ export function CalendarView() {
 
       {/* WEEK AGENDA */}
       {viewMode === "week" && (
-        <div id="calendar-grid" className="t-enter rounded-[28px] bg-card p-4 shadow-sm" style={enterAt(1.6)}>
+        <div id="calendar-grid" className="t-enter squircle rounded-[28px] bg-card p-4 shadow-sm" style={enterAt(1.6)}>
           {!loaded ? (
             <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
@@ -1101,196 +1096,16 @@ export function CalendarView() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-7">
-              {weekDates.map((day) => {
-                const isToday = sameDay(day, today)
-                const dayEvents = visibleEvents
-                  .filter((e) => sameDay(e.date, day))
-                  .sort((a, b) => a.date.getTime() - b.date.getTime())
-
-                return (
-                  <div key={day.toISOString()} className="min-w-[150px]">
-                    <div
-                      className={cn(
-                        "mb-2 flex items-center justify-between rounded-xl px-2.5 py-1.5",
-                        isToday && "bg-primary text-primary-foreground"
-                      )}
-                    >
-                      <span className="text-[10px] font-semibold uppercase tracking-wide opacity-70">
-                        {dayLabelFormatter.format(day)}
-                      </span>
-                      <span className="font-heading text-sm font-bold">
-                        {day.getDate()}
-                      </span>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      {dayEvents.length === 0 && (
-                        <p className="rounded-xl border border-dashed border-border/60 px-2 py-3 text-center text-[10px] text-muted-foreground">
-                          {known ? tx("Rien", "Nothing") : "—"}
-                        </p>
-                      )}
-
-                      {dayEvents.map((event) => {
-                        const Icon = TYPE_ICON[event.kind]
-                        const isOpen = selected === event.id
-
-                        return (
-                          <div key={event.id} className="relative">
-                            <div
-                              role="button"
-                              tabIndex={0}
-                              onClick={() => setSelected(isOpen ? null : event.id)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter" || e.key === " ") {
-                                  e.preventDefault()
-                                  setSelected(isOpen ? null : event.id)
-                                }
-                              }}
-                              className={cn(
-                                "flex cursor-pointer flex-col gap-0.5 rounded-xl px-2.5 py-1.5 text-left shadow-sm transition-transform hover:-translate-y-0.5",
-                                TYPE_TONE[event.kind]
-                              )}
-                            >
-                              <div className="flex items-center gap-1">
-                                <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />
-                                <span className="truncate text-[10px] font-bold">
-                                  {event.title}
-                                </span>
-                              </div>
-
-                              <span className="truncate text-[9px] opacity-80">
-                                {event.hasTime
-                                  ? timeFormatter.format(event.date)
-                                  : tx("Toute la journée", "All day")}
-                              </span>
-
-                              {event.overdue && (
-                                <span className="text-[9px] font-bold">
-                                  {tx("En retard", "Overdue")}
-                                </span>
-                              )}
-                            </div>
-
-                            {isOpen && (
-                              <div
-                                className="absolute left-0 top-full z-40 mt-2 w-64 rounded-3xl bg-popover p-4 text-foreground shadow-xl"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <div className="flex items-start justify-between gap-2">
-                                  <span
-                                    className={cn(
-                                      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider",
-                                      TYPE_TONE[event.kind]
-                                    )}
-                                  >
-                                    <Icon className="h-3 w-3" aria-hidden="true" />
-                                    {tx(TYPE_LABEL[event.kind].fr, TYPE_LABEL[event.kind].en)}
-                                  </span>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => setSelected(null)}
-                                    className="rounded-md p-0.5 text-muted-foreground hover:bg-muted"
-                                    aria-label={tx("Fermer", "Close")}
-                                  >
-                                    <X className="h-3.5 w-3.5" />
-                                  </button>
-                                </div>
-
-                                <p className="mt-2.5 text-sm font-bold leading-snug">
-                                  {event.detail}
-                                </p>
-
-                                <div className="mt-2 rounded-xl bg-muted/60 px-2.5 py-2">
-                                  <p className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
-                                    {tx("Recommandation", "Recommendation")}
-                                  </p>
-                                  <p className="mt-0.5 text-[11px] leading-4 text-foreground">
-                                    {event.recommendedAction ??
-                                      tx(
-                                        "Aucune recommandation disponible.",
-                                        "No recommendation available."
-                                      )}
-                                  </p>
-                                </div>
-
-                                <div className="mt-2 flex gap-1.5">
-                                  <div className="flex-1 rounded-xl border border-border px-2.5 py-1.5 text-center">
-                                    <p className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">
-                                      {tx("Risque", "Risk")}
-                                    </p>
-                                    <p className="text-xs font-bold tabular-nums">
-                                      {event.riskScore != null ? `${event.riskScore}/100` : "—"}
-                                    </p>
-                                  </div>
-                                  <div className="flex-1 rounded-xl border border-border px-2.5 py-1.5 text-center">
-                                    <p className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">
-                                      {tx("Confiance", "Confidence")}
-                                    </p>
-                                    <p className="text-xs font-bold tabular-nums">
-                                      {event.confidence != null ? `${event.confidence}%` : "—"}
-                                    </p>
-                                  </div>
-                                </div>
-
-                                <div className="mt-2 flex flex-wrap gap-1.5">
-                                  <span className="rounded-full bg-muted px-2.5 py-1 text-[9px] font-semibold text-foreground/80">
-                                    {event.equipment}
-                                  </span>
-                                  {event.sector && (
-                                    <span className="rounded-full bg-muted px-2.5 py-1 text-[9px] font-semibold text-foreground/80">
-                                      {sectorLabel(event.sector, tx)}
-                                    </span>
-                                  )}
-                                  <span className="rounded-full bg-muted px-2.5 py-1 text-[9px] font-semibold text-foreground/80">
-                                    {event.hasTime
-                                      ? timeFormatter.format(event.date)
-                                      : tx("Toute la journée", "All day")}
-                                  </span>
-                                </div>
-
-                                <div className="mt-3 flex items-center gap-2">
-                                  <p className="text-[10px] font-medium text-muted-foreground">
-                                    {tx("Assigné à", "Assigned to")}
-                                  </p>
-
-                                  {event.assignees.length > 0 ? (
-                                    <div className="flex -space-x-1.5">
-                                      {event.assignees.map((person) => (
-                                        <span
-                                          key={person.id}
-                                          title={`${person.name}${person.role ? ` — ${person.role}` : ""}`}
-                                          className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-popover bg-accent text-[9px] font-bold text-accent-foreground"
-                                        >
-                                          {getInitials(person.name)}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <span className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-border text-muted-foreground">
-                                      <UserRound className="h-3 w-3" />
-                                    </span>
-                                  )}
-                                </div>
-
-                                <button
-                                  type="button"
-                                  onClick={() => setSelected(null)}
-                                  className="mt-3 w-full rounded-xl bg-accent px-3 py-2.5 text-xs font-bold text-accent-foreground transition-colors hover:bg-accent/90"
-                                >
-                                  {tx("Fermer", "Close")}
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+            <WeekHours
+              key={weekDates[0].toISOString()}
+              weekDates={weekDates}
+              events={visibleEvents}
+              today={today}
+              selected={selected}
+              onSelect={setSelected}
+              emptyText={known ? tx("Rien", "Nothing") : "—"}
+              tx={tx}
+            />
           )}
         </div>
       )}
@@ -1311,4 +1126,351 @@ export function CalendarView() {
   )
 }
 
+/* The week as an hour grid. Desktop: seven day columns against the hours, with
+ * the events that have no time in a row on top. Phone: a day picker and that
+ * day's list. Both open the same detail card. The hours shown run from 07:00 to
+ * 18:00, wider when an event falls outside them. */
 
+const DAY_ORDER = (a: CalendarEvent, b: CalendarEvent) =>
+  Number(b.hasTime) - Number(a.hasTime) || a.date.getTime() - b.date.getTime()
+
+function hourRange(list: CalendarEvent[]): number[] {
+  const hours = list.map((e) => e.date.getHours())
+  const first = Math.min(7, ...hours)
+  const last = Math.max(18, ...hours)
+
+  return Array.from({ length: last - first + 1 }, (_, i) => first + i)
+}
+
+function WeekHours({
+  weekDates,
+  events,
+  today,
+  selected,
+  onSelect,
+  emptyText,
+  tx,
+}: {
+  weekDates: Date[]
+  events: CalendarEvent[]
+  today: Date
+  selected: string | null
+  onSelect: (id: string | null) => void
+  emptyText: string
+  tx: Tx
+}) {
+  const locale = tx("fr-FR", "en-GB")
+  const dayFormatter = new Intl.DateTimeFormat(locale, { weekday: "short" })
+  const now = new Date()
+  const [dayIndex, setDayIndex] = useState(() => {
+    const index = weekDates.findIndex((d) => sameDay(d, today))
+    return index >= 0 ? index : 0
+  })
+
+  const byDay = weekDates.map((day) =>
+    events.filter((e) => sameDay(e.date, day)).sort(DAY_ORDER)
+  )
+  const hours = hourRange(events.filter((e) => e.hasTime))
+
+  return (
+    <div>
+      <div className="hidden md:block">
+        <div className="grid grid-cols-[56px_repeat(7,minmax(0,1fr))]">
+          <div />
+          {weekDates.map((day) => {
+            const isToday = sameDay(day, today)
+
+            return (
+              <div key={day.toISOString()} className="flex items-center gap-2 border-b border-border px-2 py-2">
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  {dayFormatter.format(day)}
+                </span>
+                <span
+                  className={cn(
+                    "flex h-6 w-6 items-center justify-center rounded-full font-heading text-xs font-bold",
+                    isToday && "bg-primary text-primary-foreground"
+                  )}
+                >
+                  {day.getDate()}
+                </span>
+              </div>
+            )
+          })}
+
+          <div className="flex items-start justify-end border-b border-border py-2 pr-2 text-[10px] font-semibold text-muted-foreground">
+            {tx("Journée", "All day")}
+          </div>
+          {byDay.map((list, i) => (
+            <div key={weekDates[i].toISOString()} data-allday={i} className="flex min-h-[36px] flex-col gap-1 border-b border-l border-border p-1">
+              {list
+                .filter((e) => !e.hasTime)
+                .map((event) => (
+                  <EventChip
+                    key={event.id}
+                    event={event}
+                    open={selected === event.id}
+                    onToggle={() => onSelect(selected === event.id ? null : event.id)}
+                    onClose={() => onSelect(null)}
+                    alignEnd={i >= 5}
+                    tx={tx}
+                  />
+                ))}
+            </div>
+          ))}
+
+          {hours.map((hour) => (
+            <Fragment key={hour}>
+              <div className="pr-2 pt-1 text-right text-[10px] font-semibold tabular-nums text-muted-foreground">
+                {String(hour).padStart(2, "0")}:00
+              </div>
+              {weekDates.map((day, i) => {
+                const isToday = sameDay(day, today)
+                const cellEvents = byDay[i].filter((e) => e.hasTime && e.date.getHours() === hour)
+                const showNow = isToday && now.getHours() === hour
+
+                return (
+                  <div
+                    key={`${day.toISOString()}-${hour}`}
+                    data-day={i}
+                    data-hour={hour}
+                    className={cn(
+                      "relative flex min-h-[52px] flex-col gap-1 border-b border-l border-border p-1",
+                      isToday && "bg-muted/40"
+                    )}
+                  >
+                    {showNow && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute inset-x-0 z-10 h-0.5 bg-foreground"
+                        style={{ top: `${(now.getMinutes() / 60) * 100}%` }}
+                      />
+                    )}
+                    {cellEvents.map((event) => (
+                      <EventChip
+                        key={event.id}
+                        event={event}
+                        open={selected === event.id}
+                        onToggle={() => onSelect(selected === event.id ? null : event.id)}
+                        onClose={() => onSelect(null)}
+                        alignEnd={i >= 5}
+                        tx={tx}
+                      />
+                    ))}
+                  </div>
+                )
+              })}
+            </Fragment>
+          ))}
+        </div>
+      </div>
+
+      <div className="md:hidden">
+        <div className="grid grid-cols-7 gap-1">
+          {weekDates.map((day, i) => {
+            const on = i === dayIndex
+            const isToday = sameDay(day, today)
+
+            return (
+              <button
+                key={day.toISOString()}
+                type="button"
+                onClick={() => setDayIndex(i)}
+                aria-pressed={on}
+                className={cn(
+                  "flex flex-col items-center gap-0.5 rounded-xl py-2 text-[10px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  on ? "bg-foreground text-background" : "bg-muted text-muted-foreground"
+                )}
+              >
+                <span className="uppercase">{dayFormatter.format(day)}</span>
+                <span className={cn("font-heading text-sm font-bold", isToday && !on && "text-foreground")}>
+                  {day.getDate()}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        <ul className="mt-3 space-y-2">
+          {byDay[dayIndex].length === 0 && (
+            <li className="rounded-xl border border-dashed border-border/60 px-3 py-4 text-center text-xs text-muted-foreground">
+              {emptyText}
+            </li>
+          )}
+          {byDay[dayIndex].map((event) => (
+            <li key={event.id} className="relative">
+              <EventChip
+                event={event}
+                open={selected === event.id}
+                onToggle={() => onSelect(selected === event.id ? null : event.id)}
+                onClose={() => onSelect(null)}
+                alignEnd={false}
+                tx={tx}
+                wide
+              />
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  )
+}
+
+function EventChip({
+  event,
+  open,
+  onToggle,
+  onClose,
+  alignEnd,
+  tx,
+  wide = false,
+}: {
+  event: CalendarEvent
+  open: boolean
+  onToggle: () => void
+  onClose: () => void
+  alignEnd: boolean
+  tx: Tx
+  wide?: boolean
+}) {
+  const Icon = TYPE_ICON[event.kind]
+  const timeLabel = new Intl.DateTimeFormat(tx("fr-FR", "en-GB"), {
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+
+  return (
+    <div className={cn("relative", wide && "w-full")}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onToggle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault()
+            onToggle()
+          }
+        }}
+        className={cn(
+          "flex cursor-pointer flex-col gap-0.5 rounded-lg px-2 py-1 text-left shadow-sm transition-transform hover:-translate-y-px",
+          TYPE_TONE[event.kind]
+        )}
+      >
+        <div className="flex items-center gap-1">
+          <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />
+          <span className="truncate text-[10px] font-bold">{event.title}</span>
+        </div>
+        <span className="truncate text-[9px] opacity-80">
+          {event.hasTime ? timeLabel.format(event.date) : tx("Toute la journée", "All day")}
+        </span>
+        {event.overdue && <span className="text-[9px] font-bold">{tx("En retard", "Overdue")}</span>}
+      </div>
+
+      {open && (
+        <div
+          className={cn(
+            "z-40 rounded-3xl bg-popover p-4 text-foreground shadow-xl",
+            // On a phone the card opens in the list, under its event; on the grid it floats over the cell.
+            wide ? "relative mt-2 w-full" : cn("absolute top-full mt-2 w-64", alignEnd ? "right-0" : "left-0")
+          )}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <span
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                TYPE_TONE[event.kind]
+              )}
+            >
+              <Icon className="h-3 w-3" aria-hidden="true" />
+              {tx(TYPE_LABEL[event.kind].fr, TYPE_LABEL[event.kind].en)}
+            </span>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-md p-0.5 text-muted-foreground hover:bg-muted"
+              aria-label={tx("Fermer", "Close")}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          <p className="mt-2.5 text-sm font-bold leading-snug">{event.detail}</p>
+
+          <div className="mt-2 rounded-xl bg-muted/60 px-2.5 py-2">
+            <p className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+              {tx("Recommandation", "Recommendation")}
+            </p>
+            <p className="mt-0.5 text-[11px] leading-4 text-foreground">
+              {event.recommendedAction ??
+                tx("Aucune recommandation disponible.", "No recommendation available.")}
+            </p>
+          </div>
+
+          <div className="mt-2 flex gap-1.5">
+            <div className="flex-1 rounded-xl border border-border px-2.5 py-1.5 text-center">
+              <p className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">
+                {tx("Risque", "Risk")}
+              </p>
+              <p className="text-xs font-bold tabular-nums">
+                {event.riskScore != null ? `${event.riskScore}/100` : "—"}
+              </p>
+            </div>
+            <div className="flex-1 rounded-xl border border-border px-2.5 py-1.5 text-center">
+              <p className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">
+                {tx("Confiance", "Confidence")}
+              </p>
+              <p className="text-xs font-bold tabular-nums">
+                {event.confidence != null ? `${event.confidence}%` : "—"}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <span className="rounded-full bg-muted px-2.5 py-1 text-[9px] font-semibold text-foreground/80">
+              {event.equipment}
+            </span>
+            {event.sector && (
+              <span className="rounded-full bg-muted px-2.5 py-1 text-[9px] font-semibold text-foreground/80">
+                {sectorLabel(event.sector, tx)}
+              </span>
+            )}
+            <span className="rounded-full bg-muted px-2.5 py-1 text-[9px] font-semibold text-foreground/80">
+              {event.hasTime ? timeLabel.format(event.date) : tx("Toute la journée", "All day")}
+            </span>
+          </div>
+
+          <div className="mt-3 flex items-center gap-2">
+            <p className="text-[10px] font-medium text-muted-foreground">{tx("Assigné à", "Assigned to")}</p>
+
+            {event.assignees.length > 0 ? (
+              <div className="flex -space-x-1.5">
+                {event.assignees.map((person) => (
+                  <span
+                    key={person.id}
+                    title={`${person.name}${person.role ? ` · ${person.role}` : ""}`}
+                    className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-popover bg-accent text-[9px] font-bold text-accent-foreground"
+                  >
+                    {getInitials(person.name)}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-border text-muted-foreground">
+                <UserRound className="h-3 w-3" />
+              </span>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-3 w-full rounded-xl bg-accent px-3 py-2.5 text-xs font-bold text-accent-foreground transition-colors hover:bg-accent/90"
+          >
+            {tx("Fermer", "Close")}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
