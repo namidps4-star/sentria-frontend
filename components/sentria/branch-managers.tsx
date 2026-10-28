@@ -60,6 +60,8 @@ export type BranchManagersProps = {
   loaded: boolean
   /** The swaps each branch sends, or null while they are not read (or could not be). */
   swaps: Record<string, Swap[]> | null
+  /** An employee's own read of the swaps coming in (F-SWAPIN); undefined for the boss, who reads them off every branch. */
+  incoming?: Record<string, Swap[]> | null
   canSeeAmounts: boolean
   sheet: ManagerSheet
   /** Notices that belong under the banner: a refused save, the drafted texts. */
@@ -74,11 +76,13 @@ export type BranchManagersProps = {
 }
 
 export function BranchManagers(props: BranchManagersProps) {
-  const { sites, contractors, loaded, swaps, canSeeAmounts, sheet, onAdd, readOnly } = props
+  const { sites, contractors, loaded, swaps, incoming, canSeeAmounts, sheet, onAdd, readOnly } = props
   const tx = useTx()
   const [filter, setFilter] = useState<Filter>("all")
-  const board = buildBoard(sites, contractors, swaps)
-  const swapsWaiting = swaps ? Object.values(swaps).reduce((sum, list) => sum + list.length, 0) : null
+  const board = buildBoard(sites, contractors, swaps, incoming)
+  // The branches read here: all of them for the boss, the employee's own for an employee.
+  const readLines = board.lines.filter((line) => line.read)
+  const swapsWaiting = readLines.length > 0 ? readLines.reduce((sum, line) => sum + line.send.length + (incoming === undefined ? 0 : line.receive.length), 0) : null
   const maxOpen = Math.max(1, ...contractors.map((c) => c.open_assignments))
   const everyone = [...board.lines.flatMap((l) => l.people.map((p) => ({ person: p, line: l as BranchLine | null }))), ...board.unfiled.map((p) => ({ person: p, line: null as BranchLine | null }))]
   const shown = everyone.filter(({ person }) => filter === "all" || (filter !== "nomanager" && person.availability === filter))
@@ -202,7 +206,6 @@ export function BranchManagers(props: BranchManagersProps) {
               person={person}
               line={line}
               maxOpen={maxOpen}
-              swapsRead={swaps !== null}
               canSeeAmounts={canSeeAmounts}
               sites={sites}
               onSetAvailability={props.onSetAvailability}
@@ -271,7 +274,6 @@ function PersonCard({
   person,
   line,
   maxOpen,
-  swapsRead,
   canSeeAmounts,
   sites,
   onSetAvailability,
@@ -283,7 +285,6 @@ function PersonCard({
   person: Contractor
   line: BranchLine | null
   maxOpen: number
-  swapsRead: boolean
   canSeeAmounts: boolean
   sites: BranchSite[]
   onSetAvailability: BranchManagersProps["onSetAvailability"]
@@ -414,14 +415,14 @@ function PersonCard({
       )}
 
       {/* THE SWAPS, as a tear-off stub */}
-      {line ? <SwapStub line={line} stake={stake} swapsRead={swapsRead} canSeeAmounts={canSeeAmounts} /> : <div className="pb-[18px]" />}
+      {line ? <SwapStub line={line} stake={stake} canSeeAmounts={canSeeAmounts} /> : <div className="pb-[18px]" />}
     </li>
   )
 }
 
-function SwapStub({ line, stake, swapsRead, canSeeAmounts }: { line: BranchLine; stake: ReturnType<typeof stakeOf>; swapsRead: boolean; canSeeAmounts: boolean }) {
+function SwapStub({ line, stake, canSeeAmounts }: { line: BranchLine; stake: ReturnType<typeof stakeOf>; canSeeAmounts: boolean }) {
   const tx = useTx()
-  const live = swapsRead && stake.count > 0
+  const live = line.read && stake.count > 0
 
   return (
     <div data-testid="swap-stub" className="relative -mx-[18px] mt-auto">
@@ -452,7 +453,7 @@ function SwapStub({ line, stake, swapsRead, canSeeAmounts }: { line: BranchLine;
         </div>
       ) : (
         <p className="bg-[#141414]/10 px-[18px] pb-4 pt-3.5 text-xs font-semibold opacity-65">
-          {swapsRead ? tx("Aucun transfert en attente", "No swaps waiting") : tx("Transferts non chargés", "Swaps not loaded")}
+          {line.read ? tx("Aucun transfert en attente", "No swaps waiting") : tx("Transferts non chargés", "Swaps not loaded")}
         </p>
       )}
     </div>

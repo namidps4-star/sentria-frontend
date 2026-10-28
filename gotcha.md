@@ -385,5 +385,5 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 
 ## The Field team board is the same for the boss and an employee (F-MANAGERRIGHTS)
 **Problem:** An employee with one allowed branch got the flat list, while the boss got the board with every branch, so the two pages did not match.
-**Reality:** `contractors-view.tsx` takes the branch list from `GET /branches` for an employee (names only), and from `useSites()` for the boss. An employee's board is read only. Swap figures are not read for an employee: `useBranchSwaps` is off and the board says "Swaps not loaded" with a dash, never a zero, because the API cuts other branches' alerts to their own site.
-**Rule:** Same layout for both; only the controls and the swap figures differ. `tests/e2e/managerrights.js` guards it.
+**Reality:** `contractors-view.tsx` takes the branch list from `GET /branches` for an employee (names only), and from `useSites()` for the boss. An employee's board is read only. An employee reads swaps for their own branches only: the sends from `/alerts` and the receives from `/swaps/incoming` (`lib/use-incoming-swaps.ts`). The API cuts other branches' alerts to their own site, so those lines say "Swaps not loaded" and the banner counts only what was read. `buildBoard` marks a line `read` only when its figures were read, so a missing branch is never a zero.
+**Rule:** Same layout for both; only the controls and the other branches' swap figures differ. `tests/e2e/managerrights.js` guards it.

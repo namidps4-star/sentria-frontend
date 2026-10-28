@@ -44,6 +44,7 @@ import { readList } from "@/lib/answer"
 import { API_BASE, apiFetch } from "@/lib/api"
 import { readSectors } from "@/lib/activities"
 import { useBranchSwaps } from "@/lib/use-branch-swaps"
+import { useIncomingSwaps } from "@/lib/use-incoming-swaps"
 import { useCanSeeAmounts } from "@/lib/use-plan"
 
 /* --------------------------------------------------------------------------
@@ -159,11 +160,18 @@ export function ContractorsView({
   // An employee reads the same board; the boss alone changes it (readOnly).
   const branchMode = sitesMode === "server" && companySites.length > 1 && isHealth
   const canSeeAmounts = useCanSeeAmounts()
+  // The boss reads every branch. An employee reads only their own: the API cuts the other branches' alerts to their site.
+  const readableIds = employee ? ownSites.map((site) => site.id) : companySites.map((site) => site.id)
   const branchSwaps = useBranchSwaps({
     lang: tx("fr", "en"),
-    siteIds: companySites.map((site) => site.id),
-    // An employee cannot read the other branches' swaps, so the board shows them as not loaded.
-    enabled: branchMode && !employee,
+    siteIds: readableIds,
+    enabled: branchMode,
+    refresh: 0,
+  })
+  const incomingSwaps = useIncomingSwaps({
+    lang: tx("fr", "en"),
+    siteIds: readableIds,
+    enabled: branchMode && employee,
     refresh: 0,
   })
 
@@ -545,6 +553,7 @@ export function ContractorsView({
           contractors={contractors}
           loaded={loaded}
           swaps={branchSwaps}
+          incoming={employee ? incomingSwaps : undefined}
           canSeeAmounts={canSeeAmounts}
           sheet={{
             open: adding,

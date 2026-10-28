@@ -36,6 +36,8 @@ export type BranchLine = {
   /** Swaps this branch has to send, and swaps other branches send to it. */
   send: Swap[]
   receive: Swap[]
+  /** False when this branch's swaps are not read for this account: shown as "not loaded", never as zero. */
+  read: boolean
 }
 
 export type BranchBoard = {
@@ -47,17 +49,30 @@ export type BranchBoard = {
   covered: number
 }
 
-/** `swapsBySite` holds, for each branch, the swaps its own alerts raised: the ones it sends. */
-export function buildBoard(sites: BranchSite[], contractors: Contractor[], swapsBySite: Record<string, Swap[]> | null): BranchBoard {
+/* `swapsBySite` holds, for each branch it can read, the swaps its own alerts raised: the ones it sends.
+ * `incomingBySite` is the receiver's own read (F-SWAPIN): undefined for the boss, who reads every
+ * branch's sends and works out what each receives; null while the receiver's read is not loaded. */
+export function buildBoard(
+  sites: BranchSite[],
+  contractors: Contractor[],
+  swapsBySite: Record<string, Swap[]> | null,
+  incomingBySite?: Record<string, Swap[]> | null
+): BranchBoard {
   const everySwap = swapsBySite ? Object.values(swapsBySite).flat() : []
-  const lines: BranchLine[] = sites.map((site, i) => ({
-    siteId: site.id,
-    name: site.name,
-    hue: hueOf(i),
-    people: contractors.filter((c) => c.site_id === site.id),
-    send: swapsBySite?.[site.id] ?? [],
-    receive: everySwap.filter((s) => same(s.toSite, site.name) && !same(s.fromSite, site.name)),
-  }))
+  const lines: BranchLine[] = sites.map((site, i) => {
+    const sent = swapsBySite?.[site.id]
+    const received = incomingBySite === undefined ? everySwap.filter((s) => same(s.toSite, site.name) && !same(s.fromSite, site.name)) : incomingBySite?.[site.id]
+
+    return {
+      siteId: site.id,
+      name: site.name,
+      hue: hueOf(i),
+      people: contractors.filter((c) => c.site_id === site.id),
+      send: sent ?? [],
+      receive: received ?? [],
+      read: sent !== undefined && received !== undefined,
+    }
+  })
   const known = new Set(sites.map((s) => s.id))
 
   return {

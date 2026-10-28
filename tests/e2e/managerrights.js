@@ -12,6 +12,8 @@ const site = (id, name) => ({ id, name, location: '', sector: 'health', status: 
 const person = (id, name, site_id, availability, open) => ({ id, name, role: 'Branch manager', phone: '+254700000' + id.slice(1).padStart(3, '1'), email: null, availability, note: null, active: true, open_assignments: open, site_id, sms_ready: true });
 const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_name: 'Atlantis', sentria_sector: 'health', sentria_sectors: '["health"]', sentria_business_type: 'pharmacie' };
 const SITES = [site('s1', 'Nairobi'), site('s2', 'Mombasa'), site('s3', 'Kisumu')];
+const day = n => new Date(Date.now() + n * 864e5).toISOString().slice(0, 10);
+const OWN_SEND = { id: 7, message: 'Amoxicillin: 20 units expire in 9 days at Nairobi. Mombasa sells this product: send them before ' + day(9), severity: 'WARNING', business_type: 'pharmacie', site_id: 's1', equipment: 'Amoxicillin 250mg · Nairobi -> Mombasa', alert_key: 'health.branch.swap', sector: 'health', date: NOW, params: [['product', 'Amoxicillin 250mg'], ['qty', 20], ['from_site', 'Nairobi'], ['to_site', 'Mombasa'], ['days', 9], ['expiry', day(9)], ['value', 7600], ['currency', 'KES']] };
 const PEOPLE = [
   person('c1', 'Mary Atieno', 's1', 'available', 1),
   person('c2', 'Joe Otieno', 's2', 'busy', 0),
@@ -22,7 +24,7 @@ const PEOPLE = [
   const b = await chromium.launch(LAUNCH);
   const open = async ({ role = null, sites = SITES, people = PEOPLE, vw = 1440, vh = 1000, theme = 'light', lang = 'en' } = {}) => {
     const p = await b.newPage({ viewport: { width: vw, height: vh }, locale: 'en-US' });
-    p._errs = []; p._writes = [];
+    p._errs = []; p._writes = []; p._alertSites = []; p._incomingSites = [];
     p.on('pageerror', e => p._errs.push(e.message));
     await p.route(/onrender\.com\//, r => {
       const req = r.request(); const u = new URL(req.url());
@@ -31,7 +33,8 @@ const PEOPLE = [
       if (req.method() !== 'GET' && u.pathname.startsWith('/contractors')) p._writes.push(`${req.method()} ${u.pathname}`);
       if (u.pathname === '/sites') return send({ sites, persisted: true, max_sites: 50 });
       if (u.pathname === '/branches') return send({ branches: SITES.map(x => ({ id: x.id, name: x.name })) });
-      if (u.pathname === '/alerts') return send([]);
+      if (u.pathname === '/alerts') { const sid = u.searchParams.get('site_id'); p._alertSites.push(sid); return send(sid === 's1' ? [OWN_SEND] : []); }
+      if (u.pathname === '/swaps/incoming') { p._incomingSites.push(u.searchParams.get('site_id')); return send({ alerts: [] }); }
       if (u.pathname === '/contractors' && req.method() === 'GET') return send({ contractors: people });
       if (u.pathname === '/assignments') return send({ assignments: [] });
       return send({ recommendations: [], assignments: [], contractors: [] });
@@ -79,11 +82,18 @@ const PEOPLE = [
   await q.getByTestId('branch-board').scrollIntoViewIfNeeded(); await q.screenshot({ path: 'managerrights-employee-390-dark-fr.png' });
   await q.close();
 
-  console.log('== the employee of one branch: the same board as the boss');
+  console.log('== the employee of one branch: the same board as the boss, with their own swaps');
   q = await open({ role: 'employee', sites: [SITES[0]], people: PEOPLE });
   pass(await q.getByTestId('branch-board').count() === 1, 'one branch of the account: still the board, every branch');
-  pass(await q.getByTestId('manager-card').count() === 3 && await q.getByTestId('banner-covered').innerText().then(t => /2 \/ 3/.test(t)), 'the same numbers as the boss: 2 of 3 covered');
-  pass(await q.getByText('Swaps not loaded').count() >= 1 && (await q.getByTestId('banner-swaps').innerText()).startsWith('–'), 'swaps are not loaded for an employee: a dash, never a zero');
+  pass(await q.getByTestId('manager-card').count() === 3 && /2 \/ 3/.test(await q.getByTestId('banner-covered').innerText()), 'the same numbers as the boss: 2 of 3 covered');
+  const nairobi = q.locator('[data-testid="manager-card"][data-branch="Nairobi"]');
+  pass(await nairobi.getByTestId('stub-send').count() === 1 && /1\s*send/.test(await nairobi.getByTestId('swap-stub').innerText()), 'their own branch shows the swap it sends');
+  const mombasa = q.locator('[data-testid="manager-card"][data-branch="Mombasa"]');
+  pass(/Swaps not loaded/.test(await mombasa.innerText()) && await mombasa.getByTestId('stub-send').count() === 0, 'another branch shows "Swaps not loaded", never a zero');
+  pass((await q.getByTestId('banner-swaps').innerText()).startsWith('1'), 'the banner counts their own swaps');
+  const named = q._alertSites.filter(Boolean);
+  pass(named.length > 0 && named.every(sid => sid === 's1'), 'every branch the employee asks for is their own (a call with no site gets their own on the server)');
+  pass(q._incomingSites.length > 0 && q._incomingSites.every(sid => sid === 's1'), 'and the swaps coming in only for their own branch');
   pass(await q.getByTestId('add-manager').count() === 0 && await q.getByTestId('open-branch').count() === 0, 'and no controls');
   await q.screenshot({ path: 'managerrights-employee-one-branch-light.png' });
   pass(q._writes.length === 0, 'no write sent');
