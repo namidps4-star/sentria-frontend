@@ -1,7 +1,0 @@
-{
-  "Drug ID": "drug_id",
-  "Item Description": "medicine_name",
-  "Quantity": {"to": "stock_qty", "strip_unit": true},
-  "Cost": "unit_cost",
-  "Expiry date": {"to": "expiry_date", "date_in": "%b-%y", "month_end": true}
-}

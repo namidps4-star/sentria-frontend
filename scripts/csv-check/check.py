@@ -7,12 +7,13 @@
     python scripts/csv-check/check.py FILE.csv --schema pharmacie --today 2026-10-28
 
 --schema  a file in scripts/csv-check/schemas/ (no .json), one per department.
---map     a JSON file for one client export, kept outside the repo with that
-          client's data. Shape:
-              {"Their column": "our column",
-               "Their column": {"to": "our column", "strip_unit": true,
-                                "date_in": "%b-%y", "month_end": true}}
-          A column not in the map keeps its name.
+--map     a mapping file in scripts/csv-check/mappings/. Without --map the checker
+          looks for the one whose headers match the file and whose department
+          matches --schema. A mapping names its export, department and headers,
+          and lists its columns and its assumptions. Column rules:
+              "Their column": "our column"
+              "Their column": {"to": "our column", "strip_unit": true,
+                               "date_in": "%b-%y", "month_end": true}
 --write   writes the mapped rows as a clean CSV: ISO dates, plain numbers.
 
 Column types: text, int, number, money (commas allowed), date, bool.
@@ -46,12 +47,49 @@ def load_schema(name):
         return json.load(fh)
 
 
-def normalise_map(raw):
-    """Accepts the short form ("Their": "ours") and the long form, returns long form."""
-    out = {}
-    for source, target in raw.items():
-        out[source] = target if isinstance(target, dict) else {"to": target}
-    return out
+def load_mappings():
+    """Every mapping file in mappings/, as (path, data)."""
+    folder = os.path.join(HERE, "mappings")
+    found = []
+    for name in sorted(os.listdir(folder)):
+        if name.endswith(".json"):
+            path = os.path.join(folder, name)
+            with open(path, encoding="utf-8") as fh:
+                found.append((path, json.load(fh)))
+    return found
+
+
+def find_mapping(headers, schema_name):
+    """The one mapping whose headers match the file and whose department matches the schema."""
+    matches = [
+        (path, data) for path, data in load_mappings()
+        if data.get("department") == schema_name and set(data.get("headers", [])) == set(headers)
+    ]
+    return matches[0] if len(matches) == 1 else (None, None)
+
+
+def check_mapping(data, schema, headers, schema_name):
+    """A target the schema does not list is fine: the column is ignored."""
+    """Returns a list of problems with a mapping file. Empty when it is sound."""
+    problems = []
+    if data.get("department") != schema_name:
+        problems.append(f"department is {data.get('department')!r}, schema is {schema_name!r}")
+    listed = set(data.get("headers", []))
+    if listed != set(headers):
+        problems.append(f"headers differ from the file: only in file {sorted(set(headers) - listed)}, "
+                        f"only in mapping {sorted(listed - set(headers))}")
+    for source in data.get("columns", {}):
+        if source not in listed:
+            problems.append(f"{source!r} is mapped but is not one of the mapping's headers")
+    return problems
+
+
+def mapping_rules(data):
+    """Long form for every source column: {"to": ..., options}."""
+    return {
+        source: (rule if isinstance(rule, dict) else {"to": rule})
+        for source, rule in data.get("columns", {}).items()
+    }
 
 
 def parse_value(kind, text, options, schema):
@@ -114,10 +152,6 @@ def main():
 
     schema = load_schema(args.schema)
     columns = schema["columns"]
-    mapping = {}
-    if args.map_file:
-        with open(args.map_file, encoding="utf-8") as fh:
-            mapping = normalise_map(json.load(fh))
     today = datetime.date.fromisoformat(args.today) if args.today else datetime.date.today()
 
     with open(args.csv_file, encoding="utf-8-sig", newline="") as fh:
@@ -125,11 +159,27 @@ def main():
         source_columns = reader.fieldnames or []
         source_rows = list(reader)
 
-    # Which of our columns each source column becomes.
-    target_of = {}
-    for col in source_columns:
-        rule = mapping.get(col, {"to": col})
-        target_of[col] = rule
+    if args.map_file:
+        with open(args.map_file, encoding="utf-8") as fh:
+            mapping_path, mapping = args.map_file, json.load(fh)
+    else:
+        mapping_path, mapping = find_mapping(source_columns, args.schema)
+    if mapping is None:
+        print("No mapping matches this file's headers. Columns keep their own names.")
+        mapping = {"columns": {}}
+    else:
+        print(f"Mapping: {mapping.get('export')} ({os.path.basename(mapping_path)})")
+        problems = check_mapping(mapping, schema, source_columns, args.schema)
+        if problems:
+            print("Mapping problems:")
+            for problem in problems:
+                print(f"  {problem}")
+            return 1
+    mapping_assumptions = mapping.get("assumptions", [])
+
+        # Which of our columns each source column becomes.
+    rules = mapping_rules(mapping)
+    target_of = {col: rules.get(col, {"to": col}) for col in source_columns}
     targets = {rule["to"] for rule in target_of.values()}
     missing = [name for name, spec in columns.items() if spec["required"] and name not in targets]
     ignored = [c for c in source_columns if target_of[c]["to"] not in columns]
@@ -138,6 +188,8 @@ def main():
     print(f"Schema: {schema['label']} ({args.schema})  |  Rows: {len(source_rows)}  |  Today: {today.isoformat()}")
     print(f"Required but missing: {', '.join(missing) or 'none'}")
     print(f"Columns not in the schema (ignored): {', '.join(ignored) or 'none'}")
+    for note in mapping_assumptions:
+        print(f"Assumption: {note}")
     print()
 
     problems = defaultdict(list)
