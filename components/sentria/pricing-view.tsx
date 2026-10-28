@@ -33,6 +33,7 @@ import {
   type BillingStatus,
 } from "@/lib/billing"
 import { CapabilityMatrix } from "./capability-matrix"
+import { PayDialog } from "./pay-dialog"
 import { StatusTag } from "./status-tag"
 
 /* What a failed payment step says (BILL-STRIPE). */
@@ -44,6 +45,11 @@ const BILLING_FAILURE: Record<BillingFailure, Localized> = {
   owner_only: { fr: "Seul le propriétaire du compte peut changer d'offre.", en: "Only the account owner can change the plan." },
   unavailable: { fr: "Stripe ne répond pas. Réessayez dans un instant.", en: "Stripe is not answering. Try again in a moment." },
   unreachable: { fr: "Le serveur est injoignable. Vérifiez la connexion.", en: "The server cannot be reached. Check the connection." },
+  email_invalid: { fr: "Cette adresse e-mail n'est pas valide.", en: "This email address is not valid." },
+  already_subscribed: {
+    fr: "Vous avez déjà un abonnement : changez d'offre avec « Gérer mon abonnement ».",
+    en: "You already have a subscription: change plan with \"Manage my subscription\".",
+  },
   other: { fr: "Le paiement n'a pas pu s'ouvrir.", en: "The payment could not open." },
 }
 
@@ -148,6 +154,9 @@ export function PricingView() {
   const [busy, setBusy] = useState<string | null>(null)
   const [failure, setFailure] = useState<BillingFailure | null>(null)
   const [returned, setReturned] = useState<"done" | "cancelled" | null>(null)
+  // The in-app card form, open on one plan and period.
+  const [payFor, setPayFor] = useState<{ plan: PlanId; interval: "month" | "year" } | null>(null)
+  const [paidHere, setPaidHere] = useState(false)
 
   useEffect(() => {
     const sync = () => setAccount(readAccountPlan())
@@ -195,6 +204,31 @@ export function PricingView() {
 
     setBusy(null)
     setFailure(answer.reason)
+  }
+
+  /* Choose: the app's own card form when the API gives Stripe's publishable
+     key, Stripe Checkout otherwise. */
+  function choose(plan: PlanId) {
+    const interval = annual ? "year" : "month"
+
+    if (billing.cardKey) {
+      setFailure(null)
+      setPaidHere(false)
+      setPayFor({ plan, interval })
+      return
+    }
+
+    void goTo(plan, () => startCheckout(plan, interval))
+  }
+
+  function closePay() {
+    setPayFor(null)
+
+    // Paid in the form: the portal now opens on the new customer.
+    if (paidHere) {
+      fetchBillingStatus().then(setBilling)
+      setReturned("done")
+    }
   }
 
   const locale = tx("fr-FR", "en-GB")
@@ -343,7 +377,7 @@ export function PricingView() {
                     <button
                       type="button"
                       data-testid={`buy-${plan}`}
-                      onClick={() => void goTo(plan, () => startCheckout(plan, annual ? "year" : "month"))}
+                      onClick={() => choose(plan)}
                       disabled={busy !== null}
                       className={cn(
                         "rounded-full px-4 py-2 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60",
@@ -407,6 +441,23 @@ export function PricingView() {
                 "Online payment (card and mobile money) is coming soon."
               )}
         </p>
+
+        {payFor && (
+          <PayDialog
+            plan={payFor.plan}
+            interval={payFor.interval}
+            cardKey={billing.cardKey}
+            amount={(() => {
+              const p = monthlyPrice(payFor.plan, currency.code)!
+              const total = (payFor.interval === "year" ? p.amount * 10 : p.amount).toLocaleString(locale)
+              return `${total} ${currencyByCode(p.currency)?.symbol ?? p.currency}`
+            })()}
+            tagline={resolve(TAGLINES[payFor.plan], tx)}
+            describe={(reason) => resolve(BILLING_FAILURE[reason], tx)}
+            onClose={closePay}
+            onPaid={() => setPaidHere(true)}
+          />
+        )}
 
         {/* SentrIA Intelligence + add-ons */}
         <div className="t-enter grid grid-cols-1 gap-6 lg:grid-cols-[2fr_1fr]" style={enterAt(2.2)}>
