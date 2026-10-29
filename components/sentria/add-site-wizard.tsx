@@ -99,7 +99,7 @@ function Tile({
         <img
           src={art}
           alt=""
-          className={cn("pointer-events-none absolute -bottom-2 -right-2 h-[72%] w-[52%] object-contain", !selected && "[filter:var(--art-filter)]")}
+          className={cn("pointer-events-none absolute -bottom-2 -right-2 h-[68%] w-[46%] object-contain", !selected && "[filter:var(--art-filter)]")}
         />
       ) : Icon ? (
         <Icon className={cn("absolute bottom-5 right-5 h-14 w-14 stroke-[1.5]", !selected && "[filter:var(--art-filter)]")} aria-hidden="true" />
@@ -463,7 +463,36 @@ export function AddSiteWizard({
                 {priorityList.length === 0 ? (
                   <p className="mt-3 text-sm text-muted-foreground">{tx("Rien à choisir pour ce secteur.", "Nothing to pick for this sector.")}</p>
                 ) : (
-                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <>
+                    <div className="mt-3 flex items-center justify-between gap-3">
+                      <p className="text-sm text-muted-foreground">
+                        {tx(
+                          `${priorities.length} sur ${priorityList.length} choisies`,
+                          `${priorities.length} of ${priorityList.length} picked`
+                        )}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          data-testid="add-site-priorities-all"
+                          onClick={() => setPriorities(priorityList.map((item) => item.id))}
+                          disabled={priorities.length === priorityList.length}
+                          className="rounded-full bg-muted px-4 py-2 text-sm font-bold transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {tx("Tout sélectionner", "Select all")}
+                        </button>
+                        <button
+                          type="button"
+                          data-testid="add-site-priorities-none"
+                          onClick={() => setPriorities([])}
+                          disabled={priorities.length === 0}
+                          className="rounded-full bg-muted px-4 py-2 text-sm font-bold transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {tx("Tout désélectionner", "Clear all")}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {priorityList.map((item, index) => (
                       <Tile
                         key={item.id}
@@ -477,7 +506,8 @@ export function AddSiteWizard({
                         detail={px(item.description)}
                       />
                     ))}
-                  </div>
+                    </div>
+                  </>
                 )}
               </div>
             )}

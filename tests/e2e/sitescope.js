@@ -168,6 +168,11 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
     const pri = p.locator('[data-testid^="add-site-priority-"]');
     pass(await pri.count() >= 1, 'step 4 lists what the sector can monitor');
     await pri.first().click();
+    await p.getByTestId('add-site-priorities-all').click(); await p.waitForTimeout(150);
+    pass((await p.locator('[data-testid^="add-site-priority-"][aria-pressed="true"]').count()) === await pri.count(), 'Select all picks every priority');
+    await p.getByTestId('add-site-priorities-none').click(); await p.waitForTimeout(150);
+    pass((await p.locator('[data-testid^="add-site-priority-"][aria-pressed="true"]').count()) === 0, 'Clear all empties the priorities');
+    await pri.first().click();
     await p.getByTestId('add-site-next').click(); await p.waitForTimeout(300);
     pass(await p.getByTestId('add-site-source-csv').isVisible() && await p.getByTestId('add-site-source-api').isVisible() && await p.getByTestId('add-site-source-erp').isVisible(), 'step 5 offers CSV, API and ERP (and sensors)');
     await p.getByTestId('add-site-source-erp').click(); await p.waitForTimeout(150);
