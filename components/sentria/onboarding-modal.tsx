@@ -1688,8 +1688,8 @@ export function OnboardingView({
                         </p>
                       )}
 
-                      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 md:grid-cols-3">
-                        {shownSubTypes.map((item) => {
+                      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+                        {shownSubTypes.map((item, index) => {
                           const Icon = item.icon
                           const active = subTypes2.includes(item.id)
                           const img = imageForActivity(item.id)
@@ -1718,6 +1718,7 @@ export function OnboardingView({
                               }
                               className={cn(
                                 !fits && "opacity-50",
+                                index === 0 && shownSubTypes.length % 2 === 1 && "sm:col-span-2",
                                 "group relative flex min-h-[190px] flex-col justify-end overflow-hidden rounded-[28px] p-5 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                 active
                                   ? "bg-brand text-[#141414]"
@@ -1867,8 +1868,8 @@ export function OnboardingView({
                   </div>
                 </div>
 
-                <div className="mt-5 grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-                  {equipment.map((item) => {
+                <div className="mt-5 grid grid-cols-1 gap-3.5 sm:grid-cols-2">
+                  {equipment.map((item, index) => {
                     const Icon = item.icon
                     const active = selectedEquipment.includes(item.id)
                     const disabled = Boolean(item.comingSoon)
@@ -1883,6 +1884,7 @@ export function OnboardingView({
                         disabled={disabled}
                         aria-pressed={disabled ? undefined : active}
                         className={cn(
+                          index === 0 && equipment.length % 2 === 1 && "sm:col-span-2",
                           "relative flex min-h-[190px] flex-col justify-end overflow-hidden rounded-[28px] p-5 pt-24 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                           disabled
                             ? "cursor-not-allowed border border-border bg-card opacity-50"
@@ -1968,8 +1970,8 @@ export function OnboardingView({
                   )}
                 />
 
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                  {DATA_SOURCES.map((source) => {
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {DATA_SOURCES.map((source, index) => {
                     const Icon = source.icon
                     const active = selectedSources.includes(source.id)
 
@@ -1979,6 +1981,7 @@ export function OnboardingView({
                         type="button"
                         onClick={() => toggleSource(source.id)}
                         className={cn(
+                          index === 0 && DATA_SOURCES.length % 2 === 1 && "sm:col-span-2",
                           "relative flex min-h-[150px] flex-col justify-end overflow-hidden rounded-[28px] p-5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                           active
                             ? "bg-brand text-[#141414]"
