@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react"
 import { createPortal } from "react-dom"
-import { Check, CheckCircle2, Loader2, Lock, X } from "@/lib/icons"
+import { Check, CheckCircle2, Loader2, Lock, Phone, X } from "@/lib/icons"
 
-import { startCheckout, startSubscription, type BillingFailure, type BillingInterval } from "@/lib/billing"
+import { kenyanPhone, mpesaState, startCheckout, startMpesa, startSubscription, type BillingFailure, type BillingInterval, type MpesaReason } from "@/lib/billing"
 import { resolve, useTx } from "@/lib/i18n"
 import { pickableCountries, useLocale } from "@/lib/locale"
 import { PLAN_LIMITS, PLAN_NAMES, type PlanId } from "@/lib/plans"
@@ -19,7 +19,25 @@ import { StatusTag } from "./status-tag"
    on a dark panel (name, perks filling its height, the total at the bottom in
    lime), the form beside it. The card fields are Stripe's own (iframes), so
    the number never reaches this app or the API. The plan changes only when
-   Stripe's signed webhook reaches the API, never from here. */
+   Stripe's signed webhook reaches the API, never from here.
+
+   BILL-MPESA: for a company in shillings, "Mobile money" is M-PESA. The API
+   sends a prompt to the phone, the customer types their PIN there, and this
+   dialog asks the API until Safaricom has answered. One payment covers 30
+   days; M-PESA does not renew by itself. */
+
+// How often the dialog asks about an M-PESA payment, and for how long.
+const MPESA_POLL_MS = 3_000
+const MPESA_WAIT_MS = 150_000
+
+const MPESA_REASON: Record<MpesaReason, { fr: string; en: string }> = {
+  cancelled: { fr: "Le paiement a été annulé sur le téléphone.", en: "The payment was cancelled on the phone." },
+  no_answer: { fr: "Pas de réponse sur le téléphone à temps. Réessayez.", en: "The phone did not answer in time. Try again." },
+  insufficient_funds: { fr: "Solde M-PESA insuffisant.", en: "Not enough money on the M-PESA account." },
+  wrong_pin: { fr: "Code M-PESA incorrect. Réessayez.", en: "Wrong M-PESA PIN. Try again." },
+  amount_mismatch: { fr: "Le montant payé ne correspond pas. Contactez-nous.", en: "The amount paid does not match. Contact us." },
+  failed: { fr: "Le paiement M-PESA n'est pas passé. Réessayez.", en: "The M-PESA payment did not go through. Try again." },
+}
 
 type Field = "number" | "expiry" | "cvc"
 
@@ -76,6 +94,8 @@ export function PayDialog({
   plan,
   interval,
   cardKey,
+  cardOn = true,
+  mpesa = false,
   amount,
   tagline,
   describe,
@@ -86,6 +106,10 @@ export function PayDialog({
   interval: BillingInterval
   /** Stripe's publishable key, from GET /billing/status. */
   cardKey: string
+  /** Card payment is on at all (the form, or Stripe's page when there is no key). */
+  cardOn?: boolean
+  /** The company may pay by M-PESA (GET /billing/status). */
+  mpesa?: boolean
   /** The price as the Plans page shows it, e.g. "29 €". */
   amount: string
   tagline: string
@@ -108,6 +132,11 @@ export function PayDialog({
   const [paying, setPaying] = useState(false)
   const [problem, setProblem] = useState("")
   const [paid, setPaid] = useState(false)
+  const [method, setMethod] = useState<"card" | "mpesa">(mpesa && interval === "month" ? "mpesa" : "card")
+  const [phone, setPhone] = useState("")
+  // An M-PESA prompt is on the phone: the dialog waits for Safaricom's answer.
+  const [waiting, setWaiting] = useState(false)
+  const [paidUntil, setPaidUntil] = useState<string | null>(null)
 
   const payingRef = useRef(false)
   const stripeRef = useRef<StripeClient | null>(null)
@@ -118,8 +147,10 @@ export function PayDialog({
   const probes = useRef<HTMLDivElement>(null)
   const mounts = useRef<Record<Field, HTMLDivElement | null>>({ number: null, expiry: null, cvc: null })
   const firstInput = useRef<HTMLInputElement>(null)
+  const checkoutRef = useRef<string | null>(null)
 
   const yearly = interval === "year"
+  const mpesaOpen = mpesa && !yearly
   const limits = PLAN_LIMITS[plan]
   const perks = [limits.sitesUsers, limits.alerts, limits.ask, limits.history]
   const countries = pickableCountries(countryCode || country)
@@ -161,6 +192,11 @@ export function PayDialog({
     const restyle = () => made.forEach((element) => element.update({ style: fieldStyle(probes.current) }))
 
     setLoad("loading")
+
+    if (!cardKey) {
+      setLoad("failed")
+      return
+    }
 
     loadStripeJs().then((factory) => {
       if (!alive) return
@@ -269,6 +305,69 @@ export function PayDialog({
     stop(describe("other"))
   }
 
+  // Waiting for Safaricom: ask the API every few seconds, for a while.
+  useEffect(() => {
+    if (!waiting || !checkoutRef.current) return
+
+    let alive = true
+    const id = checkoutRef.current
+    const started = Date.now()
+    let timer: ReturnType<typeof setTimeout>
+
+    const ask = async () => {
+      const state = await mpesaState(id)
+      if (!alive) return
+
+      if (state?.status === "paid") {
+        setWaiting(false)
+        setPaidUntil(state.paidUntil)
+        setPaid(true)
+        onPaid()
+        return
+      }
+
+      if (state?.status === "failed") {
+        setWaiting(false)
+        setProblem(resolve(MPESA_REASON[state.reason], tx))
+        return
+      }
+
+      if (Date.now() - started > MPESA_WAIT_MS) {
+        setWaiting(false)
+        setProblem(resolve(MPESA_REASON.no_answer, tx))
+        return
+      }
+
+      timer = setTimeout(ask, MPESA_POLL_MS)
+    }
+
+    timer = setTimeout(ask, MPESA_POLL_MS)
+
+    return () => {
+      alive = false
+      clearTimeout(timer)
+    }
+  }, [waiting, onPaid, tx])
+
+  async function payMpesa() {
+    if (payingRef.current) return
+
+    setProblem("")
+    const number = kenyanPhone(phone)
+    if (!number) return setProblem(describe("phone_invalid"))
+
+    payingRef.current = true
+    setPaying(true)
+    const answer = await startMpesa(plan, number)
+    payingRef.current = false
+    setPaying(false)
+
+    if (!answer.ok) return setProblem(describe(answer.reason))
+
+    checkoutRef.current = answer.checkoutId
+    setWaiting(true)
+  }
+
   // Stripe.js did not load (blocked, offline): Stripe's own page still works.
   async function payOnStripe() {
     if (payingRef.current) return
@@ -352,19 +451,42 @@ export function PayDialog({
           <div data-testid="pay-done" role="status" className="flex flex-col justify-center gap-4 p-6 md:p-8">
             <CheckCircle2 className="h-10 w-10 text-[var(--tag-success-fg)]" aria-hidden="true" />
             <h3 className="font-heading text-2xl font-semibold">{tx("Paiement reçu", "Payment received")}</h3>
-            <p className="text-sm text-muted-foreground">
-              {tx(
-                `Votre offre passe à ${PLAN_NAMES[plan]} dès que Stripe le confirme, en général dans la minute. Rechargez la page pour la voir.`,
-                `Your plan moves to ${PLAN_NAMES[plan]} once Stripe confirms it, usually within a minute. Reload the page to see it.`
+            {method === "mpesa" ? (
+              <p className="text-sm text-muted-foreground">
+                {paidUntil
+                  ? tx(
+                      `Safaricom a confirmé. Votre offre est ${PLAN_NAMES[plan]} jusqu'au ${new Date(paidUntil).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}.`,
+                      `Safaricom confirmed it. Your plan is ${PLAN_NAMES[plan]} until ${new Date(paidUntil).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}.`
+                    )
+                  : tx(`Safaricom a confirmé. Votre offre est ${PLAN_NAMES[plan]}.`, `Safaricom confirmed it. Your plan is ${PLAN_NAMES[plan]}.`)}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {tx(
+                  `Votre offre passe à ${PLAN_NAMES[plan]} dès que Stripe le confirme, en général dans la minute. Rechargez la page pour la voir.`,
+                  `Your plan moves to ${PLAN_NAMES[plan]} once Stripe confirms it, usually within a minute. Reload the page to see it.`
+                )}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2">
+              {method === "mpesa" && (
+                <button
+                  type="button"
+                  data-testid="mpesa-see-plan"
+                  onClick={() => window.location.reload()}
+                  className="h-12 rounded-full bg-brand px-6 text-sm font-bold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {tx("Voir mon offre", "See my plan")}
+                </button>
               )}
-            </p>
-            <button
-              type="button"
-              onClick={onClose}
-              className="h-12 self-start rounded-full bg-foreground px-6 text-sm font-bold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              {tx("Fermer", "Close")}
-            </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="h-12 rounded-full bg-foreground px-6 text-sm font-bold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {tx("Fermer", "Close")}
+              </button>
+            </div>
           </div>
         ) : (
           <form
@@ -372,7 +494,7 @@ export function PayDialog({
             className="flex flex-col gap-4 p-6 md:p-8"
             onSubmit={(event) => {
               event.preventDefault()
-              void pay()
+              void (method === "mpesa" ? payMpesa() : pay())
             }}
           >
             <div className="flex items-center justify-between gap-3">
@@ -389,10 +511,10 @@ export function PayDialog({
               </button>
             </div>
 
-            <label className="flex flex-col gap-2">
+            <label className={cn("flex flex-col gap-2", method !== "card" && "hidden")}>
               <span className={label}>{tx("Adresse e-mail", "Email address")}</span>
               <input
-                ref={firstInput}
+                ref={method === "card" ? firstInput : undefined}
                 data-testid="pay-email"
                 type="email"
                 autoComplete="email"
@@ -411,78 +533,130 @@ export function PayDialog({
                 <button
                   type="button"
                   role="radio"
-                  aria-checked="true"
-                  className="flex h-12 items-center justify-center rounded-[18px] bg-card text-sm font-semibold text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-checked={method === "card"}
+                  data-testid="pay-method-card"
+                  disabled={!cardOn || paying || waiting}
+                  onClick={() => {
+                    setMethod("card")
+                    setProblem("")
+                  }}
+                  className={cn(
+                    "flex h-12 items-center justify-center rounded-[18px] text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed",
+                    method === "card" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+                  )}
                 >
                   {tx("Carte bancaire", "Card")}
                 </button>
-                {MOBILE_MONEY.map((brand) => (
-                  <button
-                    key={brand.id}
-                    type="button"
-                    role="radio"
-                    aria-checked="false"
-                    disabled
-                    data-testid={brand.testId}
-                    className="flex min-h-12 cursor-not-allowed flex-col items-center justify-center gap-1 rounded-[18px] px-2 py-1.5 text-muted-foreground"
-                  >
-                    <span className="flex h-8 w-full max-w-[92px] items-center justify-center rounded-md bg-white px-1.5">
-                      <img src={brand.logo} alt={brand.name} className="max-h-6 w-auto max-w-full object-contain" />
-                    </span>
-                    <StatusTag tone="neutral" size="xs" icon={false}>{tx("Bientôt", "Soon")}</StatusTag>
-                  </button>
-                ))}
+                {MOBILE_MONEY.map((brand) => {
+                  // M-PESA is live for a company in shillings, monthly; the others are coming.
+                  const live = brand.id === "mpesa" && mpesa
+                  const open = live && mpesaOpen
+                  const picked = live && method === "mpesa"
+                  return (
+                    <button
+                      key={brand.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={picked}
+                      disabled={!open || paying || waiting}
+                      data-testid={brand.testId}
+                      onClick={() => {
+                        setMethod("mpesa")
+                        setProblem("")
+                      }}
+                      className={cn(
+                        "flex min-h-12 flex-col items-center justify-center gap-1 rounded-[18px] px-2 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed",
+                        picked ? "bg-card text-foreground shadow-sm ring-1 ring-brand" : "text-muted-foreground"
+                      )}
+                    >
+                      <span className="flex h-8 w-full max-w-[92px] items-center justify-center rounded-md bg-white px-1.5">
+                        <img src={brand.logo} alt={brand.name} className="max-h-6 w-auto max-w-full object-contain" />
+                      </span>
+                      {!live && <StatusTag tone="neutral" size="xs" icon={false}>{tx("Bientôt", "Soon")}</StatusTag>}
+                      {live && yearly && <StatusTag tone="neutral" size="xs" icon={false}>{tx("Au mois", "Monthly")}</StatusTag>}
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <span className={label}>{tx("Carte bancaire", "Card")}</span>
-              <div data-testid="pay-card" className={cn("overflow-hidden rounded-[18px] border border-border bg-background", load === "loading" && "animate-pulse")}>
-                <div ref={(node) => { mounts.current.number = node }} data-field="number" className={cn(fieldShell, "border-b border-border")} />
-                <div className="grid grid-cols-2">
-                  <div ref={(node) => { mounts.current.expiry = node }} data-field="expiry" className={cn(fieldShell, "border-r border-border")} />
-                  <div ref={(node) => { mounts.current.cvc = node }} data-field="cvc" className={fieldShell} />
+            {method === "mpesa" && (
+              <div className="flex flex-col gap-4">
+                <label className="flex flex-col gap-2">
+                  <span className={label}>{tx("Numéro M-PESA", "M-PESA phone number")}</span>
+                  <input
+                    ref={method === "mpesa" ? firstInput : undefined}
+                    data-testid="mpesa-phone"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    value={phone}
+                    onChange={(event) => setPhone(event.target.value)}
+                    disabled={paying || waiting}
+                    placeholder="07XX XXX XXX"
+                    className={input}
+                  />
+                </label>
+                <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  {tx(
+                    "Safaricom envoie une demande sur ce téléphone. Tapez votre code M-PESA dessus. SentrIA ne voit pas votre code.",
+                    "Safaricom sends a prompt to this phone. Type your M-PESA PIN there. SentrIA never sees your PIN."
+                  )}
+                </p>
+              </div>
+            )}
+
+            <div className={cn("flex flex-col gap-4", method !== "card" && "hidden")}>
+              <div className="flex flex-col gap-2">
+                <span className={label}>{tx("Carte bancaire", "Card")}</span>
+                <div data-testid="pay-card" className={cn("overflow-hidden rounded-[18px] border border-border bg-background", load === "loading" && "animate-pulse")}>
+                  <div ref={(node) => { mounts.current.number = node }} data-field="number" className={cn(fieldShell, "border-b border-border")} />
+                  <div className="grid grid-cols-2">
+                    <div ref={(node) => { mounts.current.expiry = node }} data-field="expiry" className={cn(fieldShell, "border-r border-border")} />
+                    <div ref={(node) => { mounts.current.cvc = node }} data-field="cvc" className={fieldShell} />
+                  </div>
                 </div>
+                {cardMessage && <p className="text-xs text-destructive">{cardMessage}</p>}
               </div>
-              {cardMessage && <p className="text-xs text-destructive">{cardMessage}</p>}
+
+              <label className="flex flex-col gap-2">
+                <span className={label}>{tx("Nom sur la carte", "Name on the card")}</span>
+                <input
+                  data-testid="pay-name"
+                  autoComplete="cc-name"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  disabled={paying}
+                  className={input}
+                />
+              </label>
+
+              <label className="flex flex-col gap-2">
+                <span className={label}>{tx("Pays de facturation", "Billing country")}</span>
+                <select
+                  data-testid="pay-country"
+                  value={country}
+                  onChange={(event) => setCountry(event.target.value)}
+                  disabled={paying}
+                  className={cn(input, "appearance-none")}
+                >
+                  {countries.map((option) => (
+                    <option key={option.code} value={option.code}>
+                      {resolve(option.name, tx)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                {tx(
+                  "Paiement sécurisé par Stripe. SentrIA ne voit pas votre numéro de carte.",
+                  "Payment secured by Stripe. SentrIA never sees your card number."
+                )}
+              </p>
             </div>
-
-            <label className="flex flex-col gap-2">
-              <span className={label}>{tx("Nom sur la carte", "Name on the card")}</span>
-              <input
-                data-testid="pay-name"
-                autoComplete="cc-name"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                disabled={paying}
-                className={input}
-              />
-            </label>
-
-            <label className="flex flex-col gap-2">
-              <span className={label}>{tx("Pays de facturation", "Billing country")}</span>
-              <select
-                data-testid="pay-country"
-                value={country}
-                onChange={(event) => setCountry(event.target.value)}
-                disabled={paying}
-                className={cn(input, "appearance-none")}
-              >
-                {countries.map((option) => (
-                  <option key={option.code} value={option.code}>
-                    {resolve(option.name, tx)}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <p className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-              {tx(
-                "Paiement sécurisé par Stripe. SentrIA ne voit pas votre numéro de carte.",
-                "Payment secured by Stripe. SentrIA never sees your card number."
-              )}
-            </p>
 
             {problem && (
               <p role="alert" data-testid="pay-problem" className="text-sm font-semibold text-destructive">
@@ -490,46 +664,85 @@ export function PayDialog({
               </p>
             )}
 
-            {load === "failed" ? (
-              <div data-testid="pay-fallback" className="flex flex-col gap-3">
-                <p className="text-sm text-muted-foreground">
-                  {tx(
-                    "Le formulaire de carte n'a pas pu se charger. Vous pouvez payer sur la page de Stripe.",
-                    "The card form could not load. You can pay on Stripe's page."
-                  )}
-                </p>
+            {method === "mpesa" ? (
+              waiting ? (
+                <div data-testid="mpesa-waiting" role="status" className="flex items-center gap-3 rounded-2xl bg-muted px-4 py-4">
+                  <Phone className="h-5 w-5 shrink-0 text-foreground" aria-hidden="true" />
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold">{tx("Regardez votre téléphone", "Check your phone")}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {tx(
+                        "Tapez votre code M-PESA sur la demande de Safaricom. Cette page se met à jour toute seule.",
+                        "Type your M-PESA PIN on Safaricom's prompt. This page updates by itself."
+                      )}
+                    </p>
+                  </div>
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" aria-hidden="true" />
+                </div>
+              ) : (
                 <button
-                  type="button"
-                  onClick={() => void payOnStripe()}
+                  type="submit"
+                  data-testid="mpesa-submit"
                   disabled={paying}
-                  className="h-[52px] rounded-full bg-brand text-[15px] font-bold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+                  className="flex h-[52px] items-center justify-center gap-2 rounded-full bg-brand text-[15px] font-bold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
                 >
-                  {paying ? tx("Ouverture…", "Opening…") : tx("Payer sur la page Stripe", "Pay on Stripe's page")}
+                  {paying && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                  {paying ? tx("Envoi…", "Sending…") : tx(`Payer ${amount} avec M-PESA`, `Pay ${amount} with M-PESA`)}
                 </button>
-              </div>
+              )
             ) : (
-              <button
-                type="submit"
-                data-testid="pay-submit"
-                disabled={paying || load !== "ready"}
-                className="flex h-[52px] items-center justify-center gap-2 rounded-full bg-brand text-[15px] font-bold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
-              >
-                {paying && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-                {paying ? tx("Paiement…", "Paying…") : tx(`Payer ${amount} ${per}`, `Pay ${amount} ${per}`)}
-              </button>
+              <>
+                {load === "failed" ? (
+                  <div data-testid="pay-fallback" className="flex flex-col gap-3">
+                    <p className="text-sm text-muted-foreground">
+                      {tx(
+                        "Le formulaire de carte n'a pas pu se charger. Vous pouvez payer sur la page de Stripe.",
+                        "The card form could not load. You can pay on Stripe's page."
+                      )}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => void payOnStripe()}
+                      disabled={paying}
+                      className="h-[52px] rounded-full bg-brand text-[15px] font-bold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+                    >
+                      {paying ? tx("Ouverture…", "Opening…") : tx("Payer sur la page Stripe", "Pay on Stripe's page")}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="submit"
+                    data-testid="pay-submit"
+                    disabled={paying || load !== "ready"}
+                    className="flex h-[52px] items-center justify-center gap-2 rounded-full bg-brand text-[15px] font-bold text-brand-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+                  >
+                    {paying && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                    {paying ? tx("Paiement…", "Paying…") : tx(`Payer ${amount} ${per}`, `Pay ${amount} ${per}`)}
+                  </button>
+                )}
+
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  {yearly
+                    ? tx(
+                        `En vous abonnant, vous autorisez SentrIA à prélever ${amount} chaque année jusqu'à résiliation. Vous pouvez résilier à tout moment avec « Gérer mon abonnement ».`,
+                        `By subscribing, you allow SentrIA to charge ${amount} every year until you cancel. You can cancel at any time with "Manage my subscription".`
+                      )
+                    : tx(
+                        `En vous abonnant, vous autorisez SentrIA à prélever ${amount} chaque mois jusqu'à résiliation. Vous pouvez résilier à tout moment avec « Gérer mon abonnement ».`,
+                        `By subscribing, you allow SentrIA to charge ${amount} every month until you cancel. You can cancel at any time with "Manage my subscription".`
+                      )}
+                </p>
+              </>
             )}
 
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              {yearly
-                ? tx(
-                    `En vous abonnant, vous autorisez SentrIA à prélever ${amount} chaque année jusqu'à résiliation. Vous pouvez résilier à tout moment avec « Gérer mon abonnement ».`,
-                    `By subscribing, you allow SentrIA to charge ${amount} every year until you cancel. You can cancel at any time with "Manage my subscription".`
-                  )
-                : tx(
-                    `En vous abonnant, vous autorisez SentrIA à prélever ${amount} chaque mois jusqu'à résiliation. Vous pouvez résilier à tout moment avec « Gérer mon abonnement ».`,
-                    `By subscribing, you allow SentrIA to charge ${amount} every month until you cancel. You can cancel at any time with "Manage my subscription".`
-                  )}
-            </p>
+            {method === "mpesa" && (
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {tx(
+                  `Un paiement de ${amount} couvre 30 jours. M-PESA ne se renouvelle pas tout seul : payez à nouveau avant la fin pour garder votre offre.`,
+                  `One payment of ${amount} covers 30 days. M-PESA does not renew by itself: pay again before it ends to keep your plan.`
+                )}
+              </p>
+            )}
           </form>
         )}
       </div>

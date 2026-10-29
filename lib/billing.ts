@@ -20,9 +20,13 @@ export type BillingStatus = {
   /** Stripe's publishable key: set, the boss pays in the app's card form;
    *  empty, the Choose button opens Stripe Checkout. */
   cardKey: string
+  /** BILL-MPESA: the boss of a company that pays in shillings may pay by M-PESA. */
+  mpesa: boolean
+  /** The end of the time paid for by M-PESA, or null. */
+  mpesaUntil: string | null
 }
 
-export const BILLING_OFF: BillingStatus = { enabled: false, canBuy: false, yearly: {}, portal: false, cardKey: "" }
+export const BILLING_OFF: BillingStatus = { enabled: false, canBuy: false, yearly: {}, portal: false, cardKey: "", mpesa: false, mpesaUntil: null }
 
 export type BillingInterval = "month" | "year"
 
@@ -36,6 +40,10 @@ export type BillingFailure =
   | "unreachable"
   | "email_invalid"
   | "already_subscribed"
+  | "phone_invalid"
+  | "wrong_market"
+  | "mpesa_pending"
+  | "mpesa_unavailable"
   | "other"
 
 export type BillingResult = { ok: true; url: string } | { ok: false; reason: BillingFailure }
@@ -51,6 +59,11 @@ const BY_CODE: Record<string, BillingFailure> = {
   billing_unavailable: "unavailable",
   email_invalid: "email_invalid",
   billing_already_subscribed: "already_subscribed",
+  mpesa_not_configured: "not_configured",
+  phone_invalid: "phone_invalid",
+  mpesa_wrong_market: "wrong_market",
+  mpesa_pending: "mpesa_pending",
+  mpesa_unavailable: "mpesa_unavailable",
 }
 
 export async function fetchBillingStatus(): Promise<BillingStatus> {
@@ -67,6 +80,8 @@ export async function fetchBillingStatus(): Promise<BillingStatus> {
       yearly: body?.yearly && typeof body.yearly === "object" ? body.yearly : {},
       portal: body?.portal === true,
       cardKey: isPublishableKey(body?.card_key) ? body.card_key : "",
+      mpesa: body?.mpesa === true,
+      mpesaUntil: typeof body?.mpesa_until === "string" ? body.mpesa_until : null,
     }
   } catch {
     return BILLING_OFF
@@ -144,4 +159,56 @@ export async function startSubscription(plan: PlanId, interval: BillingInterval,
   if (answer.ok && isClientSecret(answer.data?.client_secret)) return { ok: true, clientSecret: answer.data.client_secret }
 
   return { ok: false, reason: failure(answer.data) }
+}
+
+/* ------------------------------------------------------------------ */
+/*  M-PESA (BILL-MPESA): one month of a plan, paid from the phone      */
+/* ------------------------------------------------------------------ */
+
+/** A Kenyan mobile number as Safaricom wants it (2547… or 2541…), or null.
+ *  Accepts 07…, 01…, +254… and 254…, with spaces or dashes. The API checks
+ *  it again and has the last word. */
+export function kenyanPhone(value: string): string | null {
+  let digits = value.replace(/[\s\-()]/g, "")
+  if (digits.startsWith("+")) digits = digits.slice(1)
+  if (/^0[17]\d{8}$/.test(digits)) digits = `254${digits.slice(1)}`
+  return /^254[17]\d{8}$/.test(digits) ? digits : null
+}
+
+export type MpesaStartResult = { ok: true; checkoutId: string } | { ok: false; reason: BillingFailure }
+
+/** Sends the M-PESA prompt to the phone. The amount comes from the plan on the
+ *  API, never from here, and the plan changes only once Safaricom confirms. */
+export async function startMpesa(plan: PlanId, phone: string): Promise<MpesaStartResult> {
+  const answer = await send("/billing/mpesa/pay", { plan, phone })
+
+  if (!answer) return { ok: false, reason: "unreachable" }
+  if (answer.ok && typeof answer.data?.checkout_id === "string") return { ok: true, checkoutId: answer.data.checkout_id }
+
+  return { ok: false, reason: failure(answer.data) }
+}
+
+export type MpesaReason = "cancelled" | "no_answer" | "insufficient_funds" | "wrong_pin" | "amount_mismatch" | "failed"
+
+export type MpesaState =
+  | { status: "pending" }
+  | { status: "paid"; paidUntil: string | null }
+  | { status: "failed"; reason: MpesaReason }
+
+const REASONS: MpesaReason[] = ["cancelled", "no_answer", "insufficient_funds", "wrong_pin", "amount_mismatch", "failed"]
+
+/** Where one payment stands. Null when the API cannot be reached: try again. */
+export async function mpesaState(checkoutId: string): Promise<MpesaState | null> {
+  try {
+    const res = await apiFetch(`${API_BASE}/billing/mpesa/${encodeURIComponent(checkoutId)}`)
+    if (!res.ok) return null
+    const body = await res.json()
+
+    if (body?.status === "paid") return { status: "paid", paidUntil: typeof body.paid_until === "string" ? body.paid_until : null }
+    if (body?.status === "failed") return { status: "failed", reason: REASONS.includes(body.reason) ? body.reason : "failed" }
+    if (body?.status === "pending") return { status: "pending" }
+    return null
+  } catch {
+    return null
+  }
 }

@@ -417,3 +417,8 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Problem:** Mockups came out as a small card on a beige background, with empty space around it.
 **Reality:** The founder rejected that twice, with screenshots of small cards. Every mockup must be the full viewport, with no page margin, no outer padding and no empty background. The screen is the whole frame.
 **Rule:** Render mockups full-screen at 1440 × 900 and at 390 px, with no whitespace around the design. Check the screenshot before sending it. Never send a small card on a page background.
+
+## M-PESA prices are also on the API (BILL-MPESA)
+**Problem:** The Plans page shows the shilling price from `lib/plans.ts`, but the M-PESA prompt charges the amount the API holds.
+**Reality:** `PRICES.KES` here and `PRICES_KES` in the backend's `pipeline/mpesa.py` are two copies. The browser never sends an amount: the API picks it from the plan. The payment form only offers M-PESA when `/billing/status` says `mpesa: true` (the boss of a company in KES), and only monthly.
+**Rule:** Change both price lists together. `tests/e2e/mpesapay.js` covers the form.

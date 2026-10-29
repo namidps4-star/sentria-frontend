@@ -50,6 +50,13 @@ const BILLING_FAILURE: Record<BillingFailure, Localized> = {
     fr: "Vous avez déjà un abonnement : changez d'offre avec « Gérer mon abonnement ».",
     en: "You already have a subscription: change plan with \"Manage my subscription\".",
   },
+  phone_invalid: { fr: "Ce numéro n'est pas un numéro M-PESA du Kenya (07… ou 01…).", en: "This is not a Kenyan M-PESA number (07… or 01…)." },
+  wrong_market: { fr: "M-PESA est réservé aux comptes en shillings kényans.", en: "M-PESA is only for accounts in Kenyan shillings." },
+  mpesa_pending: {
+    fr: "Un paiement M-PESA attend déjà votre code. Répondez sur votre téléphone, ou réessayez dans deux minutes.",
+    en: "An M-PESA payment is already waiting for your PIN. Answer it on your phone, or try again in two minutes.",
+  },
+  mpesa_unavailable: { fr: "M-PESA ne répond pas. Réessayez dans un instant.", en: "M-PESA is not answering. Try again in a moment." },
   other: { fr: "Le paiement n'a pas pu s'ouvrir.", en: "The payment could not open." },
 }
 
@@ -206,12 +213,12 @@ export function PricingView() {
     setFailure(answer.reason)
   }
 
-  /* Choose: the app's own card form when the API gives Stripe's publishable
-     key, Stripe Checkout otherwise. */
+  /* Choose: the app's own payment form when the API gives Stripe's publishable
+     key or offers M-PESA, Stripe Checkout otherwise. */
   function choose(plan: PlanId) {
     const interval = annual ? "year" : "month"
 
-    if (billing.cardKey) {
+    if (billing.cardKey || billing.mpesa) {
       setFailure(null)
       setPaidHere(false)
       setPayFor({ plan, interval })
@@ -323,7 +330,7 @@ export function PricingView() {
             const { main, per } = price(plan)
             // Sold online: Pro and Business, by the boss, with a yearly price when yearly is shown.
             const buyable =
-              billing.canBuy && !current && !included && (plan === "pro" || plan === "business") && (!annual || billing.yearly[plan] === true)
+              (billing.canBuy || billing.mpesa) && !current && !included && (plan === "pro" || plan === "business") && (!annual || billing.yearly[plan] === true)
 
             return (
               <section
@@ -431,7 +438,12 @@ export function PricingView() {
         )}
 
         <p className="t-enter -mt-4 text-center text-xs text-muted-foreground" style={enterAt(1.6)}>
-          {billing.enabled
+          {billing.mpesa
+            ? tx(
+                "Paiement par M-PESA ou par carte. Votre offre change dès que le paiement est confirmé. Un paiement M-PESA couvre 30 jours.",
+                "Pay by M-PESA or card. Your plan changes once the payment is confirmed. One M-PESA payment covers 30 days."
+              )
+            : billing.enabled
             ? tx(
                 "Paiement par carte avec Stripe. Votre offre change dès que Stripe confirme le paiement.",
                 "Card payment with Stripe. Your plan changes once Stripe confirms the payment."
@@ -442,11 +454,20 @@ export function PricingView() {
               )}
         </p>
 
+        {billing.mpesaUntil && (
+          <p data-testid="mpesa-until" className="-mt-6 text-center text-xs font-semibold text-foreground">
+            {tx("Payé par M-PESA jusqu'au ", "Paid by M-PESA until ")}
+            {new Date(billing.mpesaUntil).toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" })}
+          </p>
+        )}
+
         {payFor && (
           <PayDialog
             plan={payFor.plan}
             interval={payFor.interval}
             cardKey={billing.cardKey}
+            cardOn={billing.canBuy}
+            mpesa={billing.mpesa}
             amount={(() => {
               const p = monthlyPrice(payFor.plan, currency.code)!
               const total = (payFor.interval === "year" ? p.amount * 10 : p.amount).toLocaleString(locale)

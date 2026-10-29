@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { isClientSecret, isPublishableKey, isStripeUrl } from "@/lib/billing"
+import { isClientSecret, isPublishableKey, isStripeUrl, kenyanPhone } from "@/lib/billing"
 
 describe("billing", () => {
   it("follows only a Stripe page over https", () => {
@@ -28,5 +28,18 @@ describe("billing", () => {
     expect(isClientSecret("seti_1_secret_2")).toBe(false)
     expect(isClientSecret("<script>")).toBe(false)
     expect(isClientSecret(null)).toBe(false)
+  })
+})
+
+describe("kenyanPhone (BILL-MPESA)", () => {
+  it("turns 07…, 01…, +254… and 254… into 2547…/2541…", () => {
+    expect(kenyanPhone("0712 345 678")).toBe("254712345678")
+    expect(kenyanPhone("0112345678")).toBe("254112345678")
+    expect(kenyanPhone("+254712345678")).toBe("254712345678")
+    expect(kenyanPhone("254-712-345-678")).toBe("254712345678")
+  })
+
+  it("refuses a number outside Kenya, a landline or junk", () => {
+    for (const bad of ["+22997123456", "0201234567", "07123", "", "abc"]) expect(kenyanPhone(bad)).toBeNull()
   })
 })
