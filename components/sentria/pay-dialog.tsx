@@ -25,6 +25,14 @@ type Field = "number" | "expiry" | "cvc"
 
 const FIELDS: Field[] = ["number", "expiry", "cvc"]
 
+/** The mobile money brands on the payment slider, with their official logos
+ *  from /public/payment. The logo sits on white so its colours hold in dark mode. */
+const MOBILE_MONEY = [
+  { id: "mpesa", name: "M-Pesa", testId: "pay-mm-mpesa", logo: "/payment/mpesa.png" },
+  { id: "momo", name: "MTN MoMo", testId: "pay-mm-momo", logo: "/payment/mtn-momo.png" },
+  { id: "orange", name: "Orange Money", testId: "pay-mm-orange", logo: "/payment/orange-money.webp" },
+] as const
+
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 
 // The app's body font, for the text inside Stripe's fields.
@@ -399,27 +407,31 @@ export function PayDialog({
 
             <div className="flex flex-col gap-2">
               <span id="pay-method" className={label}>{tx("Mode de paiement", "Payment method")}</span>
-              <div role="radiogroup" aria-labelledby="pay-method" className="relative grid grid-cols-2 rounded-full bg-muted p-1">
-                <span className="absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-full bg-card shadow-sm" aria-hidden="true" />
+              <div role="radiogroup" aria-labelledby="pay-method" className="grid grid-cols-2 gap-1 rounded-[24px] bg-muted p-1 sm:grid-cols-4">
                 <button
                   type="button"
                   role="radio"
                   aria-checked="true"
-                  className="relative flex h-11 items-center justify-center rounded-full text-sm font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="flex h-12 items-center justify-center rounded-[18px] bg-card text-sm font-semibold text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {tx("Carte bancaire", "Card")}
                 </button>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked="false"
-                  disabled
-                  data-testid="pay-mobile-money"
-                  className="relative flex h-11 cursor-not-allowed flex-col items-center justify-center gap-0.5 rounded-full text-[13px] font-semibold text-muted-foreground sm:flex-row sm:gap-2 sm:text-sm"
-                >
-                  {tx("Mobile money", "Mobile money")}
-                  <StatusTag tone="neutral" size="xs" icon={false}>{tx("Bientôt", "Soon")}</StatusTag>
-                </button>
+                {MOBILE_MONEY.map((brand) => (
+                  <button
+                    key={brand.id}
+                    type="button"
+                    role="radio"
+                    aria-checked="false"
+                    disabled
+                    data-testid={brand.testId}
+                    className="flex min-h-12 cursor-not-allowed flex-col items-center justify-center gap-1 rounded-[18px] px-2 py-1.5 text-muted-foreground"
+                  >
+                    <span className="flex h-8 w-full max-w-[92px] items-center justify-center rounded-md bg-white px-1.5">
+                      <img src={brand.logo} alt={brand.name} className="max-h-6 w-auto max-w-full object-contain" />
+                    </span>
+                    <StatusTag tone="neutral" size="xs" icon={false}>{tx("Bientôt", "Soon")}</StatusTag>
+                  </button>
+                ))}
               </div>
             </div>
 

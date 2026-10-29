@@ -103,7 +103,9 @@ window.Stripe = function (key, options) {
   pass(/Total, every month/.test(await p.getByTestId('pay-total').textContent()) && /29\s*€/.test(await p.getByTestId('pay-total').textContent()), 'the total sits at the bottom of the panel');
   pass(await p.locator('[data-testid="pay-total"] b').evaluate(e => getComputedStyle(e).color) !== await p.locator('#pay-plan').evaluate(e => getComputedStyle(e).color), 'the total is lime, not white');
   pass(await p.getByTestId('pay-email').inputValue() === 'boss@atlantis.bj', 'the email starts as the signed-in address');
-  pass(await p.getByTestId('pay-mobile-money').isDisabled() && /Soon/.test(await p.getByTestId('pay-mobile-money').textContent()), 'mobile money is on the slider, disabled, Soon');
+  const mms = ['pay-mm-mpesa', 'pay-mm-momo', 'pay-mm-orange'];
+  pass(await Promise.all(mms.map(id => p.getByTestId(id).isDisabled())).then(a => a.every(Boolean)) && /Soon/.test(await p.getByTestId('pay-mm-mpesa').textContent()), 'M-Pesa, MTN MoMo and Orange Money are on the slider, disabled, Soon');
+  pass(await Promise.all(['pay-mm-mpesa', 'pay-mm-momo', 'pay-mm-orange'].map(id => p.getByTestId(id).locator('img').evaluate(i => i.complete && i.naturalWidth > 0))).then(a => a.every(Boolean)), 'each option shows its official logo');
   pass(await p.getByTestId('pay-country').inputValue() === 'BJ', 'the billing country starts as the account country');
   pass(/Pay 29\s*€ per month/.test(await p.getByTestId('pay-submit').textContent()), 'the button says the amount and period');
   pass(await p.locator('[data-fake="cardNumber"]').count() === 1 && await p.locator('[data-fake="cardExpiry"]').count() === 1 && await p.locator('[data-fake="cardCvc"]').count() === 1, "Stripe's three card fields are mounted");
@@ -189,7 +191,7 @@ window.Stripe = function (key, options) {
   await ctx.close();
   ({ p, ctx } = await open({ lang: 'fr' }));
   await p.getByTestId('buy-pro').click(); await p.waitForTimeout(900);
-  pass(/Total, chaque mois/.test(await p.getByTestId('pay-total').textContent()) && /Payer 29\s*€ par mois/.test(await p.getByTestId('pay-submit').textContent()) && /Bientôt/.test(await p.getByTestId('pay-mobile-money').textContent()), 'French: total, button and Soon are French');
+  pass(/Total, chaque mois/.test(await p.getByTestId('pay-total').textContent()) && /Payer 29\s*€ par mois/.test(await p.getByTestId('pay-submit').textContent()) && /Bientôt/.test(await p.getByTestId('pay-mm-mpesa').textContent()), 'French: total, button and Soon are French');
   pass(await p.evaluate(() => window.__stripe.options && window.__stripe.options.locale) === 'fr', "Stripe's fields and errors are in French");
   await ctx.close();
   ({ p, ctx } = await open({ vw: 390, vh: 844 }));
@@ -197,8 +199,8 @@ window.Stripe = function (key, options) {
   const pbox = await dialog(p).boundingBox();
   pass(pbox.x >= 0 && pbox.x + pbox.width <= 390, '390 px: the form fits the width');
   pass(await p.evaluate(() => document.documentElement.scrollWidth <= 390), '390 px: no sideways scroll');
-  const mm = await p.getByTestId('pay-mobile-money').boundingBox();
-  pass(mm.x + mm.width <= 390 && mm.height <= 48, '390 px: the slider fits on one row');
+  const boxes = await Promise.all(['pay-mm-mpesa', 'pay-mm-momo', 'pay-mm-orange'].map(id => p.getByTestId(id).boundingBox()));
+  pass(boxes.every(b => b.x >= 0 && b.x + b.width <= 390), '390 px: every mobile money option fits the width');
   await p.screenshot({ path: path.join(SHOTS, 'paydialog-390.png') });
   await dialog(p).evaluate(e => { e.scrollTop = e.scrollHeight; });
   await p.waitForTimeout(200);
