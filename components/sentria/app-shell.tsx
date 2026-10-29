@@ -379,6 +379,7 @@ export function AppShell({
 
       <RoboChat
         open={showRobo}
+        onOpen={() => setShowRobo(true)}
         onClose={() => setShowRobo(false)}
         onShowTour={(start) => {
           setShowRobo(false)
@@ -435,11 +436,12 @@ export function AppShell({
               onNotificationsOpen={markNotificationsSeen}
               onOpenTracking={() => setView("tracking")}
               onOpenSites={() => setView("sites")}
+              onAskRobo={() => setShowRobo(true)}
             />
           </div>
 
           <main key={shownSite ?? "no-site"} className="flex-1 overflow-y-auto p-4 lg:p-8">
-            {view === "dashboard" && <DashboardView search={search} onNavigate={setView} onAskRobo={() => setShowRobo(true)} />}
+            {view === "dashboard" && <DashboardView search={search} onNavigate={setView} />}
             {view === "tracking" && <TrackingView />}
             {view === "calendar" && <CalendarView />}
             {view === "sites" && !employee && <SitesView onNavigate={setView} />}

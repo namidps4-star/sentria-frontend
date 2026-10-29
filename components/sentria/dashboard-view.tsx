@@ -6,7 +6,6 @@ import { demotion, demotionSentence } from "@/lib/demotion"
 import { DisposalLog } from "./disposal-log"
 import { CountNumber } from "./count-number"
 import { RevealText } from "./reveal-text"
-import { RoboHead } from "./guide-buddy"
 import { SheetTabs } from "./sheet-tabs"
 import type { ViewKey } from "./types"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -1060,13 +1059,10 @@ function visibleBlock(): HTMLElement | null {
 export function DashboardView({
   search = "",
   onNavigate,
-  onAskRobo,
 }: {
   search?: string
   /** Opens another view (the plans, from the department tabs). */
   onNavigate?: (view: ViewKey) => void
-  /** Opens Robo's chat (ROBO-CHAT), from the top bar. */
-  onAskRobo?: () => void
 }) {
   const tx = useTx()
 
@@ -2403,24 +2399,6 @@ export function DashboardView({
         : sliceColor(slice.key),
   }))
 
-  // Robo's head in the top bar, beside the import icon (ROBO-CHAT). Every layout below renders it too.
-  const roboPortal =
-    actionsSlot && onAskRobo
-      ? createPortal(
-          <button
-            type="button"
-            onClick={onAskRobo}
-            data-robo-dashboard=""
-            aria-label={tx("Demander à Robo", "Ask Robo")}
-            title={tx("Demander à Robo", "Ask Robo")}
-            className="mr-2 hidden h-10 w-10 items-center justify-center rounded-full border border-border bg-card transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:flex"
-          >
-            <RoboHead className="h-6 w-6" />
-          </button>,
-          actionsSlot,
-        )
-      : null
-
   // The import: an upload icon in the top bar, next to the bell. Every
   // layout below renders it, so it never disappears with the view.
   const importPortal = actionsSlot
@@ -2884,7 +2862,7 @@ export function DashboardView({
       const industryCritical = industryAlerts.filter((a) => a.severity === "CRITICAL").length
       return (
         <div key="industry" className="space-y-6">
-          {roboPortal}{importPortal}
+          {importPortal}
           {warningNote}
           <div className="t-enter flex items-center justify-between" style={enterAt(0)}>
             <button
@@ -3045,7 +3023,7 @@ export function DashboardView({
 
     return (
       <div className="space-y-4">
-        {roboPortal}{importPortal}
+        {importPortal}
         {sourceNote}
         <div className="flex items-center justify-between">
           <button
@@ -3147,7 +3125,7 @@ export function DashboardView({
 
       return (
         <div key="logistics" className="space-y-6">
-          {roboPortal}{importPortal}
+          {importPortal}
           {warningNote}
           <div className="t-enter flex items-center justify-between" style={enterAt(0)}>
             <button
@@ -3285,7 +3263,7 @@ export function DashboardView({
 
     return (
       <div className="space-y-4">
-        {roboPortal}{importPortal}
+        {importPortal}
         {sourceNote}
         <div className="flex items-center justify-between">
           <button
@@ -3430,7 +3408,7 @@ export function DashboardView({
      `animationstart`, and a block that hides and rises twice). */
   return (
     <div key="overview" className="space-y-6">
-      {roboPortal}{importPortal}
+      {importPortal}
       {sourceNote}
 
       <div

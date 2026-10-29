@@ -10,6 +10,7 @@ import { usePresence } from "@/lib/use-presence"
 import { cn } from "@/lib/utils"
 
 import { AccountMenu } from "./account-menu"
+import { RoboHead } from "./guide-buddy"
 import { WorkspaceContext } from "./workspace-context"
 
 /** One critical alert waiting in the bell: a task nobody has marked
@@ -46,6 +47,7 @@ export function Topbar({
   onNotificationsOpen,
   onOpenTracking,
   onOpenSites,
+  onAskRobo,
 }: {
   title: string
   subtitle: string
@@ -68,6 +70,8 @@ export function Topbar({
   onOpenTracking?: () => void
   /** The company menu's sites open the Sites page. */
   onOpenSites?: () => void
+  /** Opens Robo's chat (ROBO-CHAT). Phones keep it in Help: the bar has no room for it. */
+  onAskRobo?: () => void
 }) {
   const t = useT()
   const tx = useTx()
@@ -167,6 +171,22 @@ export function Topbar({
 
       {/* A slot the page fills with its own action (the dashboard's
           upload icon). Empty on other pages. */}
+      {onAskRobo && (
+        <button
+          type="button"
+          onClick={onAskRobo}
+          data-robo-topbar=""
+          aria-label={tx("Demander à Robo", "Ask Robo")}
+          title={tx("Demander à Robo", "Ask Robo")}
+          className={cn(
+            "mr-2 hidden h-10 w-10 items-center justify-center rounded-full border border-border bg-card transition-colors hover:bg-muted sm:flex",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          )}
+        >
+          <RoboHead className="h-6 w-6" />
+        </button>
+      )}
+
       <div id="topbar-actions" className="flex items-center empty:hidden" />
 
       <div ref={bellRef} className="relative">
