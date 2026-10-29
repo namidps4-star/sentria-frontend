@@ -341,7 +341,7 @@ export const COUNTRIES: Country[] = [
  *  the legal review (LEG-1) covers. COUNTRIES stays whole on purpose: an
  *  account that already chose another country keeps its currency, time zone
  *  and phone checks. To open a market, add its code here. */
-export const LAUNCH_COUNTRY_CODES = ["BJ", "CI", "SN"]
+export const LAUNCH_COUNTRY_CODES = ["BJ", "CI", "SN", "KE", "UG"]
 
 /** What a country picker lists: the launch countries, plus the one the
  *  account already has, so nobody is moved off it by a list that shrank. */

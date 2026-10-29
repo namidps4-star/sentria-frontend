@@ -78,6 +78,24 @@ export function guideSteps(tx: Tx): GuideStep[] {
       ),
     },
     {
+      id: "meaning",
+      pose: "point",
+      title: tx("Confiance et risque", "Confidence and risk"),
+      body: tx(
+        "Chaque alerte a deux chiffres. La confiance dit à quel point SentrIA est sûr que le problème est réel. Le risque dit ce qui arrive si personne n'agit, sur 100.",
+        "Each alert has two numbers. Confidence says how sure SentrIA is that the problem is real. Risk says what happens if nobody acts, out of 100.",
+      ),
+      example: tx(
+        "Exemple : 92 % de confiance et 80/100 de risque : commandez aujourd'hui.",
+        "Example: 92% confidence and 80/100 risk: order today.",
+      ),
+      bullets: [
+        tx("Risque élevé, confiance élevée : agissez maintenant.", "High risk, high confidence: act now."),
+        tx("Risque élevé, confiance faible : vérifiez les données d'abord.", "High risk, low confidence: check the data first."),
+        tx("Risque faible : attendez.", "Low risk: wait."),
+      ],
+    },
+    {
       id: "tracking",
       pose: "point",
       nav: "tracking",

@@ -62,7 +62,7 @@ const PROFILES = {
   { const { p, ctx } = await open({ swap: false });
     await startTour(p);
     const seen = await walk(p);
-    pass(!seen.includes('swaps') && seen.length === 8, 'the tour never points at a row that is not there: ' + seen.join(','));
+    pass(!seen.includes('swaps') && seen.length === 9, 'the tour never points at a row that is not there: ' + seen.join(','));
     await ctx.close(); }
 
   console.log('== on a phone too');

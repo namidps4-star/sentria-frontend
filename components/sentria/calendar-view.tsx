@@ -33,6 +33,7 @@ import { localized, useTx, type Localized, type Tx } from "@/lib/i18n"
 import { AccountFreshnessNote, useAccountFreshness } from "./account-freshness"
 import { SourceNotice } from "./not-measured"
 import { SectorTag } from "./sector-tag"
+import { TermHelp } from "./term-help"
 
 type EventKind = "incident" | "threshold" | "deadline" | "resolved"
 type ViewMode = "week" | "month"
@@ -1409,16 +1410,18 @@ function EventChip({
 
           <div className="mt-2 flex gap-1.5">
             <div className="flex-1 rounded-xl border border-border px-2.5 py-1.5 text-center">
-              <p className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">
+              <p className="flex items-center justify-center gap-1 text-[8px] font-bold uppercase tracking-wide text-muted-foreground">
                 {tx("Risque", "Risk")}
+                <TermHelp term="risk" />
               </p>
               <p className="text-xs font-bold tabular-nums">
                 {event.riskScore != null ? `${event.riskScore}/100` : "—"}
               </p>
             </div>
             <div className="flex-1 rounded-xl border border-border px-2.5 py-1.5 text-center">
-              <p className="text-[8px] font-bold uppercase tracking-wide text-muted-foreground">
+              <p className="flex items-center justify-center gap-1 text-[8px] font-bold uppercase tracking-wide text-muted-foreground">
                 {tx("Confiance", "Confidence")}
+                <TermHelp term="confidence" />
               </p>
               <p className="text-xs font-bold tabular-nums">
                 {event.confidence != null ? `${event.confidence}%` : "—"}

@@ -78,7 +78,7 @@ const RECS = ALERTS.map(a => ({ ...a, recommended_action: 'ACT ' + a.equipment, 
       if (id === 'done') { pass(await tour(p).getAttribute('data-pose') === 'cheer', 'last step: cheering'); await p.screenshot({ path: 'guide-done.png' }); }
       await next(p);
     }
-    pass(seen[0] === 'hello' && seen[seen.length - 1] === 'done' && seen.length === 8, 'eight steps, hello to done: ' + seen.join(','));
+    pass(seen[0] === 'hello' && seen[seen.length - 1] === 'done' && seen.length === 9, 'nine steps, hello to done: ' + seen.join(','));
     pass(await tour(p).count() === 0, 'Done closes the tour');
     pass(await p.evaluate(() => localStorage.getItem('sentria_guide_done')) === '1', 'finishing is remembered');
     await startTour(p);
@@ -91,7 +91,7 @@ const RECS = ALERTS.map(a => ({ ...a, recommended_action: 'ACT ' + a.equipment, 
     await startTour(p);
     await next(p);
     await p.keyboard.press('ArrowRight'); await p.waitForTimeout(500);
-    pass(await tour(p).getAttribute('data-step') === 'tracking', 'ArrowRight goes forward');
+    pass(await tour(p).getAttribute('data-step') === 'meaning', 'ArrowRight goes forward');
     await p.keyboard.press('ArrowLeft'); await p.waitForTimeout(500);
     pass(await tour(p).getAttribute('data-step') === 'dashboard', 'ArrowLeft goes back');
     await p.getByTestId('guide-card').getByRole('button', { name: 'Back', exact: true }).click(); await p.waitForTimeout(500);
@@ -108,7 +108,7 @@ const RECS = ALERTS.map(a => ({ ...a, recommended_action: 'ACT ' + a.equipment, 
     await startTour(p);
     const seen = [];
     for (let i = 0; i < 12; i++) { if (!(await tour(p).count())) break; const id = await tour(p).getAttribute('data-step'); seen.push(id); await next(p); }
-    pass(!seen.includes('contractors') && seen.length === 7, 'no contractors step: ' + seen.join(','));
+    pass(!seen.includes('contractors') && seen.length === 8, 'no contractors step: ' + seen.join(','));
     await ctx.close(); }
 
   console.log('== French, dark');
@@ -130,7 +130,7 @@ const RECS = ALERTS.map(a => ({ ...a, recommended_action: 'ACT ' + a.equipment, 
       if (id === 'dashboard') await p.screenshot({ path: 'guide-390.png' });
       await next(p);
     }
-    pass(seen.length === 8 && await p.locator('[data-testid="guide-ring"]').count() === 0, 'all eight steps, no ring, every card inside the screen');
+    pass(seen.length === 9 && await p.locator('[data-testid="guide-ring"]').count() === 0, 'all nine steps, no ring, every card inside the screen');
     pass(await p.locator('aside').first().evaluate(el => el.getBoundingClientRect().right <= 1) , 'the menu drawer is closed behind the tour');
     pass(!(await p.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)), 'no sideways scroll');
     await ctx.close(); }

@@ -402,3 +402,8 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Problem:** A retry looks like a new upload, so it can drop the file or the callers' follow-up work.
 **Reality:** `runUpload` keeps the file in the refused state's `retry`, which reruns the same URL with the `mapping` form field. `MatchColumns` (upload-progress.tsx) shows one select per missing name, from the file's own columns, and Import stays off until each has one. The retry reports through the same `set`, so the alerts event and the freshness readers still fire on done. Callers that do their own work after a done (for example `sites-view`'s stored counts) do not re-run it on a retry.
 **Rule:** Never widen the choices to names the API did not list as missing. `tests/e2e/uploadmatch.js` guards it.
+
+## Confidence and risk are explained where they are shown, with examples (TERMHELP)
+**Problem:** The two alert numbers look self-explanatory to the team who built them and mean nothing to a new admin.
+**Reality:** `lib/term-help.ts` holds the plain text and examples (fr and en). `components/sentria/term-help.tsx` is the "i" that opens them; it is used beside the calendar's Risk and Confidence labels and beside the dashboard's recommendation Confidence. Robo's tour has a "meaning" step after the dashboard step. Risk is out of 100, and the calendar shows it that way. The confidence band words are in `lib/confidence.ts` (85 and up high, 65 to 84 good, below moderate).
+**Rule:** Change the wording in `lib/term-help.ts` and the tour step in `lib/guide-steps.ts` together. A new place that shows these numbers gets a `TermHelp`. `tests/e2e/termhelp.js` and `tests/unit/term-help.test.ts` guard it.
