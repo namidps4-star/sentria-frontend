@@ -6,6 +6,7 @@ import './globals.css'
 import './transitions.css'
 import { THEME_INIT_SCRIPT } from "@/lib/theme"
 import { siteUrl } from "@/lib/site"
+import { SEO } from "@/lib/seo"
 
 /* Body text and headings. */
 const bodySans = Plus_Jakarta_Sans({
@@ -39,9 +40,8 @@ const geistMono = Geist_Mono({
    i18n-ignore-start: static build-time metadata, corrected at runtime */
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl()),
-  title: 'SentrIA | Intelligence opérationnelle',
-  description:
-    'SentrIA lit vos données d\'exploitation et vous dit quoi faire, et quand : alertes en temps réel sur les stocks, les machines et les flux, pour la logistique, la santé, l\'industrie, l\'agriculture, le transport, l\'énergie et le commerce.',
+  title: SEO.fr.title,
+  description: SEO.fr.description,
   alternates: { canonical: '/' },
   openGraph: {
     type: 'website',
