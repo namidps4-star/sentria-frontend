@@ -11,7 +11,7 @@ pnpm install --frozen-lockfile
 pnpm dev                 # http://localhost:3000
 ```
 
-It needs `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. `NEXT_PUBLIC_API_URL` points at another API; without it the app calls the production one (see `lib/api.ts`). `NEXT_PUBLIC_SITE_URL` is the public address used for the sitemap and share cards.
+It needs `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. `NEXT_PUBLIC_API_URL` points at another API; without it the app calls the production one (see `lib/api.ts`). `NEXT_PUBLIC_SITE_URL` is the public address used for canonical links and share cards.
 
 ## Check it
 
@@ -31,7 +31,7 @@ Push to `new_feat`. Vercel deploys `main` and installs from a frozen `pnpm-lock.
 
 ## Where things are
 
-- `app/`: routes, the 404, error and loading pages, the sitemap and share card.
+- `app/`: routes, the 404, error and loading pages, and the share card.
 - `components/sentria/`: the screens.
 - `lib/`: helpers, the API client, the French and English strings (`tx(fr, en)`).
 - `scripts/`: the icon build and the secret scan.
