@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils"
 import { sendAlertFeedback } from "@/lib/feedback"
 import { computeConfidence, confidenceWord } from "@/lib/confidence"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
+import { TermHelp } from "./term-help"
 
 type Alert = {
   equipment: string
@@ -513,7 +514,7 @@ export function RecommendationsPanel({
                   <span className="absolute bottom-0 left-0.5 h-1 w-[22px] rounded-full bg-accent" />
                 </div>
                 <p className="mt-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-sidebar-foreground/55">
-                  {tx("Confiance", "Confidence")} · {confidenceWord(topConfidence, tx)}
+                  {tx("Confiance", "Confidence")} <TermHelp term="confidence" /> · {confidenceWord(topConfidence, tx)}
                 </p>
               </div>
             </div>
