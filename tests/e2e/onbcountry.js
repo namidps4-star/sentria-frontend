@@ -37,7 +37,7 @@ const rgb = (loc, prop) => loc.evaluate((el, prop) => { const cv = document.crea
   await x.p.getByText("Côte d'Ivoire", { exact: true }).first().click(); await x.p.waitForTimeout(300);
   const tile = x.dlg.locator('button[aria-pressed=true]', { hasText: "Côte d'Ivoire" });
   const tileBg = await rgb(tile, 'backgroundColor');
-  pass(tileBg.every(v => v < 60), 'the picked tile is black: rgb(' + tileBg.join(',') + ')');
+  pass(tileBg[0] > 180 && tileBg[2] < 120, 'the picked tile is lime: rgb(' + tileBg.join(',') + ')');
   pass(await cont.isEnabled(), 'Continue turns on');
   const zones = x.p.getByRole('group', { name: 'Time zone' });
   const gmt = zones.locator('button', { hasText: 'GMT' });
