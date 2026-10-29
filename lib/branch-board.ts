@@ -25,11 +25,13 @@ function same(a: string, b: string): boolean {
   return a.trim().toLowerCase() === b.trim().toLowerCase()
 }
 
-export type BranchSite = { id: string; name: string }
+export type BranchSite = { id: string; name: string; location?: string }
 
 export type BranchLine = {
   siteId: string
   name: string
+  /** Where the branch is, as the site was saved ("Nairobi, Kenya"); empty when none was set. */
+  location: string
   hue: BranchHue
   /** The people filed under this branch. */
   people: Contractor[]
@@ -66,6 +68,7 @@ export function buildBoard(
     return {
       siteId: site.id,
       name: site.name,
+      location: site.location ?? "",
       hue: hueOf(i),
       people: contractors.filter((c) => c.site_id === site.id),
       send: sent ?? [],

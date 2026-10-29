@@ -130,7 +130,7 @@ export function ContractorsView({
   const employee = useIsEmployee()
   const { mode: sitesMode, sites: ownSites } = useSites()
   // An employee reads every branch's name, so the board is the same as the boss's (F-MANAGERRIGHTS).
-  const [allBranches, setAllBranches] = useState<{ id: string; name: string }[] | null>(null)
+  const [allBranches, setAllBranches] = useState<{ id: string; name: string; location?: string }[] | null>(null)
   useEffect(() => {
     if (!employee) return
 
@@ -549,7 +549,7 @@ export function ContractorsView({
     return (
       <div className="space-y-6">
         <BranchManagers
-          sites={companySites.map((site) => ({ id: site.id, name: site.name }))}
+          sites={companySites.map((site) => ({ id: site.id, name: site.name, location: site.location }))}
           contractors={contractors}
           loaded={loaded}
           swaps={branchSwaps}

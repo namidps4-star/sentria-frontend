@@ -521,10 +521,17 @@ function AddManagerSheet({ sheet, board, className }: { sheet: ManagerSheet; boa
             <MapPin className="h-4 w-4 opacity-70" aria-hidden="true" />
             {tx("Agence", "Branch")}
           </span>
-          <div data-testid="manager-branch" role="radiogroup" aria-label={tx("Agence", "Branch")} className="flex flex-wrap gap-1.5 py-2.5">
+          <div
+            data-testid="manager-branch"
+            role="radiogroup"
+            aria-label={tx("Agence", "Branch")}
+            className="grid w-full grid-cols-2 gap-1 rounded-2xl bg-muted p-1 sm:grid-cols-[repeat(auto-fit,minmax(0,1fr))]"
+          >
             {board.map((line) => {
               const on = form.site_id === line.siteId
-              const lead = line.people[0]?.name.split(/\s+/)[0]
+              const manager = line.people[0]?.name.split(/\s+/)[0]
+              const country = line.location ? line.location.split(",").pop()?.trim() : ""
+              const detail = [country, manager ?? tx("Sans responsable", "No manager")].filter(Boolean).join(" · ")
 
               return (
                 <button
@@ -535,15 +542,13 @@ function AddManagerSheet({ sheet, board, className }: { sheet: ManagerSheet; boa
                   data-testid="branch-option"
                   data-site={line.siteId}
                   onClick={() => sheet.onChange({ site_id: line.siteId })}
-                  style={tint(line)}
                   className={cn(
-                    "inline-flex h-8 items-center gap-2 rounded-full border pl-1.5 pr-3 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    on ? "border-foreground bg-foreground text-background" : "border-border text-muted-foreground hover:bg-muted"
+                    "flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    on ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--b)] text-[8px] font-extrabold text-[#141414]">{branchCode(line.name)}</span>
-                  {line.name}
-                  {lead && <span className="text-[11px] opacity-70 max-sm:hidden">{lead}</span>}
+                  <span className={cn("text-sm font-bold", on && "text-foreground")}>{line.name}</span>
+                  <span className="text-[11px] leading-tight text-muted-foreground">{detail}</span>
                 </button>
               )
             })}
