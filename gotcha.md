@@ -412,3 +412,8 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Problem:** Each screen drew its own cards: small icon squares, black picks, and a lone last card hanging in a three-column grid.
 **Reality:** The onboarding sector step set the standard. Unpicked tiles are white in light mode and dark in dark mode (`bg-card` plus `border-border`). The illustration sits in the bottom-right corner, not in an icon square. It flips to white in dark mode through the `--art-filter` token (`[filter:var(--art-filter)]`). The name and text sit bottom-left, and the pill sits top-left. A picked tile is lime (`bg-brand`) with black text, and its check badge sits at `right-4 top-4`, since the tile clips its corners. Grids are two columns. When the count is odd, the first tile takes `sm:col-span-2`.
 **Rule:** Use this format for any selectable card. Never use `dark:`. Never put an icon square back in a tile. Keep the check badge inside the tile. For an odd count, make the first tile full width.
+
+## Mockups fill the whole screen (MOCKUP)
+**Problem:** Mockups came out as a small card on a beige background, with empty space around it.
+**Reality:** The founder rejected that twice, with screenshots of small cards. Every mockup must be the full viewport, with no page margin, no outer padding and no empty background. The screen is the whole frame.
+**Rule:** Render mockups full-screen at 1440 × 900 and at 390 px, with no whitespace around the design. Check the screenshot before sending it. Never send a small card on a page background.
