@@ -78,8 +78,21 @@ const PROFILE = { sentria_sector: 'health', sentria_sectors: '["health"]', sentr
     pass(await chat(p).count() === 0, 'Escape closes Robo');
     await ctx.close(); }
 
+  console.log('== the dashboard top bar opens Robo too');
+  { const { p, ctx } = await open();
+    pass(await p.locator('[data-robo-dashboard]').count() === 1, 'one Ask Robo button in the dashboard top bar');
+    await p.locator('[data-robo-dashboard]').click(); await p.waitForTimeout(600);
+    pass(await chat(p).count() === 1 && await chat(p).getAttribute('data-stage') === 'ask', 'it opens the question list');
+    await chat(p).locator('[data-question="tracking"]').click(); await p.waitForTimeout(300);
+    await chat(p).locator('[data-testid="robo-show"]').click(); await p.waitForTimeout(900);
+    pass(await tour(p).getAttribute('data-chapter') === 'tracking', '"Show me" from the top bar starts the tour there');
+    pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
+    await ctx.close(); }
+
   console.log('== French, dark, and a phone');
   { const { p, ctx } = await open({ lang: 'fr', theme: 'dark', vw: 390, vh: 844 });
+    // The top bar has no room for a fourth button on a phone: Help is the way in there.
+    pass(await p.locator('[data-robo-dashboard]').isHidden(), 'the top bar button is hidden on a phone');
     await openRobo(p);
     pass(await chat(p).count() === 1, 'phone: Ask Robo opens the chat from the drawer');
     await chat(p).locator('[data-question="confidence"]').click(); await p.waitForTimeout(300);

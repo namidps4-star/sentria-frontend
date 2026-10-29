@@ -31,7 +31,7 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 
 ## dashboard-view.tsx early returns
 **Problem:** Industry/Logistics overviews look like separate pages.
-**Reality:** They are early returns inside `dashboard-view.tsx`. Each must keep `{importPortal}`, and `{sheetTabs}` as the **last child** (the bar is sticky). `tabSector`, `departmentTabs`, `activeDepartment`, `sheetTabs` are computed before those returns.
+**Reality:** They are early returns inside `dashboard-view.tsx`. Each must keep `{roboPortal}{importPortal}` (the top-bar icons), and `{sheetTabs}` as the **last child** (the bar is sticky). `tabSector`, `departmentTabs`, `activeDepartment`, `sheetTabs` are computed before those returns.
 **Rule:** Moving or adding a return path means re-adding both.
 
 ## Settings follow the account only if listed

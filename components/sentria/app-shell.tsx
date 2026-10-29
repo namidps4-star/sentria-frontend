@@ -439,7 +439,7 @@ export function AppShell({
           </div>
 
           <main key={shownSite ?? "no-site"} className="flex-1 overflow-y-auto p-4 lg:p-8">
-            {view === "dashboard" && <DashboardView search={search} onNavigate={setView} />}
+            {view === "dashboard" && <DashboardView search={search} onNavigate={setView} onAskRobo={() => setShowRobo(true)} />}
             {view === "tracking" && <TrackingView />}
             {view === "calendar" && <CalendarView />}
             {view === "sites" && !employee && <SitesView onNavigate={setView} />}
