@@ -1540,7 +1540,7 @@ export function OnboardingView({
                                   src={item.image}
                                   alt=""
                                   className={cn(
-                                    "pointer-events-none absolute -bottom-2 -right-2 h-[72%] w-[52%] object-contain",
+                                    "pointer-events-none absolute -bottom-2 -right-2 h-[80%] w-[52%] object-contain",
                                     !isSelected && "[filter:var(--art-filter)]"
                                   )}
                                 />
@@ -1548,13 +1548,8 @@ export function OnboardingView({
                                 <Icon className="absolute bottom-5 right-5 h-16 w-16 stroke-[1.5]" aria-hidden="true" />
                               )}
 
-                              {item.maturity && (
-                                <span
-                                  className={cn(
-                                    "absolute left-5 top-5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
-                                    isSelected ? "bg-[#141414] text-brand" : "bg-muted text-foreground"
-                                  )}
-                                >
+                              {item.maturity && !isSelected && (
+                                <span className="absolute left-5 top-5 whitespace-nowrap rounded-full bg-muted px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-foreground">
                                   {maturityLabel(item.maturity, tx)}
                                 </span>
                               )}
@@ -1566,6 +1561,11 @@ export function OnboardingView({
                                 <span className={cn("mt-1 block text-[13px] leading-snug", isSelected ? "text-[#141414]/70" : "text-muted-foreground")}>
                                   {px(item.description)}
                                 </span>
+                                {item.maturity && isSelected && (
+                                  <span className="mt-3 inline-block whitespace-nowrap rounded-full bg-[#141414] px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-brand">
+                                    {maturityLabel(item.maturity, tx)}
+                                  </span>
+                                )}
                               </span>
 
                               {isSelected && (
