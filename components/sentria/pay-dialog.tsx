@@ -46,9 +46,9 @@ const FIELDS: Field[] = ["number", "expiry", "cvc"]
 /** The mobile money brands on the payment slider, with their official logos
  *  from /public/payment. The logo sits on white so its colours hold in dark mode. */
 const MOBILE_MONEY = [
-  { id: "mpesa", name: "M-Pesa", testId: "pay-mm-mpesa", logo: "/payment/mpesa.png" },
-  { id: "momo", name: "MTN MoMo", testId: "pay-mm-momo", logo: "/payment/mtn-momo.png" },
-  { id: "orange", name: "Orange Money", testId: "pay-mm-orange", logo: "/payment/orange-money.webp" },
+  { id: "mpesa", name: "M-Pesa", testId: "pay-mm-mpesa", logo: "/payment/mpesa.png", size: "h-[38px] w-auto mix-blend-multiply" },
+  { id: "momo", name: "MTN MoMo", testId: "pay-mm-momo", logo: "/payment/mtn-momo.png", size: "h-[38px] w-[38px] rounded-[10px]" },
+  { id: "orange", name: "Orange Money", testId: "pay-mm-orange", logo: "/payment/orange-money.webp", size: "h-7 w-auto mix-blend-multiply" },
 ] as const
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
@@ -529,7 +529,10 @@ export function PayDialog({
 
             <div className="flex flex-col gap-2">
               <span id="pay-method" className={label}>{tx("Mode de paiement", "Payment method")}</span>
-              <div role="radiogroup" aria-labelledby="pay-method" className="grid grid-cols-2 gap-1 rounded-[24px] bg-muted p-1 sm:grid-cols-4">
+              <span className="-mt-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                {mpesa ? tx("Mobile money", "Mobile money") : tx("Mobile money · Bientôt", "Mobile money · Soon")}
+              </span>
+              <div role="radiogroup" aria-labelledby="pay-method" className="grid grid-cols-2 gap-1 rounded-[14px] bg-muted p-1 sm:grid-cols-4">
                 <button
                   type="button"
                   role="radio"
@@ -541,11 +544,12 @@ export function PayDialog({
                     setProblem("")
                   }}
                   className={cn(
-                    "flex h-12 items-center justify-center rounded-[18px] text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed",
-                    method === "card" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
+                    "relative flex h-14 items-center justify-center rounded-[10px] text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed",
+                    method === "card" ? "font-bold text-foreground" : "text-muted-foreground"
                   )}
                 >
                   {tx("Carte bancaire", "Card")}
+                  {method === "card" && <span aria-hidden="true" className="absolute inset-x-[30%] bottom-1.5 h-0.5 rounded-full bg-foreground" />}
                 </button>
                 {MOBILE_MONEY.map((brand) => {
                   // M-PESA is live for a company in shillings, monthly; the others are coming.
@@ -565,14 +569,15 @@ export function PayDialog({
                         setProblem("")
                       }}
                       className={cn(
-                        "flex min-h-12 flex-col items-center justify-center gap-1 rounded-[18px] px-2 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed",
-                        picked ? "bg-card text-foreground shadow-sm ring-1 ring-brand" : "text-muted-foreground"
+                        "relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-[10px] px-2 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed",
+                        picked ? "font-bold text-foreground" : "text-muted-foreground"
                       )}
                     >
-                      <span className="flex h-8 w-full max-w-[92px] items-center justify-center rounded-md bg-white px-1.5">
-                        <img src={brand.logo} alt={brand.name} className="max-h-6 w-auto max-w-full object-contain" />
-                      </span>
-                      {!live && <StatusTag tone="neutral" size="xs" icon={false}>{tx("Bientôt", "Soon")}</StatusTag>}
+                      <img src={brand.logo} alt={brand.name} className={cn("object-contain", brand.size)} />
+                      {!live && brand.id !== "mpesa" && mpesa && (
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-muted-foreground">{tx("Bientôt", "Soon")}</span>
+                      )}
+                      {picked && <span aria-hidden="true" className="absolute inset-x-[30%] bottom-1.5 h-0.5 rounded-full bg-foreground" />}
                       {live && yearly && <StatusTag tone="neutral" size="xs" icon={false}>{tx("Au mois", "Monthly")}</StatusTag>}
                     </button>
                   )

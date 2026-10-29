@@ -104,7 +104,7 @@ window.Stripe = function (key, options) {
   pass(await p.locator('[data-testid="pay-total"] b').evaluate(e => getComputedStyle(e).color) !== await p.locator('#pay-plan').evaluate(e => getComputedStyle(e).color), 'the total is lime, not white');
   pass(await p.getByTestId('pay-email').inputValue() === 'boss@atlantis.bj', 'the email starts as the signed-in address');
   const mms = ['pay-mm-mpesa', 'pay-mm-momo', 'pay-mm-orange'];
-  pass(await Promise.all(mms.map(id => p.getByTestId(id).isDisabled())).then(a => a.every(Boolean)) && /Soon/.test(await p.getByTestId('pay-mm-mpesa').textContent()), 'M-Pesa, MTN MoMo and Orange Money are on the slider, disabled, Soon');
+  pass(await Promise.all(mms.map(id => p.getByTestId(id).isDisabled())).then(a => a.every(Boolean)) && (await p.getByRole('dialog').textContent()).includes('Mobile money · Soon'), 'M-Pesa, MTN MoMo and Orange Money are on the slider, disabled, under one Soon caption');
   pass(await Promise.all(['pay-mm-mpesa', 'pay-mm-momo', 'pay-mm-orange'].map(id => p.getByTestId(id).locator('img').evaluate(i => i.complete && i.naturalWidth > 0))).then(a => a.every(Boolean)), 'each option shows its official logo');
   pass(await p.getByTestId('pay-country').inputValue() === 'BJ', 'the billing country starts as the account country');
   pass(/Pay 29\s*€ per month/.test(await p.getByTestId('pay-submit').textContent()), 'the button says the amount and period');
@@ -191,7 +191,7 @@ window.Stripe = function (key, options) {
   await ctx.close();
   ({ p, ctx } = await open({ lang: 'fr' }));
   await p.getByTestId('buy-pro').click(); await p.waitForTimeout(900);
-  pass(/Total, chaque mois/.test(await p.getByTestId('pay-total').textContent()) && /Payer 29\s*€ par mois/.test(await p.getByTestId('pay-submit').textContent()) && /Bientôt/.test(await p.getByTestId('pay-mm-mpesa').textContent()), 'French: total, button and Soon are French');
+  pass(/Total, chaque mois/.test(await p.getByTestId('pay-total').textContent()) && /Payer 29\s*€ par mois/.test(await p.getByTestId('pay-submit').textContent()) && (await p.getByRole('dialog').textContent()).includes('Mobile money · Bientôt'), 'French: total, button and Soon are French');
   pass(await p.evaluate(() => window.__stripe.options && window.__stripe.options.locale) === 'fr', "Stripe's fields and errors are in French");
   await ctx.close();
   ({ p, ctx } = await open({ vw: 390, vh: 844 }));
