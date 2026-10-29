@@ -35,6 +35,7 @@ import { TrackingView } from "./tracking-view"
 import { AdminView } from "./admin-view"
 import { UploadPanelHost } from "./upload-panel-host"
 import { AnalyticsConsent } from "./analytics-consent"
+import { WebVitalsReporter } from "./web-vitals-reporter"
 import { track } from "@/lib/analytics"
 import { readAccountPlan } from "@/lib/plans"
 import { GuideBuddy } from "./guide-buddy"
@@ -347,6 +348,7 @@ export function AppShell({
       <DocumentLanguage />
       <UploadPanelHost />
       <AnalyticsConsent />
+      <WebVitalsReporter />
 
       {showOnboarding && (
         <OnboardingView
