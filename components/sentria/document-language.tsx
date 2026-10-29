@@ -2,8 +2,8 @@
 
 import { useEffect } from "react"
 
-import { useTx } from "@/lib/i18n"
 import { useLocale } from "@/lib/locale"
+import { SEO } from "@/lib/seo"
 
 /**
  * The three things about the document itself that carry a language: the
@@ -37,18 +37,9 @@ import { useLocale } from "@/lib/locale"
  */
 export function DocumentLanguage() {
   const { ui } = useLocale()
-  const tx = useTx()
 
   useEffect(() => {
-    const title = tx(
-      "SentrIA | Intelligence opérationnelle",
-      "SentrIA | Operational intelligence"
-    )
-
-    const description = tx(
-      "SentrIA : surveillance et intelligence prédictive des systèmes, équipements et opérations critiques.",
-      "SentrIA: monitoring and predictive intelligence for critical systems, equipment and operations."
-    )
+    const { title, description } = SEO[ui === "en" ? "en" : "fr"]
 
     function apply() {
       document.documentElement.lang = ui
@@ -75,7 +66,7 @@ export function DocumentLanguage() {
     })
 
     return () => observer.disconnect()
-  }, [ui, tx])
+  }, [ui])
 
   return null
 }
