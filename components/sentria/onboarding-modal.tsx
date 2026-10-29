@@ -1507,7 +1507,7 @@ export function OnboardingView({
                   {/* SECTOR */}
                   {step === sectorStepNumber && (
                     <>
-                      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+                      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
                         {SECTORS.map((item) => {
                           const Icon = item.icon
                           const active = sector === item.id
@@ -1525,55 +1525,54 @@ export function OnboardingView({
                               }
                               aria-pressed={isSelected}
                               className={cn(
-                                "group relative flex min-h-[210px] flex-col justify-between gap-5 rounded-[30px] p-5 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                "group relative flex min-h-[210px] flex-col justify-end overflow-hidden rounded-[30px] p-5 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                item.recommended && "sm:col-span-2",
                                 isSelected
-                                  ? "bg-[var(--ink)] text-white shadow-[0_14px_44px_rgba(20,20,18,0.18)]"
-                                  : "bg-muted hover:-translate-y-0.5 hover:bg-muted/70",
-                                item.recommended && !isSelected && "ring-2 ring-brand/60"
+                                  ? "bg-brand text-[#141414]"
+                                  : "border border-border bg-card hover:-translate-y-0.5",
                               )}
                             >
-                              <span className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-[22px] bg-card">
-                                {item.image ? (
-                                  <img
-                                    src={item.image}
-                                    alt=""
-                                    className={cn(
-                                      "h-full w-full object-contain transition-transform duration-300",
-                                      isSelected ? "scale-110" : "group-hover:scale-105"
-                                    )}
-                                  />
-                                ) : (
-                                  <Icon className="h-9 w-9 stroke-[1.5] text-muted-foreground" aria-hidden="true" />
-                                )}
-                              </span>
+                              {item.image ? (
+                                <img
+                                  src={item.image}
+                                  alt=""
+                                  className={cn(
+                                    "pointer-events-none absolute -bottom-2 -right-2 h-[72%] w-[52%] object-contain",
+                                    !isSelected && "[filter:var(--art-filter)]"
+                                  )}
+                                />
+                              ) : (
+                                <Icon className="absolute bottom-5 right-5 h-16 w-16 stroke-[1.5]" aria-hidden="true" />
+                              )}
 
-                              <span>
+                              {item.maturity && (
+                                <span
+                                  className={cn(
+                                    "absolute left-5 top-5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                                    isSelected ? "bg-[#141414] text-brand" : "bg-muted text-foreground"
+                                  )}
+                                >
+                                  {maturityLabel(item.maturity, tx)}
+                                </span>
+                              )}
+
+                              <span className="relative mt-auto max-w-[50%]">
                                 <span className="block font-heading text-[21px] font-extrabold leading-tight tracking-tight">
                                   {px(item.label)}
                                 </span>
-                                <span className={cn("mt-1 block text-[13px] leading-snug", isSelected ? "text-white/60" : "text-muted-foreground")}>
+                                <span className={cn("mt-1 block text-[13px] leading-snug", isSelected ? "text-[#141414]/70" : "text-muted-foreground")}>
                                   {px(item.description)}
                                 </span>
-                                {item.maturity && (
-                                  <span
-                                    className={cn(
-                                      "mt-2.5 inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
-                                      isSelected ? "bg-brand text-[#141414]" : "bg-card text-muted-foreground"
-                                    )}
-                                  >
-                                    {maturityLabel(item.maturity, tx)}
-                                  </span>
-                                )}
                               </span>
 
                               {isSelected && (
-                                <span className="absolute -right-1.5 -top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-brand text-[#141414] ring-2 ring-card">
+                                <span className="absolute -right-1.5 -top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-[#141414] text-brand ring-2 ring-card">
                                   <Check className="h-4 w-4" strokeWidth={3} />
                                 </span>
                               )}
 
                               {secondary && !active && (
-                                <span className="absolute bottom-4 right-4 rounded-full bg-card px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                                <span className="absolute right-5 top-5 rounded-full bg-muted px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
                                   {tx("Secondaire", "Secondary")}
                                 </span>
                               )}
