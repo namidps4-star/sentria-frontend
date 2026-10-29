@@ -22,6 +22,7 @@ import {
 } from "@/lib/guide-steps"
 import type { ViewKey } from "./types"
 import { cn } from "@/lib/utils"
+import type { RoboStart } from "@/lib/robo-chat"
 
 /* --------------------------------------------------------------------------
  * The first-use tour (ONB-GUIDE): a small lime robot with a black screen face
@@ -101,7 +102,24 @@ export function RoboFigure({ pose, className, style }: { pose: GuidePose; classN
       <rect x="94" y="150" width="12" height="3" rx="1.5" fill="#fff" opacity="0.9" />
       <rect x="72" y="188" width="56" height="16" rx="8" fill={LIME_DARK} />
 
-      {/* Head: a lime shell around a black screen. */}
+      <RoboHeadShapes happy={happy} />
+    </svg>
+  )
+}
+
+/** Robo's head on its own, for the chat: the same shell and screen as the whole figure. */
+export function RoboHead({ className, style }: { className?: string; style?: React.CSSProperties }) {
+  return (
+    <svg viewBox="32 10 136 116" className={className} style={style} role="img" aria-label={GUIDE_NAME}>
+      <RoboHeadShapes happy />
+    </svg>
+  )
+}
+
+/** A lime shell around a black screen, with the eyes. */
+function RoboHeadShapes({ happy }: { happy: boolean }) {
+  return (
+    <>
       <rect x="36" y="14" width="128" height="108" rx="54" fill={LIME} />
       <rect x="50" y="26" width="100" height="70" rx="35" fill={SCREEN} />
 
@@ -121,7 +139,7 @@ export function RoboFigure({ pose, className, style }: { pose: GuidePose; classN
           <circle cx="120" cy="61" r="11" />
         </g>
       )}
-    </svg>
+    </>
   )
 }
 
@@ -177,12 +195,15 @@ export function GuideBuddy({
   onClose,
   view,
   onNavigate,
+  start,
 }: {
   open: boolean
   onClose: () => void
   /** The view on screen, and a way to open another: the deeper chapter starts on the dashboard. */
   view: ViewKey
   onNavigate: (view: ViewKey) => void
+  /** Robo's chat opens the tour here instead of at hello: one part, and a step in it when given. */
+  start?: RoboStart
 }) {
   const tx = useTx()
   const [part, setPart] = useState<Part>("menu")
@@ -192,6 +213,8 @@ export function GuideBuddy({
   const [fromList, setFromList] = useState(false)
   const [seen, setSeen] = useState<PartId[]>([])
   const [index, setIndex] = useState(0)
+  // A step id to jump to once its part's steps are on screen (see `start`).
+  const [pending, setPending] = useState<string | null>(null)
   const [targets, setTargets] = useState<Record<string, Box | null>>({})
   const [narrow, setNarrow] = useState(false)
   // The dashboard is on its "no data yet" screen (data-tour="empty").
@@ -213,10 +236,18 @@ export function GuideBuddy({
     setSeen(readSeenParts())
     setQueue([])
     setFromList(false)
+    setIndex(0)
+
+    if (start) {
+      setSettled(false)
+      setPart(start.part)
+      setPending(start.step ?? null)
+      return
+    }
+
     // Whoever has finished the tour once picks a part; a first visit gets it from the top.
     setPart(finished ? "list" : "menu")
-    setIndex(0)
-  }, [open])
+  }, [open, start])
 
   const all = useMemo(
     () => (part === "list" ? [LIST_STEP] : partSteps(part, tx, deepContext(tx), queue.length > 0)),
@@ -272,6 +303,17 @@ export function GuideBuddy({
 
     return out
   }, [all, targets, narrow, settled, empty, tx])
+
+  // Robo's chat asked for one step: wait until its part's steps are on screen, then jump to it.
+  useEffect(() => {
+    if (!pending) return
+
+    const found = steps.findIndex((s) => s.id === pending)
+    if (found < 0) return
+
+    setIndex(found)
+    setPending(null)
+  }, [pending, steps])
 
   useLayoutEffect(() => {
     if (!open) return
