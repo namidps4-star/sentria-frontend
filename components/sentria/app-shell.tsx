@@ -21,6 +21,7 @@ import { ViewAsBanner } from "./view-as-banner"
 import type { ViewKey } from "./types"
 import { Topbar, type Notification } from "./topbar"
 import { DashboardView } from "./dashboard-view"
+import { OPEN_IMPORT_KEY } from "@/lib/upload-panel"
 import { CalendarView } from "./calendar-view"
 import { SitesView } from "./sites-view"
 import { AskView } from "./ask-view"
@@ -415,6 +416,15 @@ export function AppShell({
               onNotificationsOpen={markNotificationsSeen}
               onOpenTracking={() => setView("tracking")}
               onOpenSites={() => setView("sites")}
+              onOpenImport={view === "dashboard" ? undefined : () => {
+                // The import menu lives on the dashboard: go there and open it.
+                try {
+                  sessionStorage.setItem(OPEN_IMPORT_KEY, "1")
+                } catch {
+                  /* no storage: the dashboard opens closed */
+                }
+                setView("dashboard")
+              }}
             />
           </div>
 

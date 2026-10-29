@@ -120,7 +120,7 @@ import { runUpload } from "@/lib/upload"
 import { departmentIconKey, sectorTileBackground, useSiteIcons } from "@/lib/site-icons"
 import { IMPORT_REQUEST_EVENT, consumeImportRequest } from "@/lib/import-request"
 import { RelativeTime } from "./relative-time"
-import { setUploadPanel } from "@/lib/upload-panel"
+import { OPEN_IMPORT_KEY, setUploadPanel } from "@/lib/upload-panel"
 import { holdInPlace } from "@/lib/hold-scroll"
 import { uploadProblemMessage } from "@/lib/upload-problem"
 import type { AlertParams } from "@/lib/value-at-risk"
@@ -1109,6 +1109,18 @@ export function DashboardView({
   const [uploading, setUploading] = useState(false)
   // The import panel: opened from the upload icon at the top.
   const [importOpen, setImportOpen] = useState(false)
+
+  // Opened from another page's import shortcut (app-shell sets the flag).
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(OPEN_IMPORT_KEY) === "1") {
+        sessionStorage.removeItem(OPEN_IMPORT_KEY)
+        setImportOpen(true)
+      }
+    } catch {
+      /* no storage: stays closed */
+    }
+  }, [])
 
   // Robo's "Upload a file" asks for the import panel (lib/import-request.ts):
   // a request made before this page mounted is read now, a later one by event.

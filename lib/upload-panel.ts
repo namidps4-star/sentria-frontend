@@ -31,3 +31,7 @@ export function useUploadPanel(): UploadPanel {
     () => panel
   )
 }
+
+/** Set by the top bar's import shortcut on another page: the dashboard, which
+ *  owns the import menu, opens it when it mounts, then clears the flag. */
+export const OPEN_IMPORT_KEY = "sentria_open_import"

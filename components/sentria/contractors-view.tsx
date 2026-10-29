@@ -240,11 +240,14 @@ export function ContractorsView({
 
     setBusy(true)
 
+    // The branch goes in the same request that creates the person, so it cannot be left
+    // behind by a second request that never leaves the browser.
     const result = await createContractor(companyName, {
       name: form.name,
       role: branchMode ? "Branch manager" : form.role || undefined,
       phone: phone.kind === "valid" ? phone.e164 : undefined,
       email: form.email || undefined,
+      site_id: branchMode && form.site_id ? form.site_id : undefined,
     })
 
     setBusy(false)
@@ -256,13 +259,6 @@ export function ContractorsView({
 
     setError(null)
     setTried(false)
-    // The API files a new person under the site shown; a branch manager goes to the branch picked.
-    if (branchMode && form.site_id && result.data.site_id !== form.site_id) {
-      const filed = await updateContractor(result.data.id, { site_id: form.site_id })
-
-      if (!filed.ok) setError(px(filed.detail))
-    }
-
     setForm({ name: "", role: "", phone: "", email: "", site_id: "" })
     setAdding(false)
     await reload()

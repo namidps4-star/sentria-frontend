@@ -10,6 +10,7 @@ import { fieldUrl, makeFieldLink } from "@/lib/field-link"
 import { useTx, type Tx } from "@/lib/i18n"
 import { ArrowRight, Check, Send, X } from "@/lib/icons"
 import { formatAmount } from "@/lib/locale"
+import { useSites } from "@/lib/sites"
 import { enterAt } from "@/lib/motion"
 import { useCanSeeAmounts } from "@/lib/use-plan"
 import { usePresence } from "@/lib/use-presence"
@@ -60,6 +61,7 @@ export function BranchSwapsCard({ alerts, embedded = false }: { alerts: SwapAler
 
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [contractors, setContractors] = useState<Contractor[]>([])
+  const { sites } = useSites()
   /* False until both reads answered: a row never says "waiting" for a swap
      whose task we simply have not read yet. */
   const [known, setKnown] = useState(false)
@@ -244,7 +246,11 @@ export function BranchSwapsCard({ alerts, embedded = false }: { alerts: SwapAler
           const link = links[swap.taskKey]
           const tag = STAGE_TAG[stage]
           const until = dayLabel(swap.expiry, tx)
-          const chosen = picked[swap.taskKey] ?? contractors[0]?.id ?? ""
+          // A product leaves its branch for another one: the people of the branch
+          // it leaves are not offered, so the sender never suggests themselves.
+          const fromId = sites.find((site) => site.name.trim().toLowerCase() === swap.fromSite.trim().toLowerCase())?.id
+          const candidates = fromId ? contractors.filter((person) => person.site_id !== fromId) : contractors
+          const chosen = picked[swap.taskKey] ?? candidates[0]?.id ?? ""
           const firstPerson = assignment?.contractor_ids[0]
           const needsLink = known && (stage === "waiting" || stage === "with")
           const priced = canSeeAmounts && swap.value !== null
@@ -296,7 +302,7 @@ export function BranchSwapsCard({ alerts, embedded = false }: { alerts: SwapAler
 
               {needsLink && (
                 <div className="mt-3 flex flex-wrap items-center gap-2 print:hidden">
-                  {stage === "waiting" && contractors.length > 0 && (
+                  {stage === "waiting" && candidates.length > 0 && (
                     <select
                       value={chosen}
                       onChange={(e) => setPicked((p) => ({ ...p, [swap.taskKey]: e.target.value }))}
@@ -304,17 +310,21 @@ export function BranchSwapsCard({ alerts, embedded = false }: { alerts: SwapAler
                       data-testid="swap-person"
                       className="h-9 rounded-lg border border-border bg-background px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
-                      {contractors.map((person) => (
+                      {candidates.map((person) => (
                         <option key={person.id} value={person.id}>
                           {person.name}
                         </option>
                       ))}
                     </select>
                   )}
-                  {stage === "waiting" && contractors.length === 0 && (
-                    <span className="text-xs text-muted-foreground">{tx("Ajoutez d'abord un responsable dans Prestataires.", "Add a manager in Contractors first.")}</span>
+                  {stage === "waiting" && candidates.length === 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {contractors.length > 0
+                        ? tx("Aucun autre responsable hors de ce site. Ajoutez-en un dans Prestataires.", "No other manager outside this branch. Add one in Contractors.")
+                        : tx("Ajoutez d'abord un responsable dans Prestataires.", "Add a manager in Contractors first.")}
+                    </span>
                   )}
-                  {(stage === "with" || contractors.length > 0) && (
+                  {(stage === "with" || candidates.length > 0) && (
                     <button
                       type="button"
                       data-testid="swap-send"

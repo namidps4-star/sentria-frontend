@@ -80,7 +80,7 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   await q.getByTestId('manager-name').fill('Grace Wanjiru');
   await q.getByTestId('manager-save').click(); await q.waitForTimeout(1200);
   pass(q._posted && q._posted.role === 'Branch manager', 'the new person is saved as a Branch manager');
-  pass((q._patches || []).some(x => x.body.site_id === 's3'), 'and filed under Kisumu');
+  pass(q._posted && q._posted.site_id === 's3', 'and filed under Kisumu, in the same request that creates the person');
   pass(await q.getByTestId('manager-card').count() === 3 && (await q.getByTestId('banner-covered').innerText()).startsWith('3 / 3'), 'the board shows 3 managers and 3 of 3 covered');
   pass(await q.getByTestId('missing-strip').count() === 0, 'the lime band is gone when every branch has a manager');
   await q.close();
