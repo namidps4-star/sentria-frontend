@@ -80,7 +80,6 @@ export const fr = {
   "topbar.menu.open": "Ouvrir le menu",
   "topbar.search.placeholder": "Rechercher un actif, une alerte…",
   "topbar.search.label": "Rechercher un actif ou une alerte",
-  "topbar.import": "Importer des données",
   "topbar.search.clear": "Effacer la recherche",
 
   /* Two keys rather than one with a plural rule inside it. A catalogue

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Search, Bell, Menu, X, ArrowRight, Upload } from "@/lib/icons"
+import { Search, Bell, Menu, X, ArrowRight } from "@/lib/icons"
 
 import { useT, useTx } from "@/lib/i18n"
 import { agoLabel } from "@/lib/relative-time"
@@ -46,7 +46,6 @@ export function Topbar({
   onNotificationsOpen,
   onOpenTracking,
   onOpenSites,
-  onOpenImport,
 }: {
   title: string
   subtitle: string
@@ -69,8 +68,6 @@ export function Topbar({
   onOpenTracking?: () => void
   /** The company menu's sites open the Sites page. */
   onOpenSites?: () => void
-  /** The import shortcut, shown on every page but the dashboard (which has its own). */
-  onOpenImport?: () => void
 }) {
   const t = useT()
   const tx = useTx()
@@ -169,22 +166,8 @@ export function Topbar({
       </div>
 
       {/* A slot the page fills with its own action (the dashboard's
-          upload icon). On the other pages the import shortcut sits here, so
-          the upload menu is one click away everywhere. */}
-      <div id="topbar-actions" className="flex items-center empty:hidden">
-        {onOpenImport && (
-          <button
-            type="button"
-            onClick={onOpenImport}
-            data-testid="topbar-import"
-            aria-label={t("topbar.import")}
-            title={t("topbar.import")}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-brand-foreground shadow-sm transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <Upload className="h-4 w-4" aria-hidden="true" />
-          </button>
-        )}
-      </div>
+          upload icon). Empty on other pages. */}
+      <div id="topbar-actions" className="flex items-center empty:hidden" />
 
       <div ref={bellRef} className="relative">
       <button
