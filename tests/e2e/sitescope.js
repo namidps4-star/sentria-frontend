@@ -155,7 +155,7 @@ const mkSite = (id, name, location) => ({ id, name, location, sector: 'health', 
     await p.getByTestId('add-site-name').fill('Power depot'); await p.getByTestId('add-site-next').click(); await p.waitForTimeout(300);
     pass((await p.locator('[data-testid^="add-site-sector-"]').count()) === 7, 'step 2 offers the seven sectors, retail included');
     const lastBox = await p.getByTestId('add-site-sector-commerce').boundingBox(), firstBox = await p.getByTestId('add-site-sector-logistics').boundingBox();
-    pass(lastBox && firstBox && lastBox.width > firstBox.width * 1.8, 'seven is odd: the last card takes the whole row, no empty cell');
+    pass(lastBox && firstBox && firstBox.width > lastBox.width * 1.8, 'seven is odd: the first card takes the whole row, no empty cell');
     await p.getByTestId('add-site-sector-energy').click(); await p.waitForTimeout(200);
     await p.screenshot({ path: 'sitescope-wizard-step2.png' });
     await p.getByTestId('add-site-next').click(); await p.waitForTimeout(300);

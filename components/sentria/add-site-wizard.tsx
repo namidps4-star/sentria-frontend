@@ -9,7 +9,7 @@ import { SOURCE_TYPES, type StoredSource } from "@/lib/sites"
 import { resolve, useTx, type Localized } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { CsvTemplateLink } from "./csv-template-link"
-import { SAMPLE_ALERTS, SECTORS } from "./onboarding-modal"
+import { SAMPLE_ALERTS, SECTORS, imageForActivity, imageForPriority } from "./onboarding-modal"
 import { SectorBadge } from "./sector-badge"
 
 type Choice = { sector: string; departments: string[]; priorities: string[]; sources: StoredSource[] }
@@ -60,7 +60,8 @@ function Tile({
   selected,
   disabled,
   onPick,
-  lead,
+  art,
+  icon: Icon,
   title,
   detail,
   badge,
@@ -70,11 +71,14 @@ function Tile({
   selected: boolean
   disabled?: boolean
   onPick: () => void
-  lead: React.ReactNode
+  /** The onboarding artwork for this choice, in the corner. */
+  art?: string
+  /** Fallback glyph when a choice has no artwork. */
+  icon?: React.ElementType
   title: string
   detail?: string
   badge?: React.ReactNode
-  /** The last of an odd number of cards takes the whole row, so no cell is left empty. */
+  /** The first of an odd number of tiles takes the whole row (the tile rule). */
   wide?: boolean
 }) {
   return (
@@ -85,23 +89,34 @@ function Tile({
       disabled={disabled}
       onClick={onPick}
       className={cn(
-        "relative flex min-h-[4.75rem] items-center gap-3.5 rounded-[22px] border-[1.5px] p-3.5 pr-12 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        selected ? "border-foreground bg-accent/20 ring-[3px] ring-brand/55" : "border-border bg-card hover:bg-muted",
-        disabled && "cursor-not-allowed opacity-50",
-        wide && "sm:col-span-2"
+        "relative flex min-h-[190px] flex-col justify-end overflow-hidden rounded-[28px] p-5 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        wide && "sm:col-span-2",
+        selected ? "bg-brand text-[#141414]" : "border border-border bg-card hover:-translate-y-0.5",
+        disabled && "cursor-not-allowed opacity-50 hover:translate-y-0"
       )}
     >
-      {lead}
-      <span className="min-w-0 flex-1">
-        <span className="block text-[15px] font-bold leading-5">{title}</span>
-        {detail && <span className="mt-0.5 block text-[12.5px] leading-[1.35] text-muted-foreground">{detail}</span>}
-      </span>
-      {badge && <span className="absolute right-3 top-3 text-[11px] font-bold">{badge}</span>}
+      {art ? (
+        <img
+          src={art}
+          alt=""
+          className={cn("pointer-events-none absolute -bottom-2 -right-2 h-[72%] w-[52%] object-contain", !selected && "[filter:var(--art-filter)]")}
+        />
+      ) : Icon ? (
+        <Icon className={cn("absolute bottom-5 right-5 h-14 w-14 stroke-[1.5]", !selected && "[filter:var(--art-filter)]")} aria-hidden="true" />
+      ) : null}
+
+      {badge && <span className="absolute left-5 top-5">{badge}</span>}
+
       {selected && (
-        <span className="absolute bottom-3 right-3 flex h-[22px] w-[22px] items-center justify-center rounded-full bg-foreground text-brand" aria-hidden="true">
-          <Check className="h-3 w-3" strokeWidth={3} />
+        <span className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full bg-[#141414] text-brand" aria-hidden="true">
+          <Check className="h-4 w-4" strokeWidth={3} />
         </span>
       )}
+
+      <span className="relative mt-auto block max-w-[58%]">
+        <span className="block font-heading text-[18px] font-extrabold leading-tight tracking-tight">{title}</span>
+        {detail && <span className={cn("mt-1 block text-[13px] leading-snug", selected ? "text-[#141414]/70" : "text-muted-foreground")}>{detail}</span>}
+      </span>
     </button>
   )
 }
@@ -260,12 +275,6 @@ export function AddSiteWizard({
   }
   const shownPriorities = priorities.length > 0 ? priorities : priorityList.slice(0, 3).map((p) => p.id)
 
-  const neutralLead = (Icon: React.ElementType) => (
-    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-muted" aria-hidden="true">
-      <Icon className="h-[22px] w-[22px]" />
-    </span>
-  )
-
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4">
       <div
@@ -378,19 +387,19 @@ export function AddSiteWizard({
               <div>
                 <p className="mb-3 text-[17px] font-bold">{tx("Dans quel secteur travaille ce site ?", "Which industry does this site work in?")}</p>
 
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {SECTORS.map((item, index) => {
                     const count = departmentCount(item.id)
 
                     return (
                       <Tile
                         key={item.id}
-                        wide={SECTORS.length % 2 === 1 && index === SECTORS.length - 1}
+                        wide={SECTORS.length % 2 === 1 && index === 0}
                         id={`add-site-sector-${item.id}`}
                         selected={sector === item.id}
                         disabled={locked(item.id)}
                         onPick={() => chooseSector(item.id)}
-                        lead={<SectorBadge sector={item.id} size="lg" />}
+                        art={item.image}
                         title={px(item.label)}
                         detail={px(item.description)}
                         badge={
@@ -423,15 +432,16 @@ export function AddSiteWizard({
                     : tx("Choisissez le département le plus proche.", "Pick the closest department.")}
                 </p>
 
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {departmentList.map((item, index) => (
                     <Tile
                       key={item.id}
-                      wide={departmentList.length % 2 === 1 && index === departmentList.length - 1}
+                      wide={departmentList.length % 2 === 1 && index === 0}
                       id={`add-site-department-${item.id}`}
                       selected={departments.includes(item.id)}
                       onPick={() => chooseDepartment(item.id)}
-                      lead={neutralLead(item.icon)}
+                      art={imageForActivity(item.id)}
+                      icon={item.icon}
                       title={px(item.label)}
                       detail={px(item.description)}
                     />
@@ -453,15 +463,16 @@ export function AddSiteWizard({
                 {priorityList.length === 0 ? (
                   <p className="mt-3 text-sm text-muted-foreground">{tx("Rien à choisir pour ce secteur.", "Nothing to pick for this sector.")}</p>
                 ) : (
-                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                     {priorityList.map((item, index) => (
                       <Tile
                         key={item.id}
-                        wide={priorityList.length % 2 === 1 && index === priorityList.length - 1}
+                        wide={priorityList.length % 2 === 1 && index === 0}
                         id={`add-site-priority-${item.id}`}
                         selected={priorities.includes(item.id)}
                         onPick={() => setPriorities(toggle(priorities, item.id))}
-                        lead={neutralLead(item.icon)}
+                        art={imageForPriority(item.id)}
+                        icon={item.icon}
                         title={px(item.short ?? item.label)}
                         detail={px(item.description)}
                       />
@@ -475,31 +486,31 @@ export function AddSiteWizard({
               <div>
                 <p className="text-[17px] font-bold">{tx("Comment les données de ce site arriveront-elles ?", "How will this site's data arrive?")}</p>
 
-                <div className="mt-3 space-y-3">
-                  {SOURCES.map((item) => (
-                    <div key={item.type}>
-                      <Tile
-                        id={`add-site-source-${item.type}`}
-                        selected={wanted.includes(item.type)}
-                        onPick={() => setWanted(toggle(wanted, item.type as string))}
-                        lead={neutralLead(item.icon)}
-                        title={px(item.label)}
-                        detail={px(item.description)}
-                        badge={
-                          item.live ? null : (
-                            <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">{tx("Pas encore actif", "Not live yet")}</span>
-                          )
-                        }
-                      />
-
-                      {item.type === "csv" && wanted.includes("csv") && (
-                        <div className="mt-1.5 pl-3">
-                          <CsvTemplateLink department={departments[0]} sector={sector} className="text-muted-foreground hover:text-foreground" />
-                        </div>
-                      )}
-                    </div>
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {SOURCES.map((item, index) => (
+                    <Tile
+                      key={item.type}
+                      wide={SOURCES.length % 2 === 1 && index === 0}
+                      id={`add-site-source-${item.type}`}
+                      selected={wanted.includes(item.type)}
+                      onPick={() => setWanted(toggle(wanted, item.type as string))}
+                      icon={item.icon}
+                      title={px(item.label)}
+                      detail={px(item.description)}
+                      badge={
+                        item.live ? null : (
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">{tx("Pas encore actif", "Not live yet")}</span>
+                        )
+                      }
+                    />
                   ))}
                 </div>
+
+                {wanted.includes("csv") && (
+                  <div className="mt-3 pl-1">
+                    <CsvTemplateLink department={departments[0]} sector={sector} className="text-muted-foreground hover:text-foreground" />
+                  </div>
+                )}
 
                 {wanted.some((t) => t !== "csv") && (
                   <p data-testid="add-site-not-live" className="mt-3 text-xs text-muted-foreground">

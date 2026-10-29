@@ -244,7 +244,7 @@ const ACTIVITY_IMAGES: Record<string, string> = {
   "grossiste-distributeur": "/grossiste-distributeur.png",
 }
 
-function imageForActivity(activityId: string | undefined): string | undefined {
+export function imageForActivity(activityId: string | undefined): string | undefined {
   if (!activityId) return undefined
   return ACTIVITY_IMAGES[activityId]
 }
@@ -318,7 +318,7 @@ function normalizeKey(id: string): string {
 }
 
 /** Look up by raw id, then by normalized id (dashes/underscores stripped). */
-function imageForPriority(priorityId: string | undefined): string | undefined {
+export function imageForPriority(priorityId: string | undefined): string | undefined {
   if (!priorityId) return undefined
   if (PRIORITY_IMAGES[priorityId]) return PRIORITY_IMAGES[priorityId]
   return PRIORITY_IMAGES[normalizeKey(priorityId)]

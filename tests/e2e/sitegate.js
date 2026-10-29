@@ -47,7 +47,7 @@ const json = (r, body) => r.fulfill({ status: 200, contentType: 'application/jso
     pass(await upgrade(p).count() === 1, 'the next "Add a site" opens the upgrade prompt');
     pass(await p.getByPlaceholder('e.g. Lyon plant').count() === 0, 'and not the add form');
     const text = await upgrade(p).innerText();
-    pass(new RegExp(`${cap} site`).test(text) && (plan === 'business' ? /Entreprise plan for unlimited sites/ : /Business includes 3 sites/).test(text), 'it says what the plan includes and what upgrading gives: ' + text.replace(/\s+/g, ' ').slice(0, 120));
+    pass(new RegExp(`${cap} site`).test(text) && (plan === 'business' ? /Entreprise removes the limit/ : /Business includes 3/).test(text), 'it says what the plan includes and what upgrading gives: ' + text.replace(/\s+/g, ' ').slice(0, 120));
     if (plan === 'decouverte') await p.screenshot({ path: 'sitegate-light.png' });
     await upgrade(p).getByRole('button', { name: 'See the plans' }).click(); await p.waitForTimeout(700);
     pass(/plan|Plan|pricing|Pricing/i.test(await p.evaluate(() => document.body.innerText)) && await upgrade(p).count() === 0, 'See the plans leaves the dialog and opens the plans page');

@@ -1516,60 +1516,55 @@ export function SitesView({ onNavigate }: { onNavigate?: (view: ViewKey) => void
             role="dialog"
             aria-modal="true"
             aria-label={tx("Limite de sites atteinte", "Site limit reached")}
-            className={cn("w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-2xl t-modal", upgrade.className)}
+            className={cn("squircle w-full max-w-md overflow-hidden rounded-[28px] bg-[var(--ink)] p-7 text-white shadow-2xl t-modal", upgrade.className)}
           >
-            <div className="flex items-start justify-between gap-3">
-              <h3 className="font-heading text-xl font-bold">
-                {plan === "business"
-                  ? tx("Plus de sites avec l'offre Entreprise", "More sites with the Entreprise plan")
-                  : tx("Plus de sites avec l'offre Business", "More sites with the Business plan")}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowUpgrade(false)}
-                aria-label={tx("Fermer", "Close")}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
-            </div>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              {Number.isFinite(siteCap)
-                ? tx(
-                    `Votre offre ${PLAN_NAMES[plan]} inclut ${siteCap} site${siteCap > 1 ? "s" : ""}, et vous les utilisez. ${
-                      plan === "business"
-                        ? "Passez à l'offre Entreprise pour des sites illimités."
-                        : "Passez à une offre supérieure pour en ajouter d'autres : Business inclut 3 sites, Entreprise est illimitée."
-                    }`,
-                    `Your ${PLAN_NAMES[plan]} plan includes ${siteCap} site${siteCap > 1 ? "s" : ""}, and you are using them. ${
-                      plan === "business"
-                        ? "Upgrade to the Entreprise plan for unlimited sites."
-                        : "Upgrade to add more: Business includes 3 sites, Entreprise is unlimited."
-                    }`
-                  )
-                : ""}
+            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-white/60">
+              {tx(`Offre ${PLAN_NAMES[plan]}`, `${PLAN_NAMES[plan]} plan`)}
             </p>
-            <div className="mt-5 flex items-center justify-end gap-2">
+            <h3 className="mt-2 font-heading text-[26px] font-extrabold leading-tight tracking-tight">
+              {plan === "business"
+                ? tx(`Les ${siteCap} sites sont utilisés`, `All ${siteCap} sites are in use`)
+                : tx("Plus de sites avec l'offre Business", "More sites with the Business plan")}
+            </h3>
+            <p className="mt-2 text-sm text-white/60">
+              {plan === "business"
+                ? tx("Entreprise supprime la limite.", "Entreprise removes the limit.")
+                : tx(
+                    `Votre offre ${PLAN_NAMES[plan]} inclut 1 site. Business en inclut 3, Entreprise est illimitée.`,
+                    `Your ${PLAN_NAMES[plan]} plan includes 1 site. Business includes 3, Entreprise is unlimited.`
+                  )}
+            </p>
+
+            <div className="mt-6 flex flex-col gap-2.5">
+              <div className="flex items-center justify-between rounded-2xl bg-white/10 px-[18px] py-4 text-[15px]">
+                <span>Business</span>
+                <span className="text-white/60">{tx("3 sites", "3 sites")}</span>
+              </div>
+              <div className="flex items-center justify-between rounded-2xl bg-brand px-[18px] py-4 text-[15px] font-extrabold text-[#141414]">
+                <span>Entreprise</span>
+                <span>{tx("Illimité", "Unlimited")}</span>
+              </div>
+            </div>
+
+            {onNavigate && (
               <button
                 type="button"
-                onClick={() => setShowUpgrade(false)}
-                className="rounded-full border border-border px-4 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                onClick={() => {
+                  setShowUpgrade(false)
+                  onNavigate("pricing")
+                }}
+                className="mt-6 h-[54px] w-full rounded-2xl bg-brand text-base font-extrabold text-[#141414] transition-opacity hover:opacity-90"
               >
-                {tx("Plus tard", "Not now")}
+                {tx("Voir les offres", "See the plans")}
               </button>
-              {onNavigate && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowUpgrade(false)
-                    onNavigate("pricing")
-                  }}
-                  className="rounded-full bg-brand px-4 py-2 text-sm font-semibold text-[#141414] transition-opacity hover:opacity-90"
-                >
-                  {tx("Voir les offres", "See the plans")}
-                </button>
-              )}
-            </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowUpgrade(false)}
+              className="mt-1.5 h-10 w-full text-sm font-semibold text-white/60 transition-colors hover:text-white"
+            >
+              {tx("Plus tard", "Not now")}
+            </button>
           </div>
         </div>
       )}
