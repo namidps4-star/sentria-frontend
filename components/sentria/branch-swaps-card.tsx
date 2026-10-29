@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 
-import { peopleOn, stageOf, swapsFrom, totalsOf, type Swap, type SwapAlert, type SwapStage } from "@/lib/branch-swaps"
+import { stageOf, swapsFrom, totalsOf, type Swap, type SwapAlert, type SwapStage } from "@/lib/branch-swaps"
 import { announceAlertsUpdated } from "@/lib/alerts-event"
 import { readCompanyName } from "@/lib/company"
 import { fetchAssignments, fetchContractors, saveAssignment, type Assignment, type Contractor } from "@/lib/crm"
@@ -62,6 +62,12 @@ export function BranchSwapsCard({ alerts, embedded = false }: { alerts: SwapAler
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [contractors, setContractors] = useState<Contractor[]>([])
   const { sites } = useSites()
+
+  /* A person is named with the branch they run: "Grace, manager at Nairobi". */
+  const branchNamed = (person: Contractor) => {
+    const site = sites.find((row) => row.id === person.site_id)
+    return site ? tx(`${person.name}, responsable à ${site.name}`, `${person.name}, manager at ${site.name}`) : person.name
+  }
   /* False until both reads answered: a row never says "waiting" for a swap
      whose task we simply have not read yet. */
   const [known, setKnown] = useState(false)
@@ -242,7 +248,12 @@ export function BranchSwapsCard({ alerts, embedded = false }: { alerts: SwapAler
         {swaps.map((swap) => {
           const assignment = byKey.get(swap.taskKey)
           const stage = stages[swap.taskKey]
-          const names = peopleOn(assignment, contractors)
+          const named = (assignment?.contractor_ids ?? [])
+            .map((id) => contractors.find((c) => c.id === id))
+            .filter((c): c is Contractor => Boolean(c))
+            .map(branchNamed)
+          const toRow = sites.find((row) => row.name.trim().toLowerCase() === swap.toSite.trim().toLowerCase())
+          const toStaffed = !toRow || contractors.some((c) => c.site_id === toRow.id)
           const link = links[swap.taskKey]
           const tag = STAGE_TAG[stage]
           const until = dayLabel(swap.expiry, tx)
@@ -267,6 +278,11 @@ export function BranchSwapsCard({ alerts, embedded = false }: { alerts: SwapAler
                     <span>{swap.fromSite}</span>
                     <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
                     <span>{swap.toSite}</span>
+                    {!toStaffed && (
+                      <span data-testid="swap-no-manager" className="font-semibold text-[oklch(0.5_0.13_60)]">
+                        {tx(`· pas de responsable à ${swap.toSite}`, `· no manager at ${swap.toSite}`)}
+                      </span>
+                    )}
                     {swap.days !== null && <span>{tx(`· expire dans ${swap.days} j`, `· expires in ${swap.days} d`)}</span>}
                   </p>
                 </div>
@@ -281,7 +297,15 @@ export function BranchSwapsCard({ alerts, embedded = false }: { alerts: SwapAler
                     {tx(`${swap.units} unités${until ? `, à envoyer avant le ${until}` : ""}`, `${swap.units} units${until ? `, send before ${until}` : ""}`)}
                   </Step>
                   <Step done={assigned} current={current === 2} title={tx("Confié", "Assigned")} joined={replied}>
-                    {names.length > 0 ? names.join(", ") : tx("Personne pour l'instant", "Nobody yet")}
+                    {named.length > 0 ? (
+                      named.map((label) => (
+                        <span key={label} className="block">
+                          {label}
+                        </span>
+                      ))
+                    ) : (
+                      tx("Personne pour l'instant", "Nobody yet")
+                    )}
                   </Step>
                   <Step done={replied} current={current === 3} last title={tx("Réponse", "Answered")}>
                     {stage === "done" ? tx("Fait", "Done") : stage === "taken" ? tx("« Je m'en occupe »", "\"I'll take it\"") : tx("En attente du responsable", "Waiting for the manager")}
@@ -312,7 +336,7 @@ export function BranchSwapsCard({ alerts, embedded = false }: { alerts: SwapAler
                     >
                       {candidates.map((person) => (
                         <option key={person.id} value={person.id}>
-                          {person.name}
+                          {branchNamed(person)}
                         </option>
                       ))}
                     </select>

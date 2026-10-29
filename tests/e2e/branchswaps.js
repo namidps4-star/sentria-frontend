@@ -16,7 +16,8 @@ const ORS = swap(2, 'Oral rehydration salts · Nairobi -> Mombasa', 'Oral rehydr
 const MET = swap(3, 'Metformin 500mg · Nairobi -> Mombasa', 'Metformin 500mg', 35, 31, 3150);
 const OTHER = { id: 9, equipment: 'Insulin', sector: 'health', business_type: 'pharmacie', severity: 'CRITICAL', date: new Date(now - 7200e3).toISOString(), alert_key: 'health.stock.critical_low', risk_score: 80, message: 'Stock out soon' };
 const key = s => `${s.equipment}-${s.alert_key}`;
-const MARY = { id: 'c1', name: 'Mary Atieno', role: 'Branch manager', phone: null, email: null, availability: 'available', note: null, active: true, open_assignments: 0 };
+const MARY = { id: 'c1', name: 'Mary Atieno', role: 'Branch manager', phone: null, email: null, availability: 'available', note: null, active: true, open_assignments: 0, site_id: 'site-mombasa' };
+const SITES = [{ id: 'site-nairobi', name: 'Nairobi', location: 'Nairobi, Kenya' }, { id: 'site-mombasa', name: 'Mombasa', location: 'Mombasa, Kenya' }];
 const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_name: 'Atlantis', sentria_sector: 'health', sentria_sectors: '["health"]', sentria_business_type: 'pharmacie' };
 
 (async () => {
@@ -35,6 +36,7 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
       if (u.pathname === '/assignments' && req.method() === 'GET') return send({ assignments: p._rows });
       if (u.pathname === '/assignments' && req.method() === 'PUT') { const body = JSON.parse(req.postData()); p._puts.push(body); p._rows = p._rows.filter(x => x.task_key !== body.task_key).concat([body]); return send({ assignment: body }); }
       if (u.pathname === '/contractors') return send({ contractors });
+      if (u.pathname === '/sites') return send({ sites: SITES, persisted: true, max_sites: 50 });
       if (u.pathname === '/assignments/field-link') return send({ token: 'v1.test.token', expires_at: Math.floor(Date.now() / 1000) + 3 * 86400 });
       return send({ recommendations: [], assignments: [], contractors: [] });
     });
@@ -98,6 +100,7 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   pass(/Nairobi/.test(first) && /Mombasa/.test(first) && /expires in 20 d/.test(first) && /20 units/.test(first) && /7,600 KES/.test(first), 'a row says what moves where, how many, by when, and the money: ' + first.slice(0, 140));
   pass(await rows.nth(0).getAttribute('data-stage') === 'waiting' && /Waiting/.test(first) && /Nobody yet/.test(first), 'nobody on it: waiting');
   pass(await rows.nth(0).getByTestId('swap-person').count() === 1 && /Mary Atieno/.test(await rows.nth(0).getByTestId('swap-person').innerText()), 'a manager can be picked');
+  pass((await rows.nth(0).getByTestId('swap-person').evaluate(e => [...e.options].map(o => o.textContent))).includes('Mary Atieno, manager at Mombasa'), 'a manager is named with the branch they run: Mary Atieno, manager at Mombasa');
   await card.scrollIntoViewIfNeeded(); await card.screenshot({ path: 'branchswaps-light.png' });
   const lines = card.getByTestId('ticket-line');
   const lt = (await card.getByTestId('swaps-ticket').innerText()).replace(/\s+/g, ' ');

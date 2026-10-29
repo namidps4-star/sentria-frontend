@@ -531,6 +531,7 @@ function AddManagerSheet({ sheet, board, className }: { sheet: ManagerSheet; boa
               const on = form.site_id === line.siteId
               const manager = line.people[0]?.name.split(/\s+/)[0]
               const country = line.location ? line.location.split(",").pop()?.trim() : ""
+              const missing = line.people.length === 0
               const detail = [country, manager ?? tx("Sans responsable", "No manager")].filter(Boolean).join(" · ")
 
               return (
@@ -544,11 +545,15 @@ function AddManagerSheet({ sheet, board, className }: { sheet: ManagerSheet; boa
                   onClick={() => sheet.onChange({ site_id: line.siteId })}
                   className={cn(
                     "flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    on ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                    on
+                      ? "bg-card text-foreground shadow-sm"
+                      : missing
+                        ? "bg-[oklch(0.96_0.06_85)] text-foreground hover:bg-[oklch(0.94_0.08_85)]"
+                        : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <span className={cn("text-sm font-bold", on && "text-foreground")}>{line.name}</span>
-                  <span className="text-[11px] leading-tight text-muted-foreground">{detail}</span>
+                  <span className={cn("text-[11px] leading-tight", missing ? "font-bold text-[oklch(0.5_0.13_60)]" : "text-muted-foreground")}>{detail}</span>
                 </button>
               )
             })}
