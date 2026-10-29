@@ -279,6 +279,8 @@ export function createContractor(
     email?: string
     availability?: Availability
     note?: string
+    /** The branch the person is filed under, in the same request that creates them. */
+    site_id?: string
   }
 ): Promise<CrmResult<Contractor>> {
   return call(
