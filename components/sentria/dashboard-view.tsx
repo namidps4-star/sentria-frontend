@@ -2488,12 +2488,13 @@ export function DashboardView({
                 {tx("Pour quel département est ce fichier ?", "Which department is this file for?")}
               </p>
               <div
-                className="rounded-[22px] bg-muted p-1"
+                className="grid grid-cols-1 gap-2.5 sm:grid-cols-2"
                 role="group"
                 aria-labelledby="upload-activity-help"
               >
-                {uploadActivitiesFor(uploadSector).map((activity) => {
+                {uploadActivitiesFor(uploadSector).map((activity, index, all) => {
                   const on = uploadActivity === activity.id
+                  const icon = siteIcons?.[departmentIconKey(activity.id)] ?? siteIcons?.["dept:other"]
                   return (
                     <button
                       key={activity.id}
@@ -2501,42 +2502,40 @@ export function DashboardView({
                       onClick={() => setUploadActivity(activity.id)}
                       aria-pressed={on}
                       className={cn(
-                        "flex min-h-12 w-full items-center gap-3 rounded-[18px] px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                        on
-                          ? "bg-accent text-accent-foreground"
-                          : "hover:bg-card/60 [&:not(:first-child)]:border-t [&:not(:first-child)]:border-border/70"
+                        index === 0 && all.length % 2 === 1 && "sm:col-span-2",
+                        "relative flex min-h-[124px] flex-col justify-end overflow-hidden rounded-[22px] p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        on ? "bg-brand text-[#141414]" : "border border-border bg-card hover:bg-muted/60"
                       )}
                     >
                       <span
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-[inset_0_0.5px_0_rgba(255,255,255,0.55),0_1px_2px_rgba(0,0,0,0.22)]"
-                        style={{ background: sectorTileBackground(uploadSector) }}
+                        className={cn(
+                          "pointer-events-none absolute bottom-3 right-3 flex h-14 w-14 items-center justify-center [&_svg]:h-full [&_svg]:w-full",
+                          !on && "[filter:var(--art-filter)]"
+                        )}
                         data-department-icon={activity.id}
                         aria-hidden="true"
                       >
-                        {(() => {
-                          const icon = siteIcons?.[departmentIconKey(activity.id)] ?? siteIcons?.["dept:other"]
-
-                          return icon ? (
-                            <svg viewBox={icon.viewBox} width={20} height={20} focusable="false" dangerouslySetInnerHTML={{ __html: icon.body }} />
-                          ) : null
-                        })()}
+                        {icon ? (
+                          <svg viewBox={icon.viewBox} focusable="false" dangerouslySetInnerHTML={{ __html: icon.body }} />
+                        ) : null}
                       </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block font-bold leading-snug">{px(activity.label)}</span>
+
+                      {on && (
+                        <span
+                          className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-[#141414] text-brand"
+                          aria-hidden="true"
+                        >
+                          <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                        </span>
+                      )}
+
+                      <span className="relative mt-auto block max-w-[58%]">
+                        <span className="block text-sm font-bold leading-snug">{px(activity.label)}</span>
                         {activity.description && (
-                          <span className={cn("block text-xs leading-snug", on ? "text-accent-foreground/70" : "text-muted-foreground")}>
+                          <span className={cn("mt-1 block text-xs leading-snug", on ? "text-[#141414]/70" : "text-muted-foreground")}>
                             {px(activity.description)}
                           </span>
                         )}
-                      </span>
-                      <span
-                        className={cn(
-                          "flex h-5 w-5 shrink-0 items-center justify-center rounded-full",
-                          on ? "bg-accent-foreground text-accent" : "border-2 border-foreground/25"
-                        )}
-                        aria-hidden="true"
-                      >
-                        {on && <Check className="h-3 w-3" />}
                       </span>
                     </button>
                   )

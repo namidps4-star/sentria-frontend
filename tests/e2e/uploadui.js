@@ -42,8 +42,8 @@ const LS = { sentria_sector: 'health', sentria_sectors: '["industry","health"]',
   await x.panel.getByRole('button', { name: 'Health', exact: true }).click(); await x.p.waitForTimeout(200);
   const dep = x.panel.getByRole('group', { name: /Which department/ }).getByRole('button').first();
   const first = await dep.innerText();
-  const rowIcons = await x.panel.getByRole('group', { name: /Which department/ }).locator('[data-department-icon]').evaluateAll(els => els.map(e => ({ id: e.getAttribute('data-department-icon'), drawn: !!e.querySelector('svg path'), tile: /linear-gradient/.test(getComputedStyle(e).backgroundImage) })));
-  pass(rowIcons.length >= 3 && rowIcons.every(r => r.drawn && r.tile), 'each department row carries a drawn glyph on a gradient tile: ' + rowIcons.map(r => r.id).join(', '));
+  const rowIcons = await x.panel.getByRole('group', { name: /Which department/ }).locator('[data-department-icon]').evaluateAll(els => els.map(e => ({ id: e.getAttribute('data-department-icon'), drawn: !!e.querySelector('svg path') })));
+  pass(rowIcons.length >= 3 && rowIcons.every(r => r.drawn), 'each department tile carries a drawn glyph in its corner: ' + rowIcons.map(r => r.id).join(', '));
   pass(!/[\u{1F300}-\u{1FAFF}]/u.test(first), 'and no emoji in the row');
   const second = x.panel.getByRole('group', { name: /Which department/ }).getByRole('button').nth(1);
   await second.click(); await x.p.waitForTimeout(150);
