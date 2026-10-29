@@ -1916,8 +1916,8 @@ export function OnboardingView({
                             edge && (
                               <span
                                 className={cn(
-                                  "mt-2.5 inline-block rounded-2xl px-3 py-1.5 text-xs font-bold leading-snug",
-                                  active ? "bg-brand text-[#141414]" : "bg-card text-foreground"
+                                  "mt-3 block border-t pt-3 text-[13px] font-semibold leading-snug",
+                                  active ? "border-white/20 text-white" : "border-border text-foreground"
                                 )}
                               >
                                 {edge}
