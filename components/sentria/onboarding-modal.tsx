@@ -1330,26 +1330,29 @@ export function OnboardingView({
                               }}
                               aria-pressed={active}
                               className={cn(
-                                "relative flex items-center gap-4 rounded-[30px] p-5 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-col sm:items-start sm:gap-8 sm:p-6",
+                                "relative flex min-h-[170px] flex-col justify-end overflow-hidden rounded-[30px] p-5 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-6",
                                 active
-                                  ? "bg-[var(--ink)] text-white shadow-[0_14px_44px_rgba(20,20,18,0.18)]"
-                                  : "bg-muted hover:-translate-y-0.5 hover:bg-muted/70"
+                                  ? "bg-brand text-[#141414]"
+                                  : "border border-border bg-card hover:-translate-y-0.5"
                               )}
                             >
-                              <span className="text-[40px] leading-none" aria-hidden="true">
+                              <span
+                                className="absolute -bottom-2 -right-2 text-[88px] leading-none"
+                                aria-hidden="true"
+                              >
                                 {flagOf(item.code)}
                               </span>
 
-                              <span>
+                              <span className="relative mt-auto block max-w-[58%]">
                                 <span className="block font-heading text-[21px] font-extrabold leading-tight tracking-tight">{px(item.name)}</span>
-                                <span className={cn("mt-1 block text-[13px]", active ? "text-white/60" : "text-muted-foreground")}>
+                                <span className={cn("mt-1 block text-[13px]", active ? "text-[#141414]/70" : "text-muted-foreground")}>
                                   {item.currency.symbol} · {item.currency.code}
                                 </span>
                               </span>
 
                               {active && (
                                 <span
-                                  className="absolute right-5 top-5 flex h-7 w-7 items-center justify-center rounded-full bg-brand text-[#141414]"
+                                  className="absolute right-5 top-5 flex h-7 w-7 items-center justify-center rounded-full bg-[#141414] text-brand"
                                   aria-hidden="true"
                                 >
                                   <Check className="h-4 w-4" strokeWidth={3} />
@@ -1392,7 +1395,7 @@ export function OnboardingView({
                                 <span
                                   className={cn(
                                     "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold",
-                                    active ? "bg-[var(--ink)] text-brand" : "bg-card text-muted-foreground"
+                                    active ? "bg-[#141414] text-brand" : "bg-card text-muted-foreground"
                                   )}
                                 >
                                   {tx("Déduit de votre pays", "From your country")}
@@ -1507,7 +1510,7 @@ export function OnboardingView({
                   {/* SECTOR */}
                   {step === sectorStepNumber && (
                     <>
-                      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
+                      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
                         {SECTORS.map((item) => {
                           const Icon = item.icon
                           const active = sector === item.id
@@ -1525,55 +1528,54 @@ export function OnboardingView({
                               }
                               aria-pressed={isSelected}
                               className={cn(
-                                "group relative flex min-h-[210px] flex-col justify-between gap-5 rounded-[30px] p-5 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                "group relative flex min-h-[210px] flex-col justify-end overflow-hidden rounded-[30px] p-5 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                item.recommended && "sm:col-span-2",
                                 isSelected
-                                  ? "bg-[var(--ink)] text-white shadow-[0_14px_44px_rgba(20,20,18,0.18)]"
-                                  : "bg-muted hover:-translate-y-0.5 hover:bg-muted/70",
-                                item.recommended && !isSelected && "ring-2 ring-brand/60"
+                                  ? "bg-brand text-[#141414]"
+                                  : "border border-border bg-card hover:-translate-y-0.5",
                               )}
                             >
-                              <span className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-[22px] bg-card">
-                                {item.image ? (
-                                  <img
-                                    src={item.image}
-                                    alt=""
-                                    className={cn(
-                                      "h-full w-full object-contain transition-transform duration-300",
-                                      isSelected ? "scale-110" : "group-hover:scale-105"
-                                    )}
-                                  />
-                                ) : (
-                                  <Icon className="h-9 w-9 stroke-[1.5] text-muted-foreground" aria-hidden="true" />
-                                )}
-                              </span>
+                              {item.image ? (
+                                <img
+                                  src={item.image}
+                                  alt=""
+                                  className={cn(
+                                    "pointer-events-none absolute -bottom-2 -right-2 h-[72%] w-[52%] object-contain",
+                                    !isSelected && "[filter:var(--art-filter)]"
+                                  )}
+                                />
+                              ) : (
+                                <Icon className="absolute bottom-5 right-5 h-16 w-16 stroke-[1.5]" aria-hidden="true" />
+                              )}
 
-                              <span>
+                              {item.maturity && (
+                                <span
+                                  className={cn(
+                                    "absolute left-5 top-5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                                    isSelected ? "bg-[#141414] text-brand" : "bg-muted text-foreground"
+                                  )}
+                                >
+                                  {maturityLabel(item.maturity, tx)}
+                                </span>
+                              )}
+
+                              <span className="relative mt-auto max-w-[50%]">
                                 <span className="block font-heading text-[21px] font-extrabold leading-tight tracking-tight">
                                   {px(item.label)}
                                 </span>
-                                <span className={cn("mt-1 block text-[13px] leading-snug", isSelected ? "text-white/60" : "text-muted-foreground")}>
+                                <span className={cn("mt-1 block text-[13px] leading-snug", isSelected ? "text-[#141414]/70" : "text-muted-foreground")}>
                                   {px(item.description)}
                                 </span>
-                                {item.maturity && (
-                                  <span
-                                    className={cn(
-                                      "mt-2.5 inline-block whitespace-nowrap rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
-                                      isSelected ? "bg-brand text-[#141414]" : "bg-card text-muted-foreground"
-                                    )}
-                                  >
-                                    {maturityLabel(item.maturity, tx)}
-                                  </span>
-                                )}
                               </span>
 
                               {isSelected && (
-                                <span className="absolute -right-1.5 -top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-brand text-[#141414] ring-2 ring-card">
+                                <span className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full bg-[#141414] text-brand">
                                   <Check className="h-4 w-4" strokeWidth={3} />
                                 </span>
                               )}
 
                               {secondary && !active && (
-                                <span className="absolute bottom-4 right-4 rounded-full bg-card px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                                <span className="absolute right-5 top-5 rounded-full bg-muted px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
                                   {tx("Secondaire", "Secondary")}
                                 </span>
                               )}
@@ -1686,7 +1688,7 @@ export function OnboardingView({
                         </p>
                       )}
 
-                      <div className="grid grid-cols-2 gap-3.5 md:grid-cols-3">
+                      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 md:grid-cols-3">
                         {shownSubTypes.map((item) => {
                           const Icon = item.icon
                           const active = subTypes2.includes(item.id)
@@ -1716,53 +1718,52 @@ export function OnboardingView({
                               }
                               className={cn(
                                 !fits && "opacity-50",
-                                "group relative flex flex-col items-start gap-3 rounded-[28px] p-4 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:p-5",
+                                "group relative flex min-h-[190px] flex-col justify-end overflow-hidden rounded-[28px] p-5 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                 active
-                                  ? "bg-[var(--ink)] text-white shadow-[0_14px_44px_rgba(20,20,18,0.18)]"
-                                  : "bg-muted hover:-translate-y-0.5 hover:bg-muted/70"
+                                  ? "bg-brand text-[#141414]"
+                                  : "border border-border bg-card hover:-translate-y-0.5"
                               )}
                             >
-                              <span className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-[22px] bg-card">
-                                {img ? (
-                                  <img
-                                    src={img}
-                                    alt=""
-                                    className={cn(
-                                      "h-full w-full object-contain transition-transform duration-300",
-                                      active ? "scale-110" : "group-hover:scale-105"
-                                    )}
-                                  />
-                                ) : (
-                                  <Icon className="h-9 w-9 stroke-[1.5] text-muted-foreground" aria-hidden="true" />
-                                )}
-                              </span>
+                              {img ? (
+                                <img
+                                  src={img}
+                                  alt=""
+                                  className={cn(
+                                    "pointer-events-none absolute -bottom-2 -right-2 h-[64%] w-[42%] object-contain",
+                                    !active && "[filter:var(--art-filter)]"
+                                  )}
+                                />
+                              ) : (
+                                <Icon className="absolute bottom-5 right-5 h-16 w-16 stroke-[1.5]" aria-hidden="true" />
+                              )}
 
-                              <span className="block">
+                              {item.maturity && (
+                                <span
+                                  className={cn(
+                                    "absolute left-5 top-5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider",
+                                    active ? "bg-[#141414] text-brand" : "bg-muted text-foreground"
+                                  )}
+                                >
+                                  {maturityLabel(item.maturity, tx)}
+                                </span>
+                              )}
+
+                              <span className="relative mt-auto block max-w-[56%]">
                                 <span className="line-clamp-2 block font-heading text-[17px] font-extrabold leading-tight tracking-tight">
                                   {px(item.label)}
                                 </span>
                                 <span
                                   className={cn(
                                     "mt-1 line-clamp-3 block text-[13px] leading-snug",
-                                    active ? "text-white/60" : "text-muted-foreground"
+                                    active ? "text-[#141414]/70" : "text-muted-foreground"
                                   )}
                                 >
                                   {px(item.description)}
                                 </span>
-                                {item.maturity && (
-                                  <span
-                                    className={cn(
-                                      "mt-2 inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider",
-                                      active ? "bg-brand text-[#141414]" : "bg-card text-muted-foreground"
-                                    )}
-                                  >
-                                    {maturityLabel(item.maturity, tx)}
-                                  </span>
-                                )}
                               </span>
 
                               {active && (
-                                <span className="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-brand text-[#141414] ring-2 ring-card">
+                                <span className="absolute right-4 top-4 flex h-6 w-6 items-center justify-center rounded-full bg-[#141414] text-brand">
                                   <Check className="h-3.5 w-3.5" strokeWidth={3} />
                                 </span>
                               )}
@@ -1882,27 +1883,32 @@ export function OnboardingView({
                         disabled={disabled}
                         aria-pressed={disabled ? undefined : active}
                         className={cn(
-                          "relative flex min-h-[190px] flex-col justify-between gap-5 rounded-[28px] p-5 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          "relative flex min-h-[190px] flex-col justify-end overflow-hidden rounded-[28px] p-5 pt-24 text-left transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                           disabled
-                            ? "cursor-not-allowed bg-muted opacity-50"
+                            ? "cursor-not-allowed border border-border bg-card opacity-50"
                             : active
-                              ? "bg-[var(--ink)] text-white shadow-[0_14px_44px_rgba(20,20,18,0.18)]"
-                              : "bg-muted hover:-translate-y-0.5 hover:bg-muted/70"
+                              ? "bg-brand text-[#141414]"
+                              : "border border-border bg-card hover:-translate-y-0.5"
                         )}
                       >
-                        <span className="flex h-[54px] w-[54px] items-center justify-center overflow-hidden rounded-[18px] bg-card">
-                          {img ? (
-                            <img src={img} alt="" className="h-10 w-10 object-contain" />
-                          ) : (
-                            <Icon className="h-6 w-6 stroke-[1.75] text-muted-foreground" aria-hidden="true" />
-                          )}
-                        </span>
+                        {img ? (
+                          <img
+                            src={img}
+                            alt=""
+                            className={cn(
+                              "pointer-events-none absolute right-4 top-4 h-16 w-16 object-contain",
+                              !active && "[filter:var(--art-filter)]"
+                            )}
+                          />
+                        ) : (
+                          <Icon className="absolute right-5 top-5 h-11 w-11 stroke-[1.5]" aria-hidden="true" />
+                        )}
 
-                        <span className="block">
+                        <span className="relative mt-auto block">
                           <span className="block font-heading text-[18px] font-extrabold leading-tight tracking-tight">
                             {px(item.label)}
                           </span>
-                          <span className={cn("mt-1 block text-[13px] leading-snug", active ? "text-white/60" : "text-muted-foreground")}>
+                          <span className={cn("mt-1 block text-[13px] leading-snug", active ? "text-[#141414]/70" : "text-muted-foreground")}>
                             {px(item.description)}
                           </span>
 
@@ -1917,7 +1923,7 @@ export function OnboardingView({
                               <span
                                 className={cn(
                                   "mt-3 block border-t pt-3 text-[13px] font-semibold leading-snug",
-                                  active ? "border-white/20 text-white" : "border-border text-foreground"
+                                  active ? "border-[#141414]/20 text-[#141414]" : "border-border text-foreground"
                                 )}
                               >
                                 {edge}
@@ -1928,7 +1934,7 @@ export function OnboardingView({
 
                         {!disabled && active && (
                           <span
-                            className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center rounded-full bg-brand text-[#141414]"
+                            className="absolute left-4 top-4 flex h-7 w-7 items-center justify-center rounded-full bg-[#141414] text-brand"
                             aria-hidden="true"
                           >
                             <Check className="h-4 w-4" strokeWidth={3} />
@@ -1973,45 +1979,51 @@ export function OnboardingView({
                         type="button"
                         onClick={() => toggleSource(source.id)}
                         className={cn(
-                          "flex flex-col items-start gap-1 rounded-[28px] p-5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                          "relative flex min-h-[150px] flex-col justify-end overflow-hidden rounded-[28px] p-5 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                           active
-                            ? "bg-[var(--ink)] text-white shadow-[0_14px_44px_rgba(20,20,18,0.18)]"
-                            : "bg-muted hover:bg-muted/70"
+                            ? "bg-brand text-[#141414]"
+                            : "border border-border bg-card hover:-translate-y-0.5"
                         )}
                       >
-                        <div className="flex w-full items-center justify-between">
-                          <Icon className="h-5 w-5" />
-                          {active && (
-                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand text-[#141414]">
-                              <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                            </span>
-                          )}
-                        </div>
-
-                        <span className="mt-2 text-sm font-semibold">
-                          {px(source.label)}
-                        </span>
-
-                        <span
+                        <Icon
                           className={cn(
-                            "text-xs leading-5",
-                            active
-                              ? "text-white/65"
-                              : "text-muted-foreground"
+                            "absolute bottom-5 right-5 h-14 w-14 stroke-[1.5]",
+                            !active && "[filter:var(--art-filter)]"
                           )}
-                        >
-                          {px(source.description)}
-                        </span>
+                          aria-hidden="true"
+                        />
+                        {active && (
+                          <span className="absolute right-5 top-5 flex h-6 w-6 items-center justify-center rounded-full bg-[#141414] text-brand">
+                            <Check className="h-3.5 w-3.5" strokeWidth={3} />
+                          </span>
+                        )}
 
-                        <span
-                          className={cn(
-                            "mt-1 text-[11px] leading-5",
-                            active
-                              ? "text-white/45"
-                              : "text-muted-foreground/70"
-                          )}
-                        >
-                          {px(source.detail)}
+                        <span className="relative mt-auto block max-w-[58%]">
+                          <span className="block text-sm font-semibold">
+                            {px(source.label)}
+                          </span>
+
+                          <span
+                            className={cn(
+                              "mt-1 block text-xs leading-5",
+                              active
+                                ? "text-[#141414]/70"
+                                : "text-muted-foreground"
+                            )}
+                          >
+                            {px(source.description)}
+                          </span>
+
+                          <span
+                            className={cn(
+                              "mt-1 block text-[11px] leading-5",
+                              active
+                                ? "text-[#141414]/60"
+                                : "text-muted-foreground/70"
+                            )}
+                          >
+                            {px(source.detail)}
+                          </span>
                         </span>
                       </button>
                     )
@@ -2195,7 +2207,7 @@ export function OnboardingView({
                   className={cn(
                     "mt-3 flex w-full items-center justify-center gap-2 rounded-[22px] px-4 py-4 text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     configureLater
-                      ? "bg-[var(--ink)] text-white"
+                      ? "bg-brand text-[#141414]"
                       : "bg-muted text-muted-foreground hover:bg-muted/70"
                   )}
                 >
