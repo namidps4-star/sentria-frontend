@@ -59,7 +59,10 @@ export const metadata: Metadata = {
     description:
       'Alertes en temps réel sur vos stocks, machines et flux, avec l\'action à mener pour chacune.',
   },
-  robots: { index: true, follow: true },
+  /* The public landing is a separate site (sentriahq.dev). This address is the
+     signed-in app, so it is kept out of search. The page stays crawlable so
+     Google can read the noindex. */
+  robots: { index: false, follow: false },
   /* i18n-ignore-end */
   generator: 'v0.app',
   icons: {

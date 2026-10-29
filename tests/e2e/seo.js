@@ -1,4 +1,4 @@
-// Search indexing: the server HTML of "/" carries the pitch (h1, both languages, sectors), the
+// Search indexing: this is the signed-in app, so it says noindex. The server HTML of "/" still carries the pitch (h1, both languages, sectors), the
 // metadata (canonical, social card, JSON-LD) and robots.txt / sitemap.xml are served. The text for
 // crawlers leaves the page once it runs in a browser: the sign-in screen looks the same, in light, dark and 390 px.
 const { chromium } = require('playwright');
@@ -16,16 +16,15 @@ const pass = (ok, l) => { fails += !ok; console.log(`   ${ok ? 'PASS' : 'FAIL'} 
   pass(/<link rel="canonical" href="https?:\/\/[^"]+"/.test(html), 'canonical link');
   pass(/property="og:title"/.test(html) && /property="og:image"/.test(html), 'Open Graph title and image');
   pass(/name="twitter:card" content="summary_large_image"/.test(html), 'Twitter card');
-  pass(/name="robots" content="index, follow"/.test(html), 'robots meta says index, follow');
+  pass(/name="robots" content="noindex, nofollow"/.test(html), 'robots meta says noindex: the app is not for search, the landing is');
   const ld = (html.match(/<script type="application\/ld\+json">(.*?)<\/script>/) || [])[1];
   let graph = []; try { graph = JSON.parse(ld)['@graph']; } catch {}
   pass(graph.some(n => n['@type'] === 'Organization') && graph.some(n => n['@type'] === 'SoftwareApplication'), 'JSON-LD names the organization and the application');
 
   console.log('== robots, sitemap, share card');
   const robots = await (await fetch(APP_URL + '/robots.txt')).text();
-  pass(/Allow: \//.test(robots) && /Disallow: \/t\//.test(robots) && /Sitemap: .+\/sitemap\.xml/.test(robots), 'robots.txt allows the landing, blocks /t/, names the sitemap');
-  const map = await (await fetch(APP_URL + '/sitemap.xml')).text();
-  pass(/<loc>[^<]+\/<\/loc>/.test(map), 'sitemap.xml lists the landing');
+  pass(/Allow: \//.test(robots) && /Disallow: \/t\//.test(robots) && !/Sitemap:/i.test(robots), 'robots.txt lets Google read the noindex, blocks /t/, names no sitemap');
+  pass((await fetch(APP_URL + '/sitemap.xml')).status === 404, 'the app has no sitemap (the landing owns it)');
   const og = await fetch(APP_URL + '/opengraph-image');
   pass(og.status === 200 && /image\/png/.test(og.headers.get('content-type') || ''), 'the share card is a PNG');
 

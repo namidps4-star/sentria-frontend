@@ -1,13 +1,11 @@
 import type { MetadataRoute } from "next"
 
-import { siteUrl } from "@/lib/site"
-
-/* The signed-in app lives on the same address as the landing, so only the
-   landing is meant for search. /t/ holds one-task links sent by text. */
+/* This is the signed-in app, kept out of search by a noindex tag (app/layout.tsx).
+   It is not disallowed here, because Google must be able to crawl a page to see
+   its noindex. The public landing, sentriahq.dev, is a separate site with its
+   own sitemap. /t/ holds one-task links sent by text. */
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [{ userAgent: "*", allow: "/", disallow: ["/t/"] }],
-    sitemap: `${siteUrl()}/sitemap.xml`,
-    host: siteUrl(),
   }
 }

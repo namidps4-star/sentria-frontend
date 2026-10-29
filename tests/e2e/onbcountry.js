@@ -30,7 +30,7 @@ const rgb = (loc, prop) => loc.evaluate((el, prop) => { const cv = document.crea
   const rail = x.dlg.locator('div.rounded-\\[40px\\]').first();
   const railBg = await rgb(rail, 'backgroundColor');
   pass(railBg.every(v => v < 60), 'the rail is black: rgb(' + railBg.join(',') + ')');
-  pass(await x.dlg.locator('button[aria-pressed]', { hasText: /Benin|Côte d'Ivoire|Senegal/ }).count() === 3, 'three country tiles');
+  pass(await x.dlg.locator('button[aria-pressed]', { hasText: /Benin|Côte d'Ivoire|Senegal|Kenya|Uganda/ }).count() === 5, 'five country tiles');
   pass(/🇨🇮/.test(await x.dlg.innerText()) && /🇧🇯/.test(await x.dlg.innerText()), 'tiles show flags');
   const cont = x.p.getByRole('button', { name: /^Continue/ }).last();
   pass(await cont.isDisabled(), 'Continue is off until a country is picked');

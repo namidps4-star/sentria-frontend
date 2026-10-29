@@ -1,5 +1,5 @@
-// LEG-1: sign-up offers three countries for now (Benin, Côte d'Ivoire,
-// Senegal). This checks the onboarding picker and the Settings picker in
+// LEG-1: sign-up offers five countries for now (Benin, Côte d'Ivoire,
+// Senegal, Kenya, Uganda). This checks the onboarding picker and the Settings picker in
 // English and French, that an account that already chose another country
 // keeps it, and that nothing overflows in dark or on a phone.
 const { chromium } = require('playwright');
@@ -8,7 +8,7 @@ const { signedIn } = require('./auth-mock');
 let fails = 0;
 const pass = (ok, l) => { fails += !ok; console.log(`   ${ok ? 'PASS' : 'FAIL'} ${l}`); };
 
-const OTHERS = ['Togo', 'Ghana', 'Nigeria', 'Cameroon', 'DR Congo', 'Kenya', 'Tanzania', 'Morocco', 'France', 'United Kingdom', 'United States', 'Brazil', 'Another country',
+const OTHERS = ['Togo', 'Ghana', 'Nigeria', 'Cameroon', 'DR Congo', 'Tanzania', 'Morocco', 'France', 'United Kingdom', 'United States', 'Brazil', 'Another country',
   'Cameroun', 'RD Congo', 'Maroc', 'Royaume-Uni', 'États-Unis', 'Brésil', 'Autre pays'];
 const SETTINGS = 9;
 const ONB = { sentria_onboarded: 'true', sentria_company_name: 'Acme', sentria_sector: 'industry', sentria_sectors: '["industry"]' };
@@ -34,11 +34,11 @@ const ONB = { sentria_onboarded: 'true', sentria_company_name: 'Acme', sentria_s
   const optionTexts = async p => (await countrySelect(p).locator('option').allInnerTexts()).map(t => t.trim()).filter(Boolean);
   const hasWord = (text, w) => new RegExp(`(^|[^\\p{L}])${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^\\p{L}]|$)`, 'u').test(text);
 
-  console.log('== onboarding, English: three countries');
+  console.log('== onboarding, English: five countries');
   { const { p, ctx } = await open({});
     const t = await dialogText(p);
     pass(/Your country/.test(t), 'the wizard is on step 1, "Your country"');
-    for (const n of ['Benin', "Côte d'Ivoire", 'Senegal']) pass(hasWord(t, n), `offered: ${n}`);
+    for (const n of ['Benin', "Côte d'Ivoire", 'Senegal', 'Kenya', 'Uganda']) pass(hasWord(t, n), `offered: ${n}`);
     const left = OTHERS.filter(n => hasWord(t, n));
     pass(left.length === 0, `no other country, no "Another country" (${left.join(', ') || 'none found'})`);
     await p.getByText('Senegal', { exact: true }).first().click(); await p.waitForTimeout(200);
@@ -65,7 +65,7 @@ const ONB = { sentria_onboarded: 'true', sentria_company_name: 'Acme', sentria_s
   console.log('== onboarding, French');
   { const { p, ctx } = await open({ lang: 'fr' });
     const t = await dialogText(p);
-    for (const n of ['Bénin', "Côte d'Ivoire", 'Sénégal']) pass(hasWord(t, n), `offered: ${n}`);
+    for (const n of ['Bénin', "Côte d'Ivoire", 'Sénégal', 'Kenya', 'Ouganda']) pass(hasWord(t, n), `offered: ${n}`);
     const left = OTHERS.filter(n => hasWord(t, n));
     pass(left.length === 0, `no other country (${left.join(', ') || 'none found'})`);
     await ctx.close(); }
@@ -79,12 +79,12 @@ const ONB = { sentria_onboarded: 'true', sentria_company_name: 'Acme', sentria_s
     pass(hasWord(await dialogText(p), "Côte d'Ivoire"), '390 px: the picker is there');
     await p.screenshot({ path: 'launchcountries-onboarding-390.png' }); await ctx.close(); }
 
-  console.log('== Settings: a new account sees three');
+  console.log('== Settings: a new account sees five');
   { const { p, ctx } = await open({ ls: ONB, settings: true });
     const o = await optionTexts(p);
-    pass(o.length === 4, `the list is "no country" plus three (${o.length} options)`);
+    pass(o.length === 6, `the list is "no country" plus five (${o.length} options)`);
     const names = o.slice(1).map(t => t.split('·')[0].trim());
-    pass(JSON.stringify(names) === JSON.stringify(['Benin', "Côte d'Ivoire", 'Senegal']), `Benin, Côte d'Ivoire, Senegal (${names.join(', ')})`);
+    pass(JSON.stringify(names) === JSON.stringify(['Benin', "Côte d'Ivoire", 'Senegal', 'Kenya', 'Uganda']), `Benin, Côte d'Ivoire, Senegal (${names.join(', ')})`);
     await countrySelect(p).selectOption('SN'); await p.waitForTimeout(150);
     pass(await countrySelect(p).inputValue() === 'SN', 'Senegal can be chosen');
     const zoneSelect = p.locator('select').filter({ has: p.locator('option', { hasText: /^WAT/ }) });
@@ -101,14 +101,14 @@ const ONB = { sentria_onboarded: 'true', sentria_company_name: 'Acme', sentria_s
     pass(o.some(t => t.startsWith(name)), `${name} is still in the list`);
     pass(await countrySelect(p).inputValue() === code, `and it is the one selected (${code})`);
     pass(o.some(t => t.startsWith(name) && t.includes(symbol)), `with its currency (${symbol})`);
-    pass(o.length === 5, `the three launch countries are there too (${o.length - 1} countries)`);
+    pass(o.length === 7, `the five launch countries are there too (${o.length - 1} countries)`);
     await ctx.close();
   }
 
   console.log('== Settings: French, dark, phone');
   { const { p, ctx } = await open({ ls: ONB, lang: 'fr', settings: true });
     const names = (await optionTexts(p)).slice(1).map(t => t.split('·')[0].trim());
-    pass(JSON.stringify(names) === JSON.stringify(['Bénin', "Côte d'Ivoire", 'Sénégal']), `French names (${names.join(', ')})`);
+    pass(JSON.stringify(names) === JSON.stringify(['Bénin', "Côte d'Ivoire", 'Sénégal', 'Kenya', 'Ouganda']), `French names (${names.join(', ')})`);
     await ctx.close(); }
   { const { p, ctx } = await open({ ls: ONB, theme: 'dark', vw: 390, settings: true });
     pass(await p.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'dark, 390 px: no sideways scroll');
