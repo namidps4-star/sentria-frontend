@@ -17,8 +17,27 @@ let fails = 0;
 const pass = (ok, l) => { fails += !ok; console.log(`   ${ok ? 'PASS' : 'FAIL'} ${l}`); };
 const ROOT = path.join(__dirname, '..', '..');
 const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
-const TEMPLATE = 'supabase/templates/confirmation.html';
+const TEMPLATE = process.env.EMAIL_TEMPLATE || 'supabase/templates/confirmation.html';
 const URL_SAMPLE = 'https://sentria-test.supabase.co/auth/v1/verify?token=pkce_abc123';
+
+// The words each template must carry, per language. The sign-up email and the
+// password-reset email share one layout; only the wording differs.
+const RECOVERY = /recovery/.test(TEMPLATE);
+const WORDS = RECOVERY ? {
+  en: /Reset your password/, enBtn: /Choose a new password/, enOther: /Réinitialisez|Choisir|Confirmez|Confirmer/,
+  fr: /Réinitialisez votre mot de passe/, frBtn: /Changer mon mot de passe/, frOther: /Reset your password|Choose a new password/,
+  body: { en: /Click the button to choose a new password/, fr: /Cliquez sur le bouton pour choisir un nouveau mot de passe/ },
+  footer: { en: /Didn't ask for this\?/, fr: /Vous n'avez pas demandé ce changement \?/ },
+  preview: { en: /choose a new password/, fr: /choisir un nouveau mot de passe/ },
+  titleEn: /Reset your password/, titleFr: /Réinitialisez votre mot de passe/,
+} : {
+  en: /Confirm your email/, enBtn: /Confirm my email/, enOther: /Confirmez|Confirmer mon/,
+  fr: /Confirmez votre email/, frBtn: /Confirmer mon email/, frOther: /Confirm your email|Confirm my email/,
+  body: { en: /Click the button to confirm your address/, fr: /Cliquez sur le bouton pour confirmer votre adresse/ },
+  footer: { en: /Didn't ask for this account\?/, fr: /Vous n'avez pas demandé ce compte \?/ },
+  preview: { en: /open your account/, fr: /ouvrir votre compte/ },
+  titleEn: /Confirm your email/, titleFr: /Confirmez votre email/,
+};
 
 // ---- colours
 const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
@@ -130,8 +149,8 @@ const token = (b, name) => (b.match(new RegExp('--' + name + ':\\s*([^;]+);')) |
   }
   {
     const text = h => h.replace(/<style[\s\S]*?<\/style>/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
-    pass(/Confirm your email/.test(html.en) && /Confirm my email/.test(html.en) && !/Confirmez|Confirmer mon/.test(html.en), 'English: the English words, none of the French');
-    pass(/Confirmez votre email/.test(html.fr) && /Confirmer mon email/.test(html.fr) && !/Confirm your email|Confirm my email/.test(html.fr), 'French: the French words, none of the English');
+    pass(WORDS.en.test(html.en) && WORDS.enBtn.test(html.en) && !WORDS.enOther.test(html.en), 'English: the English words, none of the French');
+    pass(WORDS.fr.test(html.fr) && WORDS.frBtn.test(html.fr) && !WORDS.frOther.test(html.fr), 'French: the French words, none of the English');
     pass(html.none === html.fr && html.other === html.fr, 'no language, or a language the interface lacks: French');
     pass(/<html lang="en">/.test(html.en) && /<html lang="fr">/.test(html.fr), 'the page language follows');
     pass(!/\{\{|\}\}/.test(html.en + html.fr), 'nothing of the template is left in what is sent');
@@ -141,9 +160,9 @@ const token = (b, name) => (b.match(new RegExp('--' + name + ':\\s*([^;]+);')) |
     const tags = h => (h.match(/<[a-z0-9]+/g) || []).join(',');
     pass(tags(html.en) === tags(html.fr), 'both languages have exactly the same structure');
     pass(!/[—–]/.test(html.en + html.fr), 'no dash used as punctuation, in either language');
-    pass(/Click the button to confirm your address/.test(html.en) && /Cliquez sur le bouton pour confirmer votre adresse/.test(html.fr) && /Didn't ask for this account\?/.test(html.en) && /Vous n'avez pas demandé ce compte \?/.test(html.fr), 'what to do, and what to do if it was not you, in each language');
+    pass(WORDS.body.en.test(html.en) && WORDS.body.fr.test(html.fr) && WORDS.footer.en.test(html.en) && WORDS.footer.fr.test(html.fr), 'what to do, and what to do if it was not you, in each language');
     const hidden = h => (h.match(/mso-hide:all[^>]*>([^<]*)</) || [])[1];
-    pass(/open your account/.test(hidden(html.en)) && /ouvrir votre compte/.test(hidden(html.fr)), 'the preview line an inbox shows is set, in each language');
+    pass(WORDS.preview.en.test(hidden(html.en)) && WORDS.preview.fr.test(hidden(html.fr)), 'the preview line an inbox shows is set, in each language');
   }
 
   console.log('== Go\'s own template engines');
@@ -228,7 +247,7 @@ const token = (b, name) => (b.match(new RegExp('--' + name + ':\\s*([^;]+);')) |
         pass(m.card.radius === '24px' && m.card.bg === 'rgb(20, 20, 18)', `${label}: a black card with the app's 24 px corners`);
         pass(m.h1.size === (width === 390 ? '24px' : '28px'), `${label}: the title is ${m.h1.size}`);
         pass(m.page === (scheme === 'dark' ? 'rgb(10, 10, 10)' : 'rgb(248, 241, 231)') && m.below === (scheme === 'dark' ? 'rgb(161, 161, 161)' : 'rgb(105, 105, 101)'), `${label}: the page is ${m.page}, the line under the card ${m.below}`);
-        pass(m.lang === language && new RegExp(language === 'en' ? 'Confirm your email' : 'Confirmez votre email').test(m.title), `${label}: the page language and the title (${m.title})`);
+        pass(m.lang === language && (language === 'en' ? WORDS.titleEn : WORDS.titleFr).test(m.title), `${label}: the page language and the title (${m.title})`);
         await p.screenshot({ path: `signup-email-${language}-${scheme}-${width}.png`, fullPage: true });
         pass(p._errors.length === 0, `${label}: no page errors ${p._errors.join('|')}`);
         await ctx.close();
