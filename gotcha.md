@@ -422,3 +422,8 @@ Project-specific facts that are easy to miss. Not a diary, not general advice.
 **Problem:** The Plans page shows the shilling price from `lib/plans.ts`, but the M-PESA prompt charges the amount the API holds.
 **Reality:** `PRICES.KES` here and `PRICES_KES` in the backend's `pipeline/mpesa.py` are two copies. The browser never sends an amount: the API picks it from the plan. The payment form only offers M-PESA when `/billing/status` says `mpesa: true` (the boss of a company in KES), and only monthly.
 **Rule:** Change both price lists together. `tests/e2e/mpesapay.js` covers the form.
+
+## A dropdown panel caps its list and keeps its actions outside it
+**Problem:** The site menu grew with its sites. With 10 or more, the panel ran past the bottom of the screen, and "Add a site" and "Manage sites" went off screen with the rows. Nothing could be reached, and no bar appeared to say so.
+**Reality:** `account-menu.tsx` puts a `max-h-[min(60vh,32rem)] overflow-y-auto` on the list only, and the footer buttons sit after it in the panel. The global bar rule (above) hides the scroll bar, so the list scrolls by wheel, touch and keyboard with no visible cue. The scroll area is the list; the footer never moves into it.
+**Rule:** A panel that can hold many rows caps its list with `max-h` and `overflow-y-auto`, and keeps its buttons outside that element. A test that scrolls wheels over the list's centre, not a fixed point, because a point outside the panel scrolls the page.
