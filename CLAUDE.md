@@ -38,6 +38,13 @@ These read as machine-made. Leave them out of every project (app, landing page, 
 - Every feature gets a Playwright suite in `tests/e2e/` (add it to `run-all.js`), with screenshots in light, dark and 390 px before pushing.
 - Build from a clean copy with the frozen lockfile (see `gotcha.md`). Stop on any failure.
 
+## Agent failures: log, learn, keep
+
+- Every output the founder corrects or rejects goes in one failure log: the task, what the agent did, what it should have done, who caught it, how bad the damage was, and the fix.
+- Once a week, review the log. A failure that repeats becomes a written rule here or a test the agent must pass before it acts.
+- The log lives on the founder's own disk, outside this repo. Never commit it, and never paste customer data, secrets or the owner's email into it.
+- Do not use any vendor setting that trains on, shares or keeps the log. Check the setting before turning on a feature that sends it anywhere.
+
 ## Deployment & git
 - Push to `new_feat`. Never push to `main`; no PR unless asked.
 - Commit only the files you changed (`git add <names>`); keep untracked third-party files out.
