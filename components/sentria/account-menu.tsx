@@ -186,7 +186,7 @@ export function AccountMenu({ onOpenSites }: { onOpenSites?: () => void }) {
           {sites.length === 0 ? (
             <p className="px-3 py-3 text-sm text-muted-foreground">{tx("Aucun site pour l'instant.", "No sites yet.")}</p>
           ) : (
-            <div className="space-y-2 px-0.5">
+            <div className="max-h-[min(60vh,32rem)] space-y-2 overflow-y-auto overscroll-contain px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {(() => {
                 // The active site sits on top in lime; the rest follow as cards. One sector label carries the
                 // test id for each industry, whichever card shows it first.
