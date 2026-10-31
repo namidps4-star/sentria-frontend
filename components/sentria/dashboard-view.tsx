@@ -117,7 +117,6 @@ import {
 } from "@/lib/plans"
 import { sendAlertFeedback } from "@/lib/feedback"
 import { runUpload } from "@/lib/upload"
-import { departmentIconKey, sectorTileBackground, useSiteIcons } from "@/lib/site-icons"
 import { IMPORT_REQUEST_EVENT, consumeImportRequest } from "@/lib/import-request"
 import { RelativeTime } from "./relative-time"
 import { setUploadPanel } from "@/lib/upload-panel"
@@ -1123,8 +1122,6 @@ export function DashboardView({
 
     return () => window.removeEventListener(IMPORT_REQUEST_EVENT, onRequest)
   }, [])
-  // The department glyphs of the import list load when it first opens.
-  const siteIcons = useSiteIcons(importOpen)
   const importPanel = usePresence(importOpen, "--dropdown-close-dur")
   // Where the upload icon goes: a slot the top bar keeps for the page.
   const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null)
@@ -2488,13 +2485,12 @@ export function DashboardView({
                 {tx("Pour quel département est ce fichier ?", "Which department is this file for?")}
               </p>
               <div
-                className="grid grid-cols-1 gap-2.5 sm:grid-cols-2"
+                className="flex flex-col gap-2"
                 role="group"
                 aria-labelledby="upload-activity-help"
               >
-                {uploadActivitiesFor(uploadSector).map((activity, index, all) => {
+                {uploadActivitiesFor(uploadSector).map((activity) => {
                   const on = uploadActivity === activity.id
-                  const icon = siteIcons?.[departmentIconKey(activity.id)] ?? siteIcons?.["dept:other"]
                   return (
                     <button
                       key={activity.id}
@@ -2502,41 +2498,19 @@ export function DashboardView({
                       onClick={() => setUploadActivity(activity.id)}
                       aria-pressed={on}
                       className={cn(
-                        index === 0 && all.length % 2 === 1 && "sm:col-span-2",
-                        "relative flex min-h-[124px] flex-col justify-end overflow-hidden rounded-[22px] p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        "flex min-h-12 w-full items-center justify-between gap-3 rounded-[18px] px-4 py-3 text-left text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                         on ? "bg-brand text-[#141414]" : "border border-border bg-card hover:bg-muted/60"
                       )}
                     >
-                      <span
-                        className={cn(
-                          "pointer-events-none absolute bottom-3 right-3 flex h-14 w-14 items-center justify-center [&_svg]:h-full [&_svg]:w-full",
-                          !on && "[filter:var(--art-filter)]"
-                        )}
-                        data-department-icon={activity.id}
-                        aria-hidden="true"
-                      >
-                        {icon ? (
-                          <svg viewBox={icon.viewBox} focusable="false" dangerouslySetInnerHTML={{ __html: icon.body }} />
-                        ) : null}
-                      </span>
-
+                      <span className="min-w-0 truncate">{px(activity.label)}</span>
                       {on && (
                         <span
-                          className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-[#141414] text-brand"
+                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#141414] text-brand"
                           aria-hidden="true"
                         >
                           <Check className="h-3.5 w-3.5" strokeWidth={3} />
                         </span>
                       )}
-
-                      <span className="relative mt-auto block max-w-[58%]">
-                        <span className="block text-sm font-bold leading-snug">{px(activity.label)}</span>
-                        {activity.description && (
-                          <span className={cn("mt-1 block text-xs leading-snug", on ? "text-[#141414]/70" : "text-muted-foreground")}>
-                            {px(activity.description)}
-                          </span>
-                        )}
-                      </span>
                     </button>
                   )
                 })}

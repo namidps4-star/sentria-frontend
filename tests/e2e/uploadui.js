@@ -42,12 +42,12 @@ const LS = { sentria_sector: 'health', sentria_sectors: '["industry","health"]',
   await x.panel.getByRole('button', { name: 'Health', exact: true }).click(); await x.p.waitForTimeout(200);
   const dep = x.panel.getByRole('group', { name: /Which department/ }).getByRole('button').first();
   const first = await dep.innerText();
-  const rowIcons = await x.panel.getByRole('group', { name: /Which department/ }).locator('[data-department-icon]').evaluateAll(els => els.map(e => ({ id: e.getAttribute('data-department-icon'), drawn: !!e.querySelector('svg path') })));
-  pass(rowIcons.length >= 3 && rowIcons.every(r => r.drawn), 'each department tile carries a drawn glyph in its corner: ' + rowIcons.map(r => r.id).join(', '));
+  const rows = await x.panel.getByRole('group', { name: /Which department/ }).getByRole('button').evaluateAll(els => els.map(e => ({ text: e.innerText.trim(), glyph: !!e.querySelector('[data-department-icon]') })));
+  pass(rows.length >= 3 && rows.every(r => r.text && !r.glyph), 'each department is a plain labelled row, no glyph: ' + rows.map(r => r.text).join(' | '));
   pass(!/[\u{1F300}-\u{1FAFF}]/u.test(first), 'and no emoji in the row');
   const second = x.panel.getByRole('group', { name: /Which department/ }).getByRole('button').nth(1);
   await second.click(); await x.p.waitForTimeout(150);
-  pass(await second.getAttribute('aria-pressed') === 'true' && (await x.panel.locator('h3').innerText()).includes((await second.locator('span.font-bold').innerText()).trim()), 'picking a department updates the header');
+  pass(await second.getAttribute('aria-pressed') === 'true' && (await x.panel.locator('h3').innerText()).includes((await second.innerText()).trim()), 'picking a department updates the header');
   pass(await x.panel.locator('[data-supplier-columns]').count() === 1, 'Health shows the supplier columns');
   await x.panel.getByRole('button', { name: 'Industry', exact: true }).click(); await x.p.waitForTimeout(200);
   pass(await x.panel.locator('[data-cost-columns]').count() === 1 && /units_per_hour/.test(await x.panel.innerText()), 'Industry shows the cost columns');
