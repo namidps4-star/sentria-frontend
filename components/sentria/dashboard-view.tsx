@@ -2316,15 +2316,19 @@ export function DashboardView({
         activityOf(a) !== null
     )
 
+  // A cold-chain import shows only the blocked and active counts: the queue,
+  // pressure and port tiles belong to other logistics activities.
+  const coldChain = filterSector === "logistics" && normalizeOpsType(opsType) === "froid"
   const kpis = meta
     .kpis(filteredAlerts)
+    .filter((k) => !coldChain || !["Files d'attente", "Alertes pression"].includes(k.label.fr))
     .map((k, i) => ({
       ...k,
       // The tile's identity: the French name, so switching language changes
       // its text but not the tile (its number follows instead of restarting).
       id: (subtypeLabels?.[i] ?? k.label).fr,
       label: px(subtypeLabels?.[i] ?? k.label),
-      delta: px(k.delta),
+      delta: coldChain ? "" : px(k.delta),
     }))
 
   const breakdown = alertBreakdown(filteredAlerts, tx)
@@ -2935,7 +2939,7 @@ export function DashboardView({
              ground); the numbers inside count and the lines draw. */
           <div
             data-tour="kpis"
-            className="t-enter grid grid-cols-2 gap-px overflow-hidden rounded-[22px] bg-border shadow-sm xl:grid-cols-4"
+            className={cn("t-enter grid grid-cols-2 gap-px overflow-hidden rounded-[22px] bg-border shadow-sm", kpis.length === 2 ? "xl:grid-cols-2" : "xl:grid-cols-4")}
             style={enterAt(5)}
           >
             {kpis.map((k) => (
@@ -3176,7 +3180,7 @@ export function DashboardView({
               ground); the numbers inside count and the lines draw. */}
           <div
             data-tour="kpis"
-            className="t-enter grid grid-cols-2 gap-px overflow-hidden rounded-[22px] bg-border shadow-sm xl:grid-cols-4"
+            className={cn("t-enter grid grid-cols-2 gap-px overflow-hidden rounded-[22px] bg-border shadow-sm", kpis.length === 2 ? "xl:grid-cols-2" : "xl:grid-cols-4")}
             style={enterAt(5)}
           >
             {kpis.map((k) => (
