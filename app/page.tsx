@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { AuthGate } from "@/components/sentria/auth-gate"
 import { CrawlerIntro } from "@/components/sentria/crawler-intro"
 import { siteUrl } from "@/lib/site"
@@ -39,6 +40,11 @@ const COPY = {
   },
 } as const
 /* i18n-ignore-end */
+
+/* The signed-in app and its sign-in screen are not for search. */
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+}
 
 export default function Page() {
   const url = siteUrl()
