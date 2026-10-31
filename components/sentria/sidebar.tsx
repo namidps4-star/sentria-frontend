@@ -67,6 +67,8 @@ interface SidebarProps {
   isAdmin?: boolean
   /** Opens the first-use tour again (ONB-GUIDE), from the Help dialog. */
   onStartTour?: () => void
+  /** Opens Robo's chat (ROBO-CHAT), from the Help dialog. */
+  onAskRobo?: () => void
   /** Branch swaps (F-BRANCHSWAP): a row under Operations while this site has a swap to send. `open` is how many still need someone. */
   swaps?: { open: number; total: number; onOpen: () => void }
 }
@@ -176,6 +178,7 @@ export function Sidebar({
   onSignOut,
   isAdmin = false,
   onStartTour,
+  onAskRobo,
   swaps,
 }: SidebarProps) {
   const t = useT()
@@ -604,6 +607,7 @@ export function Sidebar({
         pageLabel={here ? t(here.label) : active}
         onClose={closeSupport}
         onStartTour={onStartTour ? () => { closeSupport(); onClose(); onStartTour() } : undefined}
+        onAskRobo={onAskRobo ? () => { closeSupport(); onClose(); onAskRobo() } : undefined}
       />
 
       {signOutDialog.present && (

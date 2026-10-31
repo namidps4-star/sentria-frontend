@@ -1,4 +1,4 @@
-/** The public address of the site, for canonical links, the sitemap and
+/** The public address of the site, for canonical links and
  *  social cards. Set NEXT_PUBLIC_SITE_URL to the real domain on Vercel.
  *  Without it, Vercel's production address is used, then localhost. */
 export function siteUrl(): string {

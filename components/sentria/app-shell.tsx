@@ -21,7 +21,6 @@ import { ViewAsBanner } from "./view-as-banner"
 import type { ViewKey } from "./types"
 import { Topbar, type Notification } from "./topbar"
 import { DashboardView } from "./dashboard-view"
-import { OPEN_IMPORT_KEY } from "@/lib/upload-panel"
 import { CalendarView } from "./calendar-view"
 import { SitesView } from "./sites-view"
 import { AskView } from "./ask-view"
@@ -36,10 +35,13 @@ import { TrackingView } from "./tracking-view"
 import { AdminView } from "./admin-view"
 import { UploadPanelHost } from "./upload-panel-host"
 import { AnalyticsConsent } from "./analytics-consent"
+import { WebVitalsReporter } from "./web-vitals-reporter"
 import { track } from "@/lib/analytics"
 import { readAccountPlan } from "@/lib/plans"
 import { GuideBuddy } from "./guide-buddy"
+import { RoboChat } from "./robo-chat"
 import { GUIDE_DONE_KEY } from "@/lib/guide-steps"
+import type { RoboStart } from "@/lib/robo-chat"
 
 /** What the bell reads of an alert row. */
 type BellAlert = {
@@ -142,6 +144,9 @@ export function AppShell({
   const [search, setSearch] = useState("")
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [showGuide, setShowGuide] = useState(false)
+  // Robo's chat: open from the Help dialog, and the tour it hands over to starts at this step.
+  const [showRobo, setShowRobo] = useState(false)
+  const [guideStart, setGuideStart] = useState<RoboStart | undefined>(undefined)
   const [collapsed, setCollapsed] = useState(false)
 
   // The bell (B-22): critical alerts of the account's sectors and
@@ -343,6 +348,7 @@ export function AppShell({
       <DocumentLanguage />
       <UploadPanelHost />
       <AnalyticsConsent />
+      <WebVitalsReporter />
 
       {showOnboarding && (
         <OnboardingView
@@ -366,14 +372,30 @@ export function AppShell({
         open={showGuide}
         onClose={() => setShowGuide(false)}
         view={view}
+        start={guideStart}
         onNavigate={(v) => {
           setView(v)
           setSearch("")
         }}
       />
 
+      <RoboChat
+        open={showRobo}
+        onOpen={() => setShowRobo(true)}
+        onClose={() => setShowRobo(false)}
+        onShowTour={(start) => {
+          setShowRobo(false)
+          setGuideStart(start)
+          setShowGuide(true)
+        }}
+      />
+
       <Sidebar
-        onStartTour={() => setShowGuide(true)}
+        onStartTour={() => {
+          setGuideStart(undefined)
+          setShowGuide(true)
+        }}
+        onAskRobo={() => setShowRobo(true)}
         active={view}
         onNavigate={(v) => {
           setView(v)
@@ -416,15 +438,7 @@ export function AppShell({
               onNotificationsOpen={markNotificationsSeen}
               onOpenTracking={() => setView("tracking")}
               onOpenSites={() => setView("sites")}
-              onOpenImport={view === "dashboard" ? undefined : () => {
-                // The import menu lives on the dashboard: go there and open it.
-                try {
-                  sessionStorage.setItem(OPEN_IMPORT_KEY, "1")
-                } catch {
-                  /* no storage: the dashboard opens closed */
-                }
-                setView("dashboard")
-              }}
+              onAskRobo={() => setShowRobo(true)}
             />
           </div>
 

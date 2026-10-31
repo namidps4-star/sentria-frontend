@@ -33,6 +33,7 @@ export function SupportDialog({
   pageLabel,
   onClose,
   onStartTour,
+  onAskRobo,
 }: {
   open: boolean
   /** The view the person is on, as the app names it ("dashboard"). */
@@ -42,12 +43,23 @@ export function SupportDialog({
   onClose: () => void
   /** Offers the first-use tour again (ONB-GUIDE); no button when absent. */
   onStartTour?: () => void
+  /** Opens Robo's chat (ROBO-CHAT); no button when absent. */
+  onAskRobo?: () => void
 }) {
   const dialog = usePresence(open, "--modal-close-dur")
 
   if (!dialog.present) return null
 
-  return <SupportBody page={page} pageLabel={pageLabel} className={dialog.className} onClose={onClose} onStartTour={onStartTour} />
+  return (
+    <SupportBody
+      page={page}
+      pageLabel={pageLabel}
+      className={dialog.className}
+      onClose={onClose}
+      onStartTour={onStartTour}
+      onAskRobo={onAskRobo}
+    />
+  )
 }
 
 const KIND_LABEL: Record<SupportKind, [string, string]> = {
@@ -149,12 +161,14 @@ function SupportBody({
   className,
   onClose,
   onStartTour,
+  onAskRobo,
 }: {
   page: string
   pageLabel: string
   className: string
   onClose: () => void
   onStartTour?: () => void
+  onAskRobo?: () => void
 }) {
   const tx = useTx()
   const { ui } = useLocale()
@@ -344,17 +358,33 @@ function SupportBody({
                 })}
               </div>
 
-              {onStartTour && (
-                <button
-                  type="button"
-                  onClick={onStartTour}
-                  disabled={sending}
-                  data-tour-open=""
-                  className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/20 px-3 py-1.5 text-xs font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed"
-                >
-                  <Play className="h-3.5 w-3.5" aria-hidden="true" />
-                  {tx("Visite guidée", "Take the tour")}
-                </button>
+              {(onStartTour || onAskRobo) && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {onStartTour && (
+                    <button
+                      type="button"
+                      onClick={onStartTour}
+                      disabled={sending}
+                      data-tour-open=""
+                      className="inline-flex items-center gap-1.5 rounded-full border border-white/20 px-3 py-1.5 text-xs font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed"
+                    >
+                      <Play className="h-3.5 w-3.5" aria-hidden="true" />
+                      {tx("Visite guidée", "Take the tour")}
+                    </button>
+                  )}
+                  {onAskRobo && (
+                    <button
+                      type="button"
+                      onClick={onAskRobo}
+                      disabled={sending}
+                      data-robo-open=""
+                      className="inline-flex items-center gap-1.5 rounded-full border border-white/20 px-3 py-1.5 text-xs font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed"
+                    >
+                      <MessageSquare className="h-3.5 w-3.5" aria-hidden="true" />
+                      {tx("Demander à Robo", "Ask Robo")}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 

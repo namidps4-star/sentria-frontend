@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { Search, Bell, Menu, X, ArrowRight, Upload } from "@/lib/icons"
+import { Search, Bell, Menu, X, ArrowRight } from "@/lib/icons"
 
 import { useT, useTx } from "@/lib/i18n"
 import { agoLabel } from "@/lib/relative-time"
@@ -10,6 +10,7 @@ import { usePresence } from "@/lib/use-presence"
 import { cn } from "@/lib/utils"
 
 import { AccountMenu } from "./account-menu"
+import { RoboHead } from "./guide-buddy"
 import { WorkspaceContext } from "./workspace-context"
 
 /** One critical alert waiting in the bell: a task nobody has marked
@@ -46,7 +47,7 @@ export function Topbar({
   onNotificationsOpen,
   onOpenTracking,
   onOpenSites,
-  onOpenImport,
+  onAskRobo,
 }: {
   title: string
   subtitle: string
@@ -69,8 +70,8 @@ export function Topbar({
   onOpenTracking?: () => void
   /** The company menu's sites open the Sites page. */
   onOpenSites?: () => void
-  /** The import shortcut, shown on every page but the dashboard (which has its own). */
-  onOpenImport?: () => void
+  /** Opens Robo's chat (ROBO-CHAT). Phones keep it in Help: the bar has no room for it. */
+  onAskRobo?: () => void
 }) {
   const t = useT()
   const tx = useTx()
@@ -169,22 +170,24 @@ export function Topbar({
       </div>
 
       {/* A slot the page fills with its own action (the dashboard's
-          upload icon). On the other pages the import shortcut sits here, so
-          the upload menu is one click away everywhere. */}
-      <div id="topbar-actions" className="flex items-center empty:hidden">
-        {onOpenImport && (
-          <button
-            type="button"
-            onClick={onOpenImport}
-            data-testid="topbar-import"
-            aria-label={t("topbar.import")}
-            title={t("topbar.import")}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-brand text-brand-foreground shadow-sm transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            <Upload className="h-4 w-4" aria-hidden="true" />
-          </button>
-        )}
-      </div>
+          upload icon). Empty on other pages. */}
+      {onAskRobo && (
+        <button
+          type="button"
+          onClick={onAskRobo}
+          data-robo-topbar=""
+          aria-label={tx("Demander à Robo", "Ask Robo")}
+          title={tx("Demander à Robo", "Ask Robo")}
+          className={cn(
+            "mr-2 hidden h-10 w-10 items-center justify-center rounded-full border border-border bg-card transition-colors hover:bg-muted sm:flex",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+          )}
+        >
+          <RoboHead className="h-6 w-6" />
+        </button>
+      )}
+
+      <div id="topbar-actions" className="flex items-center empty:hidden" />
 
       <div ref={bellRef} className="relative">
       <button

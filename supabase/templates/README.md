@@ -46,7 +46,11 @@ sees it.
 The colours are written as hex because email apps do not read CSS variables. They
 are the brand tokens converted to sRGB, and the test fails if the tokens move.
 
-## Not done here
+## Reset-password email
 
-The reset-password email is a separate Supabase template and still uses the
-default. It can reuse this layout; it needs its own paste and its own test.
+`recovery.html` is the reset-password email, in the same layout with its own wording. Paste it
+under Authentication, Email Templates, "Reset password", the same way as step 2.
+The app does not send a language with the reset request, so the email reads the
+language the account saved at sign-up, and falls back to French.
+
+Test it with: `EMAIL_TEMPLATE=supabase/templates/recovery.html node tests/e2e/signupemail.js`.

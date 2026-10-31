@@ -61,7 +61,6 @@ export const en: Record<keyof typeof fr, string> = {
   "topbar.menu.open": "Open the menu",
   "topbar.search.placeholder": "Search an asset or an alert…",
   "topbar.search.label": "Search an asset or an alert",
-  "topbar.import": "Import data",
   "topbar.search.clear": "Clear the search",
 
   "topbar.notifications.none": "Notifications, no critical alert",

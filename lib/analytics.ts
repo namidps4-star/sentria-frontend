@@ -29,6 +29,8 @@ export type AnalyticsEvent =
   | { name: "onboarding_step"; step: number }
   | { name: "onboarding_done" }
   | { name: "upload_result"; result: "done" | "refused" | "failed" }
+  // Page timings: a number and a rating, no page or person (lib/web-vitals.ts).
+  | { name: "web_vital"; metric: "CLS" | "FCP" | "INP" | "LCP" | "TTFB"; value: number; rating: "good" | "needs-improvement" | "poor" }
 
 type PostHog = typeof import("posthog-js").default
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { lossPerHour, valueAtRisk } from "@/lib/value-at-risk"
+import { asRecord, lossPerHour, valueAtRisk } from "@/lib/value-at-risk"
 
 describe("valueAtRisk", () => {
   it("reads money from the [name, value] pairs", () => {
@@ -40,5 +40,24 @@ describe("lossPerHour", () => {
       currency: "$",
     })
     expect(lossPerHour({ loss_per_hour: 50, units_per_hour: 10 })).toBeNull()
+  })
+})
+
+describe("asRecord", () => {
+  it("reads pairs and plain objects, skips malformed pairs, and returns null for nothing", () => {
+    expect(asRecord([["a", 1], ["b", 2]])).toEqual({ a: 1, b: 2 })
+    expect(asRecord({ a: 1 })).toEqual({ a: 1 })
+    expect(asRecord([["a", 1], [3, 4] as unknown as [string, unknown]])).toEqual({ a: 1 })
+    expect(asRecord(null)).toBeNull()
+  })
+})
+
+describe("money and rates stay apart", () => {
+  it("trims the currency symbol", () => {
+    expect(valueAtRisk({ value: 10, currency: " FCFA " })?.currency).toBe("FCFA")
+  })
+
+  it("an hourly loss is a rate: it never reads as a value at risk", () => {
+    expect(valueAtRisk({ loss_per_hour: 640, units_per_hour: 8, unit_value: 80, currency: "€" })).toBeNull()
   })
 })
