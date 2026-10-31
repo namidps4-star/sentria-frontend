@@ -2503,13 +2503,15 @@ export function DashboardView({
                       )}
                     >
                       <span className="min-w-0 truncate">{px(activity.label)}</span>
-                      {on && (
+                      {on ? (
                         <span
                           className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#141414] text-brand"
                           aria-hidden="true"
                         >
                           <Check className="h-3.5 w-3.5" strokeWidth={3} />
                         </span>
+                      ) : (
+                        <span className="h-6 w-6 shrink-0 rounded-full border-2 border-border" aria-hidden="true" />
                       )}
                     </button>
                   )
