@@ -141,6 +141,7 @@ import { WholesalerAdvice } from "./wholesaler-advice"
 import { SupplierActions } from "./supplier-actions"
 import { supplierFromParams, type Supplier } from "@/lib/supplier"
 import { SectorTag } from "./sector-tag"
+import { countAlerts } from "@/lib/alert-count"
 
 const SECTORS: { key: string; label: Localized }[] = [
   { key: "all", label: localized("Tous", "All") },
@@ -414,7 +415,7 @@ function alertBreakdown(
   }
 
   if (counts.size === 0) {
-    const critical = alerts.filter((a) => a.severity === "CRITICAL").length
+    const critical = countAlerts(alerts.filter((a) => a.severity === "CRITICAL"))
     const warning = alerts.filter((a) => a.severity === "WARNING").length
 
     if (critical === 0 && warning === 0) {
@@ -466,20 +467,20 @@ const SECTOR_META: Record<
       {
         label: localized("Alertes critiques", "Critical alerts"),
         value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
+          countAlerts(a.filter((x) => x.severity === "CRITICAL"))
         ),
         match: (x) => x.severity === "CRITICAL",
         delta:
-          a.filter((x) => x.severity === "CRITICAL").length > 0
+          countAlerts(a.filter((x) => x.severity === "CRITICAL")) > 0
             ? localized("À traiter", "Act now")
             : localized("OK", "OK"),
         up:
-          a.filter((x) => x.severity === "CRITICAL").length === 0,
+          countAlerts(a.filter((x) => x.severity === "CRITICAL")) === 0,
       },
       {
         label: localized("Warnings", "Warnings"),
         value: String(
-          a.filter((x) => x.severity === "WARNING").length
+          countAlerts(a.filter((x) => x.severity === "WARNING"))
         ),
         match: (x) => x.severity === "WARNING",
         delta: localized("Surveillance", "Monitoring"),
@@ -487,7 +488,7 @@ const SECTOR_META: Record<
       },
       {
         label: localized("Total alertes", "Total alerts"),
-        value: String(a.length),
+        value: String(countAlerts(a)),
         delta: localized("Toutes sources", "All sources"),
         up: true,
       },
@@ -500,7 +501,7 @@ const SECTOR_META: Record<
       {
         label: localized("Machines en panne imminente", "Machines about to fail"),
         value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
+          countAlerts(a.filter((x) => x.severity === "CRITICAL"))
         ),
         match: (x) => x.severity === "CRITICAL",
         up: false,
@@ -508,7 +509,7 @@ const SECTOR_META: Record<
       {
         label: localized("Usure élevée", "High wear"),
         value: String(
-          a.filter((x) => x.severity === "WARNING").length
+          countAlerts(a.filter((x) => x.severity === "WARNING"))
         ),
         match: (x) => x.severity === "WARNING",
         delta: localized("Surveiller", "Watch"),
@@ -522,7 +523,7 @@ const SECTOR_META: Record<
       },
       {
         label: localized("Total alertes", "Total alerts"),
-        value: String(a.length),
+        value: String(countAlerts(a)),
         delta: localized("Session", "Session"),
         up: true,
       },
@@ -537,14 +538,14 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: localized("Ruptures critiques", "Critical stockouts"),
-        value: String(a.filter(healthStockCritical).length),
+        value: String(countAlerts(a.filter(healthStockCritical))),
         match: healthStockCritical,
         delta: localized("Commander maintenant", "Order now"),
         up: false,
       },
       {
         label: localized("Stocks bas", "Low stock"),
-        value: String(a.filter(healthStockLow).length),
+        value: String(countAlerts(a.filter(healthStockLow))),
         match: healthStockLow,
         delta: localized("À surveiller", "To watch"),
         up: true,
@@ -557,7 +558,7 @@ const SECTOR_META: Record<
       },
       {
         label: localized("Alertes chaîne froid", "Cold chain alerts"),
-        value: String(a.filter(healthColdChain).length),
+        value: String(countAlerts(a.filter(healthColdChain))),
         match: healthColdChain,
         delta: localized("Urgence", "Urgent"),
         up: false,
@@ -571,7 +572,7 @@ const SECTOR_META: Record<
       {
         label: localized("Pertes probables", "Likely losses"),
         value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
+          countAlerts(a.filter((x) => x.severity === "CRITICAL"))
         ),
         match: (x) => x.severity === "CRITICAL",
         delta: localized("Livraison urgente", "Urgent delivery"),
@@ -580,11 +581,11 @@ const SECTOR_META: Record<
       {
         label: localized("Retards détectés", "Delays detected"),
         value: String(
-          a.filter(
+          countAlerts(a.filter(
             (x) =>
               x.message.toLowerCase().includes("retard") ||
               x.message.toLowerCase().includes("delay")
-          ).length
+          ))
         ),
         delta: localized("Camions", "Trucks"),
         up: false,
@@ -598,9 +599,9 @@ const SECTOR_META: Record<
       {
         label: localized("Alertes temp.", "Temp. alerts"),
         value: String(
-          a.filter((x) =>
+          countAlerts(a.filter((x) =>
             x.message.toLowerCase().includes("temp")
-          ).length
+          ))
         ),
         delta: localized("Stockage", "Storage"),
         up: false,
@@ -614,7 +615,7 @@ const SECTOR_META: Record<
       {
         label: localized("Camions critiques", "Critical trucks"),
         value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
+          countAlerts(a.filter((x) => x.severity === "CRITICAL"))
         ),
         match: (x) => x.severity === "CRITICAL",
         delta: localized("Immobiliser", "Take off road"),
@@ -623,11 +624,11 @@ const SECTOR_META: Record<
       {
         label: localized("Révisions dues", "Services due"),
         value: String(
-          a.filter(
+          countAlerts(a.filter(
             (x) =>
               x.message.toLowerCase().includes("service") ||
               x.message.toLowerCase().includes("révision")
-          ).length
+          ))
         ),
         delta: localized("Planifier", "Schedule"),
         up: false,
@@ -641,11 +642,11 @@ const SECTOR_META: Record<
       {
         label: localized("Alertes moteur", "Engine alerts"),
         value: String(
-          a.filter(
+          countAlerts(a.filter(
             (x) =>
               x.message.toLowerCase().includes("moteur") ||
               x.message.toLowerCase().includes("engine")
-          ).length
+          ))
         ),
         delta: localized("Urgence", "Urgent"),
         up: false,
@@ -659,7 +660,7 @@ const SECTOR_META: Record<
       {
         label: localized("Équipements bloqués", "Equipment blocked"),
         value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
+          countAlerts(a.filter((x) => x.severity === "CRITICAL"))
         ),
         match: (x) => x.severity === "CRITICAL",
         up: false,
@@ -667,11 +668,11 @@ const SECTOR_META: Record<
       {
         label: localized("Files d'attente", "Queues"),
         value: String(
-          a.filter(
+          countAlerts(a.filter(
             (x) =>
               x.message.toLowerCase().includes("attente") ||
               x.message.toLowerCase().includes("wait")
-          ).length
+          ))
         ),
         delta: localized("Conteneurs", "Containers"),
         up: false,
@@ -685,11 +686,11 @@ const SECTOR_META: Record<
       {
         label: localized("Alertes pression", "Pressure alerts"),
         value: String(
-          a.filter(
+          countAlerts(a.filter(
             (x) =>
               x.message.toLowerCase().includes("pression") ||
               x.message.toLowerCase().includes("pressure")
-          ).length
+          ))
         ),
         delta: localized("Hydraulique", "Hydraulics"),
         up: false,
@@ -703,7 +704,7 @@ const SECTOR_META: Record<
       {
         label: localized("Générateurs critiques", "Critical generators"),
         value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
+          countAlerts(a.filter((x) => x.severity === "CRITICAL"))
         ),
         match: (x) => x.severity === "CRITICAL",
         delta: localized("Intervenir", "Intervene"),
@@ -712,11 +713,11 @@ const SECTOR_META: Record<
       {
         label: localized("Carburant bas", "Low fuel"),
         value: String(
-          a.filter(
+          countAlerts(a.filter(
             (x) =>
               x.message.toLowerCase().includes("carburant") ||
               x.message.toLowerCase().includes("fuel")
-          ).length
+          ))
         ),
         delta: localized("Réapprovisionner", "Refuel"),
         up: false,
@@ -730,11 +731,11 @@ const SECTOR_META: Record<
       {
         label: localized("Alertes surchauffe", "Overheating alerts"),
         value: String(
-          a.filter(
+          countAlerts(a.filter(
             (x) =>
               x.message.toLowerCase().includes("surchauffe") ||
               x.message.toLowerCase().includes("overheat")
-          ).length
+          ))
         ),
         delta: localized("Température", "Temperature"),
         up: false,
@@ -748,7 +749,7 @@ const SECTOR_META: Record<
       {
         label: localized("Ruptures en rayon", "Out of stock on shelf"),
         value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
+          countAlerts(a.filter((x) => x.severity === "CRITICAL"))
         ),
         match: (x) => x.severity === "CRITICAL",
         delta: localized("Réassort urgent", "Urgent replenishment"),
@@ -757,7 +758,7 @@ const SECTOR_META: Record<
       {
         label: localized("Stocks bas", "Low stock"),
         value: String(
-          a.filter((x) => x.severity === "WARNING").length
+          countAlerts(a.filter((x) => x.severity === "WARNING"))
         ),
         match: (x) => x.severity === "WARNING",
         delta: localized("À surveiller", "To watch"),
@@ -771,9 +772,9 @@ const SECTOR_META: Record<
       },
       {
         label: localized("Total alertes", "Total alerts"),
-        value: String(a.length),
+        value: String(countAlerts(a)),
         delta: localized("Sur la période", "Over the period"),
-        up: a.length === 0,
+        up: countAlerts(a) === 0,
       },
     ],
     chartTitle: localized("Alertes stocks · 7 jours", "Stock alerts · 7 days"),
@@ -783,22 +784,22 @@ const SECTOR_META: Record<
     kpis: (a) => [
       {
         label: localized("Alertes corridor EAC", "EAC corridor alerts"),
-        value: String(a.length),
+        value: String(countAlerts(a)),
         delta: localized("Régional", "Regional"),
-        up: a.length === 0,
+        up: countAlerts(a) === 0,
       },
       {
         label: localized("Risques critiques", "Critical risks"),
         value: String(
-          a.filter((x) => x.severity === "CRITICAL").length
+          countAlerts(a.filter((x) => x.severity === "CRITICAL"))
         ),
         match: (x) => x.severity === "CRITICAL",
         delta:
-          a.filter((x) => x.severity === "CRITICAL").length > 0
+          countAlerts(a.filter((x) => x.severity === "CRITICAL")) > 0
             ? localized("À traiter", "Act now")
             : localized("OK", "OK"),
         up:
-          a.filter((x) => x.severity === "CRITICAL").length === 0,
+          countAlerts(a.filter((x) => x.severity === "CRITICAL")) === 0,
       },
       {
         label: localized("Flux surveillés", "Flows monitored"),
@@ -809,7 +810,7 @@ const SECTOR_META: Record<
       {
         label: localized("Alertes conformité", "Compliance alerts"),
         value: String(
-          a.filter((x) => {
+          countAlerts(a.filter((x) => {
             const message = x.message.toLowerCase()
             return (
               message.includes("douane") ||
@@ -818,7 +819,7 @@ const SECTOR_META: Record<
               message.includes("compliance") ||
               message.includes("certificat")
             )
-          }).length
+          }))
         ),
         delta: localized("Documents", "Documents"),
         up: false,
@@ -2842,7 +2843,7 @@ export function DashboardView({
       freshness.data.entries.some((e) => e.sector === "industry" && e.rows_processed > 0)
 
     if (industryPriority === null) {
-      const industryCritical = industryAlerts.filter((a) => a.severity === "CRITICAL").length
+      const industryCritical = countAlerts(industryAlerts.filter((a) => a.severity === "CRITICAL"))
       return (
         <div key="industry" className="space-y-6">
           {importPortal}
@@ -2882,8 +2883,8 @@ export function DashboardView({
                   : zeroUnknown && industryAlerts.length === 0
                     ? tx("Non mesuré", "Not measured")
                     : tx(
-                        `${industryAlerts.length} signaux · ${industryCritical} critique${industryCritical > 1 ? "s" : ""}`,
-                        `${industryAlerts.length} signals · ${industryCritical} critical`
+                        `${countAlerts(industryAlerts)} signaux · ${industryCritical} critique${industryCritical > 1 ? "s" : ""}`,
+                        `${countAlerts(industryAlerts)} signals · ${industryCritical} critical`
                       )}
               </span>
             </div>
@@ -3111,7 +3112,7 @@ export function DashboardView({
           : []
 
     if (logisticsPriority === null) {
-      const critical = logisticsViewAlerts.filter((a) => a.severity === "CRITICAL").length
+      const critical = countAlerts(logisticsViewAlerts.filter((a) => a.severity === "CRITICAL"))
 
       return (
         <div key="logistics" className="space-y-6">
@@ -3152,8 +3153,8 @@ export function DashboardView({
                   : zeroUnknown && logisticsViewAlerts.length === 0
                     ? tx("Non mesuré", "Not measured")
                     : tx(
-                        `${logisticsViewAlerts.length} signaux · ${critical} critique${critical > 1 ? "s" : ""}`,
-                        `${logisticsViewAlerts.length} signals · ${critical} critical`
+                        `${countAlerts(logisticsViewAlerts)} signaux · ${critical} critique${critical > 1 ? "s" : ""}`,
+                        `${countAlerts(logisticsViewAlerts)} signals · ${critical} critical`
                       )}
               </span>
             </div>
@@ -3515,7 +3516,7 @@ export function DashboardView({
         >
           {tx("Tous", "All")}
 
-          {alertsLoaded && !notMeasured(String(alerts.filter(matchesActivity).length)) && (
+          {alertsLoaded && !notMeasured(String(countAlerts(alerts.filter(matchesActivity)))) && (
             <span className="ml-1.5 text-[10px] opacity-60">
               {alerts.filter(matchesActivity).length}
             </span>
@@ -3560,7 +3561,7 @@ export function DashboardView({
 
             {alertsLoaded &&
               !notMeasured(
-                String(alerts.filter((a) => a.sector === s.key).filter(matchesActivity).length)
+                String(countAlerts(alerts.filter((a) => a.sector === s.key).filter(matchesActivity)))
               ) && (
               <span className="ml-1.5 text-[10px] opacity-60">
                 {
@@ -4017,7 +4018,7 @@ export function DashboardView({
             </h3>
 
             <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] font-semibold text-muted-foreground">
-              {!alertsLoaded || notMeasured(String(tableAlerts.length)) ? "—" : tableAlerts.length}
+              {!alertsLoaded || notMeasured(String(countAlerts(tableAlerts))) ? "—" : countAlerts(tableAlerts)}
             </span>
           </div>
 
@@ -4215,12 +4216,12 @@ export function DashboardView({
             )}
 
             <span className="ml-auto text-[11px] font-medium text-muted-foreground">
-              {notMeasured(String(tableAlerts.length)) ? (
+              {notMeasured(String(countAlerts(tableAlerts))) ? (
                 tx("Non mesuré", "Not measured")
               ) : (
                 <>
-                  {tableAlerts.length}{" "}
-                  {tableAlerts.length === 1
+                  {countAlerts(tableAlerts)}{" "}
+                  {countAlerts(tableAlerts) === 1
                     ? tx("alerte", "alert")
                     : tx("alertes", "alerts")}
                 </>
