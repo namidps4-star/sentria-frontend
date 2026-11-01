@@ -2837,6 +2837,11 @@ export function DashboardView({
     const industryAlerts = alerts
       .filter((a) => a.sector === "industry")
       .filter(matchesActivity)
+    // A file that came in with rows counts as imported, even when none of its
+    // rows raised an alert for this activity: the banner must not say otherwise.
+    const industryImported =
+      freshness.data.persisted &&
+      freshness.data.entries.some((e) => e.sector === "industry" && e.rows_processed > 0)
 
     if (industryPriority === null) {
       const industryCritical = industryAlerts.filter((a) => a.severity === "CRITICAL").length
@@ -2922,15 +2927,22 @@ export function DashboardView({
               </div>
 
               <h3 className="mt-4 font-heading text-lg font-bold">
-                {tx("Aucune donnée industrielle", "No industry data")}
+                {industryImported
+                  ? tx("Fichier reçu, aucune alerte", "File received, no alert")
+                  : tx("Aucune donnée industrielle", "No industry data")}
                 {subtypeName ? ` · ${subtypeName}` : ""}
               </h3>
 
               <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-                {tx(
-                  "Les priorités ci-dessus sont bien enregistrées, mais aucun fichier n'a encore été importé pour cette activité. Les indicateurs restent vides jusque-là.",
-                  "The priorities above are saved, but no file has been imported for this activity yet. The figures stay empty until one is."
-                )}
+                {industryImported
+                  ? tx(
+                      "Un fichier a bien été reçu pour cette activité, mais aucune de ses lignes ne ressort comme alerte pour l'instant.",
+                      "A file was received for this activity, but none of its rows is an alert yet."
+                    )
+                  : tx(
+                      "Les priorités ci-dessus sont bien enregistrées, mais aucun fichier n'a encore été importé pour cette activité. Les indicateurs restent vides jusque-là.",
+                      "The priorities above are saved, but no file has been imported for this activity yet. The figures stay empty until one is."
+                    )}
               </p>
             </div>
           ) : (
