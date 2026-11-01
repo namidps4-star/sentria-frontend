@@ -487,6 +487,24 @@ export function saveAssignment(
   )
 }
 
+/** Change one task's status and nothing else (PATCH), so the people, the
+ *  deadline and the priority already saved on it stay as they are. A task
+ *  nobody has saved yet is created with this status. */
+export function setAssignmentStatus(
+  taskKey: string,
+  status: AssignmentStatus
+): Promise<CrmResult<Assignment>> {
+  return call(
+    "/assignments",
+    { method: "PATCH", body: JSON.stringify({ task_key: taskKey, status }) },
+    (body) => {
+      const row = body.assignment as Assignment
+
+      return { ...row, contractor_ids: contractorIdsOf(row) }
+    }
+  )
+}
+
 /* ------------------------------------------------------------------ */
 /*  Two-way SMS (F-SMS2)                                               */
 /* ------------------------------------------------------------------ */

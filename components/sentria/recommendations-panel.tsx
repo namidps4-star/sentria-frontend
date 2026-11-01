@@ -25,6 +25,7 @@ import {
 } from "@/lib/icons"
 import { cn } from "@/lib/utils"
 import { sendAlertFeedback } from "@/lib/feedback"
+import { setAssignmentStatus, taskKeyFor } from "@/lib/crm"
 import { computeConfidence, confidenceWord } from "@/lib/confidence"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
 import { TermHelp } from "./term-help"
@@ -47,6 +48,8 @@ type Recommendation = {
   message: string
   risk_score?: number | null
   alert_key?: string | null
+  /** The key the API gives every task (P-RECAPI), the one the board and the dashboard save under. */
+  task_key?: string | null
   /** The department that raised it (the API sends it). */
   business_type?: string | null
   recommended_action: string
@@ -256,8 +259,14 @@ function reasoningOf(
   return parts.join(" ")
 }
 
+/* The same key the tracking board and the dashboard save under (taskKeyFor),
+   so a task handled here is the same task everywhere. The fallback id matches
+   the board's for an API that does not send task_key. */
 function actionKeyFor(rec: Recommendation): string {
-  return `${rec.equipment}-${rec.alert_key ?? rec.message}`
+  return taskKeyFor({
+    ...rec,
+    id: [rec.alert_key ?? "", rec.equipment, rec.date, rec.action_category, rec.recommended_action].join("::"),
+  })
 }
 
 export function RecommendationsPanel({
@@ -305,35 +314,56 @@ export function RecommendationsPanel({
     }
   )
 
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  function writeActionsLog(next: Record<string, ActionRecord>) {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sentria_actions_log", JSON.stringify(next))
+    }
+  }
+
+  /* Saved on the server first (the same task the board shows). The local log
+     only remembers what this browser shows; a refused save is rolled back and
+     said out loud, never left looking handled. */
   function recordAction(
     key: string,
     status: ActionStatus,
     rec?: Recommendation
   ) {
-    // F-SUPPRESS: the server keeps the log per company, so an alert
-    // dismissed again and again can be lowered. The local log below
-    // still drives this panel.
-    if (rec) {
-      sendAlertFeedback(rec.alert_key, rec.equipment, status === "done" ? "acted" : "dismissed")
-    }
+    const before = actionsLog[key]
+    const at = new Date().toLocaleTimeString(tx("fr-FR", "en-GB"), {
+      hour: "2-digit",
+      minute: "2-digit",
+    })
 
+    setActionError(null)
     setActionsLog((current) => {
-      const next = {
-        ...current,
-        [key]: {
-          status,
-          at: new Date().toLocaleTimeString(tx("fr-FR", "en-GB"), {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        },
-      }
+      const next = { ...current, [key]: { status, at } }
 
-      if (typeof window !== "undefined") {
-        localStorage.setItem("sentria_actions_log", JSON.stringify(next))
-      }
-
+      writeActionsLog(next)
       return next
+    })
+
+    setAssignmentStatus(key, status).then((result) => {
+      if (result.ok) {
+        // F-SUPPRESS: the server keeps the log per company, so an alert
+        // dismissed again and again can be lowered.
+        if (rec) {
+          sendAlertFeedback(rec.alert_key, rec.equipment, status === "done" ? "acted" : "dismissed")
+        }
+        return
+      }
+
+      setActionError(px(result.detail))
+      setActionsLog((current) => {
+        const next = { ...current }
+
+        if (before) next[key] = before
+        else delete next[key]
+
+        writeActionsLog(next)
+        return next
+      })
     })
   }
 
@@ -535,6 +565,11 @@ export function RecommendationsPanel({
           </div>
 
           <div className="mt-4">
+            {actionError && (
+              <p role="alert" className="mb-2.5 rounded-2xl bg-red-500/15 px-3 py-2 text-[12px] leading-snug text-sidebar-foreground">
+                {actionError}
+              </p>
+            )}
             {!topAction ? (
               <div className="flex gap-2">
                 <button
