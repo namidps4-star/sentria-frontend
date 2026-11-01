@@ -33,6 +33,10 @@ These read as machine-made. Leave them out of every project (app, landing page, 
 - Beige with an italic serif.
 - The word "supercharge" and em dashes in copy.
 
+## Mockups of an existing screen
+- Start from a screenshot of the screen as it is now, taken from the running app (the Playwright suites, or a one-off capture with the test sign-in), not drawn from memory.
+- Draw the improvement over that screenshot, keeping the real background, copy and states. No rough drafts: the image sent to the founder is finished, at the app's real size.
+
 ## Testing
 - `npx tsc --noEmit -p .` and `npx eslint <files>` (the `set-state-in-effect` warnings are expected).
 - Every feature gets a Playwright suite in `tests/e2e/` (add it to `run-all.js`), with screenshots in light, dark and 390 px before pushing.
