@@ -2955,7 +2955,7 @@ export function DashboardView({
 
                   {!alertsLoaded ? (
                     <Skeleton className="h-5 w-20 rounded-full" />
-                  ) : notMeasured(k.value) ? null : (
+                  ) : notMeasured(k.value) || !k.delta ? null : (
                     <StatusTag tone={k.up ? "brand" : "danger"} size="xs" icon={k.up ? TrendingUp : TrendingDown}>
                       {k.delta}
                     </StatusTag>
@@ -3196,7 +3196,7 @@ export function DashboardView({
 
                   {!alertsLoaded ? (
                     <Skeleton className="h-5 w-20 rounded-full" />
-                  ) : notMeasured(k.value) ? null : (
+                  ) : notMeasured(k.value) || !k.delta ? null : (
                     <StatusTag tone={k.up ? "brand" : "danger"} size="xs" icon={k.up ? TrendingUp : TrendingDown}>
                       {k.delta}
                     </StatusTag>
