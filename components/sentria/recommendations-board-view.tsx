@@ -208,19 +208,17 @@ const PRIORITY_LABEL: Record<Priority, Localized> = {
  *  hue is picked, and avoids the dark: variant pitfall noted above (a
  *  flat class with no theme branch, so "system" theme cannot desync it).
  */
-const CATEGORY_TONE: Record<string, { pill: string; dot: string }> = {
-  maintenance: { pill: "bg-blue-500/12 text-foreground", dot: "bg-blue-500" },
-  fuel: { pill: "bg-orange-500/12 text-foreground", dot: "bg-orange-500" },
-  delay: { pill: "bg-warning/12 text-foreground", dot: "bg-warning" },
-  stock: { pill: "bg-purple-500/12 text-foreground", dot: "bg-purple-500" },
-  cold_chain: { pill: "bg-cyan-500/12 text-foreground", dot: "bg-cyan-500" },
-  expiry: { pill: "bg-rose-500/12 text-foreground", dot: "bg-rose-500" },
-  capacity: { pill: "bg-indigo-500/12 text-foreground", dot: "bg-indigo-500" },
-  predictive: {
-    pill: "bg-fuchsia-500/12 text-foreground",
-    dot: "bg-fuchsia-500",
-  },
-  other: { pill: "bg-muted text-muted-foreground", dot: "bg-muted-foreground" },
+/** Each action category's tag tone (the app's StatusTag tones). */
+const CATEGORY_TONE: Record<string, TagTone> = {
+  maintenance: "info",
+  fuel: "warning",
+  delay: "warning",
+  stock: "neutral",
+  cold_chain: "info",
+  expiry: "warning",
+  capacity: "neutral",
+  predictive: "brand",
+  other: "neutral",
 }
 
 const COLUMN_TONE: Record<Status, { pill: string; dot: string; tag: TagTone }> = {
@@ -458,40 +456,18 @@ function riskOf(rec: Recommendation): number | null {
  *  wrapping the row to a second line.
  */
 function Chip({
-  icon: Icon,
+  icon,
   tone = "neutral",
-  pillClassName,
-  dotClassName,
   children,
 }: {
   icon?: LucideIcon
-  tone?: "neutral" | "brand"
-  /** Overrides the neutral/brand tone above with a specific hue, e.g.
-   *  from CATEGORY_TONE or PRIORITY_TONE. */
-  pillClassName?: string
-  /** Adds a small solid dot before the label, in the same hue. */
-  dotClassName?: string
+  tone?: TagTone
   children: React.ReactNode
 }) {
   return (
-    <span
-      className={cn(
-        "inline-flex max-w-full items-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1 text-[11px] font-medium",
-        pillClassName ??
-          (tone === "brand"
-            ? "bg-brand/20 text-foreground"
-            : "bg-muted text-muted-foreground")
-      )}
-    >
-      {dotClassName && (
-        <span
-          className={cn("h-1.5 w-1.5 shrink-0 rounded-full", dotClassName)}
-          aria-hidden="true"
-        />
-      )}
-      {Icon && <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />}
+    <StatusTag tone={tone} size="xs" icon={icon ?? false} className="max-w-full">
       <span className="min-w-0 truncate">{children}</span>
-    </span>
+    </StatusTag>
   )
 }
 
@@ -838,14 +814,7 @@ function DetailDialog({
           <div className="flex flex-wrap items-center gap-1.5">
             <Chip
               icon={Icon}
-              pillClassName={
-                (CATEGORY_TONE[rec.action_category] ?? CATEGORY_TONE.other)
-                  .pill
-              }
-              dotClassName={
-                (CATEGORY_TONE[rec.action_category] ?? CATEGORY_TONE.other)
-                  .dot
-              }
+              tone={CATEGORY_TONE[rec.action_category] ?? CATEGORY_TONE.other}
             >
               {px(
                 CATEGORY_LABEL[rec.action_category] ?? CATEGORY_LABEL.other
