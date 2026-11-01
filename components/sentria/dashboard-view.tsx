@@ -448,7 +448,7 @@ const SECTOR_META: Record<
     kpis: (alerts: Alert[]) => {
       label: Localized
       value: string
-      delta: Localized
+      delta?: Localized
       up: boolean
       match?: (alert: Alert) => boolean
     }[]
@@ -503,7 +503,6 @@ const SECTOR_META: Record<
           a.filter((x) => x.severity === "CRITICAL").length
         ),
         match: (x) => x.severity === "CRITICAL",
-        delta: localized("Arrêt immédiat", "Stop now"),
         up: false,
       },
       {
@@ -663,7 +662,6 @@ const SECTOR_META: Record<
           a.filter((x) => x.severity === "CRITICAL").length
         ),
         match: (x) => x.severity === "CRITICAL",
-        delta: localized("Arrêt immédiat", "Stop now"),
         up: false,
       },
       {
