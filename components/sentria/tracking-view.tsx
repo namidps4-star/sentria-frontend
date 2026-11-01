@@ -32,6 +32,9 @@ type ApiRecommendation = {
   reasoning?: string | null
 }
 
+/** How long the board waits for the API before it shows the retry notice. */
+const LOAD_TIMEOUT_MS = 15000
+
 /* The tracking board for every department (P-TRACK, B-15). The logistics
    board inside the dashboard derives its cards from the chain; this one
    takes every recommendation the account's sectors and activity produce.
@@ -68,7 +71,12 @@ export function TrackingView() {
 
     setFailed(false)
 
-    apiFetch(`${API_BASE}/recommendations?limit=100&lang=${lang}`)
+    // A read that never answers (slow host, dropped connection) must end in
+    // the retry notice, not an endless spinner.
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), LOAD_TIMEOUT_MS)
+
+    apiFetch(`${API_BASE}/recommendations?limit=100&lang=${lang}`, { signal: controller.signal })
       .then((r) => readList<ApiRecommendation>(r, "recommendations"))
       .then((answer) => {
         if (cancelled) return
@@ -84,11 +92,14 @@ export function TrackingView() {
         if (!cancelled) setFailed(true)
       })
       .finally(() => {
+        clearTimeout(timer)
         if (!cancelled) setLoaded(true)
       })
 
     return () => {
       cancelled = true
+      clearTimeout(timer)
+      controller.abort()
     }
   }, [lang, attempt])
 
