@@ -125,6 +125,8 @@ export function AppShell({
   const t = useT()
 
   const [view, setView] = useState<ViewKey>("dashboard")
+  /* A bell row asks the dashboard to open that alert's detail. */
+  const [alertRequest, setAlertRequest] = useState<{ key: string; equipment: string; date: string } | null>(null)
   // Back from Stripe (BILL-STRIPE): the Plans page says what happened.
   useEffect(() => {
     if (new URLSearchParams(window.location.search).has("billing")) setView("pricing")
@@ -437,13 +439,24 @@ export function AppShell({
               notificationsUnknown={bellUnknown}
               onNotificationsOpen={markNotificationsSeen}
               onOpenTracking={() => setView("tracking")}
+              onOpenAlert={(n) => {
+                setAlertRequest({ key: n.key, equipment: n.equipment, date: n.date })
+                setView("dashboard")
+              }}
               onOpenSites={() => setView("sites")}
               onAskRobo={() => setShowRobo(true)}
             />
           </div>
 
           <main key={shownSite ?? "no-site"} className="flex-1 overflow-y-auto p-4 lg:p-8">
-            {view === "dashboard" && <DashboardView search={search} onNavigate={setView} />}
+            {view === "dashboard" && (
+              <DashboardView
+                search={search}
+                onNavigate={setView}
+                alertRequest={alertRequest}
+                onAlertRequestHandled={() => setAlertRequest(null)}
+              />
+            )}
             {view === "tracking" && <TrackingView />}
             {view === "calendar" && <CalendarView />}
             {view === "sites" && !employee && <SitesView onNavigate={setView} />}

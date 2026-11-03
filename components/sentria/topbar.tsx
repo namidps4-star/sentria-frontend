@@ -46,6 +46,7 @@ export function Topbar({
   notificationsUnknown = false,
   onNotificationsOpen,
   onOpenTracking,
+  onOpenAlert,
   onOpenSites,
   onAskRobo,
 }: {
@@ -68,6 +69,8 @@ export function Topbar({
   /** Called when the list opens: what it shows is now read. */
   onNotificationsOpen?: () => void
   onOpenTracking?: () => void
+  /** A row opens that alert's detail (its evidence, confidence and value), on the dashboard. */
+  onOpenAlert?: (n: Notification) => void
   /** The company menu's sites open the Sites page. */
   onOpenSites?: () => void
   /** Opens Robo's chat (ROBO-CHAT). Phones keep it in Help: the bar has no room for it. */
@@ -115,6 +118,12 @@ export function Topbar({
   function openTracking() {
     setBellOpen(false)
     onOpenTracking?.()
+  }
+
+  function openAlert(n: Notification) {
+    setBellOpen(false)
+    if (onOpenAlert) onOpenAlert(n)
+    else onOpenTracking?.()
   }
 
   const hasUnread = unreadCount > 0
@@ -292,7 +301,7 @@ export function Topbar({
                 <li key={n.key}>
                   <button
                     type="button"
-                    onClick={openTracking}
+                    onClick={() => openAlert(n)}
                     className={"flex w-full items-center gap-3 rounded-[20px] bg-muted px-4 py-3.5 text-left transition-colors hover:bg-muted/70" + FOCUS_RING}
                   >
                     <span className="flex min-w-0 flex-1 flex-col gap-2">

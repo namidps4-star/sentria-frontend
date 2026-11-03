@@ -1057,8 +1057,13 @@ function visibleBlock(): HTMLElement | null {
 export function DashboardView({
   search = "",
   onNavigate,
+  alertRequest = null,
+  onAlertRequestHandled,
 }: {
   search?: string
+  /** A bell row asked for this alert's detail. */
+  alertRequest?: { key: string; equipment: string; date: string } | null
+  onAlertRequestHandled?: () => void
   /** Opens another view (the plans, from the department tabs). */
   onNavigate?: (view: ViewKey) => void
 }) {
@@ -1373,6 +1378,27 @@ export function DashboardView({
 
   const [selectedRecommendation, setSelectedRecommendation] =
     useState<Recommendation | null>(null)
+
+  /* A critical alert chosen in the bell: open its detail once its
+     recommendation is on screen. Waits while the list is still loading. */
+  useEffect(() => {
+    if (!alertRequest) return
+
+    const match = recommendations.find(
+      (rec) =>
+        taskKeyFor(rec) === alertRequest.key ||
+        (rec.equipment === alertRequest.equipment && rec.date === alertRequest.date)
+    )
+
+    if (!match) return
+
+    // Show the dashboard, not a sector screen, so the detail is where it opens.
+    setLogisticsPriority(null)
+    setIndustryPriority(null)
+    setFilterSector("all")
+    setSelectedRecommendation(match)
+    onAlertRequestHandled?.()
+  }, [alertRequest, recommendations, onAlertRequestHandled])
 
   /* The people and the figures are only read when a popup opens (F-DISPATCH,
      I-COST). `contractorsLoaded` keeps "nobody free" from showing while the
