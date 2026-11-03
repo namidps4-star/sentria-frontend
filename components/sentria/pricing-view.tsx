@@ -514,7 +514,6 @@ export function PricingView() {
           <section className="rounded-[28px] border border-border bg-card p-7">
             <h3 className="flex flex-wrap items-center gap-2 font-heading text-xl font-bold">
               {tx("Options", "Add-ons")}
-              <StatusTag tone="neutral" size="xs">{tx("Bientôt", "Soon")}</StatusTag>
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">
               {tx("Sur toute offre payante, quel que soit votre secteur.", "On any paid plan, whatever your sector.")}

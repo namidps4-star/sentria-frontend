@@ -102,11 +102,6 @@ export function CapabilityMatrix() {
                 <tr key={capability.key} data-capability={capability.key} data-live={capability.live} className="border-t border-border">
                   <th scope="row" className="py-2.5 pr-3 text-left align-top font-normal">
                     {resolve(capability.label, tx)}
-                    {!capability.live && (
-                      <StatusTag tone="neutral" size="xs" className="ml-2 align-middle">
-                        {tx("Bientôt", "Soon")}
-                      </StatusTag>
-                    )}
                     {/* A phone has no room for four columns: the lowest plan says it all. */}
                     <span data-from="" className="mt-0.5 block text-[11px] text-muted-foreground md:hidden">
                       {capability.plan === PLAN_ORDER[0]

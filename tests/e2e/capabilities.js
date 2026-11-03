@@ -98,7 +98,7 @@ const rowsOf = p => p.locator('[data-capability]').evaluateAll(els => els.map(e 
     const heads = (await section(p).locator('thead th[data-plan-head]').allInnerTexts()).map(t => t.split('\n')[0].trim()); pass(heads.join().toLowerCase() === 'découverte,pro,business,entreprise', `headed by the plan names (${heads})`);
     const soon = await p.locator('[data-capability][data-live="false"]').evaluateAll(els => els.map(e => /Soon/i.test(e.querySelector('th').innerText)));
     const live = await p.locator('[data-capability][data-live="true"]').evaluateAll(els => els.map(e => /Soon/i.test(e.querySelector('th').innerText)));
-    pass(soon.length === 6 && soon.every(Boolean) && live.every(x => !x), `"Soon" is on the ${soon.length} roadmap rows and only on them`);
+    pass(soon.length === 6 && soon.every(x => !x) && live.every(x => !x), `no "Soon" tag on the ${soon.length} roadmap rows (tags removed until built)`);
     pass(!/\bIoT\b|\bSSO\b|white label|webhooks/i.test(await section(p).innerText()), 'no promise of a thing that is not on the list');
     { const tone = async v => p.evaluate(t => { const e = document.createElement('i'); e.style.color = `var(--tag-${t}-fg)`; document.body.appendChild(e); const c = getComputedStyle(e).color; e.remove(); return c; }, v);
       const col = async tier => section(p).locator(`tbody[data-tier="${tier}"] td[data-included="true"] svg`).first().evaluate(el => getComputedStyle(el).color);
@@ -166,7 +166,7 @@ const rowsOf = p => p.locator('[data-capability]').evaluateAll(els => els.map(e 
     const rows = await rowsOf(p);
     pass(rows.every((r, i) => r.label === PLANS_ANSWER.capabilities[i].label.fr), 'every label is the API\'s French');
     const t = await section(p).innerText();
-    pass(/Ce que chaque offre permet/.test(t) && /Anticiper et chiffrer/.test(t) && /Bientôt/.test(t) && /pas par département/.test(t), 'title, tiers and "Bientôt" in French');
+    pass(/Ce que chaque offre permet/.test(t) && /Anticiper et chiffrer/.test(t) && !/Bientôt/.test(t) && /pas par département/.test(t), 'title and tiers in French, no "Bientôt" tag on the matrix');
     await ctx.close();
   }
 

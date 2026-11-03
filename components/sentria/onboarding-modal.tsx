@@ -1914,23 +1914,15 @@ export function OnboardingView({
                             {px(item.description)}
                           </span>
 
-                          {disabled ? (
-                            <span className="mt-2.5 inline-block">
-                              <StatusTag tone="neutral" size="xs">
-                                {tx("Bientôt", "Soon")}
-                              </StatusTag>
+                          {!disabled && edge && (
+                            <span
+                              className={cn(
+                                "mt-3 block border-t pt-3 text-[13px] font-semibold leading-snug",
+                                active ? "border-[#141414]/20 text-[#141414]" : "border-border text-foreground"
+                              )}
+                            >
+                              {edge}
                             </span>
-                          ) : (
-                            edge && (
-                              <span
-                                className={cn(
-                                  "mt-3 block border-t pt-3 text-[13px] font-semibold leading-snug",
-                                  active ? "border-[#141414]/20 text-[#141414]" : "border-border text-foreground"
-                                )}
-                              >
-                                {edge}
-                              </span>
-                            )
                           )}
                         </span>
 
