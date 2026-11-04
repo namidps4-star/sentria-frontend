@@ -9,7 +9,10 @@
 
 export const LEGAL_VERSION = "2026-10-18"
 
-export const LEGAL_COMPANY = "Sentria"
+export const LEGAL_COMPANY = "Sentria HQ"
+
+/** Registered address. */
+export const LEGAL_ADDRESS = "7005 Sand Cherry Way, Clinton, Maryland 20735, United States"
 
 export type LegalDocId = "privacy" | "terms"
 
@@ -32,6 +35,10 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalSection[]> = {
         [
           `${LEGAL_COMPANY} publie SentrIA, un outil qui surveille vos données d'exploitation, lève des alertes et recommande des actions.`,
           `${LEGAL_COMPANY} publishes SentrIA, a tool that watches your operating data, raises alerts and recommends actions.`,
+        ],
+        [
+          `Adresse : ${LEGAL_ADDRESS}.`,
+          `Address: ${LEGAL_ADDRESS}.`,
         ],
       ],
     },
