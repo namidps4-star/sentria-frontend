@@ -16,7 +16,7 @@ export const SITES_KEY = "sentria_sites"
 export const MAX_STORED_SITES = 100
 
 export const SITE_SECTORS = ["industry", "health", "agriculture", "transportation", "logistics", "energy", "commerce"] as const
-export const SITE_STATUSES = ["connected", "warning", "offline"] as const
+export const SITE_STATUSES = ["connected", "warning", "offline", "pending"] as const
 export const SOURCE_TYPES = ["csv", "api", "erp", "iot"] as const
 
 /** `wanted`: the way the site was set up to receive data. `connected` and
@@ -356,7 +356,7 @@ export async function addSite(fields: NewSite): Promise<SiteResult & { id?: stri
   const site: StoredSite = {
     id: `site-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
     ...fields,
-    status: "offline",
+    status: "pending",
     synced: false,
     sources: fields.sources ?? SOURCE_TYPES.map((type) => ({ type, wanted: false, connected: false, synced: false })),
     departments: fields.departments ?? [],

@@ -55,7 +55,7 @@ type Sector =
   | "energy"
   | "commerce"
 
-type SiteStatus = "connected" | "warning" | "offline"
+type SiteStatus = "connected" | "warning" | "offline" | "pending"
 
 /** When the last sync happened. A marker, not a sentence: storing
  *  "À l'instant" in state meant a site created in French still said it
@@ -171,6 +171,13 @@ const STATUS_META = {
     icon: AlertTriangle,
     className: "bg-warning/12 text-warning",
     dot: "bg-warning",
+  },
+  pending: {
+    label: localized("Pas encore connecté", "Not connected yet"),
+    tone: "neutral" as TagTone,
+    icon: CircleDot,
+    className: "bg-muted text-muted-foreground",
+    dot: "bg-muted-foreground",
   },
   offline: {
     label: localized("Hors ligne", "Offline"),
