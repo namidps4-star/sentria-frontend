@@ -3483,10 +3483,15 @@ export function DashboardView({
                   <span className="font-bold text-sidebar-foreground">
                     {subtypeName}
                   </span>
-                  {tx(
-                    ". Aucune alerte importée ne porte encore d'activité, elles sont donc toutes affichées.",
-                    ". No imported alert carries an activity yet, so all of them are shown."
-                  )}
+                  {alerts.length === 0
+                    ? tx(
+                        ". Aucune alerte importée pour l'instant. Importez un fichier pour voir vos alertes.",
+                        ". No alerts imported yet. Import a file to see your alerts."
+                      )
+                    : tx(
+                        `. Vos ${alerts.length} alertes n'indiquent pas encore leur activité, elles sont donc toutes affichées.`,
+                        `. Your ${alerts.length} alerts do not show their activity yet, so all of them are shown.`
+                      )}
                 </>
               )}
             </p>
