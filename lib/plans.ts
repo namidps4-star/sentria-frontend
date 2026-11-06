@@ -135,19 +135,19 @@ export function checkPlan(plan: PlanId, departments: Record<string, string[]>): 
  *  converted: a price that is fair in Paris is not in Lagos. A currency
  *  missing here is billed in US dollars. Annual = 10 months. */
 export const PRICES: Record<string, [number, number]> = {
-  XOF: [25_000, 65_000],
-  XAF: [25_000, 65_000],
-  NGN: [33_000, 87_000],
-  GHS: [420, 1_100],
-  KES: [4_200, 11_000],
-  UGX: [125_000, 325_000],
-  TZS: [85_000, 215_000],
-  CDF: [85_000, 215_000],
-  MAD: [420, 1_100],
-  EUR: [39, 99],
-  USD: [39, 99],
-  GBP: [33, 85],
-  BRL: [169, 439],
+  XOF: [32_000, 65_000],
+  XAF: [32_000, 65_000],
+  NGN: [42_000, 87_000],
+  GHS: [540, 1_100],
+  KES: [5_400, 11_000],
+  UGX: [160_000, 325_000],
+  TZS: [110_000, 215_000],
+  CDF: [110_000, 215_000],
+  MAD: [540, 1_100],
+  EUR: [49, 99],
+  USD: [49, 99],
+  GBP: [42, 85],
+  BRL: [215, 439],
 }
 
 export const PRICE_FALLBACK_CURRENCY = "USD"
