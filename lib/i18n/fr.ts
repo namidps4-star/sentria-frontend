@@ -65,6 +65,7 @@ export const fr = {
   "nav.sites": "Sites",
   "nav.contractors": "Intervenants",
   "nav.wholesalers": "Grossistes",
+  "nav.receiving": "Contrôle de réception",
   "nav.tracking": "Suivi",
   "nav.ask": "Ask SentrIA",
   "nav.report": "Rapport",
@@ -129,6 +130,8 @@ export const fr = {
   "view.contractors.subtitle": "Qui est disponible, et qui fait quoi",
   "view.wholesalers.title": "Grossistes",
   "view.wholesalers.subtitle": "Qui vous livre, et en combien de temps",
+  "view.receiving.title": "Contrôle de réception",
+  "view.receiving.subtitle": "Ne vérifiez que les lignes qui semblent fausses",
 
   /* ---------------------------------------------------------------- */
   /*  Buttons and states that repeat across views                      */

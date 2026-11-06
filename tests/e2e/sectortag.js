@@ -37,7 +37,7 @@ const oldBadges = p => p.evaluate(() => [...document.querySelectorAll('span.roun
   };
   const go = async (p, name, vw = 1440) => {
     const base = PAGES.find(x => x[0] === name)[1];
-    const index = base + (base > 4 && (p._sectors || []).includes('health') ? 1 : 0);
+    const index = base + (base > 4 && (p._sectors || []).includes('health') ? 2 : 0); // health has two more rows: Wholesalers and Receiving check
     if (vw < 768) { await p.getByRole('button', { name: /open.*(menu|navigation)|ouvrir.*(menu|navigation)/i }).first().click().catch(() => {}); await p.waitForTimeout(300); }
     await p.locator('aside nav button').locator('visible=true').nth(index).click();
     await p.waitForTimeout(900);

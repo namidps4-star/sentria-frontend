@@ -30,6 +30,7 @@ import {
   ChevronRight,
   Bot,
   Truck,
+  ClipboardCheck,
   UsersRound,
   LogOut,
   MessageSquare,
@@ -120,6 +121,12 @@ const sections: {
         id: "wholesalers",
         label: "nav.wholesalers",
         icon: Truck,
+        sector: "health",
+      },
+      {
+        id: "receiving",
+        label: "nav.receiving",
+        icon: ClipboardCheck,
         sector: "health",
       },
     ],
@@ -375,11 +382,11 @@ export function Sidebar({
             {visibleSections.map((section, sectionIndex) => (
               <div key={section.title} className="flex min-h-0 shrink flex-col">
                 {sectionIndex > 0 && (
-                  <div className="my-4 h-px w-full shrink-0 bg-white/15 [@media(max-height:820px)]:my-2 [@media(max-height:700px)]:my-0.5" />
+                  <div className="my-4 h-px w-full shrink-0 bg-white/15 [@media(max-height:820px)]:my-2 [@media(max-height:700px)]:hidden" />
                 )}
 
                 {!collapsed && (
-                  <div className="mb-2 shrink-0 px-3 text-[10px] font-semibold tracking-[0.16em] text-sidebar-foreground/60 [@media(max-height:700px)]:hidden">
+                  <div className="mb-2 shrink-0 px-3 text-[10px] font-semibold tracking-[0.16em] text-sidebar-foreground/60 [@media(max-height:740px)]:hidden">
                     {t(section.title)}
                   </div>
                 )}

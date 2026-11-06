@@ -1,0 +1,170 @@
+// The goods-receiving check (PH-RECEIVE): upload, the board, ticking, a typed date, the grid and
+// one-by-one views, the CSV, what is kept after a refresh, the refusals, French, dark and 390 px.
+const { LAUNCH, APP_URL } = require('./env');
+const { chromium } = require('playwright');
+const { signedIn } = require('./auth-mock');
+let fails = 0;
+const pass = (ok, l) => { fails += !ok; console.log(`   ${ok ? 'PASS' : 'FAIL'} ${l}`); };
+
+const item = (row, flag, product, batch, expiry, extra = {}) => ({
+  id: `${row - 2}:health.receiving.${flag}`, row, flag, key: `health.receiving.${flag}`, product, batch, expiry, dates: null, days_expired: null,
+  value: null, currency: null, message: `${product}: message`, action: `Action for ${product}.`, ...extra,
+});
+const ITEMS = [
+  item(44, 'expired', 'Metformin 500mg', 'M771', '2026-09-30', { days_expired: 37, value: 3150, currency: 'KES' }),
+  item(45, 'expired', 'ORS sachets', 'C903', '2026-09-30', { days_expired: 37, value: 3120, currency: 'KES' }),
+  item(41, 'conflict', 'Amoxicillin 250mg', 'A114', '2027-05-31', { dates: ['2027-05-31', '2027-06-30'], value: 7600, currency: 'KES' }),
+  item(42, 'conflict', 'Amoxicillin 250mg', 'A114', '2027-06-30', { dates: ['2027-05-31', '2027-06-30'], value: 7600, currency: 'KES' }),
+  item(46, 'unclear', 'Omeprazole 20mg', 'O412', '06/07/2027', { value: 2700, currency: 'KES' }),
+  item(47, 'unclear', 'Cetirizine 10mg', 'A55', '03/04/2027', { value: 900, currency: 'KES' }),
+  item(48, 'nodate', 'Paracetamol 500mg', '?', '2027-03', { value: 1260, currency: 'KES' }),
+  item(49, 'nodate', 'Ibuprofen 400mg', 'B2207', '', { value: 2040, currency: 'KES' }),
+  item(50, 'nodate', 'Salbutamol inhaler', '?', '', { value: 4800, currency: 'KES' }),
+  item(51, 'nodate', 'Zinc 20mg', 'Z310', ''),
+];
+const GOOD = { success: true, rows: 100, flagged: 10, clean: 90, items: ITEMS };
+const FILE = { name: 'receiving-2026-11-06.csv', mimeType: 'text/csv', buffer: Buffer.from('product_name,batch_number,expiry_date\nAspirin,A1,2027-01-01\n') };
+const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_name: 'Atlantis', sentria_sector: 'health', sentria_sectors: '["health"]', sentria_business_type: 'pharmacie' };
+
+(async () => {
+  const b = await chromium.launch(LAUNCH);
+  const open = async ({ answer = { status: 200, body: GOOD }, vw = 1440, vh = 900, theme = 'light', lang = 'en', plan = 'business', upload = true } = {}) => {
+    const ctx = await b.newContext({ viewport: { width: vw, height: vh }, locale: 'en-US', acceptDownloads: true });
+    const p = await ctx.newPage();
+    p._errs = []; p._calls = [];
+    p.on('pageerror', e => p._errs.push(e.message));
+    await p.route(/onrender\.com\//, r => {
+      const req = r.request(); const u = new URL(req.url()); p._calls.push(`${req.method()} ${u.pathname}${u.search}`);
+      const send = (body, status = 200) => r.fulfill({ status, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify(body) });
+      if (req.method() === 'OPTIONS') return r.fulfill({ status: 200, headers: { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': '*' } });
+      if (u.pathname === '/receiving/check') return send(answer.body, answer.status);
+      if (u.pathname === '/alerts') return send([]);
+      if (u.pathname === '/sites') return send({ sites: [{ id: 's1', name: 'Nairobi', location: 'Nairobi, Kenya' }], persisted: true, max_sites: 50 });
+      return send({ recommendations: [], assignments: [], contractors: [] });
+    });
+    await p.addInitScript(ls => { if (!sessionStorage.x) { sessionStorage.x = 1; localStorage.clear(); Object.entries(ls).forEach(([k, v]) => localStorage.setItem(k, v)); } }, { ...LS, sentria_theme: theme, sentria_language: lang });
+    await signedIn(p, 'u', 'a@b.c', { plan }); await p.goto(APP_URL); await p.waitForTimeout(1800);
+    if (vw < 1024) { await p.getByRole('button', { name: /menu/i }).first().click(); await p.waitForTimeout(300); }
+    await p.locator('aside nav button', { hasText: lang === 'fr' ? 'Contrôle de réception' : 'Receiving check' }).click(); await p.waitForTimeout(900);
+    if (upload) { await p.getByTestId('receiving-file').setInputFiles(FILE); await p.waitForTimeout(900); }
+    return p;
+  };
+  const overflow = p => p.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+  const progress = async p => (await p.getByTestId('receiving-progress').innerText()).replace(/\s+/g, ' ');
+
+  console.log('== the row in the sidebar, and the empty screen');
+  let p = await open({ upload: false });
+  pass(await p.getByTestId('receiving-empty').isVisible(), 'a health account opens the Receiving check from the sidebar and sees the upload prompt');
+  pass((await p.locator('main').innerText()).includes('Choose a CSV file'), 'the prompt names the action');
+  pass(!p._calls.some(c => c.includes('/receiving/check')), 'nothing is sent before a file is chosen');
+  await p.screenshot({ path: 'receiving-empty.png' });
+  await p.context().close();
+
+  console.log('== the board');
+  p = await open();
+  pass(p._calls.filter(c => c.startsWith('POST /receiving/check')).length === 1 && p._calls.some(c => c.includes('lang=en')), 'the file is sent once, with the language');
+  pass(await p.getByTestId('receiving-card').count() === 10, 'ten cards');
+  const colCount = async k => await p.getByTestId(`receiving-col-${k}`).getByTestId('receiving-card').count();
+  pass((await colCount('nodate')) === 4 && (await colCount('unclear')) === 2 && (await colCount('conflict')) === 2 && (await colCount('expired')) === 2 && (await colCount('checked')) === 0, 'four missing, two unclear, two with two dates, two expired, none checked');
+  pass(/0 of 10 checked/.test(await progress(p)), 'the progress starts at 0 of 10');
+  pass((await p.locator('main').innerText()).includes('Expired 37 days ago (2026-09-30)'), 'a card says how long ago it expired');
+  pass((await p.locator('main').innerText()).includes('3,150 KES'), 'the money is shown (Business plan)');
+  await p.screenshot({ path: 'receiving-board.png' });
+
+  console.log('== ticking');
+  const expiredCard = p.getByTestId('receiving-col-expired').getByTestId('receiving-card').first();
+  await expiredCard.getByTestId('receiving-done').click(); await p.waitForTimeout(300);
+  pass((await colCount('checked')) === 1 && (await colCount('expired')) === 1 && /1 of 10 checked/.test(await progress(p)), 'Set aside, done moves a card to Checked and the count follows');
+  const unclearCard = p.getByTestId('receiving-col-unclear').getByTestId('receiving-card').first();
+  const bad = unclearCard.getByTestId('receiving-date'); await bad.fill('7 July'); 
+  pass(await unclearCard.getByTestId('receiving-done').isDisabled(), 'a date that is not YYYY-MM-DD cannot be saved');
+  await bad.fill('2027-07-06'); await unclearCard.getByTestId('receiving-done').click(); await p.waitForTimeout(300);
+  pass((await p.locator('main').innerText()).includes('Date noted: 2027-07-06'), 'a date typed from the box is kept with the tick');
+  const toDrag = p.getByTestId('receiving-col-conflict').getByTestId('receiving-card').first();
+  await toDrag.dragTo(p.getByTestId('receiving-col-checked')); await p.waitForTimeout(300);
+  pass((await colCount('checked')) === 3, 'dragging a card onto Checked ticks it');
+  await p.getByTestId('receiving-col-checked').getByTestId('receiving-undo').first().click(); await p.waitForTimeout(300);
+  pass((await colCount('checked')) === 2, 'Undo puts a card back');
+  const noScroll = await p.evaluate(() => [...document.querySelectorAll('[data-testid^="receiving-col-"]')].every(c => c.scrollHeight <= c.clientHeight + 1 && getComputedStyle(c).overflowY !== 'auto' && getComputedStyle(c).overflowY !== 'scroll'));
+  pass(noScroll, 'no column scrolls inside itself');
+
+  console.log('== what is kept');
+  await p.reload(); await p.waitForTimeout(1800);
+  await p.locator('aside nav button', { hasText: 'Receiving check' }).click(); await p.waitForTimeout(900);
+  pass(await p.getByTestId('receiving-card').count() === 10 && /2 of 10 checked/.test(await progress(p)), 'after a refresh the list and the ticks are still there');
+  pass(p._calls.filter(c => c.startsWith('POST /receiving/check')).length === 1, 'and nothing is sent again');
+
+  console.log('== the grid');
+  await p.getByTestId('receiving-mode-grid').click(); await p.waitForTimeout(400);
+  pass(await p.getByTestId('receiving-row').count() === 10 && await p.locator('[data-testid="receiving-grid"] thead.table-head').count() === 1, 'ten rows under the table header class');
+  pass(await p.locator('[data-testid="receiving-row"][data-checked="true"]').count() === 2, 'two rows are ticked');
+  await p.locator('[data-testid="receiving-row"][data-checked="false"] input[type=checkbox]').first().check(); await p.waitForTimeout(250);
+  pass(/3 of 10 checked/.test(await progress(p)), 'a checkbox ticks a row');
+  await p.screenshot({ path: 'receiving-grid.png' });
+
+  console.log('== one by one');
+  await p.getByTestId('receiving-mode-focus').click(); await p.waitForTimeout(400);
+  const first = await p.getByTestId('receiving-focus').innerText();
+  pass(/Expired/.test(first), 'the worst problem comes first');
+  await p.screenshot({ path: 'receiving-focus.png' });
+  await p.keyboard.press('s'); await p.waitForTimeout(200);
+  pass((await p.getByTestId('receiving-focus').innerText()) !== first, 'S skips to the next one');
+  await p.keyboard.press('e'); await p.waitForTimeout(250);
+  pass(/4 of 10 checked/.test(await progress(p)), 'E ticks the one on screen');
+  for (let i = 0; i < 12 && await p.getByTestId('receiving-focus').count(); i++) { await p.getByTestId('receiving-focus-done').click(); await p.waitForTimeout(120); }
+  pass(await p.getByTestId('receiving-all-done').isVisible() && /10 of 10 checked/.test(await progress(p)), 'when the last is ticked it says everything is checked');
+
+  console.log('== the CSV');
+  const [dl] = await Promise.all([p.waitForEvent('download'), p.getByTestId('receiving-export').click()]);
+  const csv = require('fs').readFileSync(await dl.path(), 'utf8');
+  const lines = csv.trim().split(/\r?\n/);
+  pass(/^receiving-check-\d{4}-\d{2}-\d{2}\.csv$/.test(dl.suggestedFilename()), 'the file is named with the date');
+  pass(lines.length === 11 && lines[0].startsWith('row,problem,product,lot'), 'a header and ten rows');
+  pass(lines.some(l => l.includes('2027-07-06') && l.includes(',yes,')), 'the date typed from the box and the tick are in it');
+  await p.context().close();
+
+  console.log('== refusals');
+  p = await open({ answer: { status: 403, body: { success: false, error_code: 'plan_required', message: 'The receiving check is included from the Pro plan.' } } });
+  pass((await p.getByTestId('receiving-error').innerText()).includes('included from the Pro plan') && await p.getByTestId('receiving-empty').isVisible(), 'a plan refusal shows the API sentence and keeps the prompt');
+  await p.context().close();
+  p = await open({ answer: { status: 422, body: { detail: { success: false, error_code: 'receiving_no_columns', message: 'The file has no lot column and no expiry date column.' } } } });
+  pass((await p.getByTestId('receiving-error').innerText()).includes('no lot column'), 'a file with no lot and no date column gets the API message (also when wrapped in detail)');
+  await p.context().close();
+  p = await open({ answer: { status: 200, body: { success: true, rows: 40, flagged: 0, clean: 40, items: [] } } });
+  pass(await p.getByTestId('receiving-clean').isVisible() && (await p.locator('main').innerText()).includes('All 40 rows'), 'a clean file says so');
+  await p.context().close();
+  p = await open({ answer: { status: 200, body: { success: true, items: [{ flag: 'nope' }] } } });
+  pass((await p.getByTestId('receiving-error').innerText()).includes('did not go through'), 'an answer that is not a worklist shows a plain failure');
+  await p.context().close();
+
+  console.log('== French');
+  p = await open({ lang: 'fr' });
+  const frText = await p.locator('main').innerText();
+  pass(/0 sur 10 vérifiés/.test(await progress(p)) && frText.includes('Colonnes') && frText.includes('Mis de côté, fait'), 'French labels');
+  pass(!/Set aside|checked|Board/.test(frText.replace(/Action for [^.]*\./g, '')), 'no English left on the screen except the API text');
+  await p.screenshot({ path: 'receiving-fr.png' });
+  await p.context().close();
+
+  console.log('== dark');
+  p = await open({ theme: 'dark' });
+  await p.screenshot({ path: 'receiving-dark.png' });
+  pass(await p.getByTestId('receiving-card').count() === 10 && await overflow(p) <= 0, 'dark: all cards, no horizontal overflow');
+  await p.context().close();
+
+  console.log('== 390 px');
+  p = await open({ vw: 390, vh: 844 });
+  await p.screenshot({ path: 'receiving-390-board.png', fullPage: true });
+  pass(await overflow(p) <= 0, 'board: no horizontal overflow');
+  await p.getByTestId('receiving-mode-grid').click(); await p.waitForTimeout(300);
+  await p.screenshot({ path: 'receiving-390-grid.png', fullPage: true });
+  pass(await overflow(p) <= 0, 'grid: no horizontal overflow');
+  await p.getByTestId('receiving-mode-focus').click(); await p.waitForTimeout(300);
+  await p.screenshot({ path: 'receiving-390-focus.png', fullPage: true });
+  pass(await overflow(p) <= 0, 'one by one: no horizontal overflow');
+  pass(p._errs.length === 0, 'no page errors' + (p._errs.length ? ': ' + p._errs[0] : ''));
+  await p.context().close();
+
+  await b.close();
+  console.log(fails ? `\n${fails} FAILED` : '\nALL PASSED');
+  process.exit(fails ? 1 : 0);
+})().catch(e => { console.error(e); process.exit(1); });

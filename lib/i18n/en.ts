@@ -46,6 +46,7 @@ export const en: Record<keyof typeof fr, string> = {
      staff included. "Field team" says that and stays short in a rail. */
   "nav.contractors": "Field team",
   "nav.wholesalers": "Wholesalers",
+  "nav.receiving": "Receiving check",
   "nav.tracking": "Tracking",
   "nav.ask": "Ask SentrIA",
   "nav.report": "Report",
@@ -107,6 +108,8 @@ export const en: Record<keyof typeof fr, string> = {
   "view.contractors.subtitle": "Who is available, and who is on what",
   "view.wholesalers.title": "Wholesalers",
   "view.wholesalers.subtitle": "Who delivers to you, and how fast",
+  "view.receiving.title": "Receiving check",
+  "view.receiving.subtitle": "Check only the rows that look wrong",
 
   /* ---------------------------------------------------------------- */
   /*  Buttons and states                                               */
