@@ -43,7 +43,28 @@ export type Item = {
   action: string
 }
 
-export type Worklist = { rows: number; flagged: number; clean: number; items: Item[] }
+/** One line of the file, as the grid shows it. `bad` names the cells to colour. */
+export type TableRow = {
+  row: number
+  product: string
+  batch: string
+  expiry: string
+  quantity: string
+  unitCost: string
+  flag: Flag | null
+  item: string | null
+  bad: ("batch" | "expiry")[]
+}
+
+export type Worklist = {
+  rows: number
+  flagged: number
+  clean: number
+  items: Item[]
+  /** The whole file, flagged rows first-class and clean ones up to the API's cap. Empty for a list kept before the grid existed. */
+  table: TableRow[]
+  tableTruncated: boolean
+}
 
 /** One tick: when, and the date typed from the box if there was one. */
 export type Tick = { at: number; date?: string }
@@ -84,7 +105,53 @@ export function parseWorklist(body: unknown): Worklist | null {
     })
   }
 
-  return { rows: num(b.rows) ?? items.length, flagged: items.length, clean: num(b.clean) ?? 0, items }
+  return { rows: num(b.rows) ?? items.length, flagged: items.length, clean: num(b.clean) ?? 0, items, table: parseTable((b as { table?: unknown }).table), tableTruncated: (b as { table_truncated?: unknown }).table_truncated === true }
+}
+
+/** The API's table, or nothing when it is missing or malformed: the grid then falls back to the flagged rows. */
+function parseTable(raw: unknown): TableRow[] {
+  if (!Array.isArray(raw)) return []
+
+  const out: TableRow[] = []
+
+  for (const r of raw as Record<string, unknown>[]) {
+    if (!r || typeof r.row !== "number") return []
+
+    out.push({
+      row: r.row,
+      product: text(r.product),
+      batch: text(r.batch),
+      expiry: text(r.expiry),
+      quantity: text(r.quantity),
+      unitCost: text(r.unit_cost),
+      flag: isFlag(r.flag) ? r.flag : null,
+      item: typeof r.item === "string" ? r.item : null,
+      bad: Array.isArray(r.bad) ? (r.bad.filter((c) => c === "batch" || c === "expiry") as ("batch" | "expiry")[]) : [],
+    })
+  }
+
+  return out
+}
+
+/** The grid's lines: the API's table, or, for an older kept list, the flagged rows rebuilt from the items. */
+export function tableOf(list: Worklist): { rows: TableRow[]; whole: boolean } {
+  if (list.table.length > 0) return { rows: list.table, whole: true }
+
+  const rows = list.items
+    .map<TableRow>((i) => ({
+      row: i.row,
+      product: i.product,
+      batch: i.batch === "?" ? "" : i.batch,
+      expiry: i.expiry,
+      quantity: "",
+      unitCost: "",
+      flag: i.flag,
+      item: i.id,
+      bad: i.flag === "nodate" ? [...(i.batch && i.batch !== "?" ? [] : (["batch"] as const)), ...(i.expiry ? [] : (["expiry"] as const))] : ["expiry"],
+    }))
+    .sort((a, b) => a.row - b.row)
+
+  return { rows, whole: false }
 }
 
 export type CheckResult = { ok: true; list: Worklist } | { ok: false; code: string; message: string }
@@ -148,6 +215,9 @@ function serialise(list: Worklist) {
     rows: list.rows,
     clean: list.clean,
     items: list.items.map((i) => ({ ...i, days_expired: i.daysExpired })),
+    // A list kept before the grid existed has no table.
+    table: (list.table ?? []).map((t) => ({ ...t, unit_cost: t.unitCost })),
+    table_truncated: list.tableTruncated === true,
   }
 }
 

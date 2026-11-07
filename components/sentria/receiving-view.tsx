@@ -17,8 +17,10 @@ import {
   writeSaved,
   type Flag,
   type Item,
+  tableOf,
   type Saved,
   type Ticks,
+  type Worklist,
 } from "@/lib/receiving"
 import { useCanSeeAmounts } from "@/lib/use-plan"
 import { cn } from "@/lib/utils"
@@ -229,61 +231,137 @@ function Board({ items, ticks, onTick, onUntick }: { items: Item[]; ticks: Ticks
 
 /* ---------------------------------- grid --------------------------------- */
 
-function Grid({ items, ticks, onTick, onUntick }: { items: Item[]; ticks: Ticks; onTick: (id: string, date?: string) => void; onUntick: (id: string) => void }) {
+const PAGE = 50
+
+/* The cell colours follow the problem, from the status tag tokens. */
+const CELL: Record<Flag, string> = {
+  nodate: "bg-[var(--tag-critical-bg)] text-[var(--tag-critical-fg)]",
+  expired: "bg-[var(--tag-critical-bg)] text-[var(--tag-critical-fg)]",
+  unclear: "bg-[var(--tag-watch-bg)] text-[var(--tag-watch-fg)]",
+  conflict: "bg-[var(--tag-info-bg)] text-[var(--tag-info-fg)]",
+}
+
+function Grid({ list, ticks, onTick, onUntick }: { list: Worklist; ticks: Ticks; onTick: (id: string, date?: string) => void; onUntick: (id: string) => void }) {
   const tx = useTx()
-  const ordered = useMemo(() => [...items].sort((a, b) => a.row - b.row), [items])
+  const { rows, whole } = useMemo(() => tableOf(list), [list])
+  const [only, setOnly] = useState(!whole)
+  const [page, setPage] = useState(0)
+  const itemById = useMemo(() => new Map(list.items.map((i) => [i.id, i])), [list.items])
+
+  const shown = useMemo(() => (only ? rows.filter((r) => r.flag) : rows), [only, rows])
+  const pages = Math.max(1, Math.ceil(shown.length / PAGE))
+  const at = Math.min(page, pages - 1)
+  const slice = shown.slice(at * PAGE, at * PAGE + PAGE)
+
+  const choose = (flaggedOnly: boolean) => {
+    setOnly(flaggedOnly)
+    setPage(0)
+  }
+
+  const seg = (on: boolean) => cn("h-8 rounded-full px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", on ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-border bg-card">
-      <table className="w-full border-collapse text-sm" data-testid="receiving-grid">
-        <caption className="sr-only">{tx("Lignes à vérifier", "Rows to check")}</caption>
-        <thead className="table-head">
-          <tr className="text-left text-xs">
-            <th scope="col" className="w-12 px-3 py-2.5">
-              <span className="sr-only">{tx("Vérifié", "Checked")}</span>
-            </th>
-            <th scope="col" className="px-2 py-2.5">{tx("Problème", "Problem")}</th>
-            <th scope="col" className="px-2 py-2.5">{tx("Produit", "Product")}</th>
-            <th scope="col" className="hidden px-2 py-2.5 md:table-cell">{tx("Lot", "Lot")}</th>
-            <th scope="col" className="hidden px-2 py-2.5 lg:table-cell">{tx("Ce qui ne va pas", "What is wrong")}</th>
-            <th scope="col" className="hidden px-2 py-2.5 text-right md:table-cell">{tx("En jeu", "At stake")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {ordered.map((item) => {
-            const tick = ticks[item.id]
+    <div className="flex flex-col gap-3">
+      {whole && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div role="group" aria-label={tx("Lignes affichées", "Rows shown")} className="flex rounded-full bg-muted p-1">
+            <button type="button" data-testid="receiving-grid-all" aria-pressed={!only} onClick={() => choose(false)} className={seg(!only)}>
+              {tx("Toutes les lignes", "All rows")} <span className="tabular-nums opacity-70">{rows.length}</span>
+            </button>
+            <button type="button" data-testid="receiving-grid-flagged" aria-pressed={only} onClick={() => choose(true)} className={seg(only)}>
+              {tx("À vérifier seulement", "Flagged only")} <span className="tabular-nums opacity-70">{list.flagged}</span>
+            </button>
+          </div>
+          {list.tableTruncated && !only && (
+            <p data-testid="receiving-truncated" className="text-xs text-muted-foreground">
+              {tx(
+                `Toutes les lignes à vérifier, et les ${rows.length - list.flagged} premières lignes sans problème, sur ${list.clean}.`,
+                `Every row to check, and the first ${rows.length - list.flagged} clean rows of ${list.clean}.`
+              )}
+            </p>
+          )}
+        </div>
+      )}
+      <div className="overflow-hidden rounded-3xl border border-border bg-card">
+        <table className="w-full table-fixed border-collapse text-sm" data-testid="receiving-grid">
+          <caption className="sr-only">{only ? tx("Lignes à vérifier", "Rows to check") : tx("Toutes les lignes du fichier", "Every row of the file")}</caption>
+          <thead className="table-head">
+            <tr className="text-left text-xs">
+              <th scope="col" className="w-11 px-3 py-2.5">
+                <span className="sr-only">{tx("Vérifié", "Checked")}</span>
+              </th>
+              <th scope="col" className="hidden w-14 px-2 py-2.5 md:table-cell">{tx("Ligne", "Line")}</th>
+              <th scope="col" className="px-2 py-2.5">{tx("Produit", "Product")}</th>
+              <th scope="col" className="hidden w-28 px-2 py-2.5 md:table-cell">{tx("Lot", "Lot")}</th>
+              <th scope="col" className="hidden w-32 px-2 py-2.5 md:table-cell">{tx("Péremption", "Expiry")}</th>
+              <th scope="col" className="hidden w-20 px-2 py-2.5 text-right lg:table-cell">{tx("Qté", "Qty")}</th>
+              <th scope="col" className="hidden w-24 px-2 py-2.5 text-right lg:table-cell">{tx("Prix", "Cost")}</th>
+              <th scope="col" className="w-32 px-2 py-2.5">{tx("Contrôle", "Check")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {slice.map((r) => {
+              const tick = r.item ? ticks[r.item] : undefined
+              const item = r.item ? itemById.get(r.item) : undefined
+              const tone = r.flag ? CELL[r.flag] : ""
 
-            return (
-              <tr key={item.id} data-testid="receiving-row" data-checked={tick ? "true" : "false"} className={cn("border-t border-border align-top", tick && "text-muted-foreground")}>
-                <td className="px-3 py-3">
-                  <input
-                    type="checkbox"
-                    checked={!!tick}
-                    onChange={(e) => (e.target.checked ? onTick(item.id) : onUntick(item.id))}
-                    aria-label={tx(`Marquer ${item.product} comme vérifié`, `Mark ${item.product} as checked`)}
-                    className="h-4 w-4 accent-foreground"
-                  />
-                </td>
-                <td className="px-2 py-3">
-                  <StatusTag tone={TONE[item.flag]} size="xs">
-                    {label(item.flag, tx)}
-                  </StatusTag>
-                </td>
-                <td className="px-2 py-3">
-                  <span className="font-semibold text-foreground">{item.product}</span>
-                  <span className="block text-xs md:hidden">{item.batch && item.batch !== "?" ? `Lot ${item.batch}` : tx("Sans lot", "No lot")}</span>
-                  <span className="block text-xs lg:hidden">{why(item, tx)}</span>
-                </td>
-                <td className="hidden px-2 py-3 md:table-cell">{item.batch && item.batch !== "?" ? item.batch : "—"}</td>
-                <td className="hidden px-2 py-3 lg:table-cell">{why(item, tx)}</td>
-                <td className="hidden px-2 py-3 text-right md:table-cell">
-                  <Money item={item} />
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+              return (
+                <tr key={`${r.row}-${r.item ?? "ok"}`} data-testid="receiving-row" data-flag={r.flag ?? "clean"} data-checked={tick ? "true" : "false"} className={cn("border-t border-border align-top", tick && "text-muted-foreground")}>
+                  <td className="px-3 py-2.5">
+                    {r.item && (
+                      <input
+                        type="checkbox"
+                        checked={!!tick}
+                        onChange={(e) => (e.target.checked ? onTick(r.item as string) : onUntick(r.item as string))}
+                        aria-label={tx(`Marquer ${r.product} comme vérifié`, `Mark ${r.product} as checked`)}
+                        className="h-4 w-4 accent-foreground"
+                      />
+                    )}
+                  </td>
+                  <td className="hidden px-2 py-2.5 tabular-nums text-muted-foreground md:table-cell">{r.row}</td>
+                  <td className="px-2 py-2.5">
+                    <span className="block break-words font-semibold text-foreground">{r.product || "—"}</span>
+                    <span className={cn("mt-0.5 block text-xs md:hidden", r.bad.includes("batch") && tone && `rounded px-1 ${tone}`)}>{r.batch ? `Lot ${r.batch}` : tx("Sans lot", "No lot")}</span>
+                    <span className={cn("block text-xs md:hidden", r.bad.includes("expiry") && tone && `rounded px-1 ${tone}`)}>{r.expiry || tx("Sans date", "No date")}</span>
+                  </td>
+                  <td className={cn("hidden px-2 py-2.5 md:table-cell", r.bad.includes("batch") && tone)} data-bad={r.bad.includes("batch") ? "true" : undefined}>{r.batch || (r.bad.includes("batch") ? tx("vide", "empty") : "")}</td>
+                  <td className={cn("hidden px-2 py-2.5 tabular-nums md:table-cell", r.bad.includes("expiry") && tone)} data-bad={r.bad.includes("expiry") ? "true" : undefined}>{r.expiry || (r.bad.includes("expiry") ? tx("vide", "empty") : "")}</td>
+                  <td className="hidden px-2 py-2.5 text-right tabular-nums lg:table-cell">{r.quantity}</td>
+                  <td className="hidden px-2 py-2.5 text-right tabular-nums lg:table-cell">{r.unitCost}</td>
+                  <td className="px-2 py-2.5">
+                    {r.flag ? (
+                      <div className="flex flex-col items-start gap-1">
+                        <StatusTag tone={TONE[r.flag]} size="xs">
+                          {label(r.flag, tx)}
+                        </StatusTag>
+                        {item && <Money item={item} className="text-xs text-foreground" />}
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">{tx("Sans problème", "Clean")}</span>
+                    )}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+        <span data-testid="receiving-page-info" className="tabular-nums">
+          {tx(`Lignes ${shown.length === 0 ? 0 : at * PAGE + 1} à ${at * PAGE + slice.length} sur ${shown.length}`, `Rows ${shown.length === 0 ? 0 : at * PAGE + 1} to ${at * PAGE + slice.length} of ${shown.length}`)}
+        </span>
+        {pages > 1 && (
+          <div className="flex items-center gap-2">
+            <button type="button" data-testid="receiving-prev" disabled={at === 0} onClick={() => setPage(at - 1)} className="h-8 rounded-full border border-border bg-card px-3.5 font-semibold text-foreground hover:bg-muted disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              {tx("Précédent", "Previous")}
+            </button>
+            <span className="tabular-nums">{tx(`Page ${at + 1} sur ${pages}`, `Page ${at + 1} of ${pages}`)}</span>
+            <button type="button" data-testid="receiving-next" disabled={at >= pages - 1} onClick={() => setPage(at + 1)} className="h-8 rounded-full border border-border bg-card px-3.5 font-semibold text-foreground hover:bg-muted disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              {tx("Suivant", "Next")}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -602,7 +680,7 @@ export function ReceivingView() {
       ) : mode === "board" ? (
         <Board items={list.items} ticks={ticks} onTick={tick} onUntick={untick} />
       ) : mode === "grid" ? (
-        <Grid items={list.items} ticks={ticks} onTick={tick} onUntick={untick} />
+        <Grid list={list} ticks={ticks} onTick={tick} onUntick={untick} />
       ) : (
         <Focus items={list.items} ticks={ticks} onTick={tick} onExport={exportCsv} />
       )}

@@ -22,7 +22,11 @@ const ITEMS = [
   item(50, 'nodate', 'Salbutamol inhaler', '?', '', { value: 4800, currency: 'KES' }),
   item(51, 'nodate', 'Zinc 20mg', 'Z310', ''),
 ];
-const GOOD = { success: true, rows: 100, flagged: 10, clean: 90, items: ITEMS };
+const tr = (row, product, batch, expiry, flag, bad, item) => ({ row, product, batch, expiry, quantity: '10', unit_cost: '2', flag, item, bad });
+const CLEAN = [tr(2, 'Aspirin 100mg', 'AS201', '2027-10-31', null, [], null), tr(3, 'Diclofenac 50mg', 'DC118', '2028-01-31', null, [], null), tr(52, 'Loratadine 10mg', 'LR044', '2027-12-15', null, [], null), tr(53, 'Zinc plus', 'ZP9', '2028-02-29', null, [], null)];
+const TABLE = [...CLEAN.slice(0, 2), ...ITEMS.map(i => tr(i.row, i.product, i.batch === '?' ? '' : i.batch, i.expiry, i.flag, i.flag === 'nodate' ? [...(i.batch === '?' ? ['batch'] : []), ...(i.expiry ? [] : ['expiry'])] : ['expiry'], i.id)), ...CLEAN.slice(2)].sort((a, b) => a.row - b.row);
+const GOOD = { success: true, rows: 100, flagged: 10, clean: 90, items: ITEMS, table: TABLE, table_truncated: true };
+const BIG = { ...GOOD, rows: 120, clean: 110, table: Array.from({ length: 120 }, (_, i) => tr(i + 2, `Product ${i + 1}`, `L${i + 1}`, '2028-01-01', null, [], null)).map((r, i) => i === 7 ? { ...r, flag: 'nodate', item: ITEMS[6].id, bad: ['batch'] } : r) };
 const FILE = { name: 'receiving-2026-11-06.csv', mimeType: 'text/csv', buffer: Buffer.from('product_name,batch_number,expiry_date\nAspirin,A1,2027-01-01\n') };
 const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_name: 'Atlantis', sentria_sector: 'health', sentria_sectors: '["health"]', sentria_business_type: 'pharmacie' };
 
@@ -94,13 +98,24 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   pass(await p.getByTestId('receiving-card').count() === 10 && /2 of 10 checked/.test(await progress(p)), 'after a refresh the list and the ticks are still there');
   pass(p._calls.filter(c => c.startsWith('POST /receiving/check')).length === 1, 'and nothing is sent again');
 
-  console.log('== the grid');
+  console.log('== the grid: the whole file');
   await p.getByTestId('receiving-mode-grid').click(); await p.waitForTimeout(400);
-  pass(await p.getByTestId('receiving-row').count() === 10 && await p.locator('[data-testid="receiving-grid"] thead.table-head').count() === 1, 'ten rows under the table header class');
+  pass(await p.locator('[data-testid="receiving-grid"] thead.table-head').count() === 1, 'the table wears the table-head class');
+  pass(await p.getByTestId('receiving-row').count() === 14, 'it opens on all rows: the file lines, flagged and clean');
+  pass(await p.locator('[data-testid="receiving-row"][data-flag="clean"]').count() === 4, 'four clean rows sit between the problems');
+  pass(await p.locator('td[data-bad="true"]').count() === 11, 'eleven bad cells are coloured (a lot cell, a date cell, or both)');
+  const cellBg = await p.locator('td[data-bad="true"]').first().evaluate(e => getComputedStyle(e).backgroundColor);
+  const okBg = await p.locator('[data-flag="clean"] td').nth(3).evaluate(e => getComputedStyle(e).backgroundColor);
+  pass(cellBg !== okBg && cellBg !== 'rgba(0, 0, 0, 0)', 'a bad cell is tinted and a clean one is not');
+  pass((await p.getByTestId('receiving-truncated').innerText()).includes('first 4 clean rows of 90'), 'it says clean rows were left out of a big file');
+  pass(await p.locator('[data-testid="receiving-row"][data-flag="clean"] input[type=checkbox]').count() === 0, 'a clean row has nothing to tick');
+  await p.screenshot({ path: 'receiving-grid.png' });
+  await p.getByTestId('receiving-grid-flagged').click(); await p.waitForTimeout(300);
+  pass(await p.getByTestId('receiving-row').count() === 10, 'Flagged only shows the ten');
   pass(await p.locator('[data-testid="receiving-row"][data-checked="true"]').count() === 2, 'two rows are ticked');
   await p.locator('[data-testid="receiving-row"][data-checked="false"] input[type=checkbox]').first().check(); await p.waitForTimeout(250);
   pass(/3 of 10 checked/.test(await progress(p)), 'a checkbox ticks a row');
-  await p.screenshot({ path: 'receiving-grid.png' });
+  await p.screenshot({ path: 'receiving-grid-flagged.png' });
 
   console.log('== one by one');
   await p.getByTestId('receiving-mode-focus').click(); await p.waitForTimeout(400);
@@ -121,6 +136,29 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   pass(/^receiving-check-\d{4}-\d{2}-\d{2}\.csv$/.test(dl.suggestedFilename()), 'the file is named with the date');
   pass(lines.length === 11 && lines[0].startsWith('row,problem,product,lot'), 'a header and ten rows');
   pass(lines.some(l => l.includes('2027-07-06') && l.includes(',yes,')), 'the date typed from the box and the tick are in it');
+  await p.context().close();
+
+  console.log('== a long file is paged');
+  p = await open({ answer: { status: 200, body: BIG } });
+  await p.getByTestId('receiving-mode-grid').click(); await p.waitForTimeout(400);
+  pass(await p.getByTestId('receiving-row').count() === 50 && (await p.getByTestId('receiving-page-info').innerText()).includes('Rows 1 to 50 of 120'), 'fifty rows a page, and where you are');
+  await p.getByTestId('receiving-next').click(); await p.waitForTimeout(250);
+  pass((await p.getByTestId('receiving-page-info').innerText()).includes('Rows 51 to 100 of 120'), 'Next moves to the second page');
+  await p.getByTestId('receiving-next').click(); await p.waitForTimeout(250);
+  pass(await p.getByTestId('receiving-row').count() === 20 && await p.getByTestId('receiving-next').isDisabled(), 'the last page has twenty and no Next');
+  await p.getByTestId('receiving-grid-flagged').click(); await p.waitForTimeout(250);
+  pass(await p.getByTestId('receiving-row').count() === 1 && (await p.getByTestId('receiving-page-info').innerText()).includes('Rows 1 to 1 of 1'), 'Flagged only goes back to the first page');
+  const tall = await p.evaluate(() => { const t = document.querySelector('[data-testid="receiving-grid"]').parentElement; return t.scrollHeight <= t.clientHeight + 1 && getComputedStyle(t).overflowY === 'hidden'; });
+  pass(tall, 'the table does not scroll inside itself');
+  await p.context().close();
+
+  console.log('== an older kept list still opens');
+  p = await open({ upload: false });
+  await p.evaluate(({ items }) => { localStorage.setItem('sentria_receiving', JSON.stringify({ name: 'old.csv', at: 1, ticks: {}, list: { rows: 100, flagged: items.length, clean: 90, items } })); }, { items: ITEMS.map(i => ({ id: i.id, row: i.row, flag: i.flag, product: i.product, batch: i.batch, expiry: i.expiry, dates: i.dates, daysExpired: i.days_expired, value: i.value, currency: i.currency, message: i.message, action: i.action })) });
+  await p.reload(); await p.waitForTimeout(1500);
+  await p.locator('aside nav button', { hasText: 'Receiving check' }).click(); await p.waitForTimeout(700);
+  await p.getByTestId('receiving-mode-grid').click(); await p.waitForTimeout(300);
+  pass(await p.getByTestId('receiving-row').count() === 10 && await p.getByTestId('receiving-grid-all').count() === 0, 'without a table the grid shows the flagged rows and no All switch');
   await p.context().close();
 
   console.log('== refusals');
@@ -158,6 +196,7 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   await p.getByTestId('receiving-mode-grid').click(); await p.waitForTimeout(300);
   await p.screenshot({ path: 'receiving-390-grid.png', fullPage: true });
   pass(await overflow(p) <= 0, 'grid: no horizontal overflow');
+  pass(await p.getByTestId('receiving-row').count() === 14 && await p.getByTestId('receiving-grid-all').isVisible(), 'grid on a phone: every row and the switch');
   await p.getByTestId('receiving-mode-focus').click(); await p.waitForTimeout(300);
   await p.screenshot({ path: 'receiving-390-focus.png', fullPage: true });
   pass(await overflow(p) <= 0, 'one by one: no horizontal overflow');
