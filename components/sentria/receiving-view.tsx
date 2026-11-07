@@ -120,9 +120,51 @@ function Money({ item, className }: { item: Item; className?: string }) {
 
 /* --------------------------------- board --------------------------------- */
 
-function BoardCard({ item, ticks, onTick, onUntick }: { item: Item; ticks: Ticks; onTick: (id: string, date?: string) => void; onUntick: (id: string) => void }) {
+/** The problem in a few words, for the badge on a card. */
+function shortWhy(item: Item, tx: Tx): string {
+  const lot = !item.batch || item.batch === "?"
+
+  switch (item.flag) {
+    case "expired":
+      return item.daysExpired !== null ? tx(`Périmé depuis ${item.daysExpired} jours`, `Expired ${item.daysExpired} days ago`) : tx("Périmé", "Expired")
+    case "conflict":
+      return tx("Deux dates dans le fichier", "Two dates in file")
+    case "unclear":
+      return tx("Jour ou mois ?", "Day or month?")
+    default:
+      if (lot && !item.expiry) return tx("Ni lot ni date", "No lot, no date")
+      return lot ? tx("Pas de numéro de lot", "No lot number") : tx("Pas de date de péremption", "No expiry date")
+  }
+}
+
+const BADGE: Record<Flag, string> = {
+  nodate: "bg-[var(--tag-critical-bg)] text-[var(--tag-critical-fg)]",
+  expired: "bg-[var(--tag-critical-bg)] text-[var(--tag-critical-fg)]",
+  unclear: "bg-[var(--tag-watch-bg)] text-[var(--tag-watch-fg)]",
+  conflict: "bg-[var(--tag-info-bg)] text-[var(--tag-info-fg)]",
+}
+
+function Fact({ name, children }: { name: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-3 border-t border-border py-1.5 text-xs">
+      <dt className="text-muted-foreground">{name}</dt>
+      <dd className="min-w-0 text-right font-medium">{children}</dd>
+    </div>
+  )
+}
+
+/* One card, in the Stripe style: the product, a badge for the problem, then
+ * Lot / Expiry / At stake as hairline rows, the amount under a lime marker.
+ * The first card of each column is open (the advice and where to type the
+ * good value); the others open on a tap. */
+function BoardCard({ item, ticks, onTick, onUntick, defaultOpen }: { item: Item; ticks: Ticks; onTick: (id: string, date?: string) => void; onUntick: (id: string) => void; defaultOpen: boolean }) {
   const tx = useTx()
+  const canSee = useCanSeeAmounts()
   const tick = ticks[item.id]
+  const [open, setOpen] = useState(defaultOpen)
+  const hasLot = !!item.batch && item.batch !== "?"
+  const showMoney = canSee && item.value !== null && !!item.currency
+  const panelId = `card-${item.id.replace(/[^a-z0-9]/gi, "")}`
 
   return (
     <article
@@ -134,36 +176,78 @@ function BoardCard({ item, ticks, onTick, onUntick }: { item: Item; ticks: Ticks
         e.dataTransfer.setData("text/plain", item.id)
         e.dataTransfer.effectAllowed = "move"
       }}
-      className={cn("rounded-2xl border border-border bg-card p-3.5 shadow-sm", tick && "opacity-70")}
+      className={cn("rounded-xl border border-border bg-card px-3.5 pb-2 pt-3 shadow-sm", tick && "opacity-70")}
     >
-      <div className="flex items-baseline gap-2">
-        <h4 className="min-w-0 break-words text-sm font-semibold leading-snug">{item.product}</h4>
-        <span className="shrink-0 text-xs text-muted-foreground">{item.batch && item.batch !== "?" ? tx(`Lot ${item.batch}`, `Lot ${item.batch}`) : tx("Sans lot", "No lot")}</span>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen((o) => !o)}
+        className="block w-full rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <h4 className="break-words text-sm font-semibold leading-snug">{item.product}</h4>
+        <span className={cn("mt-1.5 inline-flex rounded-md px-2 py-0.5 text-[11.5px] font-semibold", BADGE[item.flag])}>{shortWhy(item, tx)}</span>
+      </button>
+      <dl className="mt-2">
+        <Fact name={tx("Lot", "Lot")}>
+          <span className="font-mono">{hasLot ? item.batch : tx("aucun", "none")}</span>
+        </Fact>
+        <Fact name={tx("Péremption", "Expiry")}>
+          {item.flag === "conflict" ? (
+            (item.dates ?? []).map((d) => (
+              <span key={d} className="block font-mono text-[11.5px]">
+                {d}
+              </span>
+            ))
+          ) : (
+            <span className="font-mono text-[11.5px]">{item.expiry || tx("aucune date", "No date")}</span>
+          )}
+        </Fact>
+        {showMoney && (
+          <Fact name={tx("En jeu", "At stake")}>
+            <Money item={item} className="bg-[linear-gradient(transparent_55%,var(--brand)_55%)] px-0.5 font-bold" />
+          </Fact>
+        )}
+      </dl>
+      <div id={panelId} className="pb-1">
+        {tick ? (
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-muted-foreground">{tick.date ? tx(`Date notée : ${tick.date}`, `Date noted: ${tick.date}`) : tx("Vérifié", "Checked")}</span>
+            <button
+              type="button"
+              data-testid="receiving-undo"
+              onClick={() => onUntick(item.id)}
+              className="inline-flex h-8 items-center gap-1 rounded-full border border-border px-3 text-xs font-semibold hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <RotateCcw className="h-3 w-3" aria-hidden="true" />
+              {tx("Annuler", "Undo")}
+            </button>
+          </div>
+        ) : (
+          open && (
+            <>
+              <p className="mt-2 text-xs leading-5 text-muted-foreground">{item.flag === "conflict" ? tx("Quelle date est sur la boîte ?", "Which date is on the box?") : item.action}</p>
+              {item.flag === "conflict" ? (
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {(item.dates ?? []).map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      data-testid="receiving-pick-date"
+                      onClick={() => onTick(item.id, d)}
+                      className="h-9 rounded-xl border border-border bg-card text-xs font-semibold tabular-nums hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      {d.slice(5).replace("-", "/")}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <DateField item={item} onDone={(date) => onTick(item.id, date)} className="mt-2" />
+              )}
+            </>
+          )
+        )}
       </div>
-      <p className="mt-1 text-xs leading-5 text-muted-foreground">{why(item, tx)}</p>
-      <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground">
-        <span>{tx(`Ligne ${item.row}`, `Line ${item.row}`)}</span>
-        <Money item={item} className="text-foreground" />
-      </div>
-      {tick ? (
-        <div className="mt-2.5 flex items-center justify-between gap-2">
-          <span className="text-xs font-medium text-muted-foreground">{tick.date ? tx(`Date notée : ${tick.date}`, `Date noted: ${tick.date}`) : tx("Vérifié", "Checked")}</span>
-          <button
-            type="button"
-            data-testid="receiving-undo"
-            onClick={() => onUntick(item.id)}
-            className="inline-flex h-8 items-center gap-1 rounded-full border border-border px-3 text-xs font-semibold hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <RotateCcw className="h-3 w-3" aria-hidden="true" />
-            {tx("Annuler", "Undo")}
-          </button>
-        </div>
-      ) : (
-        <>
-          <p className="mt-2 rounded-xl bg-muted px-3 py-2 text-xs leading-5">{item.action}</p>
-          <DateField item={item} onDone={(date) => onTick(item.id, date)} className="mt-2.5" />
-        </>
-      )}
     </article>
   )
 }
@@ -195,8 +279,8 @@ function Board({ items, ticks, onTick, onUntick }: { items: Item[]; ticks: Ticks
         <span className="text-xs text-muted-foreground tabular-nums">{list.length}</span>
       </header>
       <p className="px-1 text-xs leading-4 text-muted-foreground">{hint}</p>
-      {list.map((item) => (
-        <BoardCard key={item.id} item={item} ticks={ticks} onTick={onTick} onUntick={onUntick} />
+      {list.map((item, n) => (
+        <BoardCard key={item.id} item={item} ticks={ticks} onTick={onTick} onUntick={onUntick} defaultOpen={n === 0} />
       ))}
     </section>
   )

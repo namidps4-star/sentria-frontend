@@ -72,7 +72,10 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   const colCount = async k => await p.getByTestId(`receiving-col-${k}`).getByTestId('receiving-card').count();
   pass((await colCount('nodate')) === 4 && (await colCount('unclear')) === 2 && (await colCount('conflict')) === 2 && (await colCount('expired')) === 2 && (await colCount('checked')) === 0, 'four missing, two unclear, two with two dates, two expired, none checked');
   pass(/0 of 10 checked/.test(await progress(p)), 'the progress starts at 0 of 10');
-  pass((await p.locator('main').innerText()).includes('Expired 37 days ago (2026-09-30)'), 'a card says how long ago it expired');
+  const mainText = await p.locator('main').innerText();
+  pass(mainText.includes('Expired 37 days ago') && mainText.includes('2026-09-30'), 'a card says how long ago it expired, and the expiry date is in its row');
+  const conflictOpen = p.getByTestId('receiving-col-conflict').getByTestId('receiving-card').first();
+  pass(await conflictOpen.getByTestId('receiving-pick-date').count() === 2 && await conflictOpen.getByTestId('receiving-date').count() === 0, 'a two-dates card offers one button per date, no typing');
   pass((await p.locator('main').innerText()).includes('3,150 KES'), 'the money is shown (Business plan)');
   await p.screenshot({ path: 'receiving-board.png' });
 
