@@ -7,7 +7,10 @@
  * is kept here, in the browser, with the last list, so a refresh does not
  * lose it. */
 
+import { activeDepartment } from "@/lib/active-site"
+import { announceAlertsUpdated } from "@/lib/alerts-event"
 import { API_BASE, apiFetch } from "@/lib/api"
+import { accountCurrencyParam } from "@/lib/locale"
 
 export type Flag = "nodate" | "unclear" | "conflict" | "expired"
 
@@ -70,7 +73,11 @@ export type Worklist = {
 export type Tick = { at: number; date?: string }
 export type Ticks = Record<string, Tick>
 
-export type Saved = { name: string; at: number; list: Worklist; ticks: Ticks }
+/** `raised` is how many alerts the list was turned into, once it has been. */
+export type Saved = { name: string; at: number; list: Worklist; ticks: Ticks; raised?: number }
+
+/** Fired when the kept list or its ticks change, so the sidebar's count follows. */
+export const RECEIVING_CHANGED = "sentria_receiving_changed"
 
 const KEY = "sentria_receiving"
 
@@ -194,7 +201,7 @@ export function readSaved(): Saved | null {
 
     if (!list || typeof saved.name !== "string") return null
 
-    return { name: saved.name, at: num(saved.at) ?? 0, list, ticks: saved.ticks && typeof saved.ticks === "object" ? saved.ticks : {} }
+    return { name: saved.name, at: num(saved.at) ?? 0, list, ticks: saved.ticks && typeof saved.ticks === "object" ? saved.ticks : {}, ...(typeof saved.raised === "number" ? { raised: saved.raised } : {}) }
   } catch {
     return null
   }
@@ -207,6 +214,9 @@ export function writeSaved(saved: Saved | null): void {
   } catch {
     /* A full or blocked store: the screen still works, it just forgets on refresh. */
   }
+
+  // After the current render: this is called from inside a state update.
+  if (typeof window !== "undefined") queueMicrotask(() => window.dispatchEvent(new Event(RECEIVING_CHANGED)))
 }
 
 /** A Worklist back into the API's own shape, so one parser reads both. */
@@ -259,4 +269,33 @@ export function valueLeft(items: Item[], ticks: Ticks): { value: number; currenc
   if (left.some((i) => i.currency !== currency)) return null
 
   return { value: left.reduce((sum, i) => sum + (i.value as number), 0), currency }
+}
+
+export type RaiseResult = { ok: true; fired: number } | { ok: false; message: string }
+
+/** Turns the same file into alerts (one per flagged row) through /upload, named as a receiving file.
+ *  The API raises them through its one alert path, so the phone limits and the demotion of an
+ *  alert you keep dismissing apply. Needs the file itself: it is only in memory just after the
+ *  check. */
+export async function raiseReceivingAlerts(file: File, lang: "fr" | "en"): Promise<RaiseResult> {
+  const fallback = lang === "fr" ? "Les alertes n'ont pas pu être créées. Réessayez dans un instant." : "The alerts could not be created. Try again in a moment."
+
+  try {
+    const form = new FormData()
+    form.append("file", file)
+
+    const department = activeDepartment() ?? "pharmacie"
+    const res = await apiFetch(`${API_BASE}/upload?sector=health&business_type=${encodeURIComponent(department)}&lang=${lang}&kind=receiving${accountCurrencyParam()}`, { method: "POST", body: form })
+    const body = (await res.json().catch(() => null)) as { success?: unknown; alerts_fired?: unknown; message?: unknown; detail?: { message?: unknown } } | null
+
+    if (res.ok && body?.success === true) {
+      announceAlertsUpdated()
+
+      return { ok: true, fired: typeof body.alerts_fired === "number" ? body.alerts_fired : 0 }
+    }
+
+    return { ok: false, message: text(body?.message) || text(body?.detail?.message) || fallback }
+  } catch {
+    return { ok: false, message: fallback }
+  }
 }

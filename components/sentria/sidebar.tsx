@@ -12,6 +12,7 @@ import { SupportDialog } from "./support-dialog"
 import { useT, useTx, type MessageKey } from "@/lib/i18n"
 import { readSectors } from "@/lib/activities"
 import { PLAN_NAMES, PLAN_UPDATED_EVENT, readAccountPlan, type PlanId } from "@/lib/plans"
+import { useReceivingLeft } from "@/lib/use-receiving-left"
 import { useSites } from "@/lib/sites"
 import { usePresence } from "@/lib/use-presence"
 import { cn } from "@/lib/utils"
@@ -190,6 +191,7 @@ export function Sidebar({
 }: SidebarProps) {
   const t = useT()
   const held = useSites()
+  const receivingLeft = useReceivingLeft()
   const shownSite = held.sites.find((site) => site.id === held.activeId)
 
   /* The plan in force for this account (F-TIERTAG). Read after mount
@@ -457,6 +459,20 @@ export function Sidebar({
                             ].join(" ")}
                           >
                             {t(item.label)}
+                          </span>
+                        )}
+
+                        {/* RECEIVING CHECK: rows still to look at */}
+                        {item.id === "receiving" && receivingLeft > 0 && (
+                          <span
+                            data-testid="receiving-count"
+                            aria-label={tx(`${receivingLeft} à vérifier`, `${receivingLeft} to check`)}
+                            className={[
+                              "flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-bold leading-none text-accent-foreground",
+                              collapsed ? "absolute right-1 top-1 h-4 min-w-4 px-1 text-[10px]" : "ml-auto",
+                            ].join(" ")}
+                          >
+                            {receivingLeft}
                           </span>
                         )}
 

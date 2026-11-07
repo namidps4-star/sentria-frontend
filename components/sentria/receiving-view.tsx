@@ -12,6 +12,7 @@ import {
   buildCsv,
   checkReceiving,
   checkedCount,
+  raiseReceivingAlerts,
   readSaved,
   valueLeft,
   writeSaved,
@@ -467,6 +468,9 @@ export function ReceivingView() {
   const [error, setError] = useState<string | null>(null)
   const [mode, setMode] = useState<Mode>("board")
   const input = useRef<HTMLInputElement>(null)
+  // The file itself, only until the page is left: raising alerts sends it again.
+  const [file, setFile] = useState<File | null>(null)
+  const [raising, setRaising] = useState(false)
 
   useEffect(() => {
     setSaved(readSaved())
@@ -516,12 +520,12 @@ export function ReceivingView() {
     }
   }
 
-  async function onFile(file: File | undefined) {
-    if (!file) return
+  async function onFile(chosen: File | undefined) {
+    if (!chosen) return
     setBusy(true)
     setError(null)
 
-    const result = await checkReceiving(file, tx("fr", "en") as "fr" | "en")
+    const result = await checkReceiving(chosen, tx("fr", "en") as "fr" | "en")
 
     setBusy(false)
 
@@ -530,7 +534,25 @@ export function ReceivingView() {
       return
     }
 
-    update({ name: file.name, at: Date.now(), list: result.list, ticks: {} })
+    setFile(chosen)
+    update({ name: chosen.name, at: Date.now(), list: result.list, ticks: {} })
+  }
+
+  async function raise() {
+    if (!file || !saved) return
+    setRaising(true)
+    setError(null)
+
+    const result = await raiseReceivingAlerts(file, tx("fr", "en") as "fr" | "en")
+
+    setRaising(false)
+
+    if (!result.ok) {
+      setError(result.message)
+      return
+    }
+
+    update({ ...saved, raised: result.fired })
   }
 
   const exportCsv = () => {
@@ -670,6 +692,33 @@ export function ReceivingView() {
         <p role="alert" data-testid="receiving-error" className="rounded-xl bg-[var(--tag-critical-bg)] px-4 py-3 text-sm font-medium text-[var(--tag-critical-fg)]">
           {error}
         </p>
+      )}
+
+      {list.flagged > 0 && saved.raised !== undefined && (
+        <p data-testid="receiving-raised" className="flex items-center gap-2 rounded-2xl bg-[var(--tag-success-bg)] px-4 py-2.5 text-sm font-medium text-[var(--tag-success-fg)]">
+          <Check className="h-4 w-4 shrink-0" aria-hidden="true" />
+          {tx(`${saved.raised} alertes créées dans votre liste d'alertes.`, `${saved.raised} alerts created in your alert list.`)}
+        </p>
+      )}
+
+      {list.flagged > 0 && saved.raised === undefined && file && (
+        <div data-testid="receiving-raise" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3">
+          <p className="min-w-0 flex-1 text-sm leading-6 text-muted-foreground">
+            {tx(
+              "Voulez-vous aussi une alerte par ligne dans votre liste d'alertes ? Les produits périmés peuvent envoyer un SMS à votre numéro.",
+              "Want one alert per row in your alert list too? Expired products may text your phone."
+            )}
+          </p>
+          <button
+            type="button"
+            data-testid="receiving-raise-button"
+            onClick={() => void raise()}
+            disabled={raising}
+            className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-foreground px-5 text-sm font-bold text-background transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+          >
+            {raising ? tx("Création…", "Creating…") : tx(`Créer ${list.flagged} alertes`, `Create ${list.flagged} alerts`)}
+          </button>
+        </div>
       )}
 
       {list.flagged === 0 ? (

@@ -65,7 +65,7 @@ export const fr = {
   "nav.sites": "Sites",
   "nav.contractors": "Intervenants",
   "nav.wholesalers": "Grossistes",
-  "nav.receiving": "Contrôle de réception",
+  "nav.receiving": "Réception",
   "nav.tracking": "Suivi",
   "nav.ask": "Ask SentrIA",
   "nav.report": "Rapport",
