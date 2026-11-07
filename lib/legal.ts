@@ -33,8 +33,8 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalSection[]> = {
       title: ["Qui nous sommes", "Who we are"],
       body: [
         [
-          `${LEGAL_COMPANY} publie SentrIA, un outil qui surveille vos données d'exploitation, lève des alertes et recommande des actions.`,
-          `${LEGAL_COMPANY} publishes SentrIA, a tool that watches your operating data, raises alerts and recommends actions.`,
+          `${LEGAL_COMPANY} publie SentrIA, un outil de pilotage opérationnel qui surveille vos données d'exploitation et lève des alertes sur les risques à traiter. ${LEGAL_COMPANY} est le responsable de traitement des données personnelles décrites dans ce document.`,
+          `${LEGAL_COMPANY} publishes SentrIA, an operational management tool that monitors your operating data and surfaces alerts on the risks that need attention. ${LEGAL_COMPANY} is the data controller for the personal data described in this document.`,
         ],
         [
           `Adresse : ${LEGAL_ADDRESS}.`,
@@ -46,20 +46,20 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalSection[]> = {
       title: ["Ce que nous collectons", "What we collect"],
       body: [
         [
-          "Votre compte : nom, entreprise, nom d'utilisateur, email et, si vous le donnez, numéro de téléphone. Le mot de passe est géré par notre service d'authentification et n'est pas lisible par nous.",
-          "Your account: name, company, username, email and, if you give it, a phone number. The password is handled by our sign-in service and we cannot read it.",
+          "Votre compte : nom, entreprise, nom d'utilisateur, adresse email et, si vous le donnez, numéro de téléphone. Le mot de passe est géré par notre service d'authentification et n'est pas lisible par nous.",
+          "Your account: name, company, username, email address and, if you give it, a phone number. The password is handled by our sign-in service and we cannot read it.",
         ],
         [
-          "Vos données : les fichiers CSV que vous importez, les sites que vous créez, les alertes qui en résultent et vos réglages.",
-          "Your data: the CSV files you import, the sites you create, the alerts that result and your settings.",
+          "Vos données opérationnelles : les fichiers CSV que vous importez, les sites que vous créez, les alertes qui en résultent et vos réglages.",
+          "Your operational data: the CSV files you import, the sites you create, the alerts that result and your settings.",
         ],
         [
           "Vos messages : ce que vous écrivez dans Aide et retours et dans Demandez à SentrIA.",
           "Your messages: what you write in Help & feedback and in Ask SentrIA.",
         ],
         [
-          "Des données techniques : pages vues et adresse IP, par notre hébergeur et notre outil de mesure d'audience.",
-          "Technical data: page views and IP address, through our host and our audience measurement tool.",
+          "Des données techniques : pages vues et adresse IP, collectées par notre hébergeur et notre outil de mesure d'audience.",
+          "Technical data: page views and IP address, collected through our host and our audience measurement tool.",
         ],
       ],
     },
@@ -67,8 +67,12 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalSection[]> = {
       title: ["Pourquoi", "Why"],
       body: [
         [
-          "Pour fournir le service : analyser vos fichiers, afficher vos alertes, envoyer des SMS et des emails d'alerte, répondre à vos messages, protéger le service contre les abus.",
-          "To provide the service: analyse your files, show your alerts, send alert texts and emails, answer your messages, protect the service from abuse.",
+          "Pour exécuter le contrat : analyser vos fichiers, afficher vos alertes, envoyer des SMS et des emails d'alerte, répondre à vos messages.",
+          "To perform the contract: analyse your files, show your alerts, send alert texts and emails, answer your messages.",
+        ],
+        [
+          "Sur la base de notre intérêt légitime : protéger le service contre les abus, améliorer la fiabilité des détections.",
+          "On the basis of our legitimate interest: protect the service from abuse, improve the reliability of detections.",
         ],
       ],
     },
@@ -76,16 +80,16 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalSection[]> = {
       title: ["Qui reçoit vos données", "Who receives your data"],
       body: [
         [
-          "Nous travaillons avec des prestataires qui traitent des données pour nous : Supabase (connexion et base de données), Vercel (hébergement du site et mesure d'audience), Render (hébergement de l'API), Twilio (SMS), Resend (emails), Google (IA Gemini) et PostHog (statistiques d'usage, seulement si vous les acceptez).",
-          "We work with providers that handle data for us: Supabase (sign-in and database), Vercel (site hosting and audience measurement), Render (API hosting), Twilio (texts), Resend (email), Google (Gemini AI) and PostHog (usage statistics, only if you accept them).",
+          "Nous travaillons avec des prestataires qui traitent des données pour nous : Supabase (connexion et base de données, UE), Vercel (hébergement du site et mesure d'audience, UE), Render (hébergement de l'API), Twilio (SMS), Resend (emails), Google (IA Gemini) et PostHog (statistiques d'usage, si vous les acceptez).",
+          "We work with providers that handle data for us: Supabase (sign-in and database, EU), Vercel (site hosting and audience measurement, EU), Render (API hosting), Twilio (texts), Resend (email), Google (Gemini AI) and PostHog (usage statistics, only if you accept them).",
         ],
         [
           "Quand vous utilisez les recommandations ou Demandez à SentrIA, le texte de vos alertes et de vos questions est envoyé à Google pour produire la réponse. N'y mettez pas de données que vous ne voulez pas partager.",
           "When you use the recommendations or Ask SentrIA, the text of your alerts and questions is sent to Google to produce the answer. Do not put in data you do not want to share.",
         ],
         [
-          "Nous ne vendons pas vos données. Les pays où ces prestataires les stockent restent à confirmer.",
-          "We do not sell your data. The countries where these providers store it are still to be confirmed.",
+          "Nous ne vendons pas vos données. Vos données sont hébergées en France (Paris).",
+          "We do not sell your data. Your data is hosted in France (Paris).",
         ],
       ],
     },
@@ -102,8 +106,8 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalSection[]> = {
       title: ["Statistiques d'usage", "Usage statistics"],
       body: [
         [
-          "Si vous acceptez, nous comptons les écrans ouverts, les étapes d'accueil terminées et le résultat des imports de fichiers, sans nom, sans e-mail et sans contenu de fichier. Rien n'est mesuré avant votre accord. Vous pouvez le retirer à tout moment dans Paramètres. Les données sont traitées par PostHog, par défaut dans l'Union européenne.",
-          "If you accept, we count the screens opened, the welcome steps finished and the result of file imports, with no name, no email and no file content. Nothing is measured before you agree. You can withdraw at any time in Settings. The data is processed by PostHog, in the European Union by default.",
+          "Si vous acceptez, nous comptons les écrans ouverts, les étapes d'accueil terminées et le résultat des imports de fichiers, sans nom, sans e-mail et sans contenu de fichier. Rien n'est mesuré avant votre accord. Vous pouvez le retirer à tout moment dans Paramètres. Les données sont traitées par PostHog, dans l'Union européenne.",
+          "If you accept, we count the screens opened, the welcome steps finished and the result of file imports, with no name, no email and no file content. Nothing is measured before you agree. You can withdraw at any time in Settings. The data is processed by PostHog, in the European Union.",
         ],
       ],
     },
@@ -111,8 +115,8 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalSection[]> = {
       title: ["Durée de conservation", "How long we keep it"],
       body: [
         [
-          "Tant que votre compte est actif. À votre demande, nous supprimons votre compte et vos données. La durée exacte de conservation des sauvegardes reste à confirmer.",
-          "While your account is active. On your request we delete your account and your data. The exact backup retention period is still to be confirmed.",
+          "Tant que votre compte est actif. À votre demande, nous supprimons votre compte et vos données. Les sauvegardes sont conservées jusqu'à 90 jours.",
+          "While your account is active. On your request we delete your account and your data. Backups are retained for up to 90 days.",
         ],
       ],
     },
@@ -120,8 +124,8 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalSection[]> = {
       title: ["Vos droits", "Your rights"],
       body: [
         [
-          "Vous pouvez demander l'accès à vos données, leur correction, leur export ou leur suppression, en nous écrivant (voir Contact).",
-          "You can ask for access to your data, to correct it, to export it or to delete it, by writing to us (see Contact).",
+          "Au titre du RGPD, vous pouvez demander l'accès à vos données, leur rectification, leur export, leur suppression et, selon les cas, la limitation ou l'opposition au traitement, en nous écrivant (voir Contact).",
+          "Under the GDPR, you can ask for access to your data, to correct it, to export it, to delete it and, where applicable, to restrict or object to its processing, by writing to us (see Contact).",
         ],
         [
           "Dans l'application, Paramètres, section « Vos données » : « Exporter mes données » télécharge un fichier avec tout ce que nous gardons sur votre compte, et « Supprimer mon compte » efface votre connexion et les données de l'entreprise. Si d'autres comptes partagent l'entreprise, seul le vôtre est supprimé.",
@@ -133,8 +137,8 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalSection[]> = {
       title: ["Sécurité", "Security"],
       body: [
         [
-          "Nous prenons des mesures raisonnables pour protéger vos données. Aucun système n'est parfaitement sûr.",
-          "We take reasonable steps to protect your data. No system is perfectly secure.",
+          "Les données sont chiffrées en transit (TLS) et au repos. Les accès sont limités aux membres de l'équipe et services qui en ont besoin. Aucun système n'est parfaitement sûr.",
+          "Data is encrypted in transit (TLS) and at rest. Access is restricted to the team members and services that need it. No system is perfectly secure.",
         ],
       ],
     },
@@ -142,8 +146,8 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalSection[]> = {
       title: ["Changements", "Changes"],
       body: [
         [
-          "Si cette page change de façon importante, nous vous le dirons dans l'application.",
-          "If this page changes in an important way, we will tell you in the app.",
+          "Si cette page change de façon importante, nous vous en informerons dans l'application avant l'entrée en vigueur du changement.",
+          "If this page changes in an important way, we will notify you in the app before the change takes effect.",
         ],
       ],
     },
@@ -207,8 +211,8 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalSection[]> = {
       title: ["Disponibilité et changements", "Availability and changes"],
       body: [
         [
-          "Nous faisons de notre mieux pour que le service fonctionne, sans garantir qu'il soit toujours disponible. Nous pouvons le faire évoluer.",
-          "We do our best to keep the service running, without promising it is always available. We may change it.",
+          "Nous visons une haute disponibilité mais ne garantissons pas que le service soit toujours accessible. Nous pouvons le faire évoluer et vous en informerons lorsqu'un changement affecte substantiellement votre usage.",
+          "We aim for high availability but do not guarantee that the service is always accessible. We may update it and will give you notice when a change materially affects your use.",
         ],
       ],
     },
@@ -216,8 +220,8 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalSection[]> = {
       title: ["Responsabilité", "Liability"],
       body: [
         [
-          "Dans la mesure permise par la loi, notre responsabilité est limitée. Les limites exactes restent à confirmer par un juriste.",
-          "To the extent the law allows, our liability is limited. The exact limits are still to be confirmed by a lawyer.",
+          "Dans la mesure permise par la loi, la responsabilité totale de Sentria HQ est limitée au montant que vous avez payé au cours des douze mois précédant la réclamation.",
+          "To the extent the law allows, Sentria HQ's total liability is limited to the amount you paid in the twelve months before the claim arises.",
         ],
       ],
     },
@@ -234,8 +238,8 @@ export const LEGAL_DOCS: Record<LegalDocId, LegalSection[]> = {
       title: ["Droit applicable", "Governing law"],
       body: [
         [
-          "Le droit applicable et le tribunal compétent restent à définir.",
-          "The governing law and the competent court are still to be defined.",
+          "Ces conditions sont régies par le droit français. Tout litige ne pouvant être résolu à l'amiable relève de la compétence exclusive des tribunaux de Paris.",
+          "These terms are governed by French law. Any dispute that cannot be resolved amicably falls under the exclusive jurisdiction of the courts of Paris.",
         ],
       ],
     },
