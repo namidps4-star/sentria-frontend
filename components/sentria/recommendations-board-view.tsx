@@ -691,7 +691,25 @@ function DetailDialog({
 
   const closeRef = useRef<HTMLButtonElement>(null)
   const returnFocusRef = useRef<Element | null>(null)
+  const outcomeRef = useRef<HTMLDivElement>(null)
   const enter = useEnter()
+
+  const [showOutcomeToast, setShowOutcomeToast] = useState(false)
+
+  useEffect(() => {
+    if (!showOutcomeToast) return
+    const id = setTimeout(() => setShowOutcomeToast(false), 7000)
+    return () => clearTimeout(id)
+  }, [showOutcomeToast])
+
+  function handlePatch(patch: Partial<TaskMeta>) {
+    onPatch(patch)
+    if (patch.status === "done" && rec.alert_key) {
+      setShowOutcomeToast(true)
+    } else if (patch.status && patch.status !== "done") {
+      setShowOutcomeToast(false)
+    }
+  }
 
   const { rec, task } = card
   const tone = toneOf(rec)
@@ -857,6 +875,32 @@ function DetailDialog({
 
         {/* What the operator decides ------------------------------------ */}
         <div className="space-y-4 p-5 sm:p-6">
+
+          {showOutcomeToast && rec.alert_key && (
+            <div className="flex items-center gap-2 rounded-xl bg-brand px-4 py-3 text-brand-foreground">
+              <span className="flex-1 text-sm font-semibold leading-5">
+                {tx("Tâche terminée — que s'est-il passé ?", "Task done — what happened?")}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowOutcomeToast(false)
+                  outcomeRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+                }}
+                className="shrink-0 rounded-lg bg-black/20 px-3 py-1 text-xs font-semibold transition-colors hover:bg-black/30"
+              >
+                {tx("Répondre", "Answer")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowOutcomeToast(false)}
+                aria-label={tx("Ignorer", "Dismiss")}
+                className="shrink-0 rounded-lg p-1 transition-colors hover:bg-black/20"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          )}
           <div>
             <p className={labelClass}>{tx("Statut", "Status")}</p>
 
@@ -876,7 +920,7 @@ function DetailDialog({
                     key={column.id}
                     type="button"
                     aria-pressed={active}
-                    onClick={() => onPatch({ status: column.id })}
+                    onClick={() => handlePatch({ status: column.id })}
                     className={cn(
                       "flex-1 rounded-lg px-2 py-2 text-xs font-semibold transition-colors",
                       active
@@ -893,12 +937,14 @@ function DetailDialog({
 
           {/* What happened (F-OUTCOME): only once the task is done. */}
           {task.status === "done" && rec.alert_key && (
-            <OutcomeAsk
-              taskKey={card.id}
-              alertKey={rec.alert_key}
-              sector={rec.sector}
-              symbol={currency.symbol}
-            />
+            <div ref={outcomeRef} className="rounded-2xl border border-brand/25 bg-brand/[0.05] p-3">
+              <OutcomeAsk
+                taskKey={card.id}
+                alertKey={rec.alert_key}
+                sector={rec.sector}
+                symbol={currency.symbol}
+              />
+            </div>
           )}
 
           {/* Send someone (F-DISPATCH): only on a task that is still open. */}
