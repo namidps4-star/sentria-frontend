@@ -1188,12 +1188,12 @@ export function OnboardingView({
           <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
             <div className="flex items-center justify-between gap-4">
               <div className="flex min-w-0 items-center gap-2.5">
-                <span
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand"
+                <img
+                  src="/logo-mark.png"
+                  alt=""
                   aria-hidden="true"
-                >
-                  <Zap className="h-3.5 w-3.5 text-brand-foreground" />
-                </span>
+                  className="h-7 w-7 shrink-0 object-contain"
+                />
 
                 <span className="font-heading text-sm font-bold tracking-tight">
                   SentrIA
