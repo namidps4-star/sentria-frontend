@@ -289,7 +289,7 @@ const SUBTYPE_KPI_LABELS: Record<string, Localized[]> = {
   ],
   "grossiste-pharma": [
     localized("Ruptures réseau", "Network stockouts"),
-    localized("Rééquilibrages suggérés", "Suggested transfers"),
+    localized("Réapprovisionnements suggérés", "Suggested resupplies"),
     localized("Produits concernés", "Products affected"),
     localized("Invendus réseau", "Network deadstock"),
   ],
@@ -361,7 +361,7 @@ const KEY_FAMILY_LABELS: Record<string, Localized> = {
   tests_remaining: localized("Analyses", "Tests"),
   reagent: localized("Réactifs", "Reagents"),
   critical_supply: localized("Sans alternative", "No substitute"),
-  rebalance: localized("Transferts", "Transfers"),
+  rebalance: localized("Réapprovisionnement", "Resupply"),
   chain: localized("Transferts magasins", "Store transfers"),
   wholesale: localized("Clients", "Customers"),
   torque: localized("Couple", "Torque"),

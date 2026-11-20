@@ -2,6 +2,8 @@
 
 **Read `gotcha.md` before changing anything.** It holds project-specific facts the code doesn't make obvious. Treat its warnings as operational knowledge; don't override one just because the code seems to say otherwise. When you find a new durable, non-obvious issue, add it to `gotcha.md` (Problem / Reality / Rule). Don't put debugging notes, conversation history or general coding advice there, and don't repeat rules from this file in it.
 
+Before you edit, also read `PROJECT_MAP.md` (where things live and what is restricted), then check `git status` and the branch.
+
 ## Stack
 Next.js 16 (App Router, Turbopack), React 19, Tailwind v4, Supabase Auth (`@supabase/supabase-js`), pnpm. Deployed on Vercel. Backend: the `Sentria` repo (FastAPI) on Render.
 
@@ -41,6 +43,14 @@ These read as machine-made. Leave them out of every project (app, landing page, 
 - `npx tsc --noEmit -p .` and `npx eslint <files>` (the `set-state-in-effect` warnings are expected).
 - Every feature gets a Playwright suite in `tests/e2e/` (add it to `run-all.js`), with screenshots in light, dark and 390 px before pushing.
 - Build from a clean copy with the frozen lockfile (see `gotcha.md`). Stop on any failure.
+
+## Completion protocol
+- A task is not done until `scripts/verify.sh` has passed on the final state of the code. Run it and read the result. Add `--audit` when you changed dependencies.
+- Read `git diff` before you report: only the files you meant to change, no secrets, no hand edits to generated files or lockfiles. `next build` rewrites `next-env.d.ts`: restore it, do not commit it.
+- `verify.sh` does not run `tests/e2e`. For a feature, run its Playwright suite as the Testing section says.
+- Never report a check as passed if it did not run. Say what was not run and why.
+- When a folder, route, integration or restricted area changes, update `PROJECT_MAP.md` in the same commit.
+- Text rules do not stop a mistake. Branch protection and the required CI check do. Do not ask for a bypass.
 
 ## Agent failures: log, learn, keep
 
