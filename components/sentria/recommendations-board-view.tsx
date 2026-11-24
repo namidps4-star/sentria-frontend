@@ -2,6 +2,8 @@
 
 import { RelativeTime } from "./relative-time"
 import { SupplierActions } from "./supplier-actions"
+import { ReorderCard } from "./reorder-card"
+import { readReorder } from "@/lib/reorder-card"
 import type { Supplier } from "@/lib/supplier"
 import { AskHeader } from "./ask-header"
 import { DispatchPanel } from "./dispatch-panel"
@@ -72,6 +74,8 @@ type Recommendation = {
   action_category: string
   /** Who to order from, when the upload named one (F-SUPPLIER). */
   supplier?: Supplier | null
+  /** The numbers behind a reorder alert, for the order card (F-JIT). Read through readReorder. */
+  reorder?: unknown
   /* Set only by deriveRecommendations, which knows the chain. The
      backend endpoint cannot produce these, so every one is optional and
      the card renders what it has. */
@@ -2233,6 +2237,7 @@ export function RecommendationsBoard({
                     )
 
                   const signals = rec.alertCount ?? 0
+                  const reorder = readReorder(rec.reorder)
 
                   const subtitle = [
                     rec.stageName,
@@ -2350,18 +2355,34 @@ export function RecommendationsBoard({
                         )}
                       </h5>
 
-                      <p
-                        className="mt-1 flex items-start gap-1.5 text-sm leading-snug text-muted-foreground"
-                        title={rec.recommended_action}
-                      >
-                        <Icon
-                          className="mt-0.5 h-3.5 w-3.5 shrink-0"
-                          aria-label={px(
-                            CATEGORY_LABEL[rec.action_category] ?? CATEGORY_LABEL.other
-                          )}
+                      {reorder ? (
+                        <ReorderCard
+                          reorder={reorder}
+                          supplier={rec.supplier?.name}
+                          title={rec.recommended_action}
+                          icon={
+                            <Icon
+                              className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                              aria-label={px(
+                                CATEGORY_LABEL[rec.action_category] ?? CATEGORY_LABEL.other
+                              )}
+                            />
+                          }
                         />
-                        <span className="line-clamp-2">{rec.recommended_action}</span>
-                      </p>
+                      ) : (
+                        <p
+                          className="mt-1 flex items-start gap-1.5 text-sm leading-snug text-muted-foreground"
+                          title={rec.recommended_action}
+                        >
+                          <Icon
+                            className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                            aria-label={px(
+                              CATEGORY_LABEL[rec.action_category] ?? CATEGORY_LABEL.other
+                            )}
+                          />
+                          <span className="line-clamp-2">{rec.recommended_action}</span>
+                        </p>
+                      )}
 
                       <div className="relative mt-3.5 flex items-center gap-1.5">
                         {ownerButton(id, assignees, true)}
