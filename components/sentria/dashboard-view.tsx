@@ -1,6 +1,7 @@
 "use client"
 
 import { CsvTemplateLink } from "./csv-template-link"
+import { ImportOptionalColumns } from "./import-optional-columns"
 import { DemotedTag, LossTag, SeverityTag, StatusTag, ValueTag } from "./status-tag"
 import { demotion, demotionSentence } from "@/lib/demotion"
 import { DisposalLog } from "./disposal-log"
@@ -2456,7 +2457,7 @@ export function DashboardView({
           aria-label={tx("Importer des données", "Import data")}
           hidden={!importPanel.present}
           data-origin="top-right"
-          className={cn("squircle absolute right-0 top-full z-30 mt-2 w-[min(380px,calc(100vw-2.5rem))] rounded-[30px] border border-border bg-card p-2.5 shadow-2xl t-dropdown max-sm:fixed max-sm:inset-x-4 max-sm:w-auto", importPanel.className)}
+          className={cn("squircle absolute right-0 top-full z-30 mt-2 max-h-[calc(100dvh-5.75rem)] w-[min(380px,calc(100vw-2.5rem))] overflow-y-auto overscroll-contain rounded-[30px] border border-border bg-card p-2.5 shadow-2xl t-dropdown max-sm:fixed max-sm:inset-x-4 max-sm:max-h-[calc(100dvh-7rem)] max-sm:w-auto", importPanel.className)}
         >
           {/* The lime header: where the file goes, and the sector tabs. */}
           <div className="squircle rounded-[22px] bg-accent px-4 pb-3.5 pt-3.5 text-accent-foreground">
@@ -2635,25 +2636,11 @@ export function DashboardView({
               out what an hour of stop costs. Health needs none: its
               cold-chain alerts already carry the stock value. */}
           {/* Stock (Health, Retail): three optional columns that name who to
-              order from, so the alert can say it and offer Call, Text, Email. */}
+              order from, so the alert can say it and offer Call, Text, Email,
+              and where the department has a reorder alert, the columns that
+              let it say how much to order (lib/reorder-columns.ts). */}
           {(uploadSector === "health" || uploadSector === "commerce") && (
-            <div data-supplier-columns="" className="mt-2 rounded-[20px] bg-muted px-3.5 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {tx("Facultatif · pour savoir chez qui commander", "Optional · to know who to order from")}
-              </p>
-              <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                <code className="rounded-md bg-card px-1.5 py-0.5 font-mono text-[11px] text-foreground">supplier</code>{" "}
-                <code className="rounded-md bg-card px-1.5 py-0.5 font-mono text-[11px] text-foreground">supplier_phone</code>{" "}
-                <code className="rounded-md bg-card px-1.5 py-0.5 font-mono text-[11px] text-foreground">supplier_email</code>{" "}
-                {tx("le nom, le téléphone (format +229…) et l'e-mail du fournisseur", "the supplier's name, phone (as +229…) and email")}
-              </p>
-              <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
-                {tx(
-                  "L'alerte de stock dit alors chez qui commander et propose Appeler, SMS et E-mail. Sans ces colonnes, rien ne change.",
-                  "The stock alert then says who to order from and offers Call, Text and Email. Without these columns nothing changes."
-                )}
-              </p>
-            </div>
+            <ImportOptionalColumns department={uploadActivity ?? activityIn(uploadSector)} />
           )}
 
           {uploadSector === "industry" && (
