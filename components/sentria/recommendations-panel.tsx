@@ -29,6 +29,7 @@ import { setAssignmentStatus, taskKeyFor } from "@/lib/crm"
 import { computeConfidence, confidenceWord } from "@/lib/confidence"
 import { localized, useTx, type Localized, type Tx, resolve } from "@/lib/i18n"
 import { TermHelp } from "./term-help"
+import { recurrenceDays } from "@/lib/alert-count"
 
 type Alert = {
   equipment: string
@@ -250,8 +251,8 @@ function reasoningOf(
   if (recurrence > 1) {
     parts.push(
       tx(
-        `Ce n'est pas un cas isolé : ${recurrence} alertes similaires cette semaine.`,
-        `This is not a one-off: ${recurrence} similar alerts this week.`
+        `Cet actif a alerté sur ${recurrence} jours cette semaine.`,
+        `This asset alerted on ${recurrence} days this week.`
       )
     )
   }
@@ -402,11 +403,10 @@ export function RecommendationsPanel({
   const cutoff = new Date()
   cutoff.setDate(cutoff.getDate() - 7)
 
-  const recurrenceOf = (equipment: string) =>
-    alerts.filter((a) => a.equipment === equipment && new Date(a.date) >= cutoff)
-      .length
+  const recurrenceOf = (rec: Recommendation) =>
+    recurrenceDays(rec.equipment, rec.alert_key, alerts.filter((a) => new Date(a.date) >= cutoff))
 
-  const topRecurrence = recurrenceOf(top.equipment)
+  const topRecurrence = recurrenceOf(top)
   const topConfidence = confidenceOf(top, topRecurrence)
   const topReasoning = reasoningOf(top, topRecurrence, tx)
   const topKey = actionKeyFor(top)
@@ -602,7 +602,7 @@ export function RecommendationsPanel({
             {rest.map((rec, idx) => {
               const rank = idx + 2
               const Icon = CATEGORY_ICON[rec.action_category] ?? Sparkles
-              const recurrence = recurrenceOf(rec.equipment)
+              const recurrence = recurrenceOf(rec)
               const key = actionKeyFor(rec)
               const action = actionsLog[key]
 
@@ -628,7 +628,7 @@ export function RecommendationsPanel({
                       {recurrence > 1 && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-card px-2 py-0.5 text-[11px] font-semibold">
                           <TrendingUp className="h-3 w-3" />
-                          {tx(`${recurrence}x cette semaine`, `${recurrence}x this week`)}
+                          {tx(`${recurrence} jours cette semaine`, `${recurrence} days this week`)}
                         </span>
                       )}
                     </div>

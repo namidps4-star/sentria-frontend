@@ -1029,8 +1029,8 @@ function reasoningFor(
   if (recurrence > 1) {
     parts.push(
       tx(
-        `Ce n'est pas un cas isolé : cet actif a alerté sur ${recurrence} jours différents.`,
-        `This is not a one-off: this asset alerted on ${recurrence} different days.`
+        `Cet actif a alerté sur ${recurrence} jours différents.`,
+        `This asset alerted on ${recurrence} different days.`
       )
     )
   }
