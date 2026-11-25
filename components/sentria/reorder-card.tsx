@@ -5,7 +5,7 @@ import type { ReactNode } from "react"
 import { useTx } from "@/lib/i18n"
 import { barFor, type ReorderNumbers } from "@/lib/reorder-card"
 
-const COLOR = { red: "var(--tag-critical-bg)", amber: "var(--tag-watch-bg)", lime: "var(--accent)" } as const
+const COLOR = { red: "var(--tag-critical-bg)", amber: "var(--tag-watch-bg)" } as const
 
 const NBSP = " "
 
@@ -14,11 +14,14 @@ const NBSP = " "
  *  action sentence, which stays in the tooltip and in the priority detail. */
 export function ReorderCard({
   reorder,
+  severity,
   supplier,
   icon,
   title,
 }: {
   reorder: ReorderNumbers
+  /** The alert's severity: it sets the bar colour, as it sets the tag. */
+  severity?: string | null
   supplier?: string | null
   icon: ReactNode
   title?: string
@@ -26,7 +29,7 @@ export function ReorderCard({
   const tx = useTx()
   const locale = tx("fr-FR", "en-GB")
   const num = (value: number) => value.toLocaleString(locale, { maximumFractionDigits: 1 })
-  const bar = barFor(reorder)
+  const bar = barFor(reorder, severity)
   const { order_qty: qty, lead_days: lead, days_of_stock: days } = reorder
 
   const units = tx(qty < 2 ? "unité" : "unités", qty === 1 ? "unit" : "units")

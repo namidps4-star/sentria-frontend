@@ -34,12 +34,17 @@ export function readReorder(value: unknown): ReorderNumbers | null {
 /** The bar is three weeks wide, so one day means the same on every card. */
 export const BAR_DAYS = 21
 
-export type BarTone = "red" | "amber" | "lime"
+export type BarTone = "red" | "amber"
 
-/** Red under a week of stock, amber under three, lime beyond. */
-export function toneFor(days: number): BarTone {
-  return days < 7 ? "red" : days < BAR_DAYS ? "amber" : "lime"
+/** The bar takes the colour of the alert's own tag: red for Critical, amber for any
+ *  other alert. A card is on the board because an alert fired, so none is green, and
+ *  a long delivery time cannot make an "order now" card look healthy. */
+export function toneFor(severity: string | null | undefined): BarTone {
+  return severity === "CRITICAL" ? "red" : "amber"
 }
+
+/** A week of stock or less: the label counts the days to the order. */
+const URGENT_DAYS = 7
 
 export type BarLabel = { kind: "today" } | { kind: "byDay"; day: number } | { kind: "point" }
 
@@ -51,8 +56,8 @@ export type BarModel = {
   markerPct: number
   /** The reorder point in days of sales: the delivery time plus the safety buffer. */
   markerDays: number
-  /** Red: "order today" at or under the reorder point, else "order by day N".
-   *  Amber and lime: "reorder point". */
+  /** With a week of stock or less: "order today" at or under the reorder point, else
+   *  "order by day N". With more: "reorder point". */
   label: BarLabel
   /** Near an edge the label lines up with the edge instead of centring on the marker. */
   align: "start" | "center" | "end"
@@ -60,15 +65,15 @@ export type BarModel = {
 
 const pct = (days: number) => Math.round((Math.min(days, BAR_DAYS) / BAR_DAYS) * 1000) / 10
 
-export function barFor(reorder: ReorderNumbers): BarModel {
-  const tone = toneFor(reorder.days_of_stock)
+export function barFor(reorder: ReorderNumbers, severity?: string | null): BarModel {
+  const tone = toneFor(severity)
   const markerDays = reorder.lead_days + reorder.buffer_days
   const markerPct = pct(markerDays)
   // Whole days until the stock reaches the reorder point.
   const early = Math.floor(reorder.days_of_stock - markerDays)
 
   const label: BarLabel =
-    tone !== "red" ? { kind: "point" } : early <= 0 ? { kind: "today" } : { kind: "byDay", day: early }
+    reorder.days_of_stock >= URGENT_DAYS ? { kind: "point" } : early <= 0 ? { kind: "today" } : { kind: "byDay", day: early }
 
   return {
     tone,

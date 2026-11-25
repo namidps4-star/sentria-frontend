@@ -2358,6 +2358,7 @@ export function RecommendationsBoard({
                       {reorder ? (
                         <ReorderCard
                           reorder={reorder}
+                          severity={rec.severity}
                           supplier={rec.supplier?.name}
                           title={rec.recommended_action}
                           icon={

@@ -1,6 +1,7 @@
 // The order card on a Tracking board card (F-JIT): the order line and the days-of-stock bar replace
 // the action sentence when the recommendation carries the reorder numbers. English and French,
-// light, dark, 390 px. A card without the numbers (or with broken ones) keeps its action line.
+// light, dark, 390 px. The bar takes the colour of the alert's tag (Critical red, Warning amber).
+// A card without the numbers (or with broken ones) keeps its action line.
 const { chromium } = require('playwright');
 const { LAUNCH, APP_URL } = require('./env');
 const { signedIn } = require('./auth-mock');
@@ -20,15 +21,17 @@ const recs = [
   rec('Paracetamol 1 g', 'WARNING', 2.5, 'health.reorder.plan_ahead', 't3', { order_qty: 57, reorder_point: 50, days_of_stock: 6.3, buffer_days: 3, lead_days: 2 }, sup('MediPlus'), 'Schedule the next order this week. Order from MediPlus.'),
   rec('Oral rehydration salts', 'WARNING', 3, 'health.reorder.plan_ahead', 't4', { order_qty: 33, reorder_point: 87, days_of_stock: 16, buffer_days: 4.5, lead_days: 10 }, sup('Imports Ltd'), 'Schedule the next order this week. Order from Imports Ltd.'),
   rec('Cough syrup 100 ml', 'WARNING', 30, 'health.reorder.order_now', 't5', { order_qty: 17, reorder_point: 9, days_of_stock: 3, buffer_days: 2.1, lead_days: 2 }, null, ACT),
+  rec('Surgical masks', 'WARNING', 3.5, 'health.reorder.order_now', 't8', { order_qty: 90, reorder_point: 330, days_of_stock: 31, buffer_days: 3, lead_days: 30 }, sup('Global Med Imports'), ACT),
   rec('Gloves M', 'WARNING', 31, 'health.stock.low', 't6', null, null, 'Plan a reorder before stock reaches the critical threshold.'),
   rec('Syringes 5 ml', 'WARNING', 32, 'health.reorder.order_now', 't7', { order_qty: 'lots', reorder_point: 9, days_of_stock: 3, buffer_days: 2.1, lead_days: 2 }, null, 'Place the order today, the numbers here are broken.'),
 ];
 const EXPECT = {
   'Insulin pens 100 IU': { line: 'Order 145 units · Pharma Distrib, 3 days', tone: 'red', fill: 7.1, marker: 42.9, label: 'order today', left: '1.5 days left', aria: '1.5 days of stock left. Reorder point at 9 days.' },
-  'Amoxicillin 500 mg': { line: 'Order 58 units · Pharma Distrib, 3 days', tone: 'red', fill: 21.4, marker: 57.1, label: 'order today', left: '4.5 days left' },
-  'Paracetamol 1 g': { line: 'Order 57 units · MediPlus, 2 days', tone: 'red', fill: 30, marker: 23.8, label: 'order by day 1', left: '6.3 days left' },
+  'Amoxicillin 500 mg': { line: 'Order 58 units · Pharma Distrib, 3 days', tone: 'amber', fill: 21.4, marker: 57.1, label: 'order today', left: '4.5 days left' },
+  'Paracetamol 1 g': { line: 'Order 57 units · MediPlus, 2 days', tone: 'amber', fill: 30, marker: 23.8, label: 'order by day 1', left: '6.3 days left' },
   'Oral rehydration salts': { line: 'Order 33 units · Imports Ltd, 10 days', tone: 'amber', fill: 76.2, marker: 69, label: 'reorder point', left: '16 days left' },
-  'Cough syrup 100 ml': { line: 'Order 17 units · supplier 2 days', tone: 'red', fill: 14.3, marker: 19.5, label: 'order today', left: '3 days left' },
+  'Cough syrup 100 ml': { line: 'Order 17 units · supplier 2 days', tone: 'amber', fill: 14.3, marker: 19.5, label: 'order today', left: '3 days left' },
+  'Surgical masks': { line: 'Order 90 units · Global Med Imports, 30 days', tone: 'amber', fill: 100, marker: 100, label: 'reorder point', left: '31 days left' },
 };
 const FR = {
   'Insulin pens 100 IU': { line: 'Commander 145 unités · Pharma Distrib, 3 jours', left: '1,5 jour restant', label: "commander aujourd'hui" },
@@ -36,6 +39,7 @@ const FR = {
   'Paracetamol 1 g': { line: 'Commander 57 unités · MediPlus, 2 jours', left: '6,3 jours restants', label: 'commander avant le jour 1' },
   'Oral rehydration salts': { line: 'Commander 33 unités · Imports Ltd, 10 jours', left: '16 jours restants', label: 'point de commande' },
   'Cough syrup 100 ml': { line: 'Commander 17 unités · fournisseur 2 jours', left: '3 jours restants', label: "commander aujourd'hui" },
+  'Surgical masks': { line: 'Commander 90 unités · Global Med Imports, 30 jours', left: '31 jours restants', label: 'point de commande' },
 };
 const clean = t => (t || '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -63,7 +67,7 @@ const clean = t => (t || '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim();
 
   console.log('== English, desktop, light');
   let x = await open();
-  pass(await x.p.locator('[data-reorder-bar]').count() === 5, 'five cards carry the order card (the two without usable numbers do not)');
+  pass(await x.p.locator('[data-reorder-bar]').count() === 6, 'six cards carry the order card (the two without usable numbers do not)');
   const crit = await bg(x.card('Insulin pens 100 IU').locator('span.rounded-full').filter({ hasText: /Critical/ }).first());
   const warn = await bg(x.card('Amoxicillin 500 mg').locator('span.rounded-full').filter({ hasText: /Warning/ }).first());
   for (const [title, e] of Object.entries(EXPECT)) {
@@ -77,7 +81,9 @@ const clean = t => (t || '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim();
     pass(clean(await bar.innerText()).includes('Days of stock') && clean(await bar.innerText()).includes(e.left), `${title}: "Days of stock", "${e.left}"`);
     if (e.aria) pass(await bar.getAttribute('aria-label') === e.aria && await bar.getAttribute('role') === 'img', `${title}: a spoken version: "${e.aria}"`);
     const fillCol = await bg(c.locator('[data-reorder-fill]'));
-    pass(fillCol === (e.tone === 'red' ? crit : e.tone === 'amber' ? warn : fillCol), `${title}: the fill is the app's own ${e.tone}`);
+    pass(fillCol === (e.tone === 'red' ? crit : warn), `${title}: the fill is the app's own ${e.tone}`);
+    const tagCol = await bg(c.locator('span.rounded-full').filter({ hasText: /Critical|Warning/ }).first());
+    pass(fillCol === tagCol, `${title}: the bar has the same colour as the card's tag`);
     const gap = await c.evaluate(el => { const l = el.querySelector('[data-reorder-label]').getBoundingClientRect(), a = [...el.querySelectorAll('button')].find(b => /Assign/.test(b.innerText)).getBoundingClientRect(), art = el.getBoundingClientRect(), bar = el.querySelector('[data-reorder-bar]').getBoundingClientRect(); return { gap: a.top - l.bottom, inside: l.left >= art.left && l.right <= art.right && bar.right <= art.right }; });
     pass(gap.gap >= 4 && gap.inside, `${title}: the marker label clears Assign and Due (${Math.round(gap.gap)} px) and stays in the card`);
     pass(await c.getByRole('button', { name: /Assign/ }).count() === 1 && await c.locator('input[type=date], button:has-text("Due")').count() >= 1, `${title}: Assign and Due are still there`);
@@ -115,7 +121,7 @@ const clean = t => (t || '').replace(/ /g, ' ').replace(/\s+/g, ' ').trim();
 
   console.log('== 390 px');
   x = await open({ width: 390, height: 1500 });
-  pass(await x.p.locator('[data-reorder-bar]').count() === 5, 'the order cards are there on a phone');
+  pass(await x.p.locator('[data-reorder-bar]').count() === 6, 'the order cards are there on a phone');
   pass(await x.p.evaluate(() => Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth) <= 0, 'no sideways scroll');
   const inside = await x.p.locator('article').evaluateAll(els => els.every(el => { const b = el.querySelector('[data-reorder-bar]'); if (!b) return true; const a = el.getBoundingClientRect(), r = b.getBoundingClientRect(), l = el.querySelector('[data-reorder-label]').getBoundingClientRect(); return r.left >= a.left && r.right <= a.right && l.left >= a.left && l.right <= a.right; }));
   pass(inside, 'every bar and label stays inside its card');
