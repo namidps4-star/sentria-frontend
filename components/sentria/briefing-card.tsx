@@ -48,8 +48,8 @@ export function BriefingCard({ alerts, stale, staleDays }: { alerts: LogisticsAl
                     {item.critical ? tx("Critique", "Critical") : tx("Attention", "Warning")}
                   </StatusTag>
                   <StatusTag tone="neutral" size="xs">{agoLabel(item.date, tx)}</StatusTag>
-                  {item.count > 1 && (
-                    <StatusTag tone="neutral" size="xs">{tx(`${item.count} jours`, `${item.count} days`)}</StatusTag>
+                  {item.fires > 1 && (
+                    <StatusTag tone="neutral" size="xs">{tx(`Alerté ${item.fires} fois`, `Fired ${item.fires} times`)}</StatusTag>
                   )}
                 </div>
               </div>

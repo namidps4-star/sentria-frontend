@@ -34,7 +34,7 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   pass(/2 critical things need you, starting with CRANE-02/.test(t), 'headline names the worst asset: ' + t.slice(0, 90));
   pass(/4 alerts in the period: 2 critical, 2 to watch/.test(t), 'the lead counts the period');
   pass(/What needs you now/.test(t) && /CRANE-02/.test(t) && /REEFER-7/.test(t), 'what needs you now lists the critical assets');
-  pass(await card.locator('ul li', { hasText: 'CRANE-02' }).count() === 1 && /2 days/.test(t), 'a repeat is one story with a count, not two');
+  pass(await card.locator('ul li', { hasText: 'CRANE-02' }).count() === 1 && /Fired 2 times/.test(t), 'a repeat is one story with a count, not two');
   pass(/Crane at 98% of its cycle limit/.test(t) && !/96%/.test(t), 'the newest reading of a repeat is the one shown');
   pass(/What keeps coming back/.test(t) && /CRANE-02 \(2 days\)/.test(t), 'what keeps coming back names the repeat asset');
   pass(/The plan/i.test(t) && /Today: deal with CRANE-02/.test(t) && /Today: deal with REEFER-7/.test(t) && /This week: find out why CRANE-02/.test(t), 'a short plan: today for critical, this week for the repeat');

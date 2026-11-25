@@ -19,6 +19,8 @@ export type BriefItem = {
   date: string
   /** Days in the period this alert fired on. */
   count: number
+  /** Times it came in during the period: rows, not alerts. */
+  fires: number
 }
 
 export type Briefing = {
@@ -55,6 +57,7 @@ export function buildBriefing(alerts: LogisticsAlert[], tx: Tx, stale = false): 
         critical,
         date: alert.date,
         count: 1,
+        fires: 1,
         risk: riskOf(alert),
         days: new Set([dayOf(alert.date)]),
       })
@@ -63,6 +66,7 @@ export function buildBriefing(alerts: LogisticsAlert[], tx: Tx, stale = false): 
 
     held.days.add(dayOf(alert.date))
     held.count = held.days.size
+    held.fires += 1
     held.risk = Math.max(held.risk, riskOf(alert))
 
     if (at > Date.parse(held.date)) {
@@ -82,7 +86,7 @@ export function buildBriefing(alerts: LogisticsAlert[], tx: Tx, stale = false): 
   const alertCount = ranked.length
   const criticalCount = ranked.filter((r) => r.critical).length
   const warningCount = alertCount - criticalCount
-  const needs: BriefItem[] = ranked.slice(0, NEEDS_SHOWN).map((r) => ({ equipment: r.equipment, finding: r.finding, critical: r.critical, date: r.date, count: r.count }))
+  const needs: BriefItem[] = ranked.slice(0, NEEDS_SHOWN).map((r) => ({ equipment: r.equipment, finding: r.finding, critical: r.critical, date: r.date, count: r.count, fires: r.fires }))
   const first = needs[0]
 
   const headline = !first

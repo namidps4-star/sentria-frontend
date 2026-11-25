@@ -31,6 +31,7 @@ describe("buildBriefing", () => {
     expect(brief.needs).toHaveLength(3)
     expect(brief.needs[0]).toMatchObject({ equipment: "CRANE-02", finding: "98%" })
     expect(brief.needs[0].count).toBe(2)
+    expect(brief.needs[0].fires).toBe(2)
     expect(brief.recurring).toEqual([{ equipment: "CRANE-02", count: 2 }])
   })
 
