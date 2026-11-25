@@ -104,7 +104,7 @@ export function bucketAlerts(
     opts.keys.map((key) => [key, { key, values: Array(opts.days).fill(0), total: 0, approx: false }])
   )
 
-  type Cell = Map<string, { time: number; value: number }>
+  type Cell = Map<string, { time: number; value: number; estimate: boolean }>
   const cells = new Map<string, Cell>()
   const cellOf = (serKey: string, at: number) => {
     const id = `${serKey}|${at}`
@@ -129,12 +129,11 @@ export function bucketAlerts(
     if (opts.metric === "value") {
       const risk = valueAtRisk(alert.params)
       if (!risk) continue
-      if (risk.estimate) rows.get(serKey)!.approx = true
       const cell = cellOf(serKey, at)
       const held = cell.get(aKey)
-      if (!held || time > held.time) cell.set(aKey, { time, value: risk.value })
+      if (!held || time > held.time) cell.set(aKey, { time, value: risk.value, estimate: risk.estimate })
     } else {
-      cellOf(serKey, at).set(aKey, { time, value: 1 })
+      cellOf(serKey, at).set(aKey, { time, value: 1, estimate: false })
     }
   }
 
@@ -143,7 +142,10 @@ export function bucketAlerts(
     const at = Number(atStr)
     const row = rows.get(serKey)!
     let amount = 0
-    for (const entry of cell.values()) amount += entry.value
+    for (const entry of cell.values()) {
+      amount += entry.value
+      if (entry.estimate) row.approx = true
+    }
     row.values[at] += amount
     row.total += amount
   }
