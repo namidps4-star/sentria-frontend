@@ -17,7 +17,7 @@ export type BriefItem = {
   critical: boolean
   /** ISO date of the newest alert on this asset and kind. */
   date: string
-  /** How many alerts of this kind this asset has in the period. */
+  /** Days in the period this alert fired on. */
   count: number
 }
 
@@ -104,16 +104,11 @@ export function buildBriefing(alerts: LogisticsAlert[], tx: Tx, stale = false): 
     `${alertCount} alert${alertCount > 1 ? "s" : ""} in the period: ${criticalCount} critical, ${warningCount} to watch. Here is what needs your attention, what keeps coming back, and what to do next.`
   )
 
-  const perAsset = new Map<string, number>()
-  for (const group of ranked) {
-    perAsset.set(group.equipment, (perAsset.get(group.equipment) ?? 0) + 1)
-  }
-
-  const recurring = [...perAsset.entries()]
-    .filter(([, count]) => count >= 2)
-    .sort((a, b) => b[1] - a[1])
+  const recurring = ranked
+    .filter((group) => group.days.size >= 2)
+    .sort((a, b) => b.days.size - a.days.size)
     .slice(0, 3)
-    .map(([equipment, count]) => ({ equipment, count }))
+    .map((group) => ({ equipment: group.equipment, count: group.days.size }))
 
   const plan: string[] = []
 
@@ -124,8 +119,8 @@ export function buildBriefing(alerts: LogisticsAlert[], tx: Tx, stale = false): 
   if (recurring[0]) {
     plan.push(
       tx(
-        `Cette semaine : chercher pourquoi ${recurring[0].equipment} alerte si souvent (${recurring[0].count} alertes).`,
-        `This week: find out why ${recurring[0].equipment} alerts so often (${recurring[0].count} alerts).`
+        `Cette semaine : chercher pourquoi ${recurring[0].equipment} alerte si souvent (${recurring[0].count} jours).`,
+        `This week: find out why ${recurring[0].equipment} alerts so often (${recurring[0].count} days).`
       )
     )
   }

@@ -17,7 +17,7 @@ const alert = (equipment: string, severity: string, key: string, hours: number, 
 
 describe("buildBriefing", () => {
   const alerts = [
-    alert("CRANE-02", "CRITICAL", "cycles", 3, "96% : plan service", 90),
+    alert("CRANE-02", "CRITICAL", "cycles", 25, "96% : plan service", 90),
     alert("CRANE-02", "CRITICAL", "cycles", 1, "98% : plan service", 95),
     alert("CRANE-02", "CRITICAL", "vibration", 25, "high : check", 85),
     alert("REEFER-7", "CRITICAL", "temp", 5, "9 C : check", 80),
@@ -30,7 +30,8 @@ describe("buildBriefing", () => {
     expect(brief.headline).toBe("3 critical things need you, starting with CRANE-02.")
     expect(brief.needs).toHaveLength(3)
     expect(brief.needs[0]).toMatchObject({ equipment: "CRANE-02", finding: "98%" })
-    expect(brief.needs[0].count).toBe(1)
+    expect(brief.needs[0].count).toBe(2)
+    expect(brief.recurring).toEqual([{ equipment: "CRANE-02", count: 2 }])
   })
 
   it("ranks critical first, then by risk", () => {
