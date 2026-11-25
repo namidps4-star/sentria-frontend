@@ -4,6 +4,7 @@
    in app/globals.css (--series-N, --slice-N), validated by
    scripts/validate-palette.mjs. */
 
+import { alertKey } from "@/lib/alert-count"
 import { asRecord, valueAtRisk, type AlertParams } from "@/lib/value-at-risk"
 
 /** Each sector keeps its colour everywhere in the app: its place in this
@@ -103,9 +104,18 @@ export function bucketAlerts(
     opts.keys.map((key) => [key, { key, values: Array(opts.days).fill(0), total: 0, approx: false }])
   )
 
+  type Cell = Map<string, { time: number; value: number }>
+  const cells = new Map<string, Cell>()
+  const cellOf = (serKey: string, at: number) => {
+    const id = `${serKey}|${at}`
+    let c = cells.get(id)
+    if (!c) { c = new Map(); cells.set(id, c) }
+    return c
+  }
+
   for (const alert of alerts) {
-    const key = seriesKeyOf(alert)
-    if (!wanted.has(key)) continue
+    const serKey = seriesKeyOf(alert)
+    if (!wanted.has(serKey)) continue
 
     const date = new Date(alert.date)
     if (Number.isNaN(date.getTime())) continue
@@ -113,15 +123,27 @@ export function bucketAlerts(
     const at = bucketOf(date, days[0], opts.days)
     if (at < 0) continue
 
-    let amount = 1
+    const aKey = alertKey({ equipment: alert.equipment ?? "", alert_key: alert.alert_key })
+    const time = date.getTime()
+
     if (opts.metric === "value") {
       const risk = valueAtRisk(alert.params)
       if (!risk) continue
-      amount = risk.value
-      if (risk.estimate) rows.get(key)!.approx = true
+      if (risk.estimate) rows.get(serKey)!.approx = true
+      const cell = cellOf(serKey, at)
+      const held = cell.get(aKey)
+      if (!held || time > held.time) cell.set(aKey, { time, value: risk.value })
+    } else {
+      cellOf(serKey, at).set(aKey, { time, value: 1 })
     }
+  }
 
-    const row = rows.get(key)!
+  for (const [id, cell] of cells) {
+    const [serKey, atStr] = id.split("|")
+    const at = Number(atStr)
+    const row = rows.get(serKey)!
+    let amount = 0
+    for (const entry of cell.values()) amount += entry.value
     row.values[at] += amount
     row.total += amount
   }

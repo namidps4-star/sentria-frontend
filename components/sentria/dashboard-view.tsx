@@ -142,7 +142,7 @@ import { WholesalerAdvice } from "./wholesaler-advice"
 import { SupplierActions } from "./supplier-actions"
 import { supplierFromParams, type Supplier } from "@/lib/supplier"
 import { SectorTag } from "./sector-tag"
-import { countAlerts } from "@/lib/alert-count"
+import { alertKey, countAlerts, countAlertDays, latestAlerts, recurrenceDays } from "@/lib/alert-count"
 
 const SECTORS: { key: string; label: Localized }[] = [
   { key: "all", label: localized("Tous", "All") },
@@ -221,14 +221,15 @@ function dailySeries(
     day.setHours(0, 0, 0, 0)
     day.setDate(day.getDate() - (days - 1 - i))
 
-    return scoped.filter((a) => {
+    const onDay = scoped.filter((a) => {
       const at = new Date(a.date)
       return (
         at.getFullYear() === day.getFullYear() &&
         at.getMonth() === day.getMonth() &&
         at.getDate() === day.getDate()
       )
-    }).length
+    })
+    return countAlerts(onDay)
   })
 }
 
@@ -405,9 +406,10 @@ function alertBreakdown(
   alerts: Alert[],
   tx: Tx
 ): { labels: string[]; values: number[]; kind: "family" | "severity" } {
+  const deduped = latestAlerts(alerts)
   const counts = new Map<string, number>()
 
-  for (const a of alerts) {
+  for (const a of deduped) {
     const parts = (a.alert_key ?? "").split(".")
     if (parts.length < 2 || !parts[1]) continue
 
@@ -417,7 +419,7 @@ function alertBreakdown(
 
   if (counts.size === 0) {
     const critical = countAlerts(alerts.filter((a) => a.severity === "CRITICAL"))
-    const warning = alerts.filter((a) => a.severity === "WARNING").length
+    const warning = countAlerts(alerts.filter((a) => a.severity === "WARNING"))
 
     if (critical === 0 && warning === 0) {
       return { labels: [], values: [], kind: "severity" }
@@ -1027,8 +1029,8 @@ function reasoningFor(
   if (recurrence > 1) {
     parts.push(
       tx(
-        `Ce n'est pas un cas isolé : ${recurrence} alertes similaires enregistrées pour cet actif.`,
-        `This is not a one-off: ${recurrence} similar alerts recorded for this asset.`
+        `Ce n'est pas un cas isolé : cet actif a alerté sur ${recurrence} jours différents.`,
+        `This is not a one-off: this asset alerted on ${recurrence} different days.`
       )
     )
   }
@@ -1036,8 +1038,8 @@ function reasoningFor(
   return parts.join(" ")
 }
 
-function recurrenceOf(equipment: string, alerts: Alert[]): number {
-  return alerts.filter((a) => a.equipment === equipment).length
+function recurrenceOf(equipment: string, alerts: Alert[], alertKeyValue?: string | null): number {
+  return recurrenceDays(equipment, alertKeyValue, alerts)
 }
 
 /** The dashboard block at the top of the visible area, to hold still
@@ -3531,7 +3533,7 @@ export function DashboardView({
 
           {alertsLoaded && !notMeasured(String(countAlerts(alerts.filter(matchesActivity)))) && (
             <span className="ml-1.5 text-[10px] opacity-60">
-              {alerts.filter(matchesActivity).length}
+              {countAlerts(alerts.filter(matchesActivity))}
             </span>
           )}
         </button>
@@ -3577,11 +3579,11 @@ export function DashboardView({
                 String(countAlerts(alerts.filter((a) => a.sector === s.key).filter(matchesActivity)))
               ) && (
               <span className="ml-1.5 text-[10px] opacity-60">
-                {
+                {countAlerts(
                   alerts
                     .filter((a) => a.sector === s.key)
-                    .filter(matchesActivity).length
-                }
+                    .filter(matchesActivity)
+                )}
               </span>
             )}
           </button>
@@ -4476,7 +4478,7 @@ export function DashboardView({
                 const confidence = expandedRecommendation
                   ? estimateConfidence(
                       expandedRecommendation,
-                      recurrenceOf(expandedRecommendation.equipment, alerts),
+                      recurrenceOf(expandedRecommendation.equipment, alerts, expandedRecommendation.alert_key),
                       trackRecordForCategory(expandedRecommendation.action_category, recommendations, taskMap),
                       alerts
                     )
@@ -4562,7 +4564,7 @@ export function DashboardView({
                       <p className="mt-1 text-sm leading-6 text-sidebar-foreground/80">
                         {reasoningFor(
                           expandedRecommendation,
-                          recurrenceOf(expandedRecommendation.equipment, alerts),
+                          recurrenceOf(expandedRecommendation.equipment, alerts, expandedRecommendation.alert_key),
                           tx
                         )}
                       </p>
@@ -4724,7 +4726,8 @@ export function DashboardView({
                         selectedRecommendation,
                         recurrenceOf(
                           selectedRecommendation.equipment,
-                          alerts
+                          alerts,
+                          selectedRecommendation.alert_key
                         ),
                         trackRecordForCategory(
                           selectedRecommendation.action_category,
@@ -4825,7 +4828,8 @@ export function DashboardView({
                         selectedRecommendation,
                         recurrenceOf(
                           selectedRecommendation.equipment,
-                          alerts
+                          alerts,
+                          selectedRecommendation.alert_key
                         ),
                         tx
                       )}
