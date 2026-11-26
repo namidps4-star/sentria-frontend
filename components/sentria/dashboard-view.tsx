@@ -2795,6 +2795,8 @@ export function DashboardView({
     tabSector && departmentTabs.length > 0
       ? [...combinableWith(tabSector, departmentTabs)]
           .filter((id) => !departmentTabs.includes(id) && activitiesFor(tabSector).some((a) => a.id === id))
+          // A cold-chain operator does not run port, so no port tab is offered.
+          .filter((id) => !(tabSector === "logistics" && normalizeOpsType(id) === "port" && departmentTabs.some((d) => normalizeOpsType(d) === "froid")))
           .map((id) => ({
             id,
             label: activityLabel(tabSector, id, tx) ?? id,
