@@ -285,7 +285,7 @@ const reply = (status, body, json) => ({ ok: status >= 200 && status < 300, stat
     await x.ctx.close();
 
     x = await open2({ alertRows: [], freshness: stamp('industry', 1, 'usine-production') });
-    pass(/No industry data/.test(await text(x.p)) && await notices(x.p).count() === 0, 'it answered with nothing: "No industry data" stays');
+    pass(/File received, no alert/.test(await text(x.p)) && !/No industry data/.test(await text(x.p)) && await notices(x.p).count() === 0, 'a file came in, no alert: "File received, no alert", no notice');
     pass(await x.p.locator('[data-freshness]').count() === 0, 'recent data: the overview gains no "updated N days ago" line (it speaks up for a failure or old data only)');
     await x.ctx.close();
 
