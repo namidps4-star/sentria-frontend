@@ -8,6 +8,7 @@ import type { LegalDocId } from "@/lib/legal"
 import { enterAt } from "@/lib/motion"
 import { cn } from "@/lib/utils"
 import { readTheme, resolvedTheme, writeTheme } from "@/lib/theme"
+import { useIsEmployee } from "@/lib/role"
 import {
   readCompanyName,
   readTimezoneId,
@@ -235,6 +236,7 @@ export function SettingsView() {
   const [legalDoc, setLegalDoc] = useState<LegalDocId>("privacy")
 
   const [countryCode, setCountryCode] = useState("")
+  const employee = useIsEmployee()
 
   const [toggles, setToggles] = useState({
     alerts: true,
@@ -365,9 +367,10 @@ export function SettingsView() {
   const FIELD =
     "mt-1.5 w-full rounded-2xl border border-white/15 bg-white/10 px-3.5 py-2.5 text-sm text-white outline-none placeholder:text-white/40 focus:border-brand [&>option]:text-[#141414]"
 
+  /* The weekly report is the owner's (F-TEAMROLES): an employee has no switch for it. */
   const preferences = [
     { icon: Bell, title: t.alerts, desc: t.alertsDesc, on: toggles.alerts, change: () => toggle("alerts") },
-    { icon: Mail, title: t.weekly, desc: t.weeklyDesc, on: toggles.weekly, change: () => toggle("weekly") },
+    ...(employee ? [] : [{ icon: Mail, title: t.weekly, desc: t.weeklyDesc, on: toggles.weekly, change: () => toggle("weekly") }]),
     { icon: Moon, title: t.dark, desc: t.darkDesc, on: dark, change: toggleDark },
   ]
 

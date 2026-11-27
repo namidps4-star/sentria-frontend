@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { API_BASE, apiFetch } from "@/lib/api"
 import { useTx } from "@/lib/i18n"
 import { Mail } from "@/lib/icons"
+import { readIsEmployee, useIsEmployee } from "@/lib/role"
 import { cn } from "@/lib/utils"
 
 /** GET /reports/weekly: the numbers the weekly email is built from
@@ -27,10 +28,12 @@ export const WEEKLY_REPORT_KEY = "sentria_weekly_report"
  *  `stale`: the data behind it is old (L4), so a zero is not a reading. */
 export function WeekCard({ stale = false }: { stale?: boolean }) {
   const tx = useTx()
+  const employee = useIsEmployee()
   const [week, setWeek] = useState<WeekSummary | null>(null)
   const [emailOn, setEmailOn] = useState(false)
 
   useEffect(() => {
+    if (readIsEmployee()) return
     try {
       setEmailOn(localStorage.getItem(WEEKLY_REPORT_KEY) === "on")
     } catch {
@@ -45,6 +48,19 @@ export function WeekCard({ stale = false }: { stale?: boolean }) {
         /* No card rather than a card of guesses. */
       })
   }, [])
+
+  if (employee) {
+    return (
+      <section className="rounded-[28px] bg-card p-5 shadow-sm" data-testid="week-card">
+        <p className="text-sm text-muted-foreground">
+          {tx(
+            "Le rapport hebdomadaire est réservé au propriétaire du compte.",
+            "Weekly report is for the account owner."
+          )}
+        </p>
+      </section>
+    )
+  }
 
   if (!week) return null
 

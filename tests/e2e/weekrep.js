@@ -13,14 +13,15 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
 (async () => {
   const b = await chromium.launch(LAUNCH);
   const go = async (p, label) => { if ((p.viewportSize() || {}).width < 1024) { await p.getByRole('button', { name: /menu/i }).first().click(); await p.waitForTimeout(300); } await p.locator('aside nav button', { hasText: label }).click(); await p.waitForTimeout(1300); };
-  const open = async ({ week, vw = 1440, ls = {} } = {}) => {
+  const open = async ({ week, vw = 1440, ls = {}, role } = {}) => {
     const p = await b.newPage({ viewport: { width: vw, height: 900 }, locale: 'en-US' }); p._errs = []; p.on('pageerror', e => p._errs.push(e.message));
     p._weekCalls = 0;
     await p.route(/onrender\.com\//, r => { const u = new URL(r.request().url());
-      if (u.pathname === '/reports/weekly') { p._weekCalls++; return week === 'down' ? r.fulfill({ status: 500, body: 'x' }) : r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(week) }); }
+      if (u.pathname === '/reports/weekly') { p._weekCalls++; if (week === 'forbidden') return r.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ detail: { error_code: 'owner_only' } }) });
+      return week === 'down' ? r.fulfill({ status: 500, body: 'x' }) : r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(week) }); }
       r.fulfill({ status: 200, contentType: 'application/json', body: u.pathname === '/alerts' ? JSON.stringify(alerts) : '{"recommendations":[],"assignments":[],"contractors":[]}' }); });
     await p.addInitScript(ls => { if (!sessionStorage.x) { sessionStorage.x = 1; localStorage.clear(); Object.entries(ls).forEach(([k, v]) => localStorage.setItem(k, v)); } }, { ...LS, ...ls });
-    await signedIn(p, 'u', 'a@b.c', { plan: 'business' }); await p.goto(APP_URL); await p.waitForTimeout(1800);
+    await signedIn(p, 'u', 'a@b.c', { plan: 'business', ...(role ? { role } : {}) }); await p.goto(APP_URL); await p.waitForTimeout(1800);
     return p; };
   const stored = p => p.evaluate(() => localStorage.getItem('sentria_weekly_report'));
 
@@ -69,6 +70,17 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   p = await open({ week: 'down' });
   await go(p, 'Report');
   pass(await p.getByTestId('week-card').count() === 0 && /Alerts|alert/i.test(await p.locator('main').innerText()), 'API error: no card, the report still shows');
+  pass(p._errs.length === 0, 'no page errors ' + p._errs.join('|'));
+  await p.close();
+
+  console.log('== an employee: the owner line, no switch');
+  p = await open({ week: 'forbidden', role: 'employee' });
+  await go(p, 'Report');
+  const emp = p.getByTestId('week-card');
+  pass(await emp.count() === 1 && /for the account owner/.test(await emp.innerText()), 'the card says the report is for the account owner');
+  pass(await emp.getByRole('switch').count() === 0 && p._weekCalls === 0, 'no Monday switch, and the report is not asked for');
+  await go(p, 'Settings');
+  pass(await p.getByRole('switch', { name: 'Weekly report' }).count() === 0, 'Settings has no Weekly report switch');
   pass(p._errs.length === 0, 'no page errors ' + p._errs.join('|'));
   await p.close();
 
