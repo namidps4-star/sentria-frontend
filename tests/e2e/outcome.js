@@ -17,7 +17,7 @@ const empty = () => ({ can_answer: true, answers: {}, kinds: {} });
 
 (async () => {
   const browser = await chromium.launch(LAUNCH);
-  const open = async ({ plan = 'pro', lang = 'en', vw = 1440, theme = 'light', sector = 'health', log = empty(), postAnswer = 'ok', getAnswer = 'ok' } = {}) => {
+  const open = async ({ plan = 'pro', lang = 'en', vw = 1440, theme = 'light', sector = 'health', log = empty(), postAnswer = 'ok', getAnswer = 'ok', role } = {}) => {
     const key = sector === 'health' ? HEALTH : `${sector}.failure.imminent`;
     const recs = [R('Doliprane', key, sector), R('Insuline', key, sector)];
     const ctx = await browser.newContext({ viewport: { width: vw, height: vw < 500 ? 844 : 1300 }, locale: lang === 'fr' ? 'fr-FR' : 'en-US' });
@@ -42,7 +42,7 @@ const empty = () => ({ can_answer: true, answers: {}, kinds: {} });
       r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(getAnswer === 'ok' ? { outcomes: log } : { error_code: getAnswer, error_detail: 'x' }) });
     });
     await p.addInitScript(([l, t, s]) => { const v = { sentria_onboarded: '1', sentria_sector: s, sentria_sectors: JSON.stringify([s]), sentria_business_type: s === 'health' ? 'pharmacie' : '', sentria_language: l, sentria_company_name: 'Acme', sentria_theme: t }; for (const k in v) localStorage.setItem(k, v[k]); }, [lang, theme, sector]);
-    await signedIn(p, 'u-test', 'test@sentria.app', { plan });
+    await signedIn(p, 'u-test', 'test@sentria.app', { plan, ...(role ? { role } : {}) });
     await p.goto(APP_URL, { waitUntil: 'networkidle' });
     if (vw < 1024) { await p.getByRole('button', { name: /menu/i }).first().click(); await p.waitForTimeout(300); }
     await p.getByRole('button', { name: lang === 'fr' ? /^Suivi$/ : /^Tracking$/ }).first().click(); await p.waitForTimeout(1200);
@@ -78,6 +78,18 @@ const empty = () => ({ can_answer: true, answers: {}, kinds: {} });
     await p.locator('[data-outcome=false_alarm]').click(); await p.waitForTimeout(500);
     pass(/0 real problems, 1 false alarm/.test(await p.locator('[data-outcome-tally]').innerText()), 'changing the answer moves the count, never doubles it');
     pass(/lower the confidence score/.test(await ask(p).innerText()), 'a false alarm says it lowers the score of this kind');
+    pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
+    await ctx.close(); }
+
+  console.log('== an employee answers, and reads no tally');
+  { const { p, ctx } = await open({ role: 'employee', log: { can_answer: true, answers: {}, kinds: { [HEALTH]: { right: 3, wrong: 1 } } } });
+    await detail(p, 'Doliprane');
+    pass(await ask(p).count() === 1 && await words(p) === 'Stock-out avoided | Stock-out happened | False alarm', 'an employee is asked on a done task');
+    pass(p._gets === 0, `the tally is not requested (${p._gets} GET)`);
+    pass(await p.locator('[data-outcome-tally]').count() === 0, 'and no count is shown');
+    await p.locator('[data-outcome=avoided]').click(); await p.waitForTimeout(500);
+    pass(p._posts.length === 1 && p._posts[0].outcome === 'avoided', 'the answer still saves');
+    pass(await p.locator('[data-outcome-saved=avoided]').count() === 1, 'and is shown as saved');
     pass(p._errors.length === 0, 'no page errors ' + p._errors.join('|'));
     await ctx.close(); }
 
