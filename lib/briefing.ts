@@ -1,3 +1,4 @@
+import { countAlerts } from "@/lib/alert-count"
 import { messageFinding, riskOf, type LogisticsAlert } from "@/lib/logistics-signals"
 import type { Tx } from "@/lib/i18n/pair"
 
@@ -16,8 +17,10 @@ export type BriefItem = {
   critical: boolean
   /** ISO date of the newest alert on this asset and kind. */
   date: string
-  /** How many alerts of this kind this asset has in the period. */
+  /** Days in the period this alert fired on. */
   count: number
+  /** Times it came in during the period: rows, not alerts. */
+  fires: number
 }
 
 export type Briefing = {
@@ -34,8 +37,12 @@ export type Briefing = {
 const NEEDS_SHOWN = 3
 
 export function buildBriefing(alerts: LogisticsAlert[], tx: Tx, stale = false): Briefing {
-  // One row per asset and kind: a repeat is a count, not a second story.
-  const groups = new Map<string, BriefItem & { risk: number }>()
+  const dayOf = (date: string) => {
+    const d = new Date(date)
+    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+  }
+
+  const groups = new Map<string, BriefItem & { risk: number; days: Set<string> }>()
 
   for (const alert of alerts) {
     const key = `${alert.equipment}|${alert.alert_key ?? messageFinding(alert)}`
@@ -50,18 +57,22 @@ export function buildBriefing(alerts: LogisticsAlert[], tx: Tx, stale = false): 
         critical,
         date: alert.date,
         count: 1,
+        fires: 1,
         risk: riskOf(alert),
+        days: new Set([dayOf(alert.date)]),
       })
       continue
     }
 
-    held.count += 1
-    held.critical = held.critical || critical
+    held.days.add(dayOf(alert.date))
+    held.count = held.days.size
+    held.fires += 1
     held.risk = Math.max(held.risk, riskOf(alert))
 
     if (at > Date.parse(held.date)) {
       held.date = alert.date
       held.finding = messageFinding(alert) || alert.message
+      held.critical = critical
     }
   }
 
@@ -72,42 +83,36 @@ export function buildBriefing(alerts: LogisticsAlert[], tx: Tx, stale = false): 
       Date.parse(b.date) - Date.parse(a.date)
   )
 
-  const critical = alerts.filter((a) => a.severity === "CRITICAL").length
-  const warning = alerts.length - critical
-  const needs: BriefItem[] = ranked.slice(0, NEEDS_SHOWN).map((r) => ({ equipment: r.equipment, finding: r.finding, critical: r.critical, date: r.date, count: r.count }))
+  const alertCount = ranked.length
+  const criticalCount = ranked.filter((r) => r.critical).length
+  const warningCount = alertCount - criticalCount
+  const needs: BriefItem[] = ranked.slice(0, NEEDS_SHOWN).map((r) => ({ equipment: r.equipment, finding: r.finding, critical: r.critical, date: r.date, count: r.count, fires: r.fires }))
   const first = needs[0]
-
-  // The headline counts things that need a person, not repeats of one.
-  const criticalThings = ranked.filter((r) => r.critical).length
 
   const headline = !first
     ? tx("Rien à signaler.", "Nothing to report.")
-    : critical === 0
+    : criticalCount === 0
       ? tx(
-          `Rien de critique. ${warning} point${warning > 1 ? "s" : ""} à surveiller.`,
-          `Nothing critical. ${warning} thing${warning > 1 ? "s" : ""} to watch.`
+          `Rien de critique. ${warningCount} point${warningCount > 1 ? "s" : ""} à surveiller.`,
+          `Nothing critical. ${warningCount} thing${warningCount > 1 ? "s" : ""} to watch.`
         )
-      : criticalThings === 1
+      : criticalCount === 1
         ? tx(`${first.equipment} a besoin de vous maintenant.`, `${first.equipment} needs you now.`)
         : tx(
-            `${criticalThings} points critiques vous attendent, à commencer par ${first.equipment}.`,
-            `${criticalThings} critical things need you, starting with ${first.equipment}.`
+            `${criticalCount} points critiques vous attendent, à commencer par ${first.equipment}.`,
+            `${criticalCount} critical things need you, starting with ${first.equipment}.`
           )
 
   const lead = tx(
-    `${alerts.length} alerte${alerts.length > 1 ? "s" : ""} sur la période : ${critical} critique${critical > 1 ? "s" : ""}, ${warning} à surveiller. Voici ce qui demande votre attention, ce qui revient, et quoi faire ensuite.`,
-    `${alerts.length} alert${alerts.length > 1 ? "s" : ""} in the period: ${critical} critical, ${warning} to watch. Here is what needs your attention, what keeps coming back, and what to do next.`
+    `${alertCount} alerte${alertCount > 1 ? "s" : ""} sur la période : ${criticalCount} critique${criticalCount > 1 ? "s" : ""}, ${warningCount} à surveiller. Voici ce qui demande votre attention, ce qui revient, et quoi faire ensuite.`,
+    `${alertCount} alert${alertCount > 1 ? "s" : ""} in the period: ${criticalCount} critical, ${warningCount} to watch. Here is what needs your attention, what keeps coming back, and what to do next.`
   )
 
-  const perAsset = new Map<string, number>()
-
-  for (const alert of alerts) perAsset.set(alert.equipment, (perAsset.get(alert.equipment) ?? 0) + 1)
-
-  const recurring = [...perAsset.entries()]
-    .filter(([, count]) => count >= 2)
-    .sort((a, b) => b[1] - a[1])
+  const recurring = ranked
+    .filter((group) => group.days.size >= 2)
+    .sort((a, b) => b.days.size - a.days.size)
     .slice(0, 3)
-    .map(([equipment, count]) => ({ equipment, count }))
+    .map((group) => ({ equipment: group.equipment, count: group.days.size }))
 
   const plan: string[] = []
 
@@ -118,8 +123,8 @@ export function buildBriefing(alerts: LogisticsAlert[], tx: Tx, stale = false): 
   if (recurring[0]) {
     plan.push(
       tx(
-        `Cette semaine : chercher pourquoi ${recurring[0].equipment} alerte si souvent (${recurring[0].count} fois).`,
-        `This week: find out why ${recurring[0].equipment} alerts so often (${recurring[0].count} times).`
+        `Cette semaine : chercher pourquoi ${recurring[0].equipment} alerte si souvent (${recurring[0].count} jours).`,
+        `This week: find out why ${recurring[0].equipment} alerts so often (${recurring[0].count} days).`
       )
     )
   }

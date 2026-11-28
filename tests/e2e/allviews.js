@@ -25,7 +25,7 @@ const A = (id, eq, key, sev='CRITICAL') => ({ id, equipment: eq, sector: 'health
     await p.evaluate(() => document.querySelector('input[type=file]').closest('label').scrollIntoView({ block: 'center' }));
     await p.locator('input[type=file]').focus(); await check('focus import');
     await p.setInputFiles('input[type=file]', { name: 'x.csv', mimeType: 'text/csv', buffer: Buffer.from('medicine_name,stock_qty\nA,1\n') });
-    await p.waitForTimeout(3000); await check('after upload'); { const close = p.locator('[role=dialog][aria-label="Data import"] button'); if (await close.count()) await close.click(); await p.waitForTimeout(200); await check('import panel closed'); } await scrollAll('dashboard after upload');
+    const done = p.getByRole('dialog', { name: 'Data import' }).getByRole('button', { name: /See the alerts|Close/ }).first(); await done.waitFor({ timeout: 15000 }); await check('after upload'); await done.click(); await p.waitForTimeout(200); await check('import panel closed'); await scrollAll('dashboard after upload');
     // every page in the sidebar
     const openMenu = async () => { if (vw < 1024 && !(await p.evaluate(() => document.querySelector('aside').getBoundingClientRect().left >= 0))) { const m = p.getByRole('button', { name: /menu/i }).first(); if (await m.count()) { await m.click({ timeout: 5000 }); await p.waitForTimeout(300); } } };
     await openMenu();

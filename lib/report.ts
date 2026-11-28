@@ -1,3 +1,4 @@
+import { alertKey, countAlerts, latestAlerts } from "@/lib/alert-count"
 import {
   dailyCounts,
   metricFor,
@@ -151,6 +152,20 @@ function dayLabels(days: number, zone: string, tx: Tx): string[] {
   return out
 }
 
+function dailyDistinctCounts(alerts: LogisticsAlert[], days: number): number[] {
+  const buckets: Set<string>[] = Array.from({ length: days }, () => new Set())
+  const now = Date.now()
+
+  for (const alert of alerts) {
+    const then = new Date(alert.date).getTime()
+    if (!Number.isFinite(then)) continue
+    const dayIndex = days - 1 - Math.floor((now - then) / 864e5)
+    if (dayIndex >= 0 && dayIndex < days) buckets[dayIndex].add(alertKey(alert))
+  }
+
+  return buckets.map((s) => s.size)
+}
+
 export function buildReport(
   alerts: LogisticsAlert[],
   companyName: string,
@@ -176,7 +191,9 @@ export function buildReport(
     }
   }
 
-  const sorted = [...alerts].sort(
+  const deduped = latestAlerts(alerts)
+
+  const sorted = [...deduped].sort(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
   )
 
@@ -186,13 +203,21 @@ export function buildReport(
   /* Only the categories that actually have alerts. The mock listed four
      fixed sections whatever the data said. */
   const byCategory = new Map<ReportMonitoringKey, LogisticsAlert[]>()
+  const rawByCategory = new Map<ReportMonitoringKey, LogisticsAlert[]>()
 
-  for (const alert of alerts) {
+  for (const alert of deduped) {
     const key = categoryOf(alert)
     const bucket = byCategory.get(key)
 
     if (bucket) bucket.push(alert)
     else byCategory.set(key, [alert])
+  }
+
+  for (const alert of alerts) {
+    const key = categoryOf(alert)
+    const bucket = rawByCategory.get(key)
+    if (bucket) bucket.push(alert)
+    else rawByCategory.set(key, [alert])
   }
 
   const monitoring = [...byCategory.keys()]
@@ -201,18 +226,16 @@ export function buildReport(
   const labels = dayLabels(days, zone.zone, tx)
 
   for (const [key, list] of byCategory) {
-    /* Two windows back to back so the delta is a week against the week
-       before it, not one day against the one before it: a single bad
-       day used to be able to flip the badge on its own. */
-    const counts = dailyCounts(list, days * 2, () => true)
+    const rawList = rawByCategory.get(key) ?? list
+    const counts = dailyDistinctCounts(rawList, days * 2)
     const previousWindow = counts.slice(0, days)
     const currentWindow = counts.slice(days)
 
     const sum = (values: number[]) => values.reduce((a, b) => a + b, 0)
 
-    const criticalCount = list.filter(
-      (alert) => severityOf(alert) === "critical"
-    ).length
+    const criticalCount = countAlerts(
+      (rawByCategory.get(key) ?? []).filter((alert) => severityOf(alert) === "critical")
+    )
 
     kpis[key] = {
       label: CATEGORY_KPI_LABEL[key],
@@ -232,7 +255,7 @@ export function buildReport(
      scanning forty rows of the table below. */
   const offenderCounts = new Map<string, number>()
 
-  for (const alert of alerts) {
+  for (const alert of deduped) {
     offenderCounts.set(
       alert.equipment,
       (offenderCounts.get(alert.equipment) ?? 0) + 1
@@ -245,7 +268,7 @@ export function buildReport(
     .slice(0, 3)
     .map(([equipment, count]) => ({ equipment, count }))
 
-  const rows: ReportAlertRow[] = [...alerts]
+  const rows: ReportAlertRow[] = [...deduped]
     .sort(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     )

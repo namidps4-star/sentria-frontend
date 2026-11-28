@@ -48,8 +48,8 @@ export function BriefingCard({ alerts, stale, staleDays }: { alerts: LogisticsAl
                     {item.critical ? tx("Critique", "Critical") : tx("Attention", "Warning")}
                   </StatusTag>
                   <StatusTag tone="neutral" size="xs">{agoLabel(item.date, tx)}</StatusTag>
-                  {item.count > 1 && (
-                    <StatusTag tone="neutral" size="xs">{tx(`${item.count} fois`, `${item.count} times`)}</StatusTag>
+                  {item.fires > 1 && (
+                    <StatusTag tone="neutral" size="xs">{tx(`Alerté ${item.fires} fois`, `Fired ${item.fires} times`)}</StatusTag>
                   )}
                 </div>
               </div>
@@ -70,7 +70,7 @@ export function BriefingCard({ alerts, stale, staleDays }: { alerts: LogisticsAl
         <div>
           <h3 className="font-heading text-xl font-semibold tracking-tight">{tx("Ce qui revient", "What keeps coming back")}</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            {brief.recurring.map((r) => tx(`${r.equipment} (${r.count} alertes)`, `${r.equipment} (${r.count} alerts)`)).join(" · ")}
+            {brief.recurring.map((r) => tx(`${r.equipment} (${r.count} jours)`, `${r.equipment} (${r.count} days)`)).join(" · ")}
           </p>
         </div>
       )}

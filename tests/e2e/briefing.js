@@ -7,7 +7,7 @@ const pass = (ok, l) => { fails += !ok; console.log(`   ${ok ? 'PASS' : 'FAIL'} 
 const now = Date.now();
 const mk = (i, equipment, sev, key, message, hoursAgo, risk) => ({ id: i, equipment, sector: 'logistics', business_type: 'port-conteneurs', severity: sev, date: new Date(now - hoursAgo * 36e5).toISOString(), alert_key: key, risk_score: risk, message });
 const ALERTS = [
-  mk(1, 'CRANE-02', 'CRITICAL', 'logistics.cycles.critical', 'Crane at 96% of its cycle limit : plan service', 3, 90),
+  mk(1, 'CRANE-02', 'CRITICAL', 'logistics.cycles.critical', 'Crane at 96% of its cycle limit : plan service', 30, 90),
   mk(2, 'CRANE-02', 'CRITICAL', 'logistics.cycles.critical', 'Crane at 98% of its cycle limit : plan service', 1, 95),
   mk(3, 'REEFER-7', 'CRITICAL', 'logistics.temp.high', 'Reefer at 9 C : check the unit', 5, 80),
   mk(4, 'QUAI-1', 'WARNING', 'logistics.wait.long', 'Berth wait of 6 h : call the line', 30, 40),
@@ -32,11 +32,11 @@ const LS = { sentria_language: 'en', sentria_onboarded: 'true', sentria_company_
   const card = p.getByTestId('briefing');
   const t = (await card.innerText()).replace(/\s+/g, ' ');
   pass(/2 critical things need you, starting with CRANE-02/.test(t), 'headline names the worst asset: ' + t.slice(0, 90));
-  pass(/5 alerts in the period: 3 critical, 2 to watch/.test(t), 'the lead counts the period');
+  pass(/4 alerts in the period: 2 critical, 2 to watch/.test(t), 'the lead counts the period');
   pass(/What needs you now/.test(t) && /CRANE-02/.test(t) && /REEFER-7/.test(t), 'what needs you now lists the critical assets');
-  pass(await card.locator('ul li', { hasText: 'CRANE-02' }).count() === 1 && /2 times/.test(t), 'a repeat is one story with a count, not two');
+  pass(await card.locator('ul li', { hasText: 'CRANE-02' }).count() === 1 && /Fired 2 times/.test(t), 'a repeat is one story with a count, not two');
   pass(/Crane at 98% of its cycle limit/.test(t) && !/96%/.test(t), 'the newest reading of a repeat is the one shown');
-  pass(/What keeps coming back/.test(t) && /CRANE-02 \(2 alerts\)/.test(t), 'what keeps coming back names the repeat asset');
+  pass(/What keeps coming back/.test(t) && /CRANE-02 \(2 days\)/.test(t), 'what keeps coming back names the repeat asset');
   pass(/The plan/i.test(t) && /Today: deal with CRANE-02/.test(t) && /Today: deal with REEFER-7/.test(t) && /This week: find out why CRANE-02/.test(t), 'a short plan: today for critical, this week for the repeat');
   pass(!/€|\$/.test(t), 'no money figure invented');
   pass(await p.getByRole('tab', { name: 'The figures' }).count() === 1 && await p.getByText('The figures behind the story').count() === 0 && await p.getByText('Key figures', { exact: true }).isHidden(), 'the old figures are on the other tab, not stacked under the story');

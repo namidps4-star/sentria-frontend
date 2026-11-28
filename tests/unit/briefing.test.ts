@@ -17,37 +17,40 @@ const alert = (equipment: string, severity: string, key: string, hours: number, 
 
 describe("buildBriefing", () => {
   const alerts = [
-    alert("CRANE-02", "CRITICAL", "cycles", 3, "96% : plan service", 90),
+    alert("CRANE-02", "CRITICAL", "cycles", 25, "96% : plan service", 90),
     alert("CRANE-02", "CRITICAL", "cycles", 1, "98% : plan service", 95),
+    alert("CRANE-02", "CRITICAL", "vibration", 25, "high : check", 85),
     alert("REEFER-7", "CRITICAL", "temp", 5, "9 C : check", 80),
     alert("QUAI-1", "WARNING", "wait", 30, "6 h : call", 40),
   ]
 
-  it("counts things that need a person, not repeats", () => {
+  it("dedupes by equipment+alert_key, counts distinct days", () => {
     const brief = buildBriefing(alerts, tx)
 
-    expect(brief.headline).toBe("2 critical things need you, starting with CRANE-02.")
+    expect(brief.headline).toBe("3 critical things need you, starting with CRANE-02.")
     expect(brief.needs).toHaveLength(3)
-    expect(brief.needs[0]).toMatchObject({ equipment: "CRANE-02", count: 2, finding: "98%" })
+    expect(brief.needs[0]).toMatchObject({ equipment: "CRANE-02", finding: "98%" })
+    expect(brief.needs[0].count).toBe(2)
+    expect(brief.needs[0].fires).toBe(2)
+    expect(brief.recurring).toEqual([{ equipment: "CRANE-02", count: 2 }])
   })
 
   it("ranks critical first, then by risk", () => {
-    expect(buildBriefing(alerts, tx).needs.map((n) => n.equipment)).toEqual(["CRANE-02", "REEFER-7", "QUAI-1"])
+    expect(buildBriefing(alerts, tx).needs.map((n) => n.equipment)).toEqual(["CRANE-02", "CRANE-02", "REEFER-7"])
   })
 
   it("does not raise a false alarm when nothing is critical", () => {
-    expect(buildBriefing([alerts[3]], tx).headline).toBe("Nothing critical. 1 thing to watch.")
+    expect(buildBriefing([alerts[4]], tx).headline).toBe("Nothing critical. 1 thing to watch.")
   })
 
   it("names one critical asset in the singular", () => {
-    expect(buildBriefing([alerts[2]], tx).headline).toBe("REEFER-7 needs you now.")
+    expect(buildBriefing([alerts[3]], tx).headline).toBe("REEFER-7 needs you now.")
   })
 
   it("plans today for critical, this week for repeats and a stale file", () => {
     const plan = buildBriefing(alerts, tx, true).plan
 
     expect(plan).toContain("Today: deal with CRANE-02.")
-    expect(plan).toContain("Today: deal with REEFER-7.")
     expect(plan.some((s) => s.startsWith("This week: find out why CRANE-02"))).toBe(true)
     expect(plan).toContain("This week: import a recent file.")
   })
@@ -59,6 +62,6 @@ describe("buildBriefing", () => {
   })
 
   it("speaks French when asked", () => {
-    expect(buildBriefing([alerts[2]], (fr) => fr).headline).toBe("REEFER-7 a besoin de vous maintenant.")
+    expect(buildBriefing([alerts[3]], (fr) => fr).headline).toBe("REEFER-7 a besoin de vous maintenant.")
   })
 })

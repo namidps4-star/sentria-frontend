@@ -1,6 +1,7 @@
 "use client"
 
 import { CsvTemplateLink } from "./csv-template-link"
+import { ImportOptionalColumns } from "./import-optional-columns"
 import { DemotedTag, LossTag, SeverityTag, StatusTag, ValueTag } from "./status-tag"
 import { demotion, demotionSentence } from "@/lib/demotion"
 import { DisposalLog } from "./disposal-log"
@@ -141,7 +142,7 @@ import { WholesalerAdvice } from "./wholesaler-advice"
 import { SupplierActions } from "./supplier-actions"
 import { supplierFromParams, type Supplier } from "@/lib/supplier"
 import { SectorTag } from "./sector-tag"
-import { countAlerts } from "@/lib/alert-count"
+import { alertKey, countAlerts, countAlertDays, latestAlerts, recurrenceDays } from "@/lib/alert-count"
 
 const SECTORS: { key: string; label: Localized }[] = [
   { key: "all", label: localized("Tous", "All") },
@@ -220,14 +221,15 @@ function dailySeries(
     day.setHours(0, 0, 0, 0)
     day.setDate(day.getDate() - (days - 1 - i))
 
-    return scoped.filter((a) => {
+    const onDay = scoped.filter((a) => {
       const at = new Date(a.date)
       return (
         at.getFullYear() === day.getFullYear() &&
         at.getMonth() === day.getMonth() &&
         at.getDate() === day.getDate()
       )
-    }).length
+    })
+    return countAlerts(onDay)
   })
 }
 
@@ -289,7 +291,7 @@ const SUBTYPE_KPI_LABELS: Record<string, Localized[]> = {
   ],
   "grossiste-pharma": [
     localized("Ruptures réseau", "Network stockouts"),
-    localized("Rééquilibrages suggérés", "Suggested transfers"),
+    localized("Réapprovisionnements suggérés", "Suggested resupplies"),
     localized("Produits concernés", "Products affected"),
     localized("Invendus réseau", "Network deadstock"),
   ],
@@ -361,7 +363,7 @@ const KEY_FAMILY_LABELS: Record<string, Localized> = {
   tests_remaining: localized("Analyses", "Tests"),
   reagent: localized("Réactifs", "Reagents"),
   critical_supply: localized("Sans alternative", "No substitute"),
-  rebalance: localized("Transferts", "Transfers"),
+  rebalance: localized("Réapprovisionnement", "Resupply"),
   chain: localized("Transferts magasins", "Store transfers"),
   wholesale: localized("Clients", "Customers"),
   torque: localized("Couple", "Torque"),
@@ -404,9 +406,10 @@ function alertBreakdown(
   alerts: Alert[],
   tx: Tx
 ): { labels: string[]; values: number[]; kind: "family" | "severity" } {
+  const deduped = latestAlerts(alerts)
   const counts = new Map<string, number>()
 
-  for (const a of alerts) {
+  for (const a of deduped) {
     const parts = (a.alert_key ?? "").split(".")
     if (parts.length < 2 || !parts[1]) continue
 
@@ -416,7 +419,7 @@ function alertBreakdown(
 
   if (counts.size === 0) {
     const critical = countAlerts(alerts.filter((a) => a.severity === "CRITICAL"))
-    const warning = alerts.filter((a) => a.severity === "WARNING").length
+    const warning = countAlerts(alerts.filter((a) => a.severity === "WARNING"))
 
     if (critical === 0 && warning === 0) {
       return { labels: [], values: [], kind: "severity" }
@@ -1026,8 +1029,8 @@ function reasoningFor(
   if (recurrence > 1) {
     parts.push(
       tx(
-        `Ce n'est pas un cas isolé : ${recurrence} alertes similaires enregistrées pour cet actif.`,
-        `This is not a one-off: ${recurrence} similar alerts recorded for this asset.`
+        `Cet actif a alerté sur ${recurrence} jours différents.`,
+        `This asset alerted on ${recurrence} different days.`
       )
     )
   }
@@ -1035,8 +1038,8 @@ function reasoningFor(
   return parts.join(" ")
 }
 
-function recurrenceOf(equipment: string, alerts: Alert[]): number {
-  return alerts.filter((a) => a.equipment === equipment).length
+function recurrenceOf(equipment: string, alerts: Alert[], alertKeyValue?: string | null): number {
+  return recurrenceDays(equipment, alertKeyValue, alerts)
 }
 
 /** The dashboard block at the top of the visible area, to hold still
@@ -2456,7 +2459,7 @@ export function DashboardView({
           aria-label={tx("Importer des données", "Import data")}
           hidden={!importPanel.present}
           data-origin="top-right"
-          className={cn("squircle absolute right-0 top-full z-30 mt-2 w-[min(380px,calc(100vw-2.5rem))] rounded-[30px] border border-border bg-card p-2.5 shadow-2xl t-dropdown max-sm:fixed max-sm:inset-x-4 max-sm:w-auto", importPanel.className)}
+          className={cn("squircle absolute right-0 top-full z-30 mt-2 max-h-[calc(100dvh-5.75rem)] w-[min(380px,calc(100vw-2.5rem))] overflow-y-auto overscroll-contain rounded-[30px] border border-border bg-card p-2.5 shadow-2xl t-dropdown max-sm:fixed max-sm:inset-x-4 max-sm:max-h-[calc(100dvh-7rem)] max-sm:w-auto", importPanel.className)}
         >
           {/* The lime header: where the file goes, and the sector tabs. */}
           <div className="squircle rounded-[22px] bg-accent px-4 pb-3.5 pt-3.5 text-accent-foreground">
@@ -2635,25 +2638,11 @@ export function DashboardView({
               out what an hour of stop costs. Health needs none: its
               cold-chain alerts already carry the stock value. */}
           {/* Stock (Health, Retail): three optional columns that name who to
-              order from, so the alert can say it and offer Call, Text, Email. */}
+              order from, so the alert can say it and offer Call, Text, Email,
+              and where the department has a reorder alert, the columns that
+              let it say how much to order (lib/reorder-columns.ts). */}
           {(uploadSector === "health" || uploadSector === "commerce") && (
-            <div data-supplier-columns="" className="mt-2 rounded-[20px] bg-muted px-3.5 py-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                {tx("Facultatif · pour savoir chez qui commander", "Optional · to know who to order from")}
-              </p>
-              <p className="mt-2 text-xs leading-5 text-muted-foreground">
-                <code className="rounded-md bg-card px-1.5 py-0.5 font-mono text-[11px] text-foreground">supplier</code>{" "}
-                <code className="rounded-md bg-card px-1.5 py-0.5 font-mono text-[11px] text-foreground">supplier_phone</code>{" "}
-                <code className="rounded-md bg-card px-1.5 py-0.5 font-mono text-[11px] text-foreground">supplier_email</code>{" "}
-                {tx("le nom, le téléphone (format +229…) et l'e-mail du fournisseur", "the supplier's name, phone (as +229…) and email")}
-              </p>
-              <p className="mt-2 text-[11px] leading-4 text-muted-foreground">
-                {tx(
-                  "L'alerte de stock dit alors chez qui commander et propose Appeler, SMS et E-mail. Sans ces colonnes, rien ne change.",
-                  "The stock alert then says who to order from and offers Call, Text and Email. Without these columns nothing changes."
-                )}
-              </p>
-            </div>
+            <ImportOptionalColumns department={uploadActivity ?? activityIn(uploadSector)} />
           )}
 
           {uploadSector === "industry" && (
@@ -2806,6 +2795,8 @@ export function DashboardView({
     tabSector && departmentTabs.length > 0
       ? [...combinableWith(tabSector, departmentTabs)]
           .filter((id) => !departmentTabs.includes(id) && activitiesFor(tabSector).some((a) => a.id === id))
+          // A cold-chain operator does not run port, so no port tab is offered.
+          .filter((id) => !(tabSector === "logistics" && normalizeOpsType(id) === "port" && departmentTabs.some((d) => normalizeOpsType(d) === "froid")))
           .map((id) => ({
             id,
             label: activityLabel(tabSector, id, tx) ?? id,
@@ -3544,7 +3535,7 @@ export function DashboardView({
 
           {alertsLoaded && !notMeasured(String(countAlerts(alerts.filter(matchesActivity)))) && (
             <span className="ml-1.5 text-[10px] opacity-60">
-              {alerts.filter(matchesActivity).length}
+              {countAlerts(alerts.filter(matchesActivity))}
             </span>
           )}
         </button>
@@ -3590,11 +3581,11 @@ export function DashboardView({
                 String(countAlerts(alerts.filter((a) => a.sector === s.key).filter(matchesActivity)))
               ) && (
               <span className="ml-1.5 text-[10px] opacity-60">
-                {
+                {countAlerts(
                   alerts
                     .filter((a) => a.sector === s.key)
-                    .filter(matchesActivity).length
-                }
+                    .filter(matchesActivity)
+                )}
               </span>
             )}
           </button>
@@ -4489,7 +4480,7 @@ export function DashboardView({
                 const confidence = expandedRecommendation
                   ? estimateConfidence(
                       expandedRecommendation,
-                      recurrenceOf(expandedRecommendation.equipment, alerts),
+                      recurrenceOf(expandedRecommendation.equipment, alerts, expandedRecommendation.alert_key),
                       trackRecordForCategory(expandedRecommendation.action_category, recommendations, taskMap),
                       alerts
                     )
@@ -4575,7 +4566,7 @@ export function DashboardView({
                       <p className="mt-1 text-sm leading-6 text-sidebar-foreground/80">
                         {reasoningFor(
                           expandedRecommendation,
-                          recurrenceOf(expandedRecommendation.equipment, alerts),
+                          recurrenceOf(expandedRecommendation.equipment, alerts, expandedRecommendation.alert_key),
                           tx
                         )}
                       </p>
@@ -4737,7 +4728,8 @@ export function DashboardView({
                         selectedRecommendation,
                         recurrenceOf(
                           selectedRecommendation.equipment,
-                          alerts
+                          alerts,
+                          selectedRecommendation.alert_key
                         ),
                         trackRecordForCategory(
                           selectedRecommendation.action_category,
@@ -4838,7 +4830,8 @@ export function DashboardView({
                         selectedRecommendation,
                         recurrenceOf(
                           selectedRecommendation.equipment,
-                          alerts
+                          alerts,
+                          selectedRecommendation.alert_key
                         ),
                         tx
                       )}

@@ -55,6 +55,7 @@ import type { ViewKey } from "./types"
 import { AccountFreshnessNote, useAccountFreshness } from "./account-freshness"
 import { SourceNotice } from "./not-measured"
 import { SectorTag } from "./sector-tag"
+import { countAlerts, latestAlerts } from "@/lib/alert-count"
 
 /* -------------------------------------------------------------------------- */
 /* Why this file no longer holds any constants                                */
@@ -222,7 +223,8 @@ export function ProfileView({
     const hours = since === null ? null : Math.max(0, (Date.now() - since) / 3_600_000)
 
     const done = new Set((assignments ?? []).filter((a) => a.status === "done").map((a) => a.task_key))
-    const openCritical = accountAlerts
+    const deduped = latestAlerts(accountAlerts)
+    const openCritical = deduped
       .filter((a) => a.severity === "CRITICAL")
       .filter((a) => !done.has(taskKeyFor({ ...a, id: String((a as { id?: unknown }).id ?? "") })))
       .sort((a, b) => timeOf(a) - timeOf(b))
@@ -231,14 +233,15 @@ export function ProfileView({
   }, [accountAlerts, assignments, stampedAt])
 
   const stats = useMemo(() => {
+    const deduped = latestAlerts(accountAlerts)
     const equipment = new Set(
-      accountAlerts.map((a) => a.equipment).filter((e): e is string => Boolean(e))
+      deduped.map((a) => a.equipment).filter((e): e is string => Boolean(e))
     )
 
-    const critical = accountAlerts.filter((a) => a.severity === "CRITICAL").length
+    const critical = countAlerts(accountAlerts.filter((a) => a.severity === "CRITICAL"))
 
     const since = Date.now() - 7 * 24 * 60 * 60 * 1000
-    const week = accountAlerts.filter((a) => timeOf(a) >= since).length
+    const week = countAlerts(accountAlerts.filter((a) => timeOf(a) >= since))
 
     /* Share of the account's tasks marked done, keyed like the tracking
        board (one task per equipment and issue). No company or no tasks:
@@ -267,7 +270,7 @@ export function ProfileView({
       },
       {
         label: tx("Signaux reçus", "Signals received"),
-        value: accountAlerts.length,
+        value: countAlerts(accountAlerts),
         icon: Bell,
       },
       {
@@ -292,23 +295,25 @@ export function ProfileView({
      the backend attributed to it. A sector with nothing against it shows
      a zero, which is true, rather than being hidden. */
   const sectorRows = useMemo(() => {
-    const counts = new Map<string, number>()
+    const perSector = new Map<string, LogisticsAlert[]>()
 
     for (const alert of accountAlerts) {
       if (alert.sector) {
-        counts.set(alert.sector, (counts.get(alert.sector) ?? 0) + 1)
+        const list = perSector.get(alert.sector)
+        if (list) list.push(alert)
+        else perSector.set(alert.sector, [alert])
       }
     }
 
     return sectors.map((id) => ({
       id,
       label: sectorLabel(id, tx),
-      count: counts.get(id) ?? 0,
+      count: countAlerts(perSector.get(id) ?? []),
     }))
   }, [sectors, accountAlerts, tx])
 
   const recent = useMemo(
-    () => [...accountAlerts].sort((a, b) => timeOf(b) - timeOf(a)).slice(0, 5),
+    () => [...latestAlerts(accountAlerts)].sort((a, b) => timeOf(b) - timeOf(a)).slice(0, 5),
     [accountAlerts]
   )
 

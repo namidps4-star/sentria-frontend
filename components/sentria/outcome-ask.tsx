@@ -14,6 +14,7 @@ import {
 import { bucketRange } from "@/lib/cost-ranges"
 import { outcomeLabel } from "@/lib/outcome-words"
 import { atLeast } from "@/lib/plans"
+import { readIsEmployee } from "@/lib/role"
 import { useEffectivePlan } from "@/lib/use-plan"
 import { resolve, useTx } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
@@ -54,6 +55,12 @@ export function OutcomeAsk({
 
   useEffect(() => {
     if (!allowed) return
+    /* The company-wide tally is the owner's (GET /outcomes): an employee
+       answers their own tasks and reads no count. */
+    if (readIsEmployee()) {
+      setLoaded(true)
+      return
+    }
     let live = true
 
     fetchOutcomes().then((result) => {

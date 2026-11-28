@@ -57,21 +57,27 @@ console.log('== data layer: lib/chart-series.ts');
   const days = C.dayStarts(30, now);
   pass(days.length === 30 && days[29].getDate() === 30 && days[0].getDate() === 1 && days[0].getMonth() === 2, '30 days end today (30 Mar) and start on 1 Mar');
   pass(days.every((d, i) => i === 0 || (d.getDate() - days[i - 1].getDate() === 1 || d.getDate() === 1)) && days.every(d => d.getHours() === 0), 'one calendar day at a time, all at local midnight, across the daylight-saving change');
-  const dst = [new Date(2026, 2, 28, 23, 59), new Date(2026, 2, 29, 0, 0), new Date(2026, 2, 29, 23, 30), new Date(2026, 2, 30, 0, 5)].map(d => ({ date: d.toISOString(), sector: 'health' }));
+  const dst = [new Date(2026, 2, 28, 23, 59), new Date(2026, 2, 29, 0, 0), new Date(2026, 2, 29, 23, 30), new Date(2026, 2, 30, 0, 5)].map((d, i) => ({ date: d.toISOString(), sector: 'health', equipment: 'Asset ' + i }));
   const b = C.bucketAlerts(dst, { keys: ['health'], days: 3, metric: 'count', now });
   pass(eq(b.series[0].values, [1, 2, 1]), `alerts either side of midnight land on the right day, on the 23-hour day too (${b.series[0].values})`);
   const edge = C.bucketAlerts([{ date: at(0).toISOString(), sector: 'health' }, { date: at(7).toISOString(), sector: 'health' }, { date: at(-1).toISOString(), sector: 'health' }, { date: 'not a date', sector: 'health' }, { date: at(1).toISOString(), sector: 'industry' }], { keys: ['health'], days: 7, metric: 'count' });
   pass(eq(edge.series[0].values, [0, 0, 0, 0, 0, 0, 1]) && edge.series[0].total === 1, 'older than the window, in the future, unreadable, or another sector: not counted');
 
   const money = [
-    { date: at(0).toISOString(), sector: 'health', params: [['value', 100], ['currency', '€']] },
-    { date: at(0).toISOString(), sector: 'health', params: [['value', 50.5], ['currency', '€'], ['basis', 'sales']] },
-    { date: at(0).toISOString(), sector: 'health', params: [['value', 7]] }, // a bare value is a rate, never money
-    { date: at(0).toISOString(), sector: 'health' },
+    { date: at(0).toISOString(), sector: 'health', equipment: 'Asset 1', params: [['value', 100], ['currency', '€']] },
+    { date: at(0).toISOString(), sector: 'health', equipment: 'Asset 2', params: [['value', 50.5], ['currency', '€'], ['basis', 'sales']] },
+    { date: at(0).toISOString(), sector: 'health', equipment: 'Asset 3', params: [['value', 7]] }, // a bare value is a rate, never money
+    { date: at(0).toISOString(), sector: 'health', equipment: 'Asset 4' },
   ];
   const v = C.bucketAlerts(money, { keys: ['health'], days: 7, metric: 'value' });
   pass(v.series[0].values[6] === 150.5 && v.series[0].approx === true, 'value at risk sums only alerts with a currency, and flags estimates');
   pass(C.bucketAlerts(money, { keys: ['health'], days: 7, metric: 'count' }).series[0].values[6] === 4, 'the count metric counts every alert');
+  const replaced = [
+    { date: at(0).toISOString(), sector: 'health', equipment: 'Asset 1', alert_key: 'k', params: [['value', 50.5], ['currency', '€'], ['basis', 'sales']] },
+    { date: new Date(at(0).getTime() + 60e3).toISOString(), sector: 'health', equipment: 'Asset 1', alert_key: 'k', params: [['value', 100], ['currency', '€']] },
+  ];
+  const rep = C.bucketAlerts(replaced, { keys: ['health'], days: 7, metric: 'value' }).series[0];
+  pass(rep.values[6] === 100 && rep.approx === false, 'a newer exact row replaces an older estimate: 100, and the chart is not flagged as an estimate');
   pass(C.valueMetric(money).available === true && C.valueMetric(money).symbol === '€', 'one currency: the value metric is available');
   pass(C.valueMetric([...money, { date: '', sector: 'x', params: [['value', 1], ['currency', '$']] }]).reason === 'mixed', 'two currencies: not on one axis');
   pass(C.valueMetric([{ date: '', params: [['value', 5]] }]).reason === 'none', 'no money anywhere: unavailable');
